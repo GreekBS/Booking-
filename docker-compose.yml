@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: hcp
+      POSTGRES_PASSWORD: hcp
+      POSTGRES_DB: hcp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hcp -d hcp"]
+      interval: 3s
+      timeout: 5s
+      retries: 10

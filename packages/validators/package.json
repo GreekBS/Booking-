@@ -1,0 +1,15 @@
+{
+  "name": "@hcp/validators",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@hcp/config": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

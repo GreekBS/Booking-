@@ -1,0 +1,24 @@
+{
+  "name": "@hcp/domain",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --max-warnings 0 && tsc --noEmit"
+  },
+  "dependencies": {
+    "@hcp/permissions": "workspace:*"
+  },
+  "devDependencies": {
+    "@hcp/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "typescript-eslint": "^8.18.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

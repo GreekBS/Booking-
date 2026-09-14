@@ -1,0 +1,26 @@
+{
+  "name": "hcp",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "test:integration": "pnpm --filter @hcp/database test:integration",
+    "test:e2e": "pnpm --filter @hcp/web test:e2e",
+    "lint": "turbo lint",
+    "lint:architecture": "node scripts/verify-eslint-boundaries.mjs",
+    "db:generate": "pnpm --filter @hcp/database db:generate",
+    "db:migrate": "pnpm --filter @hcp/database db:migrate",
+    "db:seed": "pnpm --filter @hcp/database db:seed",
+    "db:studio": "pnpm --filter @hcp/database db:studio"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

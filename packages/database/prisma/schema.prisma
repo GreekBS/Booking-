@@ -1,0 +1,1032 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum TenantStatus {
+  active
+  suspended
+  archived
+}
+
+enum PlatformRole {
+  super_admin
+}
+
+enum TenantRole {
+  admin
+  manager
+}
+
+enum MembershipStatus {
+  active
+  invited
+  revoked
+}
+
+enum PropertyType {
+  villa
+  apartment
+  hotel
+  other
+}
+
+enum PropertyStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum UnitStatus {
+  active
+  inactive
+  archived
+}
+
+enum CancellationPolicyType {
+  flexible
+  moderate
+  strict
+}
+
+enum CalendarBlockType {
+  manual
+  maintenance
+  cleaning
+  owner
+  hold
+  booking
+  turnover
+  channel_import
+}
+
+enum ChannelInventoryReconcileStatus {
+  pending
+  applied
+  superseded
+  failed
+}
+
+enum CalendarBlockStatus {
+  active
+  released
+  expired
+  cancelled
+}
+
+enum HoldStatus {
+  active
+  released
+  expired
+  converted
+}
+
+enum BookingStatus {
+  pending
+  payment_pending
+  confirmed
+  cancelled
+  completed
+}
+
+enum DowModifierType {
+  fixed
+  percent
+}
+
+enum PaymentRecordStatus {
+  pending
+  authorized
+  captured
+  failed
+  cancelled
+}
+
+enum ConfirmationMode {
+  manual
+  payment_required
+}
+
+enum PublishableKeyEnvironment {
+  test
+  live
+}
+
+enum OutboxEventStatus {
+  pending
+  processing
+  completed
+  dead_letter
+}
+
+enum BackgroundJobStatus {
+  pending
+  processing
+  completed
+  dead_letter
+  cancelled
+}
+
+enum ChannelConnectionStatus {
+  draft
+  pending_auth
+  active
+  paused
+  error
+  disconnected
+}
+
+enum ChannelFeedSemanticMode {
+  mixed_or_unknown_feed
+  availability_block_feed
+  reservation_feed
+}
+
+enum ChannelIcalCredentialRotationStatus {
+  in_progress
+  committed
+  failed
+  abandoned
+}
+
+enum ChannelSemanticTransitionCommandStatus {
+  pending
+  committed
+}
+
+enum ChannelListingMappingStatus {
+  active
+  paused
+  unmapped
+  error
+  archived
+}
+
+enum ExternalReservationLinkStatus {
+  linked
+  stale
+  conflict
+  archived
+}
+
+enum ChannelSyncDirection {
+  inbound
+  outbound
+  bidirectional
+}
+
+enum ChannelInboxProcessingStatus {
+  received
+  processing
+  completed
+  duplicate
+  skipped
+  failed
+  dead_letter
+}
+
+enum ChannelInboxProcessingOutcome {
+  SUCCESS
+  DUPLICATE
+  AVAILABILITY_CONFLICT
+  VALIDATION_ERROR
+  PROVIDER_ERROR
+  UNSUPPORTED
+  STALE_MAPPING
+  TRANSIENT_ERROR
+  INTERNAL_ERROR
+}
+
+enum ChannelInboxIngressKind {
+  webhook
+  poll
+  replay
+  manual
+}
+
+model Tenant {
+  id              String       @id @default(uuid()) @db.Uuid
+  name            String       @db.VarChar(255)
+  slug            String       @unique @db.VarChar(63)
+  status          TenantStatus @default(active)
+  timezone        String       @default("Europe/Athens") @db.VarChar(64)
+  defaultLocale   String       @default("en") @map("default_locale") @db.VarChar(10)
+  defaultCurrency String       @default("EUR") @map("default_currency") @db.Char(3)
+  settings        Json         @default("{}")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz
+
+  memberships                  Membership[]
+  invitations                  Invitation[]
+  properties                   Property[]
+  amenities                    Amenity[]
+  commerceSettings             TenantCommerceSettings?
+  publishableKeys              TenantPublishableKey[]
+  storefrontIdempotencyRecords StorefrontIdempotencyRecord[]
+  unitAvailabilityRules        UnitAvailabilityRule[]
+  ratePlans                    RatePlan[]
+  rateSeasons                  RateSeason[]
+  rateDowModifiers             RateDowModifier[]
+  unitCalendarBlocks           UnitCalendarBlock[]
+  bookingHolds                 BookingHold[]
+  quotes                       Quote[]
+  bookings                     Booking[]
+  paymentRecords               PaymentRecord[]
+
+  @@map("tenants")
+}
+
+model User {
+  id            String        @id @default(uuid()) @db.Uuid
+  email         String        @unique @db.VarChar(255)
+  passwordHash  String?       @map("password_hash")
+  name          String        @db.VarChar(255)
+  platformRole  PlatformRole? @map("platform_role")
+  emailVerified DateTime?     @map("email_verified") @db.Timestamptz
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  accounts    Account[]
+  sessions    Session[]
+  memberships Membership[]
+  invitations Invitation[] @relation("InvitedBy")
+  auditLogs   AuditLog[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id             String   @id @default(uuid()) @db.Uuid
+  sessionToken   String   @unique @map("session_token")
+  userId         String   @map("user_id") @db.Uuid
+  expires        DateTime @db.Timestamptz
+  activeTenantId String?  @map("active_tenant_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime @db.Timestamptz
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Membership {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  role        TenantRole
+  propertyIds String[]         @default([]) @map("property_ids") @db.Uuid
+  status      MembershipStatus @default(active)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("memberships")
+}
+
+model Invitation {
+  id          String     @id @default(uuid()) @db.Uuid
+  tenantId    String     @map("tenant_id") @db.Uuid
+  email       String     @db.VarChar(255)
+  role        TenantRole
+  propertyIds String[]   @default([]) @map("property_ids") @db.Uuid
+  tokenHash   String     @unique @map("token_hash")
+  expiresAt   DateTime   @map("expires_at") @db.Timestamptz
+  acceptedAt  DateTime?  @map("accepted_at") @db.Timestamptz
+  invitedById String     @map("invited_by") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([tenantId, email])
+  @@map("invitations")
+}
+
+model Property {
+  id                     String                 @id @default(uuid()) @db.Uuid
+  tenantId               String                 @map("tenant_id") @db.Uuid
+  name                   String                 @db.VarChar(255)
+  slug                   String                 @db.VarChar(63)
+  description            String?                @db.Text
+  type                   PropertyType           @default(villa)
+  status                 PropertyStatus         @default(draft)
+  timezone               String                 @default("Europe/Athens") @db.VarChar(64)
+  addressLine            String?                @map("address_line")
+  city                   String?
+  region                 String?
+  postalCode             String?                @map("postal_code")
+  country                String?                @db.Char(2)
+  latitude               Decimal?               @db.Decimal(10, 7)
+  longitude              Decimal?               @db.Decimal(10, 7)
+  checkInTime            String                 @default("15:00") @map("check_in_time") @db.VarChar(5)
+  checkOutTime           String                 @default("11:00") @map("check_out_time") @db.VarChar(5)
+  cancellationPolicyType CancellationPolicyType @default(moderate) @map("cancellation_policy_type")
+  deletedAt              DateTime?              @map("deleted_at") @db.Timestamptz
+  createdAt              DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  units          Unit[]
+  amenities      PropertyAmenity[]
+  calendarBlocks UnitCalendarBlock[]
+  bookingHolds   BookingHold[]
+  quotes         Quote[]
+  bookings       Booking[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@map("properties")
+}
+
+model Unit {
+  id         String     @id @default(uuid()) @db.Uuid
+  tenantId   String     @map("tenant_id") @db.Uuid
+  propertyId String     @map("property_id") @db.Uuid
+  name       String     @db.VarChar(255)
+  slug       String     @db.VarChar(63)
+  maxGuests  Int        @map("max_guests")
+  bedrooms   Int        @default(1)
+  bathrooms  Int        @default(1)
+  status     UnitStatus @default(active)
+  deletedAt  DateTime?  @map("deleted_at") @db.Timestamptz
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  property         Property              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  availabilityRule UnitAvailabilityRule?
+  ratePlan         RatePlan?
+  calendarBlocks   UnitCalendarBlock[]
+  bookingHolds     BookingHold[]
+  quotes           Quote[]
+  bookings         Booking[]
+
+  @@unique([propertyId, slug])
+  @@index([tenantId, propertyId])
+  @@index([tenantId, status])
+  @@map("units")
+}
+
+model Amenity {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String? @map("tenant_id") @db.Uuid
+  name     String  @db.VarChar(100)
+  icon     String? @db.VarChar(50)
+  category String? @db.VarChar(50)
+
+  tenant     Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  properties PropertyAmenity[]
+
+  @@index([tenantId])
+  @@map("amenities")
+}
+
+model PropertyAmenity {
+  propertyId String @map("property_id") @db.Uuid
+  amenityId  String @map("amenity_id") @db.Uuid
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity  Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, amenityId])
+  @@map("property_amenities")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String?  @map("tenant_id") @db.Uuid
+  actorId      String   @map("actor_id") @db.Uuid
+  action       String   @db.VarChar(100)
+  resourceType String   @map("resource_type") @db.VarChar(50)
+  resourceId   String?  @map("resource_id") @db.VarChar(255)
+  metadata     Json     @default("{}")
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+model OutboxEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String?           @map("tenant_id") @db.Uuid
+  aggregateType String            @map("aggregate_type") @db.VarChar(50)
+  aggregateId   String            @map("aggregate_id") @db.Uuid
+  eventType     String            @map("event_type") @db.VarChar(100)
+  payload       Json
+  deliveryKey   String?           @map("delivery_key") @db.Char(64)
+  status        OutboxEventStatus @default(pending)
+  attemptCount  Int               @default(0) @map("attempt_count")
+  lastError     String?           @map("last_error") @db.Text
+  claimedAt     DateTime?         @map("claimed_at") @db.Timestamptz
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  processedAt   DateTime?         @map("processed_at") @db.Timestamptz
+
+  @@index([status, createdAt])
+  @@index([processedAt, createdAt])
+  @@map("outbox_events")
+}
+
+model BackgroundJob {
+  id             String              @id @default(uuid()) @db.Uuid
+  tenantId       String?             @map("tenant_id") @db.Uuid
+  jobType        String              @map("job_type") @db.VarChar(100)
+  payload        Json
+  status         BackgroundJobStatus @default(pending)
+  priority       Int                 @default(0) @db.SmallInt
+  runAt          DateTime            @default(now()) @map("run_at") @db.Timestamptz
+  idempotencyKey String?             @map("idempotency_key") @db.VarChar(255)
+  attemptCount   Int                 @default(0) @map("attempt_count")
+  maxAttempts    Int                 @default(5) @map("max_attempts")
+  lastError      String?             @map("last_error") @db.Text
+  claimedAt      DateTime?           @map("claimed_at") @db.Timestamptz
+  nextRetryAt    DateTime?           @map("next_retry_at") @db.Timestamptz
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  startedAt      DateTime?           @map("started_at") @db.Timestamptz
+  completedAt    DateTime?           @map("completed_at") @db.Timestamptz
+  cancelledAt    DateTime?           @map("cancelled_at") @db.Timestamptz
+
+  @@unique([jobType, idempotencyKey])
+  @@index([status, runAt, nextRetryAt, priority, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@index([status, completedAt])
+  @@map("background_jobs")
+}
+
+model TenantCommerceSettings {
+  tenantId              String           @id @map("tenant_id") @db.Uuid
+  defaultHoldTtlSeconds Int              @default(900) @map("default_hold_ttl_seconds")
+  confirmationMode      ConfirmationMode @default(manual) @map("confirmation_mode")
+  defaultCurrency       String           @default("EUR") @map("default_currency") @db.Char(3)
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_commerce_settings")
+}
+
+model TenantPublishableKey {
+  id             String                    @id @default(uuid()) @db.Uuid
+  tenantId       String                    @map("tenant_id") @db.Uuid
+  keyHash        String                    @unique @map("key_hash") @db.VarChar(64)
+  keyPrefix      String                    @map("key_prefix") @db.VarChar(32)
+  environment    PublishableKeyEnvironment
+  allowedDomains String[]                  @default([]) @map("allowed_domains")
+  isActive       Boolean                   @default(true) @map("is_active")
+  createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("tenant_publishable_keys")
+}
+
+model StorefrontIdempotencyRecord {
+  tenantId       String   @map("tenant_id") @db.Uuid
+  scope          String   @db.VarChar(20)
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(64)
+  resourceId     String   @map("resource_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, scope, idempotencyKey])
+  @@index([expiresAt])
+  @@map("storefront_idempotency_records")
+}
+
+model UnitAvailabilityRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  unitId         String   @unique @map("unit_id") @db.Uuid
+  minNights      Int      @default(1) @map("min_nights")
+  maxNights      Int      @default(30) @map("max_nights")
+  checkInDays    Int[]    @default([0, 1, 2, 3, 4, 5, 6]) @map("check_in_days")
+  checkOutDays   Int[]    @default([0, 1, 2, 3, 4, 5, 6]) @map("check_out_days")
+  advanceMinDays Int      @default(0) @map("advance_min_days")
+  advanceMaxDays Int      @default(365) @map("advance_max_days")
+  turnoverNights Int      @default(0) @map("turnover_nights")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("unit_availability_rules")
+}
+
+model RatePlan {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  unitId            String   @unique @map("unit_id") @db.Uuid
+  baseNightlyAmount Decimal  @map("base_nightly_amount") @db.Decimal(19, 4)
+  currency          String   @db.Char(3)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit         Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  seasons      RateSeason[]
+  dowModifiers RateDowModifier[]
+
+  @@index([tenantId])
+  @@map("rate_plans")
+}
+
+model RateSeason {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  ratePlanId    String   @map("rate_plan_id") @db.Uuid
+  name          String   @db.VarChar(100)
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  nightlyAmount Decimal  @map("nightly_amount") @db.Decimal(19, 4)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ratePlan RatePlan @relation(fields: [ratePlanId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, ratePlanId])
+  @@map("rate_seasons")
+}
+
+model RateDowModifier {
+  id            String          @id @default(uuid()) @db.Uuid
+  tenantId      String          @map("tenant_id") @db.Uuid
+  ratePlanId    String          @map("rate_plan_id") @db.Uuid
+  dayOfWeek     Int             @map("day_of_week")
+  modifierType  DowModifierType @map("modifier_type")
+  modifierValue Decimal         @map("modifier_value") @db.Decimal(19, 4)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ratePlan RatePlan @relation(fields: [ratePlanId], references: [id], onDelete: Cascade)
+
+  @@unique([ratePlanId, dayOfWeek])
+  @@index([tenantId, ratePlanId])
+  @@map("rate_dow_modifiers")
+}
+
+model UnitCalendarBlock {
+  id         String              @id @default(uuid()) @db.Uuid
+  tenantId   String              @map("tenant_id") @db.Uuid
+  unitId     String              @map("unit_id") @db.Uuid
+  propertyId String              @map("property_id") @db.Uuid
+  blockType  CalendarBlockType   @map("block_type")
+  sourceId   String?             @map("source_id") @db.Uuid
+  checkIn    DateTime            @map("check_in") @db.Date
+  checkOut   DateTime            @map("check_out") @db.Date
+  status     CalendarBlockStatus @default(active)
+  reason     String?             @db.Text
+  expiresAt  DateTime?           @map("expires_at") @db.Timestamptz
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  // P1-S6b provider ownership (nullable except channel_import via DB CHECK)
+  connectionId          String? @map("connection_id") @db.VarChar(255)
+  semanticConfigVersion Int?    @map("semantic_config_version")
+  mappingId             String? @map("mapping_id") @db.VarChar(255)
+  sourceIdentityKey     String? @map("source_identity_key") @db.VarChar(324)
+  entryContentHash      String? @map("entry_content_hash") @db.Char(64)
+  identityKind          String? @map("identity_kind") @db.VarChar(16)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit     Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, unitId, blockType, status])
+  @@index([sourceId])
+  @@index([tenantId, connectionId, mappingId, blockType, status], map: "unit_calendar_blocks_channel_import_lookup_idx")
+  @@map("unit_calendar_blocks")
+}
+
+model BookingHold {
+  id             String     @id @default(uuid()) @db.Uuid
+  tenantId       String     @map("tenant_id") @db.Uuid
+  unitId         String     @map("unit_id") @db.Uuid
+  propertyId     String     @map("property_id") @db.Uuid
+  checkIn        DateTime   @map("check_in") @db.Date
+  checkOut       DateTime   @map("check_out") @db.Date
+  guestCount     Int        @map("guest_count")
+  status         HoldStatus @default(active)
+  expiresAt      DateTime   @map("expires_at") @db.Timestamptz
+  idempotencyKey String?    @map("idempotency_key") @db.VarChar(64)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit     Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  quotes   Quote[]
+
+  @@index([tenantId, unitId, status])
+  @@index([tenantId, checkIn, checkOut])
+  @@map("booking_holds")
+}
+
+model Quote {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  holdId      String   @map("hold_id") @db.Uuid
+  unitId      String   @map("unit_id") @db.Uuid
+  propertyId  String   @map("property_id") @db.Uuid
+  snapshotId  String   @map("snapshot_id") @db.Uuid
+  snapshot    Json
+  currency    String   @db.Char(3)
+  totalAmount Decimal  @map("total_amount") @db.Decimal(19, 4)
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hold     BookingHold @relation(fields: [holdId], references: [id], onDelete: Cascade)
+  unit     Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  property Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([tenantId, holdId])
+  @@map("quotes")
+}
+
+model Booking {
+  id                 String           @id @default(uuid()) @db.Uuid
+  tenantId           String           @map("tenant_id") @db.Uuid
+  unitId             String           @map("unit_id") @db.Uuid
+  propertyId         String           @map("property_id") @db.Uuid
+  quoteId            String           @map("quote_id") @db.Uuid
+  holdId             String           @map("hold_id") @db.Uuid
+  quoteSnapshotId    String           @map("quote_snapshot_id") @db.Uuid
+  guestName          String           @map("guest_name") @db.VarChar(255)
+  guestEmail         String           @map("guest_email") @db.VarChar(255)
+  guestPhone         String?          @map("guest_phone") @db.VarChar(50)
+  guestCount         Int              @map("guest_count")
+  checkIn            DateTime         @map("check_in") @db.Date
+  checkOut           DateTime         @map("check_out") @db.Date
+  status             BookingStatus    @default(pending)
+  confirmationMode   ConfirmationMode @map("confirmation_mode")
+  totalAmount        Decimal          @map("total_amount") @db.Decimal(19, 4)
+  currency           String           @db.Char(3)
+  confirmedAt        DateTime?        @map("confirmed_at") @db.Timestamptz
+  cancelledAt        DateTime?        @map("cancelled_at") @db.Timestamptz
+  completedAt        DateTime?        @map("completed_at") @db.Timestamptz
+  cancellationReason String?          @map("cancellation_reason") @db.Text
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit           Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  quote          Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  paymentRecords PaymentRecord[]
+
+  @@index([tenantId, unitId, checkIn, checkOut])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@map("bookings")
+}
+
+model PaymentRecord {
+  id                String              @id @default(uuid()) @db.Uuid
+  tenantId          String              @map("tenant_id") @db.Uuid
+  bookingId         String              @map("booking_id") @db.Uuid
+  amount            Decimal             @db.Decimal(19, 4)
+  currency          String              @db.Char(3)
+  status            PaymentRecordStatus @default(pending)
+  provider          String              @default("stub") @db.VarChar(32)
+  providerReference String?             @map("provider_reference") @db.VarChar(255)
+  metadata          Json                @default("{}")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, bookingId])
+  @@map("payment_records")
+}
+
+model ChannelConnection {
+  tenantId String @map("tenant_id") @db.Uuid
+  id       String @map("id") @db.VarChar(255)
+
+  provider    String                  @map("provider") @db.VarChar(50)
+  displayName String                  @map("display_name") @db.VarChar(255)
+  status      ChannelConnectionStatus @map("status")
+
+  credentialRef          String? @map("credential_ref") @db.VarChar(255)
+  webhookVerificationRef String? @map("webhook_verification_ref") @db.VarChar(255)
+  lastError              String? @map("last_error") @db.VarChar(500)
+
+  semanticMode          ChannelFeedSemanticMode @default(mixed_or_unknown_feed) @map("semantic_mode")
+  semanticConfigVersion Int                     @default(1) @map("semantic_config_version")
+
+  /// P1-S7c: connection-scoped inventory mutation fence. Default OFF.
+  inventoryApplyEnabled Boolean @default(false) @map("inventory_apply_enabled")
+
+  createdAt DateTime @map("created_at") @db.Timestamptz
+  updatedAt DateTime @map("updated_at") @db.Timestamptz
+
+  pollCursor ChannelPollCursor?
+  inventoryReconciliations ChannelInventoryReconciliation[]
+
+  @@id([tenantId, id])
+  @@index([tenantId, status])
+  @@map("channel_connections")
+}
+
+enum ChannelSecretKind {
+  credential
+  webhook_verification
+}
+
+/// CM-4b S4a-1: sealed credential / webhook verification material (ciphertext only).
+model ChannelSecretRecord {
+  tenantId String @map("tenant_id") @db.Uuid
+  id       String @map("id") @db.Uuid
+
+  kind       ChannelSecretKind @map("kind")
+  ciphertext Bytes             @map("ciphertext")
+  keyVersion Int               @map("key_version")
+
+  createdAt DateTime  @map("created_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@id([tenantId, id])
+  @@index([tenantId, kind])
+  @@map("channel_secret_records")
+}
+
+model ChannelPollCursor {
+  tenantId     String @map("tenant_id") @db.Uuid
+  connectionId String @map("connection_id") @db.VarChar(255)
+
+  payload               String @db.Text
+  version               Int
+  semanticConfigVersion Int    @map("semantic_config_version")
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  connection ChannelConnection @relation(fields: [tenantId, connectionId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, connectionId])
+  @@map("channel_poll_cursors")
+}
+
+model ChannelInventoryReconciliation {
+  tenantId      String @map("tenant_id") @db.Uuid
+  connectionId  String @map("connection_id") @db.VarChar(255)
+  cursorVersion Int    @map("cursor_version")
+
+  semanticConfigVersion Int @map("semantic_config_version")
+  mappingId             String @map("mapping_id") @db.VarChar(255)
+  mappingVersion        Int    @map("mapping_version")
+  unitId                String @map("unit_id") @db.VarChar(255)
+  propertyId            String @map("property_id") @db.VarChar(255)
+
+  snapshotHash       String                         @map("snapshot_hash") @db.Char(64)
+  actionableSnapshot Json                           @map("actionable_snapshot")
+  /// P1-S7a: true only when observed/cancelled identity sets were durably recorded.
+  completeObservedEvidence      Boolean @default(false) @map("complete_observed_evidence")
+  observedSourceIdentityKeys    Json?   @map("observed_source_identity_keys")
+  cancelledSourceIdentityKeys   Json?   @map("cancelled_source_identity_keys")
+  reconcileStatus    ChannelInventoryReconcileStatus @map("reconcile_status")
+  reconcileErrorCode String?                        @map("reconcile_error_code") @db.VarChar(80)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  appliedAt DateTime? @map("applied_at") @db.Timestamptz
+
+  connection ChannelConnection @relation(fields: [tenantId, connectionId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, connectionId, cursorVersion])
+  @@index([tenantId, connectionId, reconcileStatus, cursorVersion(sort: Desc)])
+  @@map("channel_inventory_reconciliations")
+}
+
+model ChannelSemanticTransitionCommand {
+  tenantId  String @map("tenant_id") @db.Uuid
+  operation String @db.VarChar(80)
+  commandId String @map("command_id") @db.VarChar(255)
+
+  connectionId String @map("connection_id") @db.VarChar(255)
+  actorId      String @map("actor_id") @db.Uuid
+
+  expectedFromMode ChannelFeedSemanticMode @map("expected_from_mode")
+  targetMode       ChannelFeedSemanticMode @map("target_mode")
+
+  expectedSemanticConfigVersion Int    @map("expected_semantic_config_version")
+  requestFingerprint            String @map("request_fingerprint") @db.Char(64)
+
+  status ChannelSemanticTransitionCommandStatus
+
+  previousSemanticConfigVersion  Int?     @map("previous_semantic_config_version")
+  resultingSemanticConfigVersion Int?     @map("resulting_semantic_config_version")
+  changed                        Boolean?
+  cursorReset                    Boolean? @map("cursor_reset")
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  committedAt DateTime? @map("committed_at") @db.Timestamptz
+
+  @@id([tenantId, operation, commandId])
+  @@index([tenantId, connectionId, createdAt])
+  @@map("channel_semantic_transition_commands")
+}
+
+/// P1-S6c: durable iCal credential rotation command receipt.
+/// Stores opaque credential references and non-secret digests only — never feed
+/// URLs, tokens, or raw credential material.
+model ChannelIcalCredentialRotationCommand {
+  tenantId  String @map("tenant_id") @db.Uuid
+  operation String @db.VarChar(80)
+  commandId String @map("command_id") @db.VarChar(255)
+
+  connectionId String @map("connection_id") @db.VarChar(255)
+  actorId      String @map("actor_id") @db.Uuid
+
+  expectedSemanticConfigVersion Int?   @map("expected_semantic_config_version")
+  requestFingerprint            String @map("request_fingerprint") @db.Char(64)
+
+  status ChannelIcalCredentialRotationStatus
+
+  previousCredentialRef String? @map("previous_credential_ref") @db.VarChar(255)
+  newCredentialRef      String? @map("new_credential_ref") @db.VarChar(255)
+
+  previousSemanticConfigVersion  Int?     @map("previous_semantic_config_version")
+  resultingSemanticConfigVersion Int?     @map("resulting_semantic_config_version")
+  supersededPendingCount         Int?     @map("superseded_pending_count")
+  cursorBaselineReset            Boolean? @map("cursor_baseline_reset")
+
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  vaultWrittenAt DateTime? @map("vault_written_at") @db.Timestamptz
+  committedAt    DateTime? @map("committed_at") @db.Timestamptz
+  failedAt       DateTime? @map("failed_at") @db.Timestamptz
+
+  /// Safe failure reason code only (no messages, no secrets).
+  failureReasonCode String? @map("failure_reason_code") @db.VarChar(80)
+
+  @@id([tenantId, operation, commandId])
+  @@index([tenantId, connectionId, createdAt])
+  @@map("channel_ical_credential_rotation_commands")
+}
+
+model ChannelListingMapping {
+  tenantId String @map("tenant_id") @db.Uuid
+  id       String @map("id") @db.VarChar(255)
+
+  connectionId      String  @map("connection_id") @db.VarChar(255)
+  externalListingId String  @map("external_listing_id") @db.VarChar(255)
+  externalUnitId    String? @map("external_unit_id") @db.VarChar(255)
+
+  propertyId String @map("property_id") @db.VarChar(255)
+  unitId     String @map("unit_id") @db.VarChar(255)
+
+  syncDirection ChannelSyncDirection        @map("sync_direction")
+  status        ChannelListingMappingStatus @map("status")
+
+  mappingVersion Int     @map("mapping_version")
+  lastError      String? @map("last_error") @db.VarChar(500)
+
+  createdAt DateTime @map("created_at") @db.Timestamptz
+  updatedAt DateTime @map("updated_at") @db.Timestamptz
+
+  externalReservationLinks ExternalReservationLink[]
+
+  @@id([tenantId, id])
+  @@unique([tenantId, connectionId, externalListingId, externalUnitId])
+  @@index([tenantId, connectionId])
+  @@index([tenantId, connectionId, externalListingId, externalUnitId])
+  @@map("channel_listing_mappings")
+}
+
+model ExternalReservationLink {
+  tenantId String @map("tenant_id") @db.Uuid
+  id       String @map("id") @db.VarChar(255)
+
+  provider String @map("provider") @db.VarChar(50)
+
+  connectionId          String @map("connection_id") @db.VarChar(255)
+  externalReservationId String @map("external_reservation_id") @db.VarChar(255)
+
+  bookingId String @map("booking_id") @db.VarChar(255)
+
+  mappingId                String @map("mapping_id") @db.VarChar(255)
+  mappingVersionAtImport   Int    @map("mapping_version_at_import")
+  mappingVersionAtLastSync Int    @map("mapping_version_at_last_sync")
+
+  externalRevision String?                       @map("external_revision") @db.VarChar(255)
+  status           ExternalReservationLinkStatus @map("status")
+  conflictReason   String?                       @map("conflict_reason") @db.VarChar(500)
+
+  importedAt           DateTime  @map("imported_at") @db.Timestamptz
+  lastSyncedAt         DateTime? @map("last_synced_at") @db.Timestamptz
+  lastExternalUpdateAt String?   @map("last_external_update_at") @db.VarChar(255)
+  archivedAt           DateTime? @map("archived_at") @db.Timestamptz
+
+  createdAt DateTime @map("created_at") @db.Timestamptz
+  updatedAt DateTime @map("updated_at") @db.Timestamptz
+
+  mapping ChannelListingMapping @relation(fields: [tenantId, mappingId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@unique([tenantId, connectionId, externalReservationId])
+  @@index([tenantId, bookingId])
+  @@index([tenantId, connectionId])
+  @@map("external_reservation_links")
+}
+
+model ChannelInboxItem {
+  tenantId String @map("tenant_id") @db.Uuid
+  id       String @map("id") @db.VarChar(255)
+
+  connectionId String @map("connection_id") @db.VarChar(255)
+  provider     String @map("provider") @db.VarChar(50)
+
+  ingressKind ChannelInboxIngressKind @map("ingress_kind")
+  messageKind String                  @map("message_kind") @db.VarChar(50)
+
+  providerEventId  String  @map("provider_event_id") @db.VarChar(255)
+  deduplicationKey String  @map("deduplication_key") @db.VarChar(500)
+  correlationId    String? @map("correlation_id") @db.VarChar(255)
+
+  rawPayload Json @map("raw_payload")
+
+  externalListingId     String? @map("external_listing_id") @db.VarChar(255)
+  externalUnitId        String? @map("external_unit_id") @db.VarChar(255)
+  externalReservationId String? @map("external_reservation_id") @db.VarChar(255)
+  externalRevision      String? @map("external_revision") @db.VarChar(255)
+
+  providerRevision  String?   @map("provider_revision") @db.VarChar(255)
+  providerSequence  String?   @map("provider_sequence") @db.VarChar(255)
+  providerEventTime DateTime? @map("provider_event_time") @db.Timestamptz
+
+  receivedAt DateTime @map("received_at") @db.Timestamptz
+  createdAt  DateTime @map("created_at") @db.Timestamptz
+
+  status        ChannelInboxProcessingStatus   @default(received)
+  outcome       ChannelInboxProcessingOutcome?
+  outcomeDetail String?                        @map("outcome_detail") @db.Text
+  attemptCount  Int                            @default(0) @map("attempt_count")
+  lastError     String?                        @map("last_error") @db.Text
+
+  leaseOwner          String?   @map("lease_owner") @db.VarChar(255)
+  leaseExpiresAt      DateTime? @map("lease_expires_at") @db.Timestamptz
+  leaseHeartbeatAt    DateTime? @map("lease_heartbeat_at") @db.Timestamptz
+  processingToken     String?   @map("processing_token") @db.VarChar(255)
+  processingStartedAt DateTime? @map("processing_started_at") @db.Timestamptz
+  processedAt         DateTime? @map("processed_at") @db.Timestamptz
+
+  resultBookingId String? @map("result_booking_id") @db.VarChar(255)
+  resultLinkId    String? @map("result_link_id") @db.VarChar(255)
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@id([tenantId, id])
+  @@unique([tenantId, deduplicationKey])
+  @@index([status, leaseExpiresAt, createdAt])
+  @@index([tenantId, connectionId, createdAt])
+  @@map("channel_inbox_items")
+}

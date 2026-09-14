@@ -1,0 +1,10 @@
+{
+  "extends": "@hcp/config/typescript/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

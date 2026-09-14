@@ -1,0 +1,33 @@
+node_modules
+.next
+dist
+.turbo
+coverage
+*.log
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+
+# Local secrets / env (never commit)
+.env
+.env.*
+!.env.example
+
+# Local tooling / OS
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Database / dumps (local only)
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+
+# Playwright / local temp artifacts
+**/test-results/
+**/playwright-report/
+**/blob-report/
+apps/web/tmp-test.css

@@ -1,0 +1,10 @@
+export type ChannelInboxProcessingOutcome =
+  | "SUCCESS"
+  | "DUPLICATE"
+  | "AVAILABILITY_CONFLICT"
+  | "VALIDATION_ERROR"
+  | "PROVIDER_ERROR"
+  | "UNSUPPORTED"
+  | "STALE_MAPPING"
+  | "TRANSIENT_ERROR"
+  | "INTERNAL_ERROR";
