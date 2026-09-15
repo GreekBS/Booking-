@@ -947,14 +947,24 @@ runIntegration("P1-S6c iCal credential rotation + mapping lifecycle (PostgreSQL)
         (tenantId, connectionId, cursorVersion) =>
           reader.findPending(tenantId, connectionId, cursorVersion),
         new PrismaChannelConnectionStatusFinder(),
+        new PermissionChecker(),
+        { append: async () => {} },
       );
 
-      const result = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION_ID,
-        cursorVersion: 1,
-        actorId: ACTOR,
-      });
+      const result = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION_ID,
+          cursorVersion: 1,
+        },
+        {
+          userId: ACTOR,
+          role: "admin",
+          propertyIds: null,
+          isSuperAdmin: true,
+        },
+        { actorId: ACTOR, ipAddress: null },
+      );
       expect(result.isFailure).toBe(true);
       expect(result.getError()).toBeInstanceOf(ConflictError);
       expect(

@@ -1053,6 +1053,8 @@ export const forceRedrivePendingIcalInventoryReconcileUseCase =
         cursorVersion,
       ),
     channelConnectionStatusFinder,
+    permissionChecker,
+    auditLogRepository,
     (fields) => {
       console.log(JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }));
     },

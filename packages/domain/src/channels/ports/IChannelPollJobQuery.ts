@@ -1,4 +1,4 @@
-import type { BackgroundJobEntry, BackgroundJobStatus } from "../../../shared/types/index";
+import type { BackgroundJobEntry, BackgroundJobStatus } from "../../shared/types/index";
 
 export interface ChannelPollJobSnapshot extends BackgroundJobEntry {
   readonly nextRetryAt: Date | null;

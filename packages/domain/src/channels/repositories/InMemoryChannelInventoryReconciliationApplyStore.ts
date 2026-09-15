@@ -76,14 +76,11 @@ export class InMemoryChannelInventoryReconciliationApplyStore
   ) {}
 
   seedGeneration(record: ChannelInventoryReconciliationRecord): void {
+    // Record fields are authoritative (including evidence flags). Copy into a
+    // MutableGeneration so later apply/supersede can update reconcileStatus.
     this.generations.set(
       `${record.tenantId}:${record.connectionId}:${record.cursorVersion}`,
-      {
-        completeObservedEvidence: false,
-        observedSourceIdentityKeys: null,
-        cancelledSourceIdentityKeys: null,
-        ...record,
-      },
+      { ...record },
     );
   }
 

@@ -4,6 +4,7 @@ import {
   RECONCILE_ICAL_IMPORTED_INVENTORY_JOB_TYPE,
   AvailabilityEvaluator,
   ForceRedrivePendingIcalInventoryReconcileUseCase,
+  PermissionChecker,
   GuestCount,
   LocalDate,
   StayPeriod,
@@ -839,13 +840,23 @@ runIntegration("P1-S6b Prisma inventory apply / redrive", () => {
         (tenantId, connectionId, cursorVersion) =>
           reader.findPending(tenantId, connectionId, cursorVersion),
         new PrismaChannelConnectionStatusFinder(),
+        new PermissionChecker(),
+        { append: async () => {} },
       );
-      const redriven = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION_ID,
-        cursorVersion: 1,
-        actorId: "operator",
-      });
+      const redriven = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION_ID,
+          cursorVersion: 1,
+        },
+        {
+          userId: "operator",
+          role: "admin",
+          propertyIds: null,
+          isSuperAdmin: true,
+        },
+        { actorId: "operator", ipAddress: null },
+      );
       expect(redriven.isSuccess).toBe(true);
       expect(isIcalInventoryReconcileJobKey(redriven.getValue().idempotencyKey)).toBe(true);
     } finally {

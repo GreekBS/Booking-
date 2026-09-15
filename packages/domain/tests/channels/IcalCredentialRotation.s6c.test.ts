@@ -1013,6 +1013,15 @@ describe("P1-S6c async lifecycle gates", () => {
     await withApplyEnabled(async () => {
       const scheduler = new FakeJobScheduler();
       const enqueue = new EnqueueJobUseCase(scheduler);
+      const permissions = new PermissionChecker();
+      const auditLog = { append: async () => {} };
+      const actor = {
+        userId: "op-1",
+        role: "admin" as const,
+        propertyIds: null,
+        isSuperAdmin: true,
+      };
+      const audit = { actorId: "op-1", ipAddress: null };
       const buildForce = (status: "active" | "paused" | null) =>
         new ForceRedrivePendingIcalInventoryReconcileUseCase(
           { listJobsForGeneration: async () => [] },
@@ -1025,22 +1034,32 @@ describe("P1-S6c async lifecycle gates", () => {
                 ? null
                 : { status, inventoryApplyEnabled: true },
           },
+          permissions,
+          auditLog,
         );
 
-      const paused = await buildForce("paused").execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-      });
+      const paused = await buildForce("paused").execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        actor,
+        audit,
+      );
       expect(paused.isFailure).toBe(true);
       expect(paused.getError()).toBeInstanceOf(ConflictError);
       expect((paused.getError() as ConflictError).message).toMatch(/active/);
 
-      const missing = await buildForce(null).execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-      });
+      const missing = await buildForce(null).execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        actor,
+        audit,
+      );
       expect(missing.isFailure).toBe(true);
       expect(missing.getError()).toBeInstanceOf(NotFoundError);
       expect(scheduler.jobs).toHaveLength(0);

@@ -1,5 +1,14 @@
 import { Result } from "../../shared/kernel/Result";
-import { ConflictError, NotFoundError, ValidationError } from "../../shared/errors/DomainError";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "../../shared/errors/DomainError";
+import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
+import { PERMISSIONS } from "@hcp/permissions";
+import type { UseCaseAuditContext } from "../../shared/types/AuditContext";
+import type { IAuditLogRepository } from "../../shared/ports/InfrastructurePorts";
 import { isChannelInventoryApplyEnabled } from "./channelInventoryApplyGate";
 import type { EnqueueJobUseCase } from "../../platform/async/jobs/application/EnqueueJobUseCase";
 import type {
@@ -14,7 +23,6 @@ export interface ForceRedrivePendingIcalInventoryReconcileCommand {
   tenantId: string;
   connectionId: string;
   cursorVersion: number;
-  actorId?: string;
 }
 
 export interface ForceRedrivePendingIcalInventoryReconcileResult {
@@ -28,9 +36,10 @@ export interface ForceRedrivePendingIcalInventoryReconcileResult {
 export type ForceRedriveLogFn = (fields: Record<string, unknown>) => void;
 
 /**
- * Explicit operator/internal recovery for pending + dead_letter|cancelled.
+ * Explicit operator recovery for pending + dead_letter|cancelled.
  * Does not bypass via scheduled sweep.
  *
+ * Authorization and durable audit live here (operator use-case boundary).
  * P1-S6c: fails closed unless the connection is `active`. A paused connection —
  * including one paused for credential rotation — must be resumed by an operator
  * before inventory work is redriven.
@@ -45,11 +54,15 @@ export class ForceRedrivePendingIcalInventoryReconcileUseCase {
       cursorVersion: number,
     ) => Promise<PendingInventoryReconciliationRef | null>,
     private readonly connectionStatusFinder: IChannelConnectionStatusFinder,
+    private readonly permissionChecker: PermissionChecker,
+    private readonly auditLog: IAuditLogRepository,
     private readonly log: ForceRedriveLogFn = () => {},
   ) {}
 
   async execute(
     command: ForceRedrivePendingIcalInventoryReconcileCommand,
+    actor: ActorContext,
+    audit: UseCaseAuditContext,
   ): Promise<Result<ForceRedrivePendingIcalInventoryReconcileResult, Error>> {
     try {
       if (!isChannelInventoryApplyEnabled()) {
@@ -63,6 +76,16 @@ export class ForceRedrivePendingIcalInventoryReconcileUseCase {
       }
       if (!Number.isInteger(command.cursorVersion) || command.cursorVersion < 1) {
         return Result.fail(new ValidationError("cursorVersion must be a positive integer"));
+      }
+
+      if (
+        !this.permissionChecker.hasPermission(
+          actor,
+          PERMISSIONS.CHANNELS_CONNECTION_MANAGE,
+          tenantId,
+        )
+      ) {
+        return Result.fail(new ForbiddenError());
       }
 
       const gate = await this.connectionStatusFinder.findRedriveGate(
@@ -139,6 +162,12 @@ export class ForceRedrivePendingIcalInventoryReconcileUseCase {
             predecessor.id,
           );
           if (latest.idempotencyKey === expectedKey) {
+            const reused = {
+              jobId: latest.id,
+              predecessorJobId: predecessor.id,
+              idempotencyKey: expectedKey,
+            };
+            await this.appendAudit(tenantId, connectionId, command.cursorVersion, reused, audit);
             this.log({
               action: "channels.ical_inventory_reconcile_force_redrive",
               tenantId,
@@ -147,14 +176,10 @@ export class ForceRedrivePendingIcalInventoryReconcileUseCase {
               predecessorJobId: predecessor.id,
               predecessorStatus: predecessor.status,
               jobId: latest.id,
-              actorId: command.actorId ?? null,
+              actorId: audit.actorId,
               reusedExisting: true,
             });
-            return Result.ok({
-              jobId: latest.id,
-              predecessorJobId: predecessor.id,
-              idempotencyKey: expectedKey,
-            });
+            return Result.ok(reused);
           }
         }
         return Result.fail(
@@ -198,6 +223,15 @@ export class ForceRedrivePendingIcalInventoryReconcileUseCase {
         return Result.fail(enqueued.getError());
       }
 
+      const value: ForceRedrivePendingIcalInventoryReconcileResult = {
+        jobId: enqueued.getValue().id,
+        predecessorJobId: latest.id,
+        idempotencyKey,
+        previousJobStatus: predecessorStatus,
+      };
+
+      await this.appendAudit(tenantId, connectionId, command.cursorVersion, value, audit);
+
       this.log({
         action: "channels.ical_inventory_reconcile_force_redrive",
         tenantId,
@@ -205,19 +239,39 @@ export class ForceRedrivePendingIcalInventoryReconcileUseCase {
         cursorVersion: command.cursorVersion,
         predecessorJobId: latest.id,
         predecessorStatus,
-        jobId: enqueued.getValue().id,
-        actorId: command.actorId ?? null,
+        jobId: value.jobId,
+        actorId: audit.actorId,
         reusedExisting: false,
       });
 
-      return Result.ok({
-        jobId: enqueued.getValue().id,
-        predecessorJobId: latest.id,
-        idempotencyKey,
-        previousJobStatus: predecessorStatus,
-      });
+      return Result.ok(value);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
+  }
+
+  private async appendAudit(
+    tenantId: string,
+    connectionId: string,
+    cursorVersion: number,
+    value: ForceRedrivePendingIcalInventoryReconcileResult,
+    audit: UseCaseAuditContext,
+  ): Promise<void> {
+    await this.auditLog.append({
+      tenantId,
+      actorId: audit.actorId,
+      action: "channel.connection.inventory_reconcile_force_redrive",
+      resourceType: "ChannelInventoryReconciliation",
+      resourceId: `${connectionId}:${cursorVersion}`,
+      metadata: {
+        connectionId,
+        cursorVersion,
+        predecessorJobId: value.predecessorJobId,
+        successorJobId: value.jobId,
+        idempotencyKey: value.idempotencyKey,
+        previousJobStatus: value.previousJobStatus ?? null,
+      },
+      ipAddress: audit.ipAddress,
+    });
   }
 }

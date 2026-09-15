@@ -289,8 +289,12 @@ describe("P1-S7c Enable/DisableChannelConnectionInventoryApplyUseCase", () => {
     );
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().supersededPendingCount).toBe(1);
-    expect(stale.reconcileStatus).toBe("superseded");
-    expect(current.reconcileStatus).toBe("pending");
+    expect(generations.get(`${TENANT}:${CONNECTION}:1`)?.reconcileStatus).toBe(
+      "superseded",
+    );
+    expect(generations.get(`${TENANT}:${CONNECTION}:2`)?.reconcileStatus).toBe(
+      "pending",
+    );
   });
 
   it("disable succeeds with audit and is idempotent; does not supersede pending", async () => {

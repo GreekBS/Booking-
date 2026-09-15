@@ -14,6 +14,10 @@ import {
   type PendingInventoryReconciliationRef,
 } from "../../../../src/channels/application/SweepPendingIcalInventoryReconcileUseCase";
 import { ForceRedrivePendingIcalInventoryReconcileUseCase } from "../../../../src/channels/application/ForceRedrivePendingIcalInventoryReconcileUseCase";
+import { PermissionChecker } from "../../../../src/shared/services/PermissionChecker";
+import type { IAuditLogRepository } from "../../../../src/shared/ports/InfrastructurePorts";
+import type { ActorContext } from "../../../../src/shared/services/PermissionChecker";
+import type { UseCaseAuditContext } from "../../../../src/shared/types/AuditContext";
 import {
   buildIcalInventoryReconcilePrimaryJobKey,
   buildIcalInventoryReconcileSuccessorJobKey,
@@ -722,6 +726,15 @@ describe("P1-S6b outbox handler + sweep + force redrive", () => {
       const predJob = pred.getValue();
       predJob.status = "dead_letter";
 
+      const permissions = new PermissionChecker();
+      const auditLog: IAuditLogRepository = { append: async () => {} };
+      const actor: ActorContext = {
+        userId: "op-1",
+        role: "admin",
+        propertyIds: null,
+        isSuperAdmin: true,
+      };
+      const audit: UseCaseAuditContext = { actorId: "op-1", ipAddress: null };
       const force = new ForceRedrivePendingIcalInventoryReconcileUseCase(
         {
           listJobsForGeneration: async () => [predJob],
@@ -742,20 +755,29 @@ describe("P1-S6b outbox handler + sweep + force redrive", () => {
             inventoryApplyEnabled: true,
           }),
         },
+        permissions,
+        auditLog,
       );
 
       const [a, b] = await Promise.all([
-        force.execute({
-          tenantId: TENANT,
-          connectionId: CONNECTION,
-          cursorVersion: 1,
-          actorId: "op-1",
-        }),
-        force.execute({
-          tenantId: TENANT,
-          connectionId: CONNECTION,
-          cursorVersion: 1,
-        }),
+        force.execute(
+          {
+            tenantId: TENANT,
+            connectionId: CONNECTION,
+            cursorVersion: 1,
+          },
+          actor,
+          audit,
+        ),
+        force.execute(
+          {
+            tenantId: TENANT,
+            connectionId: CONNECTION,
+            cursorVersion: 1,
+          },
+          actor,
+          audit,
+        ),
       ]);
       expect(a.isSuccess && b.isSuccess).toBe(true);
       expect(a.getValue().jobId).toBe(b.getValue().jobId);
@@ -767,11 +789,15 @@ describe("P1-S6b outbox handler + sweep + force redrive", () => {
       );
 
       process.env.CHANNELS_INVENTORY_APPLY_ENABLED = "false";
-      const off = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-      });
+      const off = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        actor,
+        audit,
+      );
       expect(off.isFailure).toBe(true);
     } finally {
       if (previous === undefined) delete process.env.CHANNELS_INVENTORY_APPLY_ENABLED;

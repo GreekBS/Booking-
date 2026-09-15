@@ -4,6 +4,10 @@ import { ChannelListingMapping } from "../../src/channels/domain/ChannelListingM
 import { CredentialReference } from "../../src/channels/domain/value-objects/CredentialReference";
 import { ExecuteChannelPollConnectionUseCase } from "../../src/channels/application/ExecuteChannelPollConnectionUseCase";
 import { ForceRedrivePendingIcalInventoryReconcileUseCase } from "../../src/channels/application/ForceRedrivePendingIcalInventoryReconcileUseCase";
+import { PermissionChecker } from "../../src/shared/services/PermissionChecker";
+import type { IAuditLogRepository } from "../../src/shared/ports/InfrastructurePorts";
+import type { ActorContext } from "../../src/shared/services/PermissionChecker";
+import type { UseCaseAuditContext } from "../../src/shared/types/AuditContext";
 import {
   SweepPendingIcalInventoryReconcileUseCase,
   type IIcalInventoryReconcileJobQuery,
@@ -24,6 +28,16 @@ import type {
   EnqueueJobCommand,
   IJobScheduler,
 } from "../../src/shared/types/index";
+
+const forceRedrivePermissions = new PermissionChecker();
+const forceRedriveAuditLog: IAuditLogRepository = { append: async () => {} };
+const forceRedriveActor: ActorContext = {
+  userId: "op-1",
+  role: "admin",
+  propertyIds: null,
+  isSuperAdmin: true,
+};
+const forceRedriveAudit: UseCaseAuditContext = { actorId: "op-1", ipAddress: null };
 
 const TENANT = "550e8400-e29b-41d4-a716-446655440901";
 const CONNECTION = "conn-s7c-fence";
@@ -367,13 +381,19 @@ describe("P1-S7c inventory apply fence (global + connection)", () => {
         mappingVersion: 1,
       }),
       channelConnectionStatusFinderFromRepository(connections),
+      forceRedrivePermissions,
+      forceRedriveAuditLog,
     );
 
-    const result = await force.execute({
-      tenantId: TENANT,
-      connectionId: CONNECTION,
-      cursorVersion: 1,
-    });
+    const result = await force.execute(
+      {
+        tenantId: TENANT,
+        connectionId: CONNECTION,
+        cursorVersion: 1,
+      },
+      forceRedriveActor,
+      forceRedriveAudit,
+    );
     expect(result.isFailure).toBe(true);
     expect(result.getError()).toBeInstanceOf(ConflictError);
     expect((result.getError() as ConflictError).conflictType).toBe(

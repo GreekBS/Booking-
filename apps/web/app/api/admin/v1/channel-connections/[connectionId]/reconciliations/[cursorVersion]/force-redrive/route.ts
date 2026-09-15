@@ -1,11 +1,6 @@
 import { NextRequest } from "next/server";
-import { ForbiddenError, NotFoundError, ValidationError } from "@hcp/domain";
-import { PERMISSIONS } from "@hcp/permissions";
-import {
-  auditLogRepository,
-  forceRedrivePendingIcalInventoryReconcileUseCase,
-  permissionChecker,
-} from "@/lib/di/container";
+import { NotFoundError, ValidationError } from "@hcp/domain";
+import { forceRedrivePendingIcalInventoryReconcileUseCase } from "@/lib/di/container";
 import {
   requireTenantContext,
   toPermissionActor,
@@ -31,7 +26,8 @@ function assertOperatorApiEnabled(): void {
 
 /**
  * P1-S7b — ForceRedrive pending iCal inventory reconcile (dead_letter | cancelled).
- * Domain behavior remains in ForceRedrivePendingIcalInventoryReconcileUseCase.
+ * Domain behavior, authorization, and audit remain in
+ * ForceRedrivePendingIcalInventoryReconcileUseCase.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
@@ -49,17 +45,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       throw new ValidationError("cursorVersion must be a positive integer");
     }
 
-    const permissionActor = toPermissionActor(actor);
-    if (
-      !permissionChecker.hasPermission(
-        permissionActor,
-        PERMISSIONS.CHANNELS_CONNECTION_MANAGE,
-        actor.tenantId,
-      )
-    ) {
-      throw new ForbiddenError();
-    }
-
     const contentType = request.headers.get("content-type");
     if (contentType?.includes("application/json")) {
       const text = await request.text();
@@ -71,35 +56,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     }
 
-    const result = await forceRedrivePendingIcalInventoryReconcileUseCase.execute({
-      tenantId: actor.tenantId,
-      connectionId,
-      cursorVersion,
-      actorId: actor.userId,
-    });
+    const result = await forceRedrivePendingIcalInventoryReconcileUseCase.execute(
+      {
+        tenantId: actor.tenantId,
+        connectionId,
+        cursorVersion,
+      },
+      toPermissionActor(actor),
+      { actorId: actor.userId, ipAddress: getClientIp(request) },
+    );
 
     if (result.isFailure) {
       return mapResultError(result.getError());
     }
 
     const value = result.getValue();
-
-    await auditLogRepository.append({
-      tenantId: actor.tenantId,
-      actorId: actor.userId,
-      action: "channel.connection.inventory_reconcile_force_redrive",
-      resourceType: "ChannelInventoryReconciliation",
-      resourceId: `${connectionId}:${cursorVersion}`,
-      metadata: {
-        connectionId,
-        cursorVersion,
-        predecessorJobId: value.predecessorJobId,
-        successorJobId: value.jobId,
-        idempotencyKey: value.idempotencyKey,
-        previousJobStatus: value.previousJobStatus ?? null,
-      },
-      ipAddress: getClientIp(request),
-    });
 
     logger.info("force redrive enqueued", {
       tenantId: actor.tenantId,

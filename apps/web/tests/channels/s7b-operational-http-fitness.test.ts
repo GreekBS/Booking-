@@ -39,10 +39,11 @@ describe("P1-S7b operational HTTP fitness (web)", () => {
       expect(source).toMatch(/isChannelOperatorApiEnabled/);
       expect(source).not.toMatch(/feedUrl|BEGIN:VCALENDAR/i);
     }
-    expect(readFileSync(force, "utf8")).toMatch(
-      /forceRedrivePendingIcalInventoryReconcileUseCase/,
-    );
-    expect(readFileSync(force, "utf8")).toMatch(/auditLogRepository\.append/);
+    const forceSource = readFileSync(force, "utf8");
+    expect(forceSource).toMatch(/forceRedrivePendingIcalInventoryReconcileUseCase/);
+    expect(forceSource).toMatch(/toPermissionActor/);
+    expect(forceSource).not.toMatch(/auditLogRepository/);
+    expect(forceSource).not.toMatch(/permissionChecker/);
     expect(readFileSync(health, "utf8")).toMatch(/getChannelConnectionHealthUseCase/);
     expect(readFileSync(deactivate, "utf8")).toMatch(
       /deactivateChannelConnectionInventoryUseCase/,

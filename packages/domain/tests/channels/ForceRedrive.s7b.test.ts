@@ -12,10 +12,24 @@ import type {
   IJobScheduler,
 } from "../../src/shared/types/index";
 import { ConflictError } from "../../src/shared/errors/DomainError";
+import { PermissionChecker } from "../../src/shared/services/PermissionChecker";
+import type { IAuditLogRepository } from "../../src/shared/ports/InfrastructurePorts";
+import type { ActorContext } from "../../src/shared/services/PermissionChecker";
+import type { UseCaseAuditContext } from "../../src/shared/types/AuditContext";
 
 const TENANT = "550e8400-e29b-41d4-a716-446655440801";
 const CONNECTION = "conn-s7b-fr";
 const MAPPING = "map-s7b-fr";
+
+const permissions = new PermissionChecker();
+const noopAuditLog: IAuditLogRepository = { append: async () => {} };
+const operatorActor: ActorContext = {
+  userId: "op-1",
+  role: "admin",
+  propertyIds: null,
+  isSuperAdmin: true,
+};
+const operatorAudit: UseCaseAuditContext = { actorId: "op-1", ipAddress: null };
 
 class FakeJobScheduler implements IJobScheduler {
   readonly jobs: BackgroundJobEntry[] = [];
@@ -90,26 +104,34 @@ describe("P1-S7b ForceRedrivePendingIcalInventoryReconcileUseCase", () => {
             inventoryApplyEnabled: true,
           }),
         },
+        permissions,
+        noopAuditLog,
       );
 
-      const first = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-        actorId: "op-1",
-      });
+      const first = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        operatorActor,
+        operatorAudit,
+      );
       expect(first.isSuccess).toBe(true);
       expect(first.getValue().previousJobStatus).toBe("dead_letter");
 
       const successor = scheduler.jobs.find((j) => j.id === first.getValue().jobId)!;
       jobsForGeneration = [successor, predJob];
 
-      const second = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-        actorId: "op-1",
-      });
+      const second = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        operatorActor,
+        operatorAudit,
+      );
       expect(second.isSuccess).toBe(true);
       expect(second.getValue().jobId).toBe(first.getValue().jobId);
       expect(second.getValue().idempotencyKey).toBe(
@@ -160,13 +182,19 @@ describe("P1-S7b ForceRedrivePendingIcalInventoryReconcileUseCase", () => {
             inventoryApplyEnabled: true,
           }),
         },
+        permissions,
+        noopAuditLog,
       );
 
-      const result = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 2,
-      });
+      const result = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 2,
+        },
+        operatorActor,
+        operatorAudit,
+      );
       expect(result.isSuccess).toBe(true);
       expect(result.getValue().previousJobStatus).toBe("cancelled");
     } finally {
@@ -197,12 +225,18 @@ describe("P1-S7b ForceRedrivePendingIcalInventoryReconcileUseCase", () => {
             inventoryApplyEnabled: true,
           }),
         },
+        permissions,
+        noopAuditLog,
       );
-      const result = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-      });
+      const result = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        operatorActor,
+        operatorAudit,
+      );
       expect(result.isFailure).toBe(true);
       expect(result.getError()).toBeInstanceOf(ConflictError);
     } finally {
@@ -226,12 +260,18 @@ describe("P1-S7b ForceRedrivePendingIcalInventoryReconcileUseCase", () => {
             inventoryApplyEnabled: true,
           }),
         },
+        permissions,
+        noopAuditLog,
       );
-      const result = await force.execute({
-        tenantId: TENANT,
-        connectionId: CONNECTION,
-        cursorVersion: 1,
-      });
+      const result = await force.execute(
+        {
+          tenantId: TENANT,
+          connectionId: CONNECTION,
+          cursorVersion: 1,
+        },
+        operatorActor,
+        operatorAudit,
+      );
       expect(result.isFailure).toBe(true);
     } finally {
       if (previous === undefined) delete process.env.CHANNELS_INVENTORY_APPLY_ENABLED;

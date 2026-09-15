@@ -52,7 +52,7 @@ export class InMemoryChannelConnectionInventoryApplyStore
     const committedCursorVersion = cursor?.version ?? null;
     let supersededPendingCount = 0;
 
-    for (const generation of this.generations.values()) {
+    for (const [key, generation] of this.generations.entries()) {
       if (
         generation.tenantId !== command.tenantId ||
         generation.connectionId !== command.connectionId ||
@@ -64,7 +64,11 @@ export class InMemoryChannelConnectionInventoryApplyStore
         committedCursorVersion === null ||
         generation.cursorVersion < committedCursorVersion;
       if (stale) {
-        generation.reconcileStatus = "superseded";
+        // Domain record is readonly; replace the map entry (Prisma UPDATE parity).
+        this.generations.set(key, {
+          ...generation,
+          reconcileStatus: "superseded",
+        });
         supersededPendingCount += 1;
       }
     }
