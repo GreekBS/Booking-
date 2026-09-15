@@ -4,15 +4,15 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@hcp/database/client";
+import { edgeAuthConfig } from "@/lib/auth/auth.config";
 
+/**
+ * Full Node-runtime Auth.js config: adapter, providers, password verify.
+ * Used by API routes and server components — never import from middleware.
+ */
 export const authConfig: NextAuthConfig = {
-  secret: process.env.AUTH_SECRET,
-  trustHost: true,
+  ...edgeAuthConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -55,26 +55,4 @@ export const authConfig: NextAuthConfig = {
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (user) {
-        token.sub = user.id;
-        token.platformRole = user.platformRole ?? null;
-      }
-
-      if (trigger === "update" && session?.activeTenantId) {
-        token.activeTenantId = session.activeTenantId;
-      }
-
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub;
-        session.user.platformRole = token.platformRole ?? null;
-        session.user.activeTenantId = (token.activeTenantId as string | null) ?? null;
-      }
-      return session;
-    },
-  },
 };

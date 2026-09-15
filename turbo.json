@@ -3,7 +3,11 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "@hcp/database#build": {
+      "cache": false,
+      "outputs": []
     },
     "dev": {
       "cache": false,
