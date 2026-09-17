@@ -367,6 +367,9 @@ const propertyRepository = new PrismaPropertyRepository(outboxRepository);
 
 const userRepository = new PrismaUserRepository();
 
+/** Exported for request-time authoritative platformRole hydration (Phase F.1). */
+export { userRepository };
+
 const membershipRepository = new PrismaMembershipRepository(outboxRepository);
 
 const invitationRepository = new PrismaInvitationRepository(outboxRepository);
@@ -658,8 +661,6 @@ export const verifyEmailUseCase = new VerifyEmailUseCase(
   verificationTokenRepository,
 
 );
-
-
 
 const catalogQueryAdapter = new PrismaCatalogQueryAdapter();
 

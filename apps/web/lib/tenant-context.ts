@@ -1,11 +1,15 @@
 import { auth } from "@/lib/auth/config";
-import { resolveTenantContextUseCase } from "@/lib/di/container";
+import {
+  resolveTenantContextUseCase,
+  userRepository,
+} from "@/lib/di/container";
 import { UnauthorizedError, ForbiddenError } from "@hcp/domain";
 import type { TenantRole } from "@hcp/domain";
 
 export interface SessionActor {
   userId: string;
   email: string;
+  /** Authoritative DB platformRole — never trust JWT claim for privilege. */
   platformRole: "super_admin" | null;
   activeTenantId: string | null;
 }
@@ -17,16 +21,47 @@ export interface TenantActor extends SessionActor {
   isSuperAdmin: boolean;
 }
 
+/**
+ * Authenticated identity from JWT (`session.user.id` ← `sub`), with
+ * `platformRole` hydrated from the database on every request.
+ *
+ * middleware may still use JWT platformRole as a UX filter only.
+ * This function is the security authority for server-side privilege.
+ */
 export async function requireSession(): Promise<SessionActor> {
   const session = await auth();
   if (!session?.user?.id) {
     throw new UnauthorizedError();
   }
 
+  const userId = session.user.id;
+  const jwtRole = session.user.platformRole ?? null;
+
+  let user;
+  try {
+    user = await userRepository.findById(userId);
+  } catch {
+    // Fail closed: never fall back to JWT platformRole on infrastructure errors.
+    throw new ForbiddenError("Unable to verify platform authority");
+  }
+
+  if (!user) {
+    throw new UnauthorizedError();
+  }
+
+  const platformRole = user.platformRole;
+
+  if (jwtRole === "super_admin" && platformRole !== "super_admin") {
+    console.warn(
+      "[auth] platformRole mismatch: JWT claimed super_admin, DB role is null",
+      { userId },
+    );
+  }
+
   return {
-    userId: session.user.id,
-    email: session.user.email ?? "",
-    platformRole: session.user.platformRole,
+    userId,
+    email: session.user.email ?? user.toProps().email,
+    platformRole,
     activeTenantId: session.user.activeTenantId,
   };
 }
@@ -42,6 +77,7 @@ export async function requireSuperAdmin(): Promise<SessionActor> {
 export async function requireTenantContext(
   tenantIdHeader?: string | null,
 ): Promise<TenantActor> {
+  // platformRole here is already DB-authoritative (via requireSession).
   const actor = await requireSession();
   const tenantId = tenantIdHeader ?? actor.activeTenantId;
 

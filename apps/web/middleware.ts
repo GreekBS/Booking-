@@ -1,3 +1,10 @@
+/**
+ * Middleware uses JWT `platformRole` as an early UX/navigation filter only.
+ * It is NOT a security boundary for platform privilege.
+ *
+ * Authoritative privilege checks run in Node via requireSession /
+ * requireSuperAdmin / requireTenantContext (DB User.platformRole).
+ */
 import { auth } from "@/lib/auth/edge";
 import { NextResponse } from "next/server";
 
