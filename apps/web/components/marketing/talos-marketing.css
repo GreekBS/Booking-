@@ -1,0 +1,64 @@
+/* Scoped Talos marketing tokens — does not override admin app chrome. */
+.talos-marketing {
+  --talos-ink: #121614;
+  --talos-ink-soft: #2a302c;
+  --talos-paper: #f6f4ef;
+  --talos-sand: #e8e2d6;
+  --talos-mist: #d7ddd6;
+  --talos-forest: #1f4d3a;
+  --talos-forest-deep: #16382b;
+  --talos-copper: #9a6b3f;
+  --talos-muted: #6a726c;
+  --talos-line: rgba(18, 22, 20, 0.12);
+
+  color: var(--talos-ink);
+  background: var(--talos-paper);
+  font-family: var(--font-talos-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.talos-marketing ::selection {
+  background: color-mix(in srgb, var(--talos-forest) 28%, white);
+}
+
+.talos-marketing .talos-display {
+  font-family: var(--font-talos-display), ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+.talos-marketing .talos-container {
+  width: min(1120px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.talos-marketing .talos-section {
+  padding-block: clamp(3.5rem, 8vw, 6.5rem);
+}
+
+.talos-marketing .talos-kicker {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--talos-forest);
+}
+
+.talos-marketing .talos-lede {
+  color: var(--talos-muted);
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+  line-height: 1.65;
+  max-width: 38rem;
+}
+
+.talos-marketing a:focus-visible,
+.talos-marketing button:focus-visible {
+  outline: 2px solid var(--talos-forest);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talos-marketing * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

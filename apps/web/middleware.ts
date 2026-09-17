@@ -7,6 +7,7 @@
  */
 import { auth } from "@/lib/auth/edge";
 import { NextResponse } from "next/server";
+import { isPublicMarketingPath } from "@/lib/marketing/site";
 
 export async function middleware(request: Request) {
   const requestId = crypto.randomUUID();
@@ -17,6 +18,9 @@ export async function middleware(request: Request) {
     url.pathname.startsWith("/forgot-password") ||
     url.pathname.startsWith("/invite");
   const isDevPreview = url.pathname.startsWith("/dev");
+  const isMarketingPublic = isPublicMarketingPath(url.pathname);
+  const isSeoFile =
+    url.pathname === "/robots.txt" || url.pathname === "/sitemap.xml";
   const isApiAuth =
     url.pathname.startsWith("/api/auth") &&
     !url.pathname.startsWith("/api/auth/register") &&
@@ -31,14 +35,20 @@ export async function middleware(request: Request) {
     return response;
   };
 
-  if (isApiAuth || isPublicInvite) {
+  if (isApiAuth || isPublicInvite || isSeoFile) {
     return attachRequestId(NextResponse.next());
   }
 
   const session = await auth();
   const isApi = url.pathname.startsWith("/api/");
 
-  if (!session?.user && !isAuthPage && !isDevPreview && !url.pathname.startsWith("/api/auth/")) {
+  if (
+    !session?.user &&
+    !isAuthPage &&
+    !isDevPreview &&
+    !isMarketingPublic &&
+    !url.pathname.startsWith("/api/auth/")
+  ) {
     if (isApi) {
       return attachRequestId(
         NextResponse.json(

@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { TALOS_BRAND } from "@/lib/marketing/site";
 
 export const metadata: Metadata = {
-  title: "HCP — Hospitality Commerce Platform",
-  description: "Platform admin",
+  title: {
+    default: `${TALOS_BRAND.name} — Hospitality platform`,
+    template: `%s · ${TALOS_BRAND.name}`,
+  },
+  description: TALOS_BRAND.tagline,
+  applicationName: TALOS_BRAND.name,
 };
 
 export default function RootLayout({

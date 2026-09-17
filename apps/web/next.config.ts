@@ -8,6 +8,15 @@ const repoRoot = path.resolve(process.cwd(), "../..");
 dotenv.config({ path: path.join(repoRoot, "packages", "database", ".env") });
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+    ],
+  },
   transpilePackages: [
     "@hcp/domain",
     "@hcp/database",
