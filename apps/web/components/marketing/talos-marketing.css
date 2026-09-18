@@ -56,8 +56,135 @@
   outline-offset: 3px;
 }
 
+/* Sign-in dialog — portal content may render outside .talos-marketing; tokens repeated for safety. */
+.talos-signin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(18, 22, 20, 0.38);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: talos-signin-overlay-in 220ms ease-out;
+}
+
+.talos-signin-dialog {
+  position: fixed;
+  left: 50%;
+  top: min(12vh, 5.5rem);
+  z-index: 61;
+  display: flex;
+  width: min(28rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 2rem);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(18, 22, 20, 0.12);
+  border-radius: 2px;
+  background: #f6f4ef;
+  color: #121614;
+  padding: 1.35rem 1.35rem 1.5rem;
+  box-shadow: 0 24px 60px -36px rgba(18, 22, 20, 0.45);
+  transform: translateX(-50%);
+  font-family: var(--font-talos-sans), ui-sans-serif, system-ui, sans-serif;
+  animation: talos-signin-dialog-in 220ms ease-out;
+  /* Height adapts to view content without forcing Sign-in to Register height. */
+  transition: none;
+}
+
+.talos-auth-view {
+  animation: talos-auth-view-in 180ms ease-out;
+}
+
+@keyframes talos-auth-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 640px) {
+  .talos-signin-dialog {
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 1.6rem 1.65rem 1.75rem;
+  }
+}
+
+.talos-signin-close {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(18, 22, 20, 0.12);
+  border-radius: 2px;
+  color: #2a302c;
+  background: transparent;
+}
+
+.talos-signin-close:hover {
+  background: #e8e2d6;
+}
+
+.talos-signin-close:focus-visible,
+.talos-signin-dialog a:focus-visible,
+.talos-signin-dialog button:focus-visible,
+.talos-signin-dialog input:focus-visible {
+  outline: 2px solid #1f4d3a;
+  outline-offset: 3px;
+}
+
+.talos-signin-dialog .talos-display {
+  font-family: var(--font-talos-display), ui-serif, Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+@keyframes talos-signin-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes talos-signin-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px)) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (max-width: 639px) {
+  @keyframes talos-signin-dialog-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .talos-marketing * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .talos-signin-overlay,
+  .talos-signin-dialog,
+  .talos-auth-view {
     animation: none !important;
     transition: none !important;
   }

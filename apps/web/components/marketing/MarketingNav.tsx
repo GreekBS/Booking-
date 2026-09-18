@@ -4,26 +4,35 @@ import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { PRIMARY_NAV } from "@/lib/marketing/site";
 import { MarketingButton } from "./MarketingButton";
+import { MarketingAuthDialog } from "./MarketingAuthDialog";
 
 export function MarketingNav() {
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const panelId = useId();
 
   useEffect(() => {
-    if (!open) return;
+    if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") setMenuOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [menuOpen]);
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    // Body lock for mobile menu only; Radix Dialog handles lock when auth dialog is open.
+    if (authOpen) return;
+    document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [menuOpen, authOpen]);
+
+  function openAuth() {
+    setMenuOpen(false);
+    setAuthOpen(true);
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--talos-line)] bg-[color-mix(in_srgb,var(--talos-paper)_92%,transparent)] backdrop-blur-md">
@@ -49,22 +58,24 @@ export function MarketingNav() {
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={openAuth}
+            data-testid="marketing-sign-in-desktop"
             className="text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
           >
             Sign in
-          </Link>
+          </button>
           <MarketingButton href="/register">Get started</MarketingButton>
         </div>
 
         <button
           type="button"
           className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[var(--talos-line)] lg:hidden"
-          aria-expanded={open}
+          aria-expanded={menuOpen}
           aria-controls={panelId}
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((v) => !v)}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          onClick={() => setMenuOpen((v) => !v)}
         >
           <span className="sr-only">Menu</span>
           <span aria-hidden className="flex w-4 flex-col gap-1.5">
@@ -75,7 +86,7 @@ export function MarketingNav() {
         </button>
       </div>
 
-      {open ? (
+      {menuOpen ? (
         <div
           id={panelId}
           className="border-t border-[var(--talos-line)] bg-[var(--talos-paper)] lg:hidden"
@@ -86,19 +97,20 @@ export function MarketingNav() {
                 key={item.href}
                 href={item.href}
                 className="rounded-sm px-2 py-3 text-base font-medium text-[var(--talos-ink)]"
-                onClick={() => setOpen(false)}
+                onClick={() => setMenuOpen(false)}
               >
                 {item.label}
               </Link>
             ))}
             <div className="mt-3 flex flex-col gap-2 border-t border-[var(--talos-line)] pt-4">
-              <Link
-                href="/login"
-                className="rounded-sm px-2 py-3 text-base font-medium"
-                onClick={() => setOpen(false)}
+              <button
+                type="button"
+                className="rounded-sm px-2 py-3 text-left text-base font-medium"
+                data-testid="marketing-sign-in-mobile"
+                onClick={openAuth}
               >
                 Sign in
-              </Link>
+              </button>
               <MarketingButton href="/register" className="w-full">
                 Get started
               </MarketingButton>
@@ -106,6 +118,8 @@ export function MarketingNav() {
           </nav>
         </div>
       ) : null}
+
+      <MarketingAuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>
   );
 }
