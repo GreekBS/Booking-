@@ -19,8 +19,8 @@ import {
   countOutboxForAggregate,
   prisma,
 } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("IdentityRepository integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

@@ -19,7 +19,9 @@ export function HeroSection() {
             Talos — or let our team manage the operation for you.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <MarketingButton href="/register">Get started</MarketingButton>
+            <MarketingButton href="/get-started?source=homepage_hero">
+              Get started
+            </MarketingButton>
             <MarketingButton href="/property-management" variant="secondary">
               Let Talos manage my property
             </MarketingButton>

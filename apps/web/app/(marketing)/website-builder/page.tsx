@@ -35,7 +35,9 @@ export default function WebsiteBuilderPage() {
             direct guests.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <MarketingButton href="/register">Get started</MarketingButton>
+            <MarketingButton href="/get-started?source=website_builder">
+              Get started
+            </MarketingButton>
             <MarketingButton href="/direct-bookings" variant="secondary">
               Direct booking journey
             </MarketingButton>
@@ -78,7 +80,7 @@ export default function WebsiteBuilderPage() {
           />
         </div>
       </section>
-      <FinalCtaSection />
+      <FinalCtaSection getStartedHref="/get-started?source=website_builder" />
     </>
   );
 }

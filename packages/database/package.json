@@ -5,19 +5,22 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./safety": "./src/safety/databaseTargetGuard.ts"
   },
   "scripts": {
     "postinstall": "prisma generate",
     "build": "prisma generate",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate deploy",
-    "db:migrate:dev": "prisma migrate dev",
-    "db:push": "prisma db push",
+    "db:migrate": "tsx scripts/guarded-prisma.ts migrate deploy",
+    "db:migrate:dev": "tsx scripts/guarded-prisma.ts migrate dev",
+    "db:push": "tsx scripts/guarded-prisma.ts db push",
     "db:seed": "tsx seed/index.ts",
-    "db:studio": "prisma studio",
+    "db:studio": "tsx scripts/guarded-prisma.ts studio",
     "test": "vitest run",
     "test:integration": "vitest run tests/integration",
+    "test:safety": "vitest run tests/safety",
+    "test:last-sa-isolated": "tsx scripts/run-last-sa-isolated-proof.ts",
     "lint": "eslint src --max-warnings 0 && tsc --noEmit"
   },
   "dependencies": {

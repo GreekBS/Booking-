@@ -18,8 +18,9 @@ import {
   setTenantContext,
 } from "../../src";
 import { prisma } from "./helpers";
+import { integrationDatabaseConfigured } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL
+const runIntegration = integrationDatabaseConfigured
   ? (title: string, fn: () => void) =>
       describe(title, { hookTimeout: 120_000, timeout: 120_000 }, fn)
   : describe.skip;

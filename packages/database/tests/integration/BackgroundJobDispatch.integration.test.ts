@@ -11,8 +11,8 @@ import {
   PrismaJobScheduler,
 } from "../../src/repositories/BackgroundJobRepository";
 import { truncateIntegrationTables, prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("Background job dispatch integration", () => {
   const jobRepository = new PrismaBackgroundJobRepository();

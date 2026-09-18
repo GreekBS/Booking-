@@ -11,6 +11,8 @@ describe("isPublicMarketingPath", () => {
     expect(isPublicMarketingPath("/direct-bookings")).toBe(true);
     expect(isPublicMarketingPath("/vacation-rental-software")).toBe(true);
     expect(isPublicMarketingPath("/contact")).toBe(true);
+    expect(isPublicMarketingPath("/privacy")).toBe(true);
+    expect(isPublicMarketingPath("/get-started")).toBe(true);
   });
 
   it("does not treat Super Admin /platform as marketing", () => {

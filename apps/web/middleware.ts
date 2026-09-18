@@ -21,6 +21,9 @@ export async function middleware(request: Request) {
   const isMarketingPublic = isPublicMarketingPath(url.pathname);
   const isSeoFile =
     url.pathname === "/robots.txt" || url.pathname === "/sitemap.xml";
+  /** Public marketing lead capture only — not a broad /api/marketing/* allowlist. */
+  const isPublicMarketingLeadApi =
+    url.pathname === "/api/marketing/v1/leads";
   const isApiAuth =
     url.pathname.startsWith("/api/auth") &&
     !url.pathname.startsWith("/api/auth/register") &&
@@ -47,6 +50,7 @@ export async function middleware(request: Request) {
     !isAuthPage &&
     !isDevPreview &&
     !isMarketingPublic &&
+    !isPublicMarketingLeadApi &&
     !url.pathname.startsWith("/api/auth/")
   ) {
     if (isApi) {

@@ -1,8 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 import { config as loadEnv } from "dotenv";
+import { applyIntegrationTestDatabaseEnv } from "@hcp/database/safety";
 import path from "node:path";
 
 loadEnv({ path: path.resolve(__dirname, "../../packages/database/.env") });
+if (applyIntegrationTestDatabaseEnv() === "missing") {
+  throw new Error(
+    "Playwright e2e requires TEST_DATABASE_URL (isolated non-production PostgreSQL). " +
+      "DATABASE_URL is not used as a fallback. " +
+      "REFUSING TO RUN DATABASE TEST/MUTATION AGAINST TALOS PRODUCTION DATABASE",
+  );
+}
 
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 
@@ -25,8 +33,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
-      DATABASE_URL: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "",
-      DIRECT_URL: process.env.DIRECT_URL ?? "",
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
+      DIRECT_URL: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "",
       AUTH_SECRET: process.env.AUTH_SECRET ?? "",
       AUTH_URL: e2eBaseUrl,
       AUTH_TRUST_HOST: "true",

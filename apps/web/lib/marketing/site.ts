@@ -77,6 +77,12 @@ export const MARKETING_ROUTES = [
     changeFrequency: "yearly" as const,
     priority: 0.5,
   },
+  {
+    path: "/privacy",
+    title: "Privacy Policy",
+    changeFrequency: "yearly" as const,
+    priority: 0.3,
+  },
 ] as const;
 
 export type MarketingNavItem = {
@@ -115,7 +121,10 @@ export const FOOTER_GROUPS: Array<{
   },
   {
     title: "Company",
-    links: [{ label: "Contact", href: "/contact" }],
+    links: [
+      { label: "Contact", href: "/contact" },
+      { label: "Privacy", href: "/privacy" },
+    ],
   },
 ];
 
@@ -129,6 +138,8 @@ export const PUBLIC_MARKETING_PATHS = [
   "/property-management",
   "/vacation-rental-software",
   "/contact",
+  "/privacy",
+  "/get-started",
 ] as const;
 
 export function isPublicMarketingPath(pathname: string): boolean {

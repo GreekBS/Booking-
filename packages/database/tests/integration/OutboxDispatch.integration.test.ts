@@ -17,8 +17,8 @@ import { TimezoneService } from "../../src/adapters/TimezoneService";
 import { UuidIdGenerator } from "../../src/UuidIdGenerator";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { seedCommerceFixture } from "./commerceFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("Outbox dispatch integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

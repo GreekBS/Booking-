@@ -11,8 +11,8 @@ import {
   PrismaExternalReservationLinkRepository,
 } from "../../src";
 import { prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("Channels persistence integration (CM-2a)", () => {
   const connectionRepository = new PrismaChannelConnectionRepository();

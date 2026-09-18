@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { verifyRlsPoliciesActive, prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("PostgreSQL RLS verification", () => {
   afterAll(async () => {

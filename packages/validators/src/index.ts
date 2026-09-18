@@ -142,3 +142,4 @@ export * from "./commerce";
 export * from "./storefront";
 export * from "./admin";
 export * from "./internal";
+export * from "./marketing";

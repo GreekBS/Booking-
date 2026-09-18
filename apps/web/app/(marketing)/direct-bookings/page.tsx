@@ -34,7 +34,9 @@ export default function DirectBookingsPage() {
             picture.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <MarketingButton href="/register">Get started</MarketingButton>
+            <MarketingButton href="/get-started?source=direct_bookings">
+              Get started
+            </MarketingButton>
             <MarketingButton href="/website-builder" variant="secondary">
               Branded property presence
             </MarketingButton>
@@ -90,7 +92,7 @@ export default function DirectBookingsPage() {
           ))}
         </div>
       </section>
-      <FinalCtaSection />
+      <FinalCtaSection getStartedHref="/get-started?source=direct_bookings" />
     </>
   );
 }

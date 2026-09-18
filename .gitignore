@@ -28,6 +28,7 @@ Thumbs.db
 
 # Playwright / local temp artifacts
 **/test-results/
+packages/database/.tmp/
 **/playwright-report/
 **/blob-report/
 apps/web/tmp-test.css

@@ -25,8 +25,9 @@ import {
   PrismaJobScheduler,
 } from "../../src";
 import { prisma, setTenantContext } from "./helpers";
+import { integrationDatabaseConfigured } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL
+const runIntegration = integrationDatabaseConfigured
   ? (title: string, fn: () => void) =>
       describe(title, { hookTimeout: 180_000, timeout: 180_000 }, fn)
   : describe.skip;

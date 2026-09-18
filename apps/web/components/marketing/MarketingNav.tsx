@@ -66,7 +66,9 @@ export function MarketingNav() {
           >
             Sign in
           </button>
-          <MarketingButton href="/register">Get started</MarketingButton>
+          <MarketingButton href="/get-started?source=homepage_nav">
+            Get started
+          </MarketingButton>
         </div>
 
         <button
@@ -111,7 +113,10 @@ export function MarketingNav() {
               >
                 Sign in
               </button>
-              <MarketingButton href="/register" className="w-full">
+              <MarketingButton
+                href="/get-started?source=homepage_nav"
+                className="w-full"
+              >
                 Get started
               </MarketingButton>
             </div>

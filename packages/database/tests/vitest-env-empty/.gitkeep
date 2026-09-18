@@ -1,0 +1,2 @@
+# Intentionally empty — Vitest envDir must not reload packages/database/.env
+# (which may contain Production credentials) into the test process.

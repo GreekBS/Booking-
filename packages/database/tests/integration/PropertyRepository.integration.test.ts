@@ -11,8 +11,8 @@ import {
   setTenantContext,
   clearTenantContext,
 } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("PropertyRepository integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

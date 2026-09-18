@@ -31,10 +31,13 @@ export default function ContactPage() {
               Software path
             </p>
             <p className="mt-2 text-sm text-[var(--talos-ink-soft)]">
-              Create an account and start configuring your hospitality operation in Talos.
+              Share a few details about your hospitality business so we can understand the right
+              Talos path. Creating an account remains optional and separate.
             </p>
             <div className="mt-4">
-              <MarketingButton href="/register">Get started with Talos</MarketingButton>
+              <MarketingButton href="/get-started?source=contact">
+                Get started with Talos
+              </MarketingButton>
             </div>
           </div>
 
@@ -66,7 +69,9 @@ export default function ContactPage() {
                   <MarketingButton href="/property-management" variant="secondary">
                     Review property management
                   </MarketingButton>
-                  <MarketingButton href="/register">Get started meanwhile</MarketingButton>
+                  <MarketingButton href="/get-started?source=contact">
+                    Get started meanwhile
+                  </MarketingButton>
                 </div>
                 <p className="mt-4 text-xs text-[var(--talos-muted)]">
                   Launch note: set{" "}

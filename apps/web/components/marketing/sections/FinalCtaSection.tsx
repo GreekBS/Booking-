@@ -1,6 +1,10 @@
 import { MarketingButton } from "../MarketingButton";
 
-export function FinalCtaSection() {
+export function FinalCtaSection({
+  getStartedHref = "/get-started?source=homepage_final",
+}: {
+  getStartedHref?: string;
+}) {
   return (
     <section className="talos-section bg-[var(--talos-ink)] text-[var(--talos-paper)]">
       <div className="talos-container max-w-3xl text-center">
@@ -12,7 +16,7 @@ export function FinalCtaSection() {
           option of professional management when they want a partner.
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <MarketingButton href="/register" variant="on-dark">
+          <MarketingButton href={getStartedHref} variant="on-dark">
             Get started with Talos
           </MarketingButton>
           <MarketingButton

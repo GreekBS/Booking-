@@ -34,7 +34,9 @@ export default function VacationRentalSoftwarePage() {
             our team manage the property when you prefer a partner.
           </p>
           <div className="mt-8">
-            <MarketingButton href="/register">Get started</MarketingButton>
+            <MarketingButton href="/get-started?source=vacation_rental_software">
+              Get started
+            </MarketingButton>
           </div>
         </div>
       </section>
@@ -96,7 +98,7 @@ export default function VacationRentalSoftwarePage() {
           ))}
         </div>
       </section>
-      <FinalCtaSection />
+      <FinalCtaSection getStartedHref="/get-started?source=vacation_rental_software" />
     </>
   );
 }

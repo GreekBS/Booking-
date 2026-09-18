@@ -58,6 +58,9 @@ import {
 
   VerifyEmailUseCase,
 
+
+  CreateLeadUseCase,
+
   PermissionChecker,
 
   CheckAvailabilityUseCase,
@@ -248,11 +251,14 @@ import {
 
   PrismaUserRepository,
 
+
   PrismaMembershipRepository,
 
   PrismaInvitationRepository,
 
   PrismaAuditLogRepository,
+
+  PrismaLeadRepository,
 
   PrismaAmenityRepository,
 
@@ -369,6 +375,7 @@ const userRepository = new PrismaUserRepository();
 
 /** Exported for request-time authoritative platformRole hydration (Phase F.1). */
 export { userRepository };
+
 
 const membershipRepository = new PrismaMembershipRepository(outboxRepository);
 
@@ -634,6 +641,16 @@ export const registerUserUseCase = new RegisterUserUseCase(
 
 );
 
+const leadRepository = new PrismaLeadRepository();
+
+export const createLeadUseCase = new CreateLeadUseCase(
+
+  leadRepository,
+
+  idGenerator,
+
+);
+
 export const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
 
   userRepository,
@@ -661,6 +678,7 @@ export const verifyEmailUseCase = new VerifyEmailUseCase(
   verificationTokenRepository,
 
 );
+
 
 const catalogQueryAdapter = new PrismaCatalogQueryAdapter();
 

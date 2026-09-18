@@ -3,7 +3,6 @@ import Image from "next/image";
 import { MarketingButton } from "@/components/marketing/MarketingButton";
 import { FinalCtaSection } from "@/components/marketing/sections/FinalCtaSection";
 import { buildPageMetadata, JsonLd, serviceJsonLd } from "@/lib/marketing/seo";
-import { getContactEmail } from "@/lib/marketing/site";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Full property management",
@@ -13,8 +12,6 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function PropertyManagementPage() {
-  const email = getContactEmail();
-
   return (
     <>
       <JsonLd
@@ -38,10 +35,10 @@ export default function PropertyManagementPage() {
               platform where supported.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <MarketingButton href={email ? `mailto:${email}` : "/contact"}>
+              <MarketingButton href="/get-started?source=property_management">
                 Talk to us about property management
               </MarketingButton>
-              <MarketingButton href="/register" variant="secondary">
+              <MarketingButton href="/get-started?source=pms" variant="secondary">
                 Or run it yourself
               </MarketingButton>
             </div>
@@ -83,7 +80,7 @@ export default function PropertyManagementPage() {
           </p>
         </div>
       </section>
-      <FinalCtaSection />
+      <FinalCtaSection getStartedHref="/get-started?source=property_management" />
     </>
   );
 }

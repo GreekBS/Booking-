@@ -32,8 +32,8 @@ import {
   prisma,
 } from "./helpers";
 import { seedCommerceFixture } from "./commerceFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("ImportChannelReservationCommand integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

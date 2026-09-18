@@ -1,6 +1,13 @@
 import { prisma, clearTenantContext, setTenantContext } from "../../src/client";
+import { assertNotTalosProductionDatabase } from "../../src/safety/databaseTargetGuard";
 
 export async function truncateIntegrationTables(): Promise<void> {
+  assertNotTalosProductionDatabase(
+    process.env.DATABASE_URL,
+    "truncateIntegrationTables",
+  );
+  // Clear RLS tenant GUC so deletes are not filtered to a single tenant.
+  await clearTenantContext(prisma);
   await prisma.channelSemanticTransitionCommand.deleteMany();
   await prisma.channelSecretRecord.deleteMany();
   await prisma.channelInventoryReconciliation.deleteMany();

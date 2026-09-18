@@ -34,8 +34,8 @@ import {
 import { UuidIdGenerator } from "../../src/UuidIdGenerator";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { seedCommerceFixture } from "./commerceFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("Admin panel backend integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

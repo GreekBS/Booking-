@@ -33,8 +33,8 @@ import {
   STOREFRONT_TEST_PUBLISHABLE_KEY,
   seedStorefrontKey,
 } from "./storefrontFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("Storefront public flow integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

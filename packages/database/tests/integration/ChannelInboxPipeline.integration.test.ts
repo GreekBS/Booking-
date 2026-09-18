@@ -10,8 +10,9 @@ import { ChannelInboxDeduplicationKey } from "@hcp/domain";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { seedCommerceFixture } from "./commerceFixtures";
 import { buildChannelInboxIntegrationStack } from "./channelInboxIntegrationStack";
+import { integrationDatabaseConfigured } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL
+const runIntegration = integrationDatabaseConfigured
   ? (title: string, fn: () => void) =>
       describe(title, { hookTimeout: 120_000, timeout: 120_000 }, fn)
   : (title: string, fn: () => void) => describe.skip(title, fn);

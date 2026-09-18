@@ -22,8 +22,8 @@ import { PrismaAuditLogRepository } from "../../src/repositories/AuditLogReposit
 import { UuidIdGenerator } from "../../src/UuidIdGenerator";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { seedCommerceFixture, seedAdditionalUnit } from "./commerceFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 function toDateString(value: Date): string {
   return value.toISOString().slice(0, 10);

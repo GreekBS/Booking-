@@ -33,7 +33,9 @@ export default function ChannelManagerPage() {
             record.
           </p>
           <div className="mt-8">
-            <MarketingButton href="/register">Get started</MarketingButton>
+            <MarketingButton href="/get-started?source=channel_manager">
+              Get started
+            </MarketingButton>
           </div>
         </div>
       </section>
@@ -68,7 +70,7 @@ export default function ChannelManagerPage() {
           </div>
         </div>
       </section>
-      <FinalCtaSection />
+      <FinalCtaSection getStartedHref="/get-started?source=channel_manager" />
     </>
   );
 }

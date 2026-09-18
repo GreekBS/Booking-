@@ -10,8 +10,8 @@ import {
 } from "../../src";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 const TENANT_A = "550e8400-e29b-41d4-a716-446655440500";
 const TENANT_B = "550e8400-e29b-41d4-a716-446655440501";

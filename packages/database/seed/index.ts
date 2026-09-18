@@ -1,6 +1,26 @@
+/**
+ * Development/demo seed entrypoint.
+ *
+ * Callers (as of Phase E):
+ * - local development: `pnpm db:seed` / `pnpm --filter @hcp/database db:seed`
+ * - documentation: README setup
+ * - NOT wired as Prisma `prisma db seed`, CI, Vercel, or test setup
+ *
+ * This is NOT production Super Admin bootstrap. Platform authority for the
+ * local `admin@hcp.local` account requires ALLOW_DEV_SUPER_ADMIN_SEED=true.
+ *
+ * Refuses Talos Production targets unless ALLOW_TALOS_PRODUCTION_DB_MUTATION=true
+ * (that override is for controlled ops only — never for routine seeding).
+ */
+import { config as loadEnv } from "dotenv";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { prisma } from "../src/client";
+import { assertNotTalosProductionDatabase } from "../src/safety/databaseTargetGuard.js";
 import { seedDevDemoTenant } from "./devDemoTenant.js";
 import { seedDevSuperAdmin } from "./devSuperAdmin.js";
+
+loadEnv({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env") });
 
 const SYSTEM_AMENITIES = [
   { name: "WiFi", icon: "wifi", category: "general" },
@@ -30,6 +50,10 @@ async function seedSystemAmenities(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  assertNotTalosProductionDatabase(process.env.DATABASE_URL, "db:seed");
+  if (process.env.DIRECT_URL) {
+    assertNotTalosProductionDatabase(process.env.DIRECT_URL, "db:seed (DIRECT_URL)");
+  }
   await seedSystemAmenities();
   await seedDevDemoTenant();
   await seedDevSuperAdmin();

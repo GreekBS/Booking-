@@ -43,7 +43,9 @@ export function ManagedServiceSection() {
             revenue guarantees.
           </p>
           <div className="mt-8">
-            <MarketingButton href="/contact">Talk to us about property management</MarketingButton>
+            <MarketingButton href="/get-started?source=property_management">
+              Talk to us about property management
+            </MarketingButton>
           </div>
         </div>
       </div>

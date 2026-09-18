@@ -1032,3 +1032,141 @@ model ChannelInboxItem {
   @@index([tenantId, connectionId, createdAt])
   @@map("channel_inbox_items")
 }
+
+// --- Marketing leads (anonymous prospects; not User/Tenant) ---
+
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  demo
+  won
+  lost
+}
+
+enum LeadRelationship {
+  owner
+  property_manager
+  hospitality_business
+  other
+}
+
+enum LeadPortfolioSize {
+  one
+  two_to_five
+  six_to_ten
+  eleven_to_twenty_five
+  twenty_six_to_fifty
+  fifty_one_plus
+}
+
+enum LeadOperatingState {
+  operating
+  launching_soon
+  planning
+}
+
+enum LeadRevenueRange {
+  under_25k
+  from_25k_to_75k
+  from_75k_to_150k
+  from_150k_to_300k
+  from_300k_to_750k
+  over_750k
+  prefer_not_to_say
+}
+
+enum LeadInterest {
+  run
+  grow
+  managed
+  unsure
+}
+
+enum LeadSource {
+  homepage_nav
+  homepage_hero
+  homepage_final
+  pms
+  website_builder
+  direct_bookings
+  channel_manager
+  vacation_rental_software
+  property_management
+  contact
+  other
+}
+
+enum LeadAccommodationType {
+  villa
+  apartment
+  vacation_rental
+  hotel
+  boutique_hotel
+  guesthouse
+  other
+}
+
+enum LeadChannel {
+  booking_com
+  airbnb
+  expedia
+  vrbo
+  direct_bookings
+  own_website
+  other
+}
+
+enum LeadTool {
+  pms
+  channel_manager
+  booking_engine
+  website_platform
+  none
+}
+
+/// Anonymous marketing/sales prospect. Never auto-creates User/Tenant/Membership.
+model Lead {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Opaque client submission token for retry idempotency (not email-based).
+  submissionId String @unique @map("submission_id") @db.Uuid
+
+  fullName        String @map("full_name") @db.VarChar(120)
+  emailNormalized String @map("email_normalized") @db.VarChar(255)
+  phone           String? @db.VarChar(40)
+  country         String @db.VarChar(100)
+
+  relationship LeadRelationship
+
+  portfolioSize       LeadPortfolioSize       @map("portfolio_size")
+  accommodationTypes  LeadAccommodationType[] @map("accommodation_types")
+  propertyCountry     String                  @map("property_country") @db.VarChar(100)
+  propertyCity        String?                 @map("property_city") @db.VarChar(120)
+  operatingState      LeadOperatingState      @map("operating_state")
+
+  channels              LeadChannel[] @default([])
+  tools                 LeadTool[]    @default([])
+  softwareName          String?       @map("software_name") @db.VarChar(120)
+  hasWebsite            Boolean?      @map("has_website")
+  acceptsDirectBookings Boolean?      @map("accepts_direct_bookings")
+
+  revenueRange LeadRevenueRange? @map("revenue_range")
+  interests    LeadInterest[]
+  message      String?           @db.VarChar(1000)
+
+  source      LeadSource
+  utmSource   String?    @map("utm_source") @db.VarChar(200)
+  utmMedium   String?    @map("utm_medium") @db.VarChar(200)
+  utmCampaign String?    @map("utm_campaign") @db.VarChar(200)
+
+  status LeadStatus @default(new)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([emailNormalized])
+  @@map("leads")
+}

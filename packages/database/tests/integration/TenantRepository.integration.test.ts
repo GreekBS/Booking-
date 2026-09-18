@@ -7,8 +7,7 @@ import {
   countOutboxForAggregate,
   prisma,
 } from "./helpers";
-
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
+import { runIntegration } from "./integrationGate";
 
 runIntegration("TenantRepository integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

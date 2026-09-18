@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { FAKE_CHANNEL_PROVIDER_ID } from "../../../domain/src/channels/simulation/FakeChannelReservationImportProvider";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { buildChannelInboxIntegrationStack } from "./channelInboxIntegrationStack";
+import { integrationDatabaseConfigured } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL
+const runIntegration = integrationDatabaseConfigured
   ? (title: string, fn: () => void) =>
       describe(title, { hookTimeout: 120_000, timeout: 120_000 }, fn)
   : (title: string, fn: () => void) => describe.skip(title, fn);

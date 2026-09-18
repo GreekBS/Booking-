@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { ChannelConnection, CredentialReference } from "@hcp/domain";
 import { PrismaChannelConnectionRepository } from "../../src";
 import { prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("ChannelConnection provider immutability (CM-4a-1)", () => {
   const connectionRepository = new PrismaChannelConnectionRepository();

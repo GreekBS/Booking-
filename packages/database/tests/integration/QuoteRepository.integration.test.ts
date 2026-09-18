@@ -10,8 +10,8 @@ import {
   prisma,
 } from "./helpers";
 import { seedCommerceFixture } from "./commerceFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("QuoteRepository integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

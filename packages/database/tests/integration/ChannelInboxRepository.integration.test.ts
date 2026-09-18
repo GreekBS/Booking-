@@ -8,8 +8,9 @@ import {
   DEFAULT_SIMULATED_FIXTURE,
 } from "../../../domain/src/channels/simulation/SimulatedReservationFixtures";
 import { FAKE_CHANNEL_PROVIDER_ID } from "../../../domain/src/channels/simulation/FakeChannelReservationImportProvider";
+import { integrationDatabaseConfigured } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL
+const runIntegration = integrationDatabaseConfigured
   ? (title: string, fn: () => void) =>
       describe(title, { hookTimeout: 120_000, timeout: 120_000 }, fn)
   : (title: string, fn: () => void) => describe.skip(title, fn);

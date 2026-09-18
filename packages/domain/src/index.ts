@@ -75,6 +75,11 @@ export * from "./identity/application/ImpersonateTenantUseCase";
 
 export * from "./identity/application/AuthUseCases";
 
+export * from "./marketing/domain/Lead";
+export * from "./marketing/domain/LeadTypes";
+export * from "./marketing/ports/ILeadRepository";
+export * from "./marketing/application/CreateLeadUseCase";
+
 
 
 export * from "./catalog/domain/Property";

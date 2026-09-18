@@ -37,7 +37,7 @@ export default function PmsPage() {
               ready.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <MarketingButton href="/register">Get started</MarketingButton>
+              <MarketingButton href="/get-started?source=pms">Get started</MarketingButton>
               <MarketingButton href="/website-builder" variant="secondary">
                 Property presence
               </MarketingButton>
@@ -77,7 +77,7 @@ export default function PmsPage() {
           </p>
         </div>
       </section>
-      <FinalCtaSection />
+      <FinalCtaSection getStartedHref="/get-started?source=pms" />
     </>
   );
 }

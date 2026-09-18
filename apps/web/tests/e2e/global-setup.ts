@@ -1,12 +1,17 @@
 import bcrypt from "bcryptjs";
 import { config as loadEnv } from "dotenv";
 import { prisma } from "@hcp/database/client";
+import { applyIntegrationTestDatabaseEnv } from "@hcp/database/safety";
 import fs from "node:fs";
 import path from "node:path";
 
 loadEnv({ path: path.resolve(process.cwd(), "../../packages/database/.env") });
-if (process.env.DIRECT_URL) {
-  process.env.DATABASE_URL = process.env.DIRECT_URL;
+if (applyIntegrationTestDatabaseEnv() === "missing") {
+  throw new Error(
+    "E2E global setup requires TEST_DATABASE_URL (isolated non-production PostgreSQL). " +
+      "DATABASE_URL is not used as a fallback. " +
+      "REFUSING TO RUN DATABASE TEST/MUTATION AGAINST TALOS PRODUCTION DATABASE",
+  );
 }
 
 export default async function globalSetup(): Promise<void> {

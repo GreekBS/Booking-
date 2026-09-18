@@ -4,8 +4,8 @@ import { PrismaTenantRepository } from "../../src/repositories/TenantRepository"
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
 import { Tenant, TenantSettings } from "@hcp/domain";
 import { truncateIntegrationTables, prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("AmenityRepository integration", () => {
   const outboxRepository = new PrismaOutboxRepository();

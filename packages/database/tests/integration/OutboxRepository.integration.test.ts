@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
 import { PropertyCreatedEvent } from "@hcp/domain";
 import { truncateIntegrationTables, prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 runIntegration("OutboxRepository integration", () => {
   const repository = new PrismaOutboxRepository();

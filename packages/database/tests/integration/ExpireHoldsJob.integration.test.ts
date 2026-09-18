@@ -24,8 +24,8 @@ import {
 } from "../../src/repositories/BackgroundJobRepository";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { seedCommerceFixture } from "./commerceFixtures";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 function expireHoldsIdempotencyKey(date = new Date()): string {
   return `expire_holds:${date.toISOString().slice(0, 16)}`;

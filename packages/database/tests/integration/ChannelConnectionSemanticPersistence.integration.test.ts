@@ -8,8 +8,8 @@ import {
 } from "@hcp/domain";
 import { PrismaChannelConnectionRepository, setTenantContext } from "../../src";
 import { prisma } from "./helpers";
+import { runIntegration } from "./integrationGate";
 
-const runIntegration = process.env.DATABASE_URL ? describe : describe.skip;
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440710";
 const CONNECTION_ID = "s3c-semantic-connection";
