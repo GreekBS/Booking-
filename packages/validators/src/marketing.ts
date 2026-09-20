@@ -127,3 +127,21 @@ export const createLeadSchema = z
   .strict();
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
+
+const leadStatus = z.enum([
+  "new",
+  "contacted",
+  "qualified",
+  "demo",
+  "won",
+  "lost",
+]);
+
+/** Platform Admin — change internal workflow status only. */
+export const updateLeadStatusSchema = z
+  .object({
+    status: leadStatus,
+  })
+  .strict();
+
+export type UpdateLeadStatusInput = z.infer<typeof updateLeadStatusSchema>;

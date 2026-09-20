@@ -10,6 +10,9 @@ type RegisterFormProps = {
   /** When set, "Sign in" uses this instead of navigating to `/login`. */
   onBackToLogin?: () => void;
   className?: string;
+  /** Optional prefill from a completed Lead — password is never prefilled. */
+  initialName?: string;
+  initialEmail?: string;
 };
 
 /**
@@ -20,10 +23,12 @@ export function RegisterForm({
   variant = "admin",
   onBackToLogin,
   className,
+  initialName = "",
+  initialEmail = "",
 }: RegisterFormProps) {
   const formId = useId();
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [email, setEmail] = useState(initialEmail);
+  const [name, setName] = useState(initialName);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

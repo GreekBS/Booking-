@@ -1,12 +1,12 @@
 import { Prisma } from "@prisma/client";
-import type { ILeadRepository, LeadProps } from "@hcp/domain";
-import { Lead } from "@hcp/domain";
+import type { ILeadRepository, LeadProps, ListLeadsQuery, ListLeadsResult } from "@hcp/domain";
+import { Lead, type LeadStatus } from "@hcp/domain";
 import { prisma, type PrismaTransactionClient } from "../client";
 import type { PrismaClient } from "@prisma/client";
 
 type LeadDatabaseClient = PrismaClient | PrismaTransactionClient;
 
-function toDomain(row: {
+type LeadRow = {
   id: string;
   submissionId: string;
   fullName: string;
@@ -32,9 +32,12 @@ function toDomain(row: {
   utmMedium: string | null;
   utmCampaign: string | null;
   status: LeadProps["status"];
+  demoRequestedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}): Lead {
+};
+
+function toDomain(row: LeadRow): Lead {
   return Lead.reconstitute({
     id: row.id,
     submissionId: row.submissionId,
@@ -61,6 +64,7 @@ function toDomain(row: {
     utmMedium: row.utmMedium,
     utmCampaign: row.utmCampaign,
     status: row.status,
+    demoRequestedAt: row.demoRequestedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
@@ -74,7 +78,51 @@ export class PrismaLeadRepository implements ILeadRepository {
       where: { submissionId },
     });
     if (!row) return null;
-    return toDomain(row);
+    return toDomain(row as LeadRow);
+  }
+
+  async findById(id: string): Promise<Lead | null> {
+    const row = await this.client.lead.findUnique({
+      where: { id },
+    });
+    if (!row) return null;
+    return toDomain(row as LeadRow);
+  }
+
+  async list(query: ListLeadsQuery): Promise<ListLeadsResult> {
+    const page = Math.max(1, query.page);
+    const limit = Math.min(100, Math.max(1, query.limit));
+    const skip = (page - 1) * limit;
+
+    const [rows, total] = await Promise.all([
+      this.client.lead.findMany({
+        orderBy: [{ createdAt: "desc" }],
+        skip,
+        take: limit,
+      }),
+      this.client.lead.count(),
+    ]);
+
+    // Stable operational presentation order within the page (NEW → demo → recent).
+    const pageRows = (rows as LeadRow[]).slice();
+    if (query.prioritizeOperational !== false) {
+      pageRows.sort((a, b) => {
+        const aNew = a.status === "new" ? 0 : 1;
+        const bNew = b.status === "new" ? 0 : 1;
+        if (aNew !== bNew) return aNew - bNew;
+        const aDemo = a.demoRequestedAt ? 0 : 1;
+        const bDemo = b.demoRequestedAt ? 0 : 1;
+        if (aDemo !== bDemo) return aDemo - bDemo;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+    }
+
+    return {
+      data: pageRows.map(toDomain),
+      total,
+      page,
+      limit,
+    };
   }
 
   async create(lead: Lead): Promise<void> {
@@ -107,6 +155,7 @@ export class PrismaLeadRepository implements ILeadRepository {
           utmMedium: props.utmMedium,
           utmCampaign: props.utmCampaign,
           status: props.status,
+          demoRequestedAt: props.demoRequestedAt,
           createdAt: props.createdAt,
           updatedAt: props.updatedAt,
         },
@@ -117,6 +166,38 @@ export class PrismaLeadRepository implements ILeadRepository {
         error.code === "P2002"
       ) {
         throw error;
+      }
+      throw error;
+    }
+  }
+
+  async markDemoRequested(id: string, at: Date): Promise<Lead | null> {
+    // Idempotent: only set when currently null.
+    const result = await this.client.lead.updateMany({
+      where: { id, demoRequestedAt: null },
+      data: { demoRequestedAt: at },
+    });
+
+    if (result.count === 0) {
+      // Either missing or already requested — return current row if present.
+      return this.findById(id);
+    }
+    return this.findById(id);
+  }
+
+  async updateStatus(id: string, status: LeadStatus): Promise<Lead | null> {
+    try {
+      const row = await this.client.lead.update({
+        where: { id },
+        data: { status },
+      });
+      return toDomain(row as LeadRow);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        return null;
       }
       throw error;
     }

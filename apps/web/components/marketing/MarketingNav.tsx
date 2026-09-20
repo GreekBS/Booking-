@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { PRIMARY_NAV } from "@/lib/marketing/site";
 import { MarketingButton } from "./MarketingButton";
-import { MarketingAuthDialog } from "./MarketingAuthDialog";
+import { useMarketingFunnel } from "./MarketingFunnelProvider";
 
 export function MarketingNav() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const { openAuth, authOpen, getStartedOpen } = useMarketingFunnel();
   const panelId = useId();
 
   useEffect(() => {
@@ -21,17 +21,17 @@ export function MarketingNav() {
   }, [menuOpen]);
 
   useEffect(() => {
-    // Body lock for mobile menu only; Radix Dialog handles lock when auth dialog is open.
-    if (authOpen) return;
+    // Body lock for mobile menu only; Radix Dialog handles lock when overlays are open.
+    if (authOpen || getStartedOpen) return;
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [menuOpen, authOpen]);
+  }, [menuOpen, authOpen, getStartedOpen]);
 
-  function openAuth() {
+  function handleOpenAuth() {
     setMenuOpen(false);
-    setAuthOpen(true);
+    openAuth();
   }
 
   return (
@@ -60,7 +60,7 @@ export function MarketingNav() {
         <div className="hidden items-center gap-3 lg:flex">
           <button
             type="button"
-            onClick={openAuth}
+            onClick={handleOpenAuth}
             data-testid="marketing-sign-in-desktop"
             className="text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
           >
@@ -109,7 +109,7 @@ export function MarketingNav() {
                 type="button"
                 className="rounded-sm px-2 py-3 text-left text-base font-medium"
                 data-testid="marketing-sign-in-mobile"
-                onClick={openAuth}
+                onClick={handleOpenAuth}
               >
                 Sign in
               </button>
@@ -123,8 +123,6 @@ export function MarketingNav() {
           </nav>
         </div>
       ) : null}
-
-      <MarketingAuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>
   );
 }

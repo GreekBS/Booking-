@@ -1,6 +1,7 @@
 import { Fraunces, Manrope } from "next/font/google";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
+import { MarketingFunnelProvider } from "@/components/marketing/MarketingFunnelProvider";
 import "@/components/marketing/talos-marketing.css";
 
 const display = Fraunces({
@@ -22,9 +23,11 @@ export default function MarketingLayout({
 }) {
   return (
     <div className={`talos-marketing ${display.variable} ${sans.variable}`}>
-      <MarketingNav />
-      <main id="main">{children}</main>
-      <MarketingFooter />
+      <MarketingFunnelProvider>
+        <MarketingNav />
+        <main id="main">{children}</main>
+        <MarketingFooter />
+      </MarketingFunnelProvider>
     </div>
   );
 }

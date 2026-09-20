@@ -54,7 +54,7 @@ describe("GetStartedWizard", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ data: { id: "lead-1" } }),
+        json: async () => ({ id: "lead-1" }),
       }),
     );
   });
@@ -94,7 +94,7 @@ describe("GetStartedWizard", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: { id: "lead-1" } }),
+        json: async () => ({ id: "lead-1" }),
       });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -128,10 +128,74 @@ describe("GetStartedWizard", () => {
     await waitFor(() =>
       expect(screen.getByText(/Thanks, Ada/i)).toBeTruthy(),
     );
-    expect(screen.getByRole("link", { name: /Create an account/i })).toHaveAttribute(
-      "href",
-      "/register",
+    expect(screen.getByRole("button", { name: /Create Account/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Book a Demo/i })).toBeTruthy();
+  });
+
+  it("transitions to registration in the same wizard after Create Account", async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await fillStep1(user);
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await fillStep2(user);
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("checkbox", { name: /Run/i }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Create Account/i })).toBeTruthy(),
     );
+    await user.click(screen.getByRole("button", { name: /Create Account/i }));
+    expect(screen.getByRole("button", { name: /Register/i })).toBeTruthy();
+    expect(screen.getByLabelText(/^Name/)).toHaveValue("Ada Owner");
+    expect(screen.getByLabelText(/^Email/)).toHaveValue("ada@example.com");
+  });
+
+  it("records demo request and shows confirmation; failure keeps success choices", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: "lead-1" }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: { message: "Demo unavailable" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: "lead-1",
+          demoRequestedAt: "2026-09-20T12:00:00.000Z",
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWizard();
+    await fillStep1(user);
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await fillStep2(user);
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("checkbox", { name: /Run/i }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Book a Demo/i })).toBeTruthy(),
+    );
+
+    await user.click(screen.getByRole("button", { name: /Book a Demo/i }));
+    await waitFor(() => expect(screen.getByText(/Demo unavailable/i)).toBeTruthy());
+    expect(screen.getByRole("button", { name: /Create Account/i })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /Book a Demo/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/Your demo request is in/i)).toBeTruthy(),
+    );
+    expect(fetchMock.mock.calls[1]![0]).toBe("/api/marketing/v1/leads/lead-1/demo");
+    expect(fetchMock.mock.calls[2]![0]).toBe("/api/marketing/v1/leads/lead-1/demo");
   });
 
   it("prevents duplicate submit while in flight", async () => {
@@ -162,7 +226,7 @@ describe("GetStartedWizard", () => {
 
     resolveFetch({
       ok: true,
-      json: async () => ({ data: { id: "lead-1" } }),
+      json: async () => ({ id: "lead-1" }),
     });
     await waitFor(() => expect(screen.getByText(/Thanks, Ada/i)).toBeTruthy());
   });

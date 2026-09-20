@@ -1162,11 +1162,15 @@ model Lead {
 
   status LeadStatus @default(new)
 
+  /// Prospect explicitly requested a demo. Independent of workflow status.
+  demoRequestedAt DateTime? @map("demo_requested_at") @db.Timestamptz
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([createdAt])
   @@index([status])
   @@index([emailNormalized])
+  @@index([demoRequestedAt])
   @@map("leads")
 }

@@ -61,6 +61,14 @@ import {
 
   CreateLeadUseCase,
 
+  RequestLeadDemoUseCase,
+
+  ListLeadsUseCase,
+
+  GetLeadUseCase,
+
+  UpdateLeadStatusUseCase,
+
   PermissionChecker,
 
   CheckAvailabilityUseCase,
@@ -650,6 +658,14 @@ export const createLeadUseCase = new CreateLeadUseCase(
   idGenerator,
 
 );
+
+export const requestLeadDemoUseCase = new RequestLeadDemoUseCase(leadRepository);
+
+export const listLeadsUseCase = new ListLeadsUseCase(leadRepository);
+
+export const getLeadUseCase = new GetLeadUseCase(leadRepository);
+
+export const updateLeadStatusUseCase = new UpdateLeadStatusUseCase(leadRepository);
 
 export const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
 
@@ -1269,7 +1285,7 @@ export const enqueueChannelConnectionPollUseCase =
     channelPollJobQuery,
   );
 
-/** P1-S7b — internal schedule-ical-polls (Bearer BACKGROUND_JOBS_SECRET). */
+/** P1-S7b â€” internal schedule-ical-polls (Bearer BACKGROUND_JOBS_SECRET). */
 export const scheduleIcalPollsUseCase = new ScheduleIcalPollsUseCase(
   eligibleIcalPollConnectionReader,
   channelPollJobQuery,

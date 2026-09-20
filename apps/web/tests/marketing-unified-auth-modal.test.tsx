@@ -31,6 +31,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 import { MarketingNav } from "@/components/marketing/MarketingNav";
+import { MarketingFunnelProvider } from "@/components/marketing/MarketingFunnelProvider";
 
 describe("Marketing unified auth modal", () => {
   afterEach(() => {
@@ -40,7 +41,9 @@ describe("Marketing unified auth modal", () => {
   async function openDialog(user: ReturnType<typeof userEvent.setup>) {
     render(
       <div className="talos-marketing">
-        <MarketingNav />
+        <MarketingFunnelProvider>
+          <MarketingNav />
+        </MarketingFunnelProvider>
       </div>,
     );
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));

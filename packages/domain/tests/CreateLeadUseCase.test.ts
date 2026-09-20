@@ -21,15 +21,26 @@ function validCommand(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function stubRepo(overrides: Partial<ILeadRepository> = {}): ILeadRepository {
+  return {
+    create: vi.fn(),
+    findBySubmissionId: vi.fn(async () => null),
+    findById: vi.fn(async () => null),
+    list: vi.fn(async () => ({ data: [], total: 0, page: 1, limit: 50 })),
+    markDemoRequested: vi.fn(async () => null),
+    updateStatus: vi.fn(async () => null),
+    ...overrides,
+  };
+}
+
 describe("CreateLeadUseCase", () => {
   it("creates a Lead with status new and normalized email", async () => {
     const created: Lead[] = [];
-    const repo: ILeadRepository = {
-      findBySubmissionId: vi.fn(async () => null),
+    const repo = stubRepo({
       create: vi.fn(async (lead) => {
         created.push(lead);
       }),
-    };
+    });
     const ids: IIdGenerator = { generate: () => "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" };
     const useCase = new CreateLeadUseCase(repo, ids);
 
@@ -38,14 +49,14 @@ describe("CreateLeadUseCase", () => {
     expect(result.getValue().id).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     expect(created).toHaveLength(1);
     expect(created[0]!.status).toBe("new");
+    expect(created[0]!.demoRequestedAt).toBeNull();
     expect(created[0]!.emailNormalized).toBe("ada@example.com");
   });
 
   it("allows optional revenue, phone, and message to be omitted", async () => {
-    const repo: ILeadRepository = {
-      findBySubmissionId: vi.fn(async () => null),
+    const repo = stubRepo({
       create: vi.fn(async () => undefined),
-    };
+    });
     const useCase = new CreateLeadUseCase(repo, {
       generate: () => "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     });
@@ -85,12 +96,12 @@ describe("CreateLeadUseCase", () => {
       utmMedium: null,
       utmCampaign: null,
     });
-    const repo: ILeadRepository = {
+    const repo = stubRepo({
       findBySubmissionId: vi.fn(async () => existing),
       create: vi.fn(async () => {
         throw new Error("should not create");
       }),
-    };
+    });
     const useCase = new CreateLeadUseCase(repo, {
       generate: () => "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     });
@@ -102,12 +113,11 @@ describe("CreateLeadUseCase", () => {
 
   it("creates distinct Leads for the same email with different submissionIds", async () => {
     const created: Lead[] = [];
-    const repo: ILeadRepository = {
-      findBySubmissionId: vi.fn(async () => null),
+    const repo = stubRepo({
       create: vi.fn(async (lead) => {
         created.push(lead);
       }),
-    };
+    });
     let n = 0;
     const useCase = new CreateLeadUseCase(repo, {
       generate: () =>
@@ -130,10 +140,7 @@ describe("CreateLeadUseCase", () => {
   });
 
   it("rejects empty interests and accommodation types", async () => {
-    const repo: ILeadRepository = {
-      findBySubmissionId: vi.fn(async () => null),
-      create: vi.fn(),
-    };
+    const repo = stubRepo();
     const useCase = new CreateLeadUseCase(repo, {
       generate: () => "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     });

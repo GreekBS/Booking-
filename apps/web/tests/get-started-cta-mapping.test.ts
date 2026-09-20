@@ -44,13 +44,31 @@ describe("Get started CTA mapping", () => {
     ).toContain("/get-started?source=property_management");
   });
 
+  it("opens Get Started overlay from marketing CTAs while keeping /get-started", () => {
+    expect(read("components/marketing/MarketingButton.tsx")).toContain(
+      "openGetStarted",
+    );
+    expect(read("components/marketing/MarketingFunnelProvider.tsx")).toContain(
+      "GetStartedOverlay",
+    );
+    expect(read("components/marketing/get-started-cta.ts")).toContain(
+      "parseGetStartedHref",
+    );
+    expect(read("app/(marketing)/get-started/page.tsx")).toContain(
+      "GetStartedWizard",
+    );
+  });
+
   it("keeps Create account / register auth destinations intact", () => {
     expect(read("features/auth/CredentialsSignInForm.tsx")).toContain(
       'href="/register"',
     );
     expect(read("app/(auth)/register/page.tsx")).toMatch(/RegisterForm/);
     expect(read("features/get-started/GetStartedWizard.tsx")).toContain(
-      'href="/register"',
+      "Create Account",
+    );
+    expect(read("features/get-started/GetStartedWizard.tsx")).toContain(
+      "RegisterForm",
     );
   });
 

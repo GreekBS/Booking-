@@ -1,5 +1,6 @@
 import { Entity } from "../../shared/kernel/Entity";
 import { Email } from "../../shared/value-objects/Email";
+import { ValidationError } from "../../shared/errors/DomainError";
 import type {
   LeadAccommodationType,
   LeadChannel,
@@ -12,6 +13,7 @@ import type {
   LeadStatus,
   LeadTool,
 } from "./LeadTypes";
+import { LEAD_STATUSES } from "./LeadTypes";
 
 export interface LeadProps {
   id: string;
@@ -39,13 +41,15 @@ export interface LeadProps {
   utmMedium: string | null;
   utmCampaign: string | null;
   status: LeadStatus;
+  /** When the prospect explicitly requested a demo. Independent of workflow status. */
+  demoRequestedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type CreateLeadProps = Omit<
   LeadProps,
-  "emailNormalized" | "status" | "createdAt" | "updatedAt"
+  "emailNormalized" | "status" | "demoRequestedAt" | "createdAt" | "updatedAt"
 > & {
   email: string;
 };
@@ -83,6 +87,14 @@ export class Lead extends Entity<LeadProps> {
     return [...this.props.interests];
   }
 
+  get demoRequestedAt(): Date | null {
+    return this.props.demoRequestedAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
   static create(props: CreateLeadProps): Lead {
     const now = new Date();
     const email = Email.create(props.email);
@@ -113,6 +125,7 @@ export class Lead extends Entity<LeadProps> {
       utmMedium: props.utmMedium?.trim() ? props.utmMedium.trim() : null,
       utmCampaign: props.utmCampaign?.trim() ? props.utmCampaign.trim() : null,
       status: "new",
+      demoRequestedAt: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -120,6 +133,26 @@ export class Lead extends Entity<LeadProps> {
 
   static reconstitute(props: LeadProps): Lead {
     return new Lead(props);
+  }
+
+  /**
+   * Record that the prospect requested a demo.
+   * Idempotent — preserves the original demoRequestedAt on retries.
+   */
+  requestDemo(at: Date = new Date()): void {
+    if (this.props.demoRequestedAt) {
+      return;
+    }
+    this.props.demoRequestedAt = at;
+    this.props.updatedAt = at;
+  }
+
+  changeStatus(status: LeadStatus, at: Date = new Date()): void {
+    if (!(LEAD_STATUSES as readonly string[]).includes(status)) {
+      throw new ValidationError(`Invalid lead status: ${status}`);
+    }
+    this.props.status = status;
+    this.props.updatedAt = at;
   }
 
   toPersistence(): LeadProps {

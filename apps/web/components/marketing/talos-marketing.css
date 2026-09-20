@@ -143,6 +143,117 @@
   letter-spacing: -0.02em;
 }
 
+/* Get Started overlay — large onboarding workspace */
+.talos-get-started-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(18, 22, 20, 0.52);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: talos-signin-overlay-in 220ms ease-out;
+}
+
+.talos-get-started-dialog {
+  position: fixed;
+  inset: 0.5rem;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(18, 22, 20, 0.12);
+  border-radius: 2px;
+  background: #f6f4ef;
+  color: #121614;
+  box-shadow: 0 28px 70px -40px rgba(18, 22, 20, 0.55);
+  font-family: var(--font-talos-sans), ui-sans-serif, system-ui, sans-serif;
+  animation: talos-get-started-dialog-in 220ms ease-out;
+}
+
+.talos-get-started-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(18, 22, 20, 0.1);
+  padding: 1rem 1rem 0.9rem;
+}
+
+.talos-get-started-dialog-body {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+.talos-get-started-aside {
+  display: none;
+}
+
+.talos-get-started-wizard-pane {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .talos-get-started-dialog {
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: min(68rem, calc(100vw - 2.5rem));
+    height: min(90dvh, 52rem);
+    transform: translate(-50%, -50%);
+  }
+
+  .talos-get-started-dialog-header {
+    padding: 1.25rem 1.5rem 1rem;
+  }
+
+  .talos-get-started-dialog-body {
+    grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.15fr);
+    gap: 1.5rem;
+    padding: 0 1.5rem 1.5rem;
+    overflow: hidden;
+  }
+
+  .talos-get-started-aside {
+    display: block;
+    padding-top: 0.5rem;
+  }
+
+  .talos-get-started-wizard-pane {
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+  }
+}
+
+@keyframes talos-get-started-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 900px) {
+  @keyframes talos-get-started-dialog-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 12px)) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+}
+
 @keyframes talos-signin-overlay-in {
   from {
     opacity: 0;
@@ -184,7 +295,9 @@
 
   .talos-signin-overlay,
   .talos-signin-dialog,
-  .talos-auth-view {
+  .talos-auth-view,
+  .talos-get-started-overlay,
+  .talos-get-started-dialog {
     animation: none !important;
     transition: none !important;
   }

@@ -79,6 +79,10 @@ export * from "./marketing/domain/Lead";
 export * from "./marketing/domain/LeadTypes";
 export * from "./marketing/ports/ILeadRepository";
 export * from "./marketing/application/CreateLeadUseCase";
+export * from "./marketing/application/RequestLeadDemoUseCase";
+export * from "./marketing/application/ListLeadsUseCase";
+export * from "./marketing/application/GetLeadUseCase";
+export * from "./marketing/application/UpdateLeadStatusUseCase";
 
 
 

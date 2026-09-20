@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useId, useState } from "react";
 import type { LeadInterest, LeadSource } from "@hcp/domain";
+import { RegisterForm } from "@/features/auth/RegisterForm";
 import { LEAD_COUNTRY_OPTIONS } from "@/lib/marketing/countries";
 import {
   ChoiceCardGroup,
@@ -39,9 +40,18 @@ type Props = {
   utmMedium: string | null;
   utmCampaign: string | null;
   preselectManaged: boolean;
+  /** Overlay presentation hides redundant chrome and enables close callbacks. */
+  presentation?: "page" | "overlay";
+  onRequestClose?: () => void;
 };
 
-type SubmitPhase = "idle" | "submitting" | "success" | "error";
+type SubmitPhase =
+  | "idle"
+  | "submitting"
+  | "success"
+  | "register"
+  | "demo-confirmed"
+  | "error";
 
 function toggleInList<T extends string>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -72,6 +82,8 @@ export function GetStartedWizard({
   utmMedium,
   utmCampaign,
   preselectManaged,
+  presentation = "page",
+  onRequestClose,
 }: Props) {
   const progressId = useId();
   const [step, setStep] = useState<GetStartedStep>(1);
@@ -87,6 +99,9 @@ export function GetStartedWizard({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const [demoSubmitting, setDemoSubmitting] = useState(false);
 
   const patch = useCallback((partial: Partial<GetStartedFormState>) => {
     setForm((prev) => ({ ...prev, ...partial }));
@@ -131,10 +146,12 @@ export function GetStartedWizard({
         body: JSON.stringify(full.data),
       });
 
+      const data = (await res.json().catch(() => null)) as {
+        id?: string;
+        error?: { message?: string };
+      } | null;
+
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: { message?: string };
-        } | null;
         setPhase("error");
         setSubmitError(
           data?.error?.message ??
@@ -143,11 +160,50 @@ export function GetStartedWizard({
         return;
       }
 
+      if (!data?.id) {
+        setPhase("error");
+        setSubmitError("We could not confirm your submission. Please try again.");
+        return;
+      }
+
+      setLeadId(data.id);
       setPhase("success");
       setErrors({});
     } catch {
       setPhase("error");
       setSubmitError("Network error. Please try again — your answers are still here.");
+    }
+  }
+
+  async function requestDemo() {
+    if (!leadId || demoSubmitting) return;
+    setDemoSubmitting(true);
+    setDemoError(null);
+
+    try {
+      const res = await fetch(`/api/marketing/v1/leads/${leadId}/demo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = (await res.json().catch(() => null)) as {
+        demoRequestedAt?: string;
+        error?: { message?: string };
+      } | null;
+
+      if (!res.ok || !data?.demoRequestedAt) {
+        setDemoError(
+          data?.error?.message ??
+            "We could not record your demo request. Please try again.",
+        );
+        return;
+      }
+
+      setPhase("demo-confirmed");
+    } catch {
+      setDemoError("Network error. Please try again — your inquiry is still saved.");
+    } finally {
+      setDemoSubmitting(false);
     }
   }
 
@@ -164,10 +220,71 @@ export function GetStartedWizard({
     setStep(1);
     setErrors({});
     setSubmitError(null);
+    setLeadId(null);
+    setDemoError(null);
     setPhase("idle");
   }
 
-  if (phase === "success") {
+  if (phase === "register" && leadId) {
+    return (
+      <div className="rounded-sm border border-[var(--talos-line)] bg-white p-8 md:p-10">
+        <RegisterForm
+          variant="marketing"
+          initialName={form.fullName}
+          initialEmail={form.email}
+          onBackToLogin={() => setPhase("success")}
+        />
+        <button
+          type="button"
+          onClick={() => setPhase("success")}
+          className="mt-6 text-sm text-[var(--talos-muted)] underline underline-offset-4 hover:text-[var(--talos-ink)]"
+        >
+          Back to next steps
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === "demo-confirmed") {
+    return (
+      <div className="rounded-sm border border-[var(--talos-line)] bg-white p-8 md:p-10">
+        <p className="talos-kicker">Demo request</p>
+        <h2 className="talos-display mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+          Your demo request is in.
+        </h2>
+        <p className="mt-4 text-[var(--talos-muted)] leading-relaxed">
+          A Talos representative will contact you soon to arrange the next step.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          {onRequestClose ? (
+            <button
+              type="button"
+              onClick={onRequestClose}
+              className="inline-flex items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)]"
+            >
+              Close
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)]"
+            >
+              Return home
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => setPhase("success")}
+            className="inline-flex items-center justify-center rounded-sm border border-[var(--talos-ink)]/20 px-5 py-3 text-sm font-semibold text-[var(--talos-ink)] hover:border-[var(--talos-ink)]/45"
+          >
+            Back to choices
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "success" && leadId) {
     return (
       <div className="rounded-sm border border-[var(--talos-line)] bg-white p-8 md:p-10">
         <p className="talos-kicker">Received</p>
@@ -180,30 +297,53 @@ export function GetStartedWizard({
         <p className="mt-3 text-sm leading-relaxed text-[var(--talos-ink-soft)]">
           {successCopy(form.interests)}
         </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Link
-            href="/pms"
+        <p className="mt-6 text-sm font-medium text-[var(--talos-ink)]">
+          What would you like to do next?
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            data-testid="get-started-create-account"
+            onClick={() => setPhase("register")}
             className="inline-flex items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)]"
           >
-            Explore the Talos platform
-          </Link>
-          <Link
-            href="/register"
-            className="inline-flex items-center justify-center rounded-sm border border-[var(--talos-ink)]/20 px-5 py-3 text-sm font-semibold text-[var(--talos-ink)] hover:border-[var(--talos-ink)]/45"
+            Create Account
+          </button>
+          <button
+            type="button"
+            data-testid="get-started-book-demo"
+            onClick={() => void requestDemo()}
+            disabled={demoSubmitting}
+            className="inline-flex items-center justify-center rounded-sm border border-[var(--talos-ink)]/20 px-5 py-3 text-sm font-semibold text-[var(--talos-ink)] hover:border-[var(--talos-ink)]/45 disabled:opacity-60"
           >
-            Create an account
-          </Link>
+            {demoSubmitting ? "Sending…" : "Book a Demo"}
+          </button>
+        </div>
+        {demoError ? (
+          <p role="alert" className="mt-4 text-sm text-[#8b3a2a]">
+            {demoError}
+          </p>
+        ) : null}
+        {presentation === "page" ? (
           <Link
             href="/"
-            className="inline-flex items-center justify-center px-5 py-3 text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
+            className="mt-8 inline-flex text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
           >
             Return home
           </Link>
-        </div>
+        ) : onRequestClose ? (
+          <button
+            type="button"
+            onClick={onRequestClose}
+            className="mt-8 text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
+          >
+            Close
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={startFresh}
-          className="mt-8 text-sm text-[var(--talos-muted)] underline underline-offset-4 hover:text-[var(--talos-ink)]"
+          className="mt-6 block text-sm text-[var(--talos-muted)] underline underline-offset-4 hover:text-[var(--talos-ink)]"
         >
           Start another inquiry
         </button>

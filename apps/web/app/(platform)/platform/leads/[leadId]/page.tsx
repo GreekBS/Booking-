@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
-import { TenantsList } from "@/features/tenants/TenantsList";
+import { LeadDetailPanel } from "@/features/leads/LeadDetailPanel";
 import { SignOutButton } from "@/features/auth/SignOutButton";
 
-export default async function PlatformTenantsPage() {
+export default async function PlatformLeadDetailPage({
+  params,
+}: {
+  params: Promise<{ leadId: string }>;
+}) {
   const session = await auth();
+  const { leadId } = await params;
 
   return (
     <div className="min-h-screen">
@@ -19,23 +24,22 @@ export default async function PlatformTenantsPage() {
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">
         <nav className="mb-6 flex gap-4 text-sm">
-          <Link href="/platform/tenants" className="font-medium text-gray-900">
+          <Link href="/platform/tenants" className="text-gray-600 hover:text-gray-900">
             Tenants
           </Link>
-          <Link href="/platform/leads" className="text-gray-600 hover:text-gray-900">
+          <Link href="/platform/leads" className="font-medium text-gray-900">
             Leads
           </Link>
         </nav>
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Tenants</h2>
+        <div className="mb-4">
           <Link
-            href="/platform/tenants/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
+            href="/platform/leads"
+            className="text-sm text-gray-600 hover:text-gray-900"
           >
-            Create tenant
+            ← Back to leads
           </Link>
         </div>
-        <TenantsList />
+        <LeadDetailPanel leadId={leadId} />
       </main>
     </div>
   );

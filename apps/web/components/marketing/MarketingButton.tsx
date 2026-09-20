@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import {
+  parseGetStartedHref,
+  useOptionalMarketingFunnel,
+} from "./get-started-cta";
 
 type Variant = "primary" | "secondary" | "ghost" | "on-dark";
 
@@ -24,6 +30,27 @@ export function MarketingButton({
   variant?: Variant;
   className?: string;
 }) {
+  const funnel = useOptionalMarketingFunnel();
+  const getStarted = parseGetStartedHref(href);
+
+  if (funnel && getStarted) {
+    return (
+      <button
+        type="button"
+        data-get-started-source={getStarted.source}
+        data-testid={`get-started-cta-${getStarted.source}`}
+        onClick={() => funnel.openGetStarted(getStarted)}
+        className={cn(
+          "inline-flex items-center justify-center rounded-sm px-5 py-3 text-sm font-semibold tracking-wide transition-colors",
+          styles[variant],
+          className,
+        )}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
     <Link
       href={href}

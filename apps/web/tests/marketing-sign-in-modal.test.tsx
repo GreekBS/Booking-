@@ -31,6 +31,17 @@ vi.mock("lucide-react", () => ({
 }));
 
 import { MarketingNav } from "@/components/marketing/MarketingNav";
+import { MarketingFunnelProvider } from "@/components/marketing/MarketingFunnelProvider";
+
+function renderNav() {
+  return render(
+    <div className="talos-marketing">
+      <MarketingFunnelProvider>
+        <MarketingNav />
+      </MarketingFunnelProvider>
+    </div>,
+  );
+}
 
 describe("MarketingNav sign-in modal", () => {
   afterEach(() => {
@@ -41,11 +52,7 @@ describe("MarketingNav sign-in modal", () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/pms");
 
-    render(
-      <div className="talos-marketing">
-        <MarketingNav />
-      </div>,
-    );
+    renderNav();
 
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));
 
@@ -57,11 +64,7 @@ describe("MarketingNav sign-in modal", () => {
 
   it("closes via Escape and close control", async () => {
     const user = userEvent.setup();
-    render(
-      <div className="talos-marketing">
-        <MarketingNav />
-      </div>,
-    );
+    renderNav();
 
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
@@ -81,11 +84,7 @@ describe("MarketingNav sign-in modal", () => {
 
   it("closes mobile menu before opening sign-in dialog", async () => {
     const user = userEvent.setup();
-    render(
-      <div className="talos-marketing">
-        <MarketingNav />
-      </div>,
-    );
+    renderNav();
 
     await user.click(screen.getByRole("button", { name: /open menu/i }));
     expect(screen.getByRole("navigation", { name: /mobile/i })).toBeInTheDocument();
@@ -98,11 +97,7 @@ describe("MarketingNav sign-in modal", () => {
 
   it("keeps a single dialog instance while open", async () => {
     const user = userEvent.setup();
-    render(
-      <div className="talos-marketing">
-        <MarketingNav />
-      </div>,
-    );
+    renderNav();
 
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
