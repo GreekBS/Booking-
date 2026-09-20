@@ -23,7 +23,7 @@ export default async function HomePage() {
   const session = await auth();
   if (session?.user) {
     if (session.user.platformRole === "super_admin") {
-      redirect("/platform/tenants");
+      redirect("/platform");
     }
     redirect("/dashboard");
   }

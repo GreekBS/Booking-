@@ -1,11 +1,17 @@
 import { Result } from "../../shared/kernel/Result";
 import { ValidationError } from "../../shared/errors/DomainError";
 import type { Lead } from "../domain/Lead";
+import type { LeadSource, LeadStatus } from "../domain/LeadTypes";
+import { LEAD_SOURCES, LEAD_STATUSES } from "../domain/LeadTypes";
 import type { ILeadRepository } from "../ports/ILeadRepository";
 
 export interface ListLeadsCommand {
   page?: number;
   limit?: number;
+  status?: LeadStatus;
+  demoRequested?: boolean;
+  source?: LeadSource;
+  prioritizeOperational?: boolean;
 }
 
 export interface ListLeadsPage {
@@ -28,10 +34,26 @@ export class ListLeadsUseCase {
         return Result.fail(new ValidationError("Invalid pagination"));
       }
 
+      if (
+        command.status != null &&
+        !(LEAD_STATUSES as readonly string[]).includes(command.status)
+      ) {
+        return Result.fail(new ValidationError("Invalid lead status filter"));
+      }
+      if (
+        command.source != null &&
+        !(LEAD_SOURCES as readonly string[]).includes(command.source)
+      ) {
+        return Result.fail(new ValidationError("Invalid lead source filter"));
+      }
+
       const result = await this.leadRepository.list({
         page,
         limit,
-        prioritizeOperational: true,
+        prioritizeOperational: command.prioritizeOperational ?? true,
+        status: command.status,
+        demoRequested: command.demoRequested,
+        source: command.source,
       });
 
       return Result.ok(result);

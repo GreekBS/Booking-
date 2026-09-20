@@ -4,6 +4,12 @@ import type {
   PaginationParams,
 } from "../../shared/types/index";
 
+export interface TenantCounts {
+  total: number;
+  active: number;
+  suspended: number;
+}
+
 export interface ITenantRepository {
   save(tenant: Tenant): Promise<void>;
   findById(id: string): Promise<Tenant | null>;
@@ -11,4 +17,5 @@ export interface ITenantRepository {
   existsBySlug(slug: string): Promise<boolean>;
   findAll(params: PaginationParams): Promise<PaginatedResult<Tenant>>;
   countProperties(tenantId: string): Promise<number>;
+  countSummary(): Promise<TenantCounts>;
 }

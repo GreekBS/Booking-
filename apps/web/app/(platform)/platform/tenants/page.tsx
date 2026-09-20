@@ -1,42 +1,26 @@
 import Link from "next/link";
-import { auth } from "@/lib/auth/config";
 import { TenantsList } from "@/features/tenants/TenantsList";
-import { SignOutButton } from "@/features/auth/SignOutButton";
 
-export default async function PlatformTenantsPage() {
-  const session = await auth();
-
+export default function PlatformTenantsPage() {
   return (
-    <div className="min-h-screen">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div>
-            <h1 className="text-xl font-semibold">Platform Admin</h1>
-            <p className="text-sm text-gray-600">{session?.user?.email}</p>
-          </div>
-          <SignOutButton />
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <nav className="mb-6 flex gap-4 text-sm">
-          <Link href="/platform/tenants" className="font-medium text-gray-900">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--platform-ink)]">
             Tenants
-          </Link>
-          <Link href="/platform/leads" className="text-gray-600 hover:text-gray-900">
-            Leads
-          </Link>
-        </nav>
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Tenants</h2>
-          <Link
-            href="/platform/tenants/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
-          >
-            Create tenant
-          </Link>
+          </h2>
+          <p className="mt-1 text-sm text-[var(--platform-muted)]">
+            Manage hospitality tenants and open tenant context as Platform Admin.
+          </p>
         </div>
-        <TenantsList />
-      </main>
+        <Link
+          href="/platform/tenants/new"
+          className="inline-flex items-center justify-center rounded-md bg-[var(--platform-accent)] px-3.5 py-2 text-sm font-semibold text-white hover:opacity-95"
+        >
+          Create tenant
+        </Link>
+      </div>
+      <TenantsList />
     </div>
   );
 }

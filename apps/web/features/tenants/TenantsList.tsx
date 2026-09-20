@@ -13,6 +13,14 @@ interface TenantRow {
   createdAt: string;
 }
 
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+  } catch {
+    return iso;
+  }
+}
+
 export function TenantsList() {
   const { update } = useSession();
   const [tenants, setTenants] = useState<TenantRow[]>([]);
@@ -22,9 +30,19 @@ export function TenantsList() {
 
   useEffect(() => {
     fetch("/api/platform/v1/tenants")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => null);
+          throw new Error(body?.error?.message ?? `Failed (${r.status})`);
+        }
+        return r.json();
+      })
       .then((data) => {
         setTenants(data.data ?? []);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load tenants");
         setLoading(false);
       });
   }, []);
@@ -48,9 +66,7 @@ export function TenantsList() {
         setError(result.error);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to open tenant",
-      );
+      setError(err instanceof Error ? err.message : "Failed to open tenant");
     } finally {
       setOpeningId(null);
     }
@@ -65,71 +81,95 @@ export function TenantsList() {
     window.location.reload();
   }
 
-  if (loading) return <p className="text-sm text-gray-600">Loading...</p>;
+  if (loading) {
+    return <p className="text-sm text-[var(--platform-muted)]">Loading...</p>;
+  }
+
+  if (error) {
+    return (
+      <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {error}
+      </p>
+    );
+  }
 
   if (tenants.length === 0) {
-    return <p className="text-sm text-gray-600">No tenants yet.</p>;
+    return (
+      <p className="rounded-md border border-[var(--platform-border)] bg-[var(--platform-card)] px-4 py-8 text-center text-sm text-[var(--platform-muted)]">
+        No tenants yet.
+      </p>
+    );
   }
 
   return (
-    <div className="space-y-3">
-      {error ? (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-      <div className="overflow-hidden rounded-lg border bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Slug</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Properties</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tenants.map((tenant) => (
-              <tr key={tenant.id} className="border-b last:border-0">
-                <td className="px-4 py-3">{tenant.name}</td>
-                <td className="px-4 py-3 font-mono text-xs">{tenant.slug}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs ${
-                      tenant.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {tenant.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{tenant.propertyCount}</td>
-                <td className="px-4 py-3 space-x-2">
+    <div className="overflow-x-auto rounded-md border border-[var(--platform-border)] bg-[var(--platform-card)]">
+      <table className="min-w-full text-left text-sm">
+        <thead className="border-b border-[var(--platform-border)] bg-[var(--platform-muted-bg)]/60 text-[11px] uppercase tracking-wide text-[var(--platform-muted)]">
+          <tr>
+            <th className="px-4 py-2.5 font-medium">Name</th>
+            <th className="px-4 py-2.5 font-medium">Slug</th>
+            <th className="px-4 py-2.5 font-medium">Status</th>
+            <th className="px-4 py-2.5 font-medium">Properties</th>
+            <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+              Created
+            </th>
+            <th className="px-4 py-2.5 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tenants.map((tenant) => (
+            <tr
+              key={tenant.id}
+              className="border-b border-[var(--platform-border)] last:border-0"
+            >
+              <td className="px-4 py-3 font-medium text-[var(--platform-ink)]">
+                {tenant.name}
+              </td>
+              <td className="px-4 py-3 font-mono text-xs text-[var(--platform-muted)]">
+                {tenant.slug}
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className={`rounded px-2 py-0.5 text-xs font-medium capitalize ${
+                    tenant.status === "active"
+                      ? "bg-emerald-100 text-emerald-900"
+                      : tenant.status === "suspended"
+                        ? "bg-amber-100 text-amber-900"
+                        : "bg-[var(--platform-muted-bg)] text-[var(--platform-ink-soft)]"
+                  }`}
+                >
+                  {tenant.status}
+                </span>
+              </td>
+              <td className="px-4 py-3 tabular-nums">{tenant.propertyCount}</td>
+              <td className="hidden px-4 py-3 text-[var(--platform-muted)] md:table-cell">
+                {tenant.createdAt ? formatDate(tenant.createdAt) : "—"}
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={openingId !== null}
-                    onClick={() => handleImpersonate(tenant.id)}
-                    className="text-blue-600 hover:underline disabled:opacity-50"
+                    onClick={() => void handleImpersonate(tenant.id)}
+                    className="text-sm font-medium text-[var(--platform-accent)] hover:underline disabled:opacity-50"
                   >
                     {openingId === tenant.id ? "Opening…" : "Open"}
                   </button>
-                  {tenant.status === "active" && (
+                  {tenant.status === "active" ? (
                     <button
                       type="button"
-                      onClick={() => handleSuspend(tenant.id)}
-                      className="text-red-600 hover:underline"
+                      onClick={() => void handleSuspend(tenant.id)}
+                      className="text-sm font-medium text-red-700 hover:underline"
                     >
                       Suspend
                     </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

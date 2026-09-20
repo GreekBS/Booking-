@@ -94,13 +94,20 @@ export class PrismaLeadRepository implements ILeadRepository {
     const limit = Math.min(100, Math.max(1, query.limit));
     const skip = (page - 1) * limit;
 
+    const where: Prisma.LeadWhereInput = {};
+    if (query.status) where.status = query.status;
+    if (query.source) where.source = query.source;
+    if (query.demoRequested === true) where.demoRequestedAt = { not: null };
+    if (query.demoRequested === false) where.demoRequestedAt = null;
+
     const [rows, total] = await Promise.all([
       this.client.lead.findMany({
+        where,
         orderBy: [{ createdAt: "desc" }],
         skip,
         take: limit,
       }),
-      this.client.lead.count(),
+      this.client.lead.count({ where }),
     ]);
 
     // Stable operational presentation order within the page (NEW → demo → recent).
@@ -123,6 +130,15 @@ export class PrismaLeadRepository implements ILeadRepository {
       page,
       limit,
     };
+  }
+
+  async countSummary() {
+    const [total, newCount, demoRequestedCount] = await Promise.all([
+      this.client.lead.count(),
+      this.client.lead.count({ where: { status: "new" } }),
+      this.client.lead.count({ where: { demoRequestedAt: { not: null } } }),
+    ]);
+    return { total, newCount, demoRequestedCount };
   }
 
   async create(lead: Lead): Promise<void> {

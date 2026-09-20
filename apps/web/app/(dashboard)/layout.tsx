@@ -23,7 +23,7 @@ export default async function DashboardLayout({
       activeTenantId: actor.activeTenantId,
     })
   ) {
-    redirect("/platform/tenants");
+    redirect("/platform");
   }
 
   return <AdminShell>{children}</AdminShell>;

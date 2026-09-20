@@ -66,9 +66,11 @@ function yesNo(v: boolean | null): string {
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="border-b border-gray-100 py-2 sm:grid sm:grid-cols-[12rem_1fr] sm:gap-4">
-      <dt className="text-sm font-medium text-gray-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-gray-900 sm:mt-0">{value || "—"}</dd>
+    <div className="border-b border-[var(--platform-border)] py-2 sm:grid sm:grid-cols-[12rem_1fr] sm:gap-4">
+      <dt className="text-sm font-medium text-[var(--platform-muted)]">{label}</dt>
+      <dd className="mt-0.5 text-sm text-[var(--platform-ink)] sm:mt-0">
+        {value || "—"}
+      </dd>
     </div>
   );
 }
@@ -81,8 +83,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded border bg-white p-4">
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+    <section className="rounded-md border border-[var(--platform-border)] bg-[var(--platform-card)] p-4">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--platform-muted)]">
         {title}
       </h3>
       <dl>{children}</dl>
@@ -143,10 +145,12 @@ export function LeadDetailPanel({ leadId }: { leadId: string }) {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-600">Loading...</p>;
+  if (loading) {
+    return <p className="text-sm text-[var(--platform-muted)]">Loading...</p>;
+  }
   if (error || !lead) {
     return (
-      <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
         {error ?? "Lead not found"}
       </p>
     );
@@ -156,8 +160,10 @@ export function LeadDetailPanel({ leadId }: { leadId: string }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">{lead.fullName}</h2>
-          <p className="text-sm text-gray-600">{lead.email}</p>
+          <h2 className="text-xl font-semibold text-[var(--platform-ink)]">
+            {lead.fullName}
+          </h2>
+          <p className="text-sm text-[var(--platform-muted)]">{lead.email}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {lead.demoRequested ? (
@@ -165,7 +171,7 @@ export function LeadDetailPanel({ leadId }: { leadId: string }) {
               Demo requested
             </span>
           ) : null}
-          <span className="rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
+          <span className="rounded bg-[var(--platform-muted-bg)] px-2 py-1 text-xs font-medium text-[var(--platform-ink-soft)]">
             {leadLabels.status(lead.status)}
           </span>
         </div>
@@ -266,7 +272,7 @@ export function LeadDetailPanel({ leadId }: { leadId: string }) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as LeadStatus)}
-              className="rounded border px-3 py-2 text-sm"
+              className="rounded-md border border-[var(--platform-border)] bg-white px-3 py-2 text-sm"
               disabled={saving}
             >
               {LEAD_STATUS_OPTIONS.map((opt) => (
@@ -280,13 +286,13 @@ export function LeadDetailPanel({ leadId }: { leadId: string }) {
             type="button"
             onClick={() => void saveStatus()}
             disabled={saving || status === lead.status}
-            className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-md bg-[var(--platform-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Update status"}
           </button>
         </div>
         {statusMessage ? (
-          <p className="mt-2 text-sm text-gray-600">{statusMessage}</p>
+          <p className="mt-2 text-sm text-[var(--platform-muted)]">{statusMessage}</p>
         ) : null}
       </Section>
     </div>

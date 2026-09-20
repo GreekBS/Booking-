@@ -1,0 +1,20 @@
+.platform-shell {
+  --platform-canvas: #f3f4f3;
+  --platform-ink: #121614;
+  --platform-ink-soft: #2a302c;
+  --platform-muted: #6b726e;
+  --platform-muted-bg: #e9ebe9;
+  --platform-border: #d7dbd8;
+  --platform-sidebar: #171c19;
+  --platform-sidebar-fg: #f4f5f4;
+  --platform-accent: #1f4d3a;
+  --platform-card: #ffffff;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.platform-shell a:focus-visible,
+.platform-shell button:focus-visible,
+.platform-shell select:focus-visible {
+  outline: 2px solid var(--platform-accent);
+  outline-offset: 2px;
+}

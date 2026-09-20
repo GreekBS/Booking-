@@ -39,6 +39,11 @@ function stubRepo(overrides: Partial<ILeadRepository> = {}): ILeadRepository {
     findBySubmissionId: vi.fn(async () => null),
     findById: vi.fn(async () => null),
     list: vi.fn(async () => ({ data: [], total: 0, page: 1, limit: 50 })),
+    countSummary: vi.fn(async () => ({
+      total: 0,
+      newCount: 0,
+      demoRequestedCount: 0,
+    })),
     markDemoRequested: vi.fn(async () => null),
     updateStatus: vi.fn(async () => null),
     ...overrides,

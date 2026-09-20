@@ -12,6 +12,8 @@ import {
 
   GetTenantUseCase,
 
+  GetPlatformOverviewUseCase,
+
   CreatePropertyUseCase,
 
   UpdatePropertyUseCase,
@@ -667,6 +669,11 @@ export const getLeadUseCase = new GetLeadUseCase(leadRepository);
 
 export const updateLeadStatusUseCase = new UpdateLeadStatusUseCase(leadRepository);
 
+export const getPlatformOverviewUseCase = new GetPlatformOverviewUseCase(
+  tenantRepository,
+  leadRepository,
+);
+
 export const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
 
   userRepository,
@@ -1285,7 +1292,7 @@ export const enqueueChannelConnectionPollUseCase =
     channelPollJobQuery,
   );
 
-/** P1-S7b â€” internal schedule-ical-polls (Bearer BACKGROUND_JOBS_SECRET). */
+/** P1-S7b — internal schedule-ical-polls (Bearer BACKGROUND_JOBS_SECRET). */
 export const scheduleIcalPollsUseCase = new ScheduleIcalPollsUseCase(
   eligibleIcalPollConnectionReader,
   channelPollJobQuery,

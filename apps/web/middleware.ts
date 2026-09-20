@@ -68,7 +68,7 @@ export async function middleware(request: Request) {
   if (session?.user && isAuthPage) {
     const redirectUrl =
       session.user.platformRole === "super_admin"
-        ? "/platform/tenants"
+        ? "/platform"
         : "/dashboard";
     return attachRequestId(NextResponse.redirect(new URL(redirectUrl, request.url)));
   }

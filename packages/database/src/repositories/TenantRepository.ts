@@ -137,4 +137,14 @@ export class PrismaTenantRepository implements ITenantRepository {
       where: { tenantId, deletedAt: null },
     });
   }
+
+  async countSummary() {
+    const where = { deletedAt: null as Date | null };
+    const [total, active, suspended] = await Promise.all([
+      prisma.tenant.count({ where }),
+      prisma.tenant.count({ where: { ...where, status: "active" } }),
+      prisma.tenant.count({ where: { ...where, status: "suspended" } }),
+    ]);
+    return { total, active, suspended };
+  }
 }

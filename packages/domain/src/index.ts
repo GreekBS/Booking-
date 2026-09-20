@@ -40,6 +40,7 @@ export * from "./platform/application/UpdateTenantUseCase";
 export * from "./platform/application/TenantSettingsUseCases";
 
 export * from "./platform/application/TenantQueryUseCases";
+export * from "./platform/application/GetPlatformOverviewUseCase";
 export * from "./platform/application/ManageTenantStatusUseCase";
 
 export * from "./platform/async/index";
