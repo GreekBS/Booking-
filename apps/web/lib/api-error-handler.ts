@@ -60,6 +60,8 @@ export function apiError(error: unknown): NextResponse {
       VALIDATION_ERROR: 400,
       CONFLICT: 409,
       IDEMPOTENCY_CONFLICT: 409,
+      LAST_SUPER_ADMIN: 409,
+      PLATFORM_ROLE_DRIFT: 409,
       FORBIDDEN: 403,
       UNAUTHORIZED: 401,
       PERSISTENCE_CORRUPTION: 500,

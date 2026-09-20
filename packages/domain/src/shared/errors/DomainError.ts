@@ -61,3 +61,27 @@ export class PersistenceCorruptionError extends DomainError {
     super(message, "PERSISTENCE_CORRUPTION");
   }
 }
+
+/**
+ * Rejected because the transition would leave zero platform Super Admins.
+ * Enforced at the transactional platform-admin mutation boundary — not by User alone.
+ */
+export class LastSuperAdminProtectionError extends DomainError {
+  constructor(
+    message = "Cannot remove the last platform Super Admin",
+  ) {
+    super(message, "LAST_SUPER_ADMIN");
+  }
+}
+
+/**
+ * Generic User persistence attempted to change platformRole.
+ * Platform authority changes must use IPlatformSuperAdminMutation.
+ */
+export class PlatformRoleDriftError extends DomainError {
+  constructor(
+    message = "platformRole cannot be changed via generic User persistence; use IPlatformSuperAdminMutation",
+  ) {
+    super(message, "PLATFORM_ROLE_DRIFT");
+  }
+}

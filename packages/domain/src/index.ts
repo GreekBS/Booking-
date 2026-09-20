@@ -57,6 +57,8 @@ export * from "./identity/domain/events/IdentityEvents";
 
 export * from "./identity/ports/IdentityRepositories";
 
+export * from "./identity/ports/IPlatformSuperAdminMutation";
+
 export * from "./identity/ports/ISessionRepository";
 
 export * from "./identity/ports/AuthPorts";
@@ -75,6 +77,8 @@ export * from "./identity/application/GetMeUseCase";
 export * from "./identity/application/ImpersonateTenantUseCase";
 
 export * from "./identity/application/AuthUseCases";
+
+export * from "./identity/application/ChangePlatformSuperAdminRoleUseCase";
 
 export * from "./marketing/domain/Lead";
 export * from "./marketing/domain/LeadTypes";

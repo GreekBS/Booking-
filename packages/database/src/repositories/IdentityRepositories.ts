@@ -4,6 +4,7 @@ import {
   User,
   Membership,
   Invitation,
+  PlatformRoleDriftError,
   type IUserRepository,
   type IMembershipRepository,
   type IInvitationRepository,
@@ -17,7 +18,6 @@ import type {
   User as PrismaUser,
   Membership as PrismaMembership,
   Invitation as PrismaInvitation,
-  PlatformRole,
   TenantRole,
   MembershipStatus,
 } from "@prisma/client";
@@ -64,23 +64,49 @@ function mapInvitation(record: PrismaInvitation): Invitation {
 }
 
 export class PrismaUserRepository implements IUserRepository {
+  /**
+   * Persists ordinary identity/auth fields only.
+   * `platformRole` is never written on update; create always forces `null`.
+   * Role changes must use IPlatformSuperAdminMutation.
+   */
   async save(user: User): Promise<void> {
     const props = user.toProps();
-    await prisma.user.upsert({
+    const existing = await prisma.user.findUnique({
       where: { id: props.id },
-      create: {
+      select: { id: true, platformRole: true },
+    });
+
+    if (existing) {
+      if (existing.platformRole !== props.platformRole) {
+        throw new PlatformRoleDriftError();
+      }
+
+      await prisma.user.update({
+        where: { id: props.id },
+        data: {
+          email: props.email,
+          passwordHash: props.passwordHash,
+          name: props.name,
+          emailVerified: props.emailVerified,
+          // platformRole intentionally omitted — protected mutation boundary only
+        },
+      });
+      return;
+    }
+
+    if (props.platformRole !== null) {
+      throw new PlatformRoleDriftError(
+        "New users cannot be created as platform Super Admin via generic User persistence; create with platformRole null then use IPlatformSuperAdminMutation.promote",
+      );
+    }
+
+    await prisma.user.create({
+      data: {
         id: props.id,
         email: props.email,
         passwordHash: props.passwordHash,
         name: props.name,
-        platformRole: props.platformRole as PlatformRole | null,
-        emailVerified: props.emailVerified,
-      },
-      update: {
-        email: props.email,
-        passwordHash: props.passwordHash,
-        name: props.name,
-        platformRole: props.platformRole as PlatformRole | null,
+        platformRole: null,
         emailVerified: props.emailVerified,
       },
     });

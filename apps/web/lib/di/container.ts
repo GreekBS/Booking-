@@ -60,6 +60,7 @@ import {
 
   VerifyEmailUseCase,
 
+  ChangePlatformSuperAdminRoleUseCase,
 
   CreateLeadUseCase,
 
@@ -261,6 +262,7 @@ import {
 
   PrismaUserRepository,
 
+  PrismaPlatformSuperAdminMutation,
 
   PrismaMembershipRepository,
 
@@ -386,6 +388,7 @@ const userRepository = new PrismaUserRepository();
 /** Exported for request-time authoritative platformRole hydration (Phase F.1). */
 export { userRepository };
 
+const platformSuperAdminMutation = new PrismaPlatformSuperAdminMutation();
 
 const membershipRepository = new PrismaMembershipRepository(outboxRepository);
 
@@ -702,6 +705,9 @@ export const verifyEmailUseCase = new VerifyEmailUseCase(
 
 );
 
+/** Explicit platform SA promote/demote — protected mutation boundary. */
+export const changePlatformSuperAdminRoleUseCase =
+  new ChangePlatformSuperAdminRoleUseCase(platformSuperAdminMutation);
 
 const catalogQueryAdapter = new PrismaCatalogQueryAdapter();
 

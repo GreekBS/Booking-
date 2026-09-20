@@ -22,6 +22,11 @@ export {
   hashToken,
   generateInviteToken,
 } from "./repositories/IdentityRepositories";
+export {
+  PrismaPlatformSuperAdminMutation,
+  PLATFORM_SUPER_ADMIN_ADVISORY_LOCK_KEY1,
+  PLATFORM_SUPER_ADMIN_ADVISORY_LOCK_KEY2,
+} from "./repositories/PlatformSuperAdminMutation";
 export { PrismaHoldRepository } from "./repositories/commerce/HoldRepository";
 export { PrismaQuoteRepository } from "./repositories/commerce/QuoteRepository";
 export { PrismaBookingRepository } from "./repositories/commerce/BookingRepository";

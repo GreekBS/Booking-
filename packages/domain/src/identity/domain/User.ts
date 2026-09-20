@@ -1,4 +1,5 @@
 import { AggregateRoot } from "../../shared/kernel/Entity";
+import { ValidationError } from "../../shared/errors/DomainError";
 import { Email } from "../../shared/value-objects/Email";
 import type { PlatformRole } from "../../shared/types/index";
 
@@ -82,6 +83,30 @@ export class User extends AggregateRoot<UserProps> {
 
   verifyEmail(): void {
     this.props.emailVerified = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Explicit platform-role transition. Does not enforce the global
+   * "at least one Super Admin" invariant — that belongs to IPlatformSuperAdminMutation.
+   */
+  promoteToSuperAdmin(): void {
+    if (this.props.platformRole === "super_admin") {
+      throw new ValidationError("User is already a platform Super Admin");
+    }
+    this.props.platformRole = "super_admin";
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Explicit platform-role transition. Does not enforce the global
+   * "at least one Super Admin" invariant — that belongs to IPlatformSuperAdminMutation.
+   */
+  demoteFromSuperAdmin(): void {
+    if (this.props.platformRole !== "super_admin") {
+      throw new ValidationError("User is not a platform Super Admin");
+    }
+    this.props.platformRole = null;
     this.props.updatedAt = new Date();
   }
 
