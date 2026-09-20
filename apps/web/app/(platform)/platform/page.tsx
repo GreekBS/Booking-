@@ -81,7 +81,7 @@ export default async function PlatformOverviewPage() {
           Overview
         </h2>
         <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Current tenant and lead state from live platform data.
+          Current business and operational state from live platform data.
         </p>
       </div>
 

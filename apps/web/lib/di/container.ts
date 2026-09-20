@@ -20,6 +20,18 @@ import {
 
   GetPlatformTenantDetailUseCase,
 
+  ListPlatformChannelsUseCase,
+
+  GetPlatformChannelDetailUseCase,
+
+  ListPlatformJobsUseCase,
+
+  ListPlatformInboxUseCase,
+
+  ListPlatformOutboxUseCase,
+
+  GetPlatformOperationsHealthUseCase,
+
   CreatePropertyUseCase,
 
   UpdatePropertyUseCase,
@@ -279,6 +291,8 @@ import {
   PrismaLeadRepository,
 
   PrismaPlatformDirectoryRepository,
+
+  PrismaPlatformOperationsRepository,
 
   PrismaAmenityRepository,
 
@@ -666,6 +680,8 @@ const leadRepository = new PrismaLeadRepository();
 
 const platformDirectoryRepository = new PrismaPlatformDirectoryRepository();
 
+const platformOperationsRepository = new PrismaPlatformOperationsRepository();
+
 export const createLeadUseCase = new CreateLeadUseCase(
 
   leadRepository,
@@ -686,6 +702,7 @@ export const getPlatformOverviewUseCase = new GetPlatformOverviewUseCase(
   tenantRepository,
   leadRepository,
   platformDirectoryRepository,
+  platformOperationsRepository,
 );
 
 export const listPlatformPropertiesUseCase = new ListPlatformPropertiesUseCase(
@@ -699,6 +716,29 @@ export const listPlatformUsersUseCase = new ListPlatformUsersUseCase(
 export const getPlatformTenantDetailUseCase = new GetPlatformTenantDetailUseCase(
   platformDirectoryRepository,
 );
+
+export const listPlatformChannelsUseCase = new ListPlatformChannelsUseCase(
+  platformOperationsRepository,
+);
+
+export const getPlatformChannelDetailUseCase = new GetPlatformChannelDetailUseCase(
+  platformOperationsRepository,
+);
+
+export const listPlatformJobsUseCase = new ListPlatformJobsUseCase(
+  platformOperationsRepository,
+);
+
+export const listPlatformInboxUseCase = new ListPlatformInboxUseCase(
+  platformOperationsRepository,
+);
+
+export const listPlatformOutboxUseCase = new ListPlatformOutboxUseCase(
+  platformOperationsRepository,
+);
+
+export const getPlatformOperationsHealthUseCase =
+  new GetPlatformOperationsHealthUseCase(platformOperationsRepository);
 
 export const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
 

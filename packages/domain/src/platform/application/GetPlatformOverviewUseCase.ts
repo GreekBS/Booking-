@@ -4,9 +4,17 @@ import type { Tenant } from "../domain/Tenant";
 import type { ILeadRepository } from "../../marketing/ports/ILeadRepository";
 import type { ITenantRepository } from "../ports/ITenantRepository";
 import type { IPlatformDirectoryRepository } from "../ports/IPlatformDirectoryRepository";
+import type { IPlatformOperationsRepository } from "../ports/IPlatformOperationsRepository";
 
 export interface PlatformOverviewAttentionItem {
-  kind: "new_leads" | "demo_requests" | "suspended_tenants";
+  kind:
+    | "new_leads"
+    | "demo_requests"
+    | "suspended_tenants"
+    | "channel_errors"
+    | "failed_jobs"
+    | "dead_letter_outbox"
+    | "inbox_attention";
   count: number;
   href: string;
   label: string;
@@ -43,6 +51,7 @@ export class GetPlatformOverviewUseCase {
     private readonly tenantRepository: ITenantRepository,
     private readonly leadRepository: ILeadRepository,
     private readonly directoryRepository: IPlatformDirectoryRepository,
+    private readonly operationsRepository: IPlatformOperationsRepository,
   ) {}
 
   async execute(): Promise<Result<PlatformOverviewResult, Error>> {
@@ -54,6 +63,7 @@ export class GetPlatformOverviewUseCase {
         userTotal,
         recentLeadsPage,
         recentTenantsPage,
+        opsAttention,
       ] = await Promise.all([
         this.tenantRepository.countSummary(),
         this.leadRepository.countSummary(),
@@ -65,6 +75,7 @@ export class GetPlatformOverviewUseCase {
           prioritizeOperational: false,
         }),
         this.tenantRepository.findAll({ page: 1, limit: 8 }),
+        this.operationsRepository.getAttentionSignals(),
       ]);
 
       const needsAttention: PlatformOverviewAttentionItem[] = [];
@@ -90,6 +101,42 @@ export class GetPlatformOverviewUseCase {
           count: tenantCounts.suspended,
           href: "/platform/tenants",
           label: "Suspended tenants",
+        });
+      }
+      if (opsAttention.connectionsError > 0) {
+        needsAttention.push({
+          kind: "channel_errors",
+          count: opsAttention.connectionsError,
+          href: "/platform/channels?status=error",
+          label: "Channel connections in error",
+        });
+      }
+      const failedJobs =
+        opsAttention.jobsDeadLetter + opsAttention.jobsFailedPending;
+      if (failedJobs > 0) {
+        needsAttention.push({
+          kind: "failed_jobs",
+          count: failedJobs,
+          href: "/platform/operations?tab=jobs&status=dead_letter",
+          label: "Background jobs requiring attention",
+        });
+      }
+      if (opsAttention.outboxDeadLetter > 0) {
+        needsAttention.push({
+          kind: "dead_letter_outbox",
+          count: opsAttention.outboxDeadLetter,
+          href: "/platform/operations?tab=outbox&status=dead_letter",
+          label: "Dead-letter outbox events",
+        });
+      }
+      const inboxAttention =
+        opsAttention.inboxFailed + opsAttention.inboxDeadLetter;
+      if (inboxAttention > 0) {
+        needsAttention.push({
+          kind: "inbox_attention",
+          count: inboxAttention,
+          href: "/platform/operations?tab=inbox&status=failed",
+          label: "Inbox items requiring attention",
         });
       }
 

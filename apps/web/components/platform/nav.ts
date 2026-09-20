@@ -1,10 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   Building2,
+  Cable,
   Hotel,
   LayoutDashboard,
   UserRound,
   Users,
+  Workflow,
 } from "lucide-react";
 
 export type PlatformNavItem = {
@@ -14,13 +17,16 @@ export type PlatformNavItem = {
   exact?: boolean;
 };
 
-/** Batch 2 primary navigation — future sections added later without redesign. */
+/** Batch 3 primary navigation — Audit Log / Settings added later. */
 export const PLATFORM_NAV_ITEMS: PlatformNavItem[] = [
   { href: "/platform", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/platform/tenants", label: "Tenants", icon: Building2 },
   { href: "/platform/properties", label: "Properties", icon: Hotel },
   { href: "/platform/users", label: "Users", icon: UserRound },
   { href: "/platform/leads", label: "Leads", icon: Users },
+  { href: "/platform/channels", label: "Channels", icon: Cable },
+  { href: "/platform/operations", label: "Operations", icon: Workflow },
+  { href: "/platform/health", label: "Platform Health", icon: Activity },
 ];
 
 export function isPlatformNavActive(
@@ -41,6 +47,12 @@ export function platformPageTitle(pathname: string): string {
   if (pathname.startsWith("/platform/tenants")) return "Tenants";
   if (pathname.startsWith("/platform/properties")) return "Properties";
   if (pathname.startsWith("/platform/users")) return "Users";
+  if (/^\/platform\/channels\/[^/]+\/[^/]+$/.test(pathname)) {
+    return "Channel detail";
+  }
+  if (pathname.startsWith("/platform/channels")) return "Channels";
+  if (pathname.startsWith("/platform/operations")) return "Operations";
+  if (pathname.startsWith("/platform/health")) return "Platform Health";
   return "Platform";
 }
 

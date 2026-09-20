@@ -8,19 +8,22 @@ import {
 } from "@/components/platform/nav";
 
 describe("Platform Control Center Batch 2", () => {
-  it("exposes Overview, Tenants, Properties, Users, and Leads navigation", () => {
+  it("exposes Overview through Leads plus Batch 3 operational sections", () => {
     expect(PLATFORM_NAV_ITEMS.map((i) => i.label)).toEqual([
       "Overview",
       "Tenants",
       "Properties",
       "Users",
       "Leads",
+      "Channels",
+      "Operations",
+      "Platform Health",
     ]);
-    expect(PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/channels")).toBe(
+    expect(PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/audit")).toBe(
       false,
     );
     expect(
-      PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/operations"),
+      PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/settings"),
     ).toBe(false);
   });
 

@@ -46,6 +46,13 @@ export * from "./platform/application/ListPlatformUsersUseCase";
 export * from "./platform/application/GetPlatformTenantDetailUseCase";
 export * from "./platform/application/ManageTenantStatusUseCase";
 export * from "./platform/ports/IPlatformDirectoryRepository";
+export * from "./platform/ports/IPlatformOperationsRepository";
+export * from "./platform/application/ListPlatformChannelsUseCase";
+export * from "./platform/application/GetPlatformChannelDetailUseCase";
+export * from "./platform/application/ListPlatformJobsUseCase";
+export * from "./platform/application/ListPlatformInboxUseCase";
+export * from "./platform/application/ListPlatformOutboxUseCase";
+export * from "./platform/application/GetPlatformOperationsHealthUseCase";
 
 export * from "./platform/async/index";
 

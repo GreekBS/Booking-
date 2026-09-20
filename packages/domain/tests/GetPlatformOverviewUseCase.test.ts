@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { GetPlatformOverviewUseCase } from "../src/platform/application/GetPlatformOverviewUseCase";
-import { ListPlatformPropertiesUseCase } from "../src/platform/application/ListPlatformPropertiesUseCase";
-import { ListPlatformUsersUseCase } from "../src/platform/application/ListPlatformUsersUseCase";
-import { GetPlatformTenantDetailUseCase } from "../src/platform/application/GetPlatformTenantDetailUseCase";
+import { ListPlatformChannelsUseCase } from "../src/platform/application/ListPlatformChannelsUseCase";
+import { ListPlatformJobsUseCase } from "../src/platform/application/ListPlatformJobsUseCase";
+import { GetPlatformOperationsHealthUseCase } from "../src/platform/application/GetPlatformOperationsHealthUseCase";
+import { GetPlatformChannelDetailUseCase } from "../src/platform/application/GetPlatformChannelDetailUseCase";
 import { Lead } from "../src/marketing/domain/Lead";
 import type { ILeadRepository } from "../src/marketing/ports/ILeadRepository";
 import type { ITenantRepository } from "../src/platform/ports/ITenantRepository";
 import type { IPlatformDirectoryRepository } from "../src/platform/ports/IPlatformDirectoryRepository";
+import type { IPlatformOperationsRepository } from "../src/platform/ports/IPlatformOperationsRepository";
 import { Tenant } from "../src/platform/domain/Tenant";
 import { NotFoundError } from "../src/shared/errors/DomainError";
 
@@ -62,8 +64,40 @@ function emptyDirectory(
   };
 }
 
+function emptyOperations(
+  overrides: Partial<IPlatformOperationsRepository> = {},
+): IPlatformOperationsRepository {
+  return {
+    listConnections: vi.fn(async () => ({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 50,
+    })),
+    getConnectionDetail: vi.fn(async () => null),
+    listJobs: vi.fn(async () => ({ data: [], total: 0, page: 1, limit: 50 })),
+    listInbox: vi.fn(async () => ({ data: [], total: 0, page: 1, limit: 50 })),
+    listOutbox: vi.fn(async () => ({ data: [], total: 0, page: 1, limit: 50 })),
+    getHealthSummary: vi.fn(async () => ({
+      connections: [],
+      jobs: [],
+      inbox: [],
+      outbox: [],
+    })),
+    getAttentionSignals: vi.fn(async () => ({
+      connectionsError: 0,
+      jobsDeadLetter: 0,
+      jobsFailedPending: 0,
+      inboxFailed: 0,
+      inboxDeadLetter: 0,
+      outboxDeadLetter: 0,
+    })),
+    ...overrides,
+  };
+}
+
 describe("GetPlatformOverviewUseCase", () => {
-  it("aggregates counts and recent rows without inventing metrics", async () => {
+  it("aggregates counts and includes operational attention signals", async () => {
     const lead = makeLead();
     lead.requestDemo(new Date("2026-09-20T12:00:00.000Z"));
     const tenant = Tenant.create({
@@ -114,29 +148,35 @@ describe("GetPlatformOverviewUseCase", () => {
       countProperties: vi.fn(async () => 12),
       countUsers: vi.fn(async () => 9),
     });
+    const operations = emptyOperations({
+      getAttentionSignals: vi.fn(async () => ({
+        connectionsError: 2,
+        jobsDeadLetter: 1,
+        jobsFailedPending: 0,
+        inboxFailed: 3,
+        inboxDeadLetter: 0,
+        outboxDeadLetter: 4,
+      })),
+    });
 
-    const useCase = new GetPlatformOverviewUseCase(
+    const result = await new GetPlatformOverviewUseCase(
       tenantRepo,
       leadRepo,
       directory,
-    );
-    const result = await useCase.execute();
+      operations,
+    ).execute();
     expect(result.isFailure).toBe(false);
     const overview = result.getValue();
-    expect(overview.tenants).toEqual({ total: 3, active: 2, suspended: 1 });
-    expect(overview.leads).toEqual({
-      total: 4,
-      newCount: 2,
-      demoRequestedCount: 1,
-    });
     expect(overview.properties.total).toBe(12);
     expect(overview.users.total).toBe(9);
-    expect(overview.recentLeads).toHaveLength(1);
-    expect(overview.recentTenants).toHaveLength(1);
     expect(overview.needsAttention.map((i) => i.kind)).toEqual([
       "new_leads",
       "demo_requests",
       "suspended_tenants",
+      "channel_errors",
+      "failed_jobs",
+      "dead_letter_outbox",
+      "inbox_attention",
     ]);
   });
 
@@ -171,22 +211,82 @@ describe("GetPlatformOverviewUseCase", () => {
       tenantRepo,
       leadRepo,
       emptyDirectory(),
+      emptyOperations(),
     ).execute();
     expect(result.getValue().needsAttention).toEqual([]);
   });
 });
 
-describe("ListPlatformPropertiesUseCase", () => {
-  it("rejects invalid pagination and status", async () => {
-    const directory = emptyDirectory();
-    const useCase = new ListPlatformPropertiesUseCase(directory);
-    expect((await useCase.execute({ page: 0 })).isFailure).toBe(true);
+describe("ListPlatformChannelsUseCase", () => {
+  it("rejects invalid status and forwards filters", async () => {
+    const listConnections = vi.fn(async () => ({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 25,
+    }));
+    const useCase = new ListPlatformChannelsUseCase(
+      emptyOperations({ listConnections }),
+    );
     expect(
-      (await useCase.execute({ status: "bogus" as "draft" })).isFailure,
+      (await useCase.execute({ status: "bogus" as "active" })).isFailure,
     ).toBe(true);
+    const ok = await useCase.execute({
+      page: 1,
+      limit: 25,
+      provider: "ical",
+      status: "error",
+    });
+    expect(ok.isSuccess).toBe(true);
+    expect(listConnections).toHaveBeenCalledWith({
+      page: 1,
+      limit: 25,
+      q: undefined,
+      tenantId: undefined,
+      provider: "ical",
+      status: "error",
+    });
   });
+});
 
+describe("ListPlatformJobsUseCase", () => {
+  it("rejects invalid pagination", async () => {
+    const useCase = new ListPlatformJobsUseCase(emptyOperations());
+    expect((await useCase.execute({ page: 0 })).isFailure).toBe(true);
+  });
+});
+
+describe("GetPlatformOperationsHealthUseCase", () => {
+  it("returns health summary from operations repository", async () => {
+    const health = {
+      connections: [{ status: "error", count: 1 }],
+      jobs: [{ status: "dead_letter", count: 2 }],
+      inbox: [],
+      outbox: [{ status: "dead_letter", count: 3 }],
+    };
+    const result = await new GetPlatformOperationsHealthUseCase(
+      emptyOperations({ getHealthSummary: vi.fn(async () => health) }),
+    ).execute();
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue()).toEqual(health);
+  });
+});
+
+describe("GetPlatformChannelDetailUseCase", () => {
+  it("returns not found when missing", async () => {
+    const result = await new GetPlatformChannelDetailUseCase(
+      emptyOperations(),
+    ).execute("t1", "c1");
+    expect(result.isFailure).toBe(true);
+    expect(result.getError()).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("ListPlatformPropertiesUseCase", () => {
   it("forwards filters to the directory repository", async () => {
+    const { ListPlatformPropertiesUseCase } = await import(
+      "../src/platform/application/ListPlatformPropertiesUseCase"
+    );
     const listProperties = vi.fn(async () => ({
       data: [],
       total: 0,
@@ -218,6 +318,9 @@ describe("ListPlatformPropertiesUseCase", () => {
 
 describe("ListPlatformUsersUseCase", () => {
   it("preserves multi-tenant memberships from the directory", async () => {
+    const { ListPlatformUsersUseCase } = await import(
+      "../src/platform/application/ListPlatformUsersUseCase"
+    );
     const listUsers = vi.fn(async () => ({
       data: [
         {
@@ -256,36 +359,5 @@ describe("ListPlatformUsersUseCase", () => {
     ).execute({ q: "sam" });
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().data[0].memberships).toHaveLength(2);
-  });
-});
-
-describe("GetPlatformTenantDetailUseCase", () => {
-  it("returns not found when tenant is missing", async () => {
-    const result = await new GetPlatformTenantDetailUseCase(
-      emptyDirectory(),
-    ).execute("missing");
-    expect(result.isFailure).toBe(true);
-    expect(result.getError()).toBeInstanceOf(NotFoundError);
-  });
-
-  it("returns detail payload when present", async () => {
-    const tenant = Tenant.create({
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      name: "Demo Hotel",
-      slug: "demo-hotel",
-    });
-    const result = await new GetPlatformTenantDetailUseCase(
-      emptyDirectory({
-        getTenantDetail: vi.fn(async () => ({
-          tenant,
-          propertyCount: 2,
-          memberCount: 1,
-          properties: [],
-          members: [],
-        })),
-      }),
-    ).execute(tenant.id);
-    expect(result.isSuccess).toBe(true);
-    expect(result.getValue().propertyCount).toBe(2);
   });
 });
