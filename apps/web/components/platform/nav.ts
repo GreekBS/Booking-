@@ -1,7 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  Hotel,
   LayoutDashboard,
+  UserRound,
   Users,
 } from "lucide-react";
 
@@ -12,10 +14,12 @@ export type PlatformNavItem = {
   exact?: boolean;
 };
 
-/** Batch 1 primary navigation — future sections added later without redesign. */
+/** Batch 2 primary navigation — future sections added later without redesign. */
 export const PLATFORM_NAV_ITEMS: PlatformNavItem[] = [
   { href: "/platform", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/platform/tenants", label: "Tenants", icon: Building2 },
+  { href: "/platform/properties", label: "Properties", icon: Hotel },
+  { href: "/platform/users", label: "Users", icon: UserRound },
   { href: "/platform/leads", label: "Leads", icon: Users },
 ];
 
@@ -33,7 +37,10 @@ export function platformPageTitle(pathname: string): string {
   if (pathname.startsWith("/platform/leads/")) return "Lead detail";
   if (pathname.startsWith("/platform/leads")) return "Leads";
   if (pathname.startsWith("/platform/tenants/new")) return "Create tenant";
+  if (/^\/platform\/tenants\/[^/]+$/.test(pathname)) return "Tenant detail";
   if (pathname.startsWith("/platform/tenants")) return "Tenants";
+  if (pathname.startsWith("/platform/properties")) return "Properties";
+  if (pathname.startsWith("/platform/users")) return "Users";
   return "Platform";
 }
 

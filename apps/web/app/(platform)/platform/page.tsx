@@ -85,7 +85,7 @@ export default async function PlatformOverviewPage() {
         </p>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <MetricCard
           label="Total tenants"
           value={overview.tenants.total}
@@ -95,6 +95,16 @@ export default async function PlatformOverviewPage() {
           label="Active tenants"
           value={overview.tenants.active}
           href="/platform/tenants"
+        />
+        <MetricCard
+          label="Total properties"
+          value={overview.properties.total}
+          href="/platform/properties"
+        />
+        <MetricCard
+          label="Total users"
+          value={overview.users.total}
+          href="/platform/users"
         />
         <MetricCard
           label="Total leads"
@@ -213,7 +223,7 @@ export default async function PlatformOverviewPage() {
               {recentTenants.map((tenant) => (
                 <li key={tenant.id}>
                   <Link
-                    href="/platform/tenants"
+                    href={`/platform/tenants/${tenant.id}`}
                     className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--platform-muted-bg)]/50"
                   >
                     <div className="min-w-0">

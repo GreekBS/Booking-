@@ -3,6 +3,7 @@ import type { Lead } from "../../marketing/domain/Lead";
 import type { Tenant } from "../domain/Tenant";
 import type { ILeadRepository } from "../../marketing/ports/ILeadRepository";
 import type { ITenantRepository } from "../ports/ITenantRepository";
+import type { IPlatformDirectoryRepository } from "../ports/IPlatformDirectoryRepository";
 
 export interface PlatformOverviewAttentionItem {
   kind: "new_leads" | "demo_requests" | "suspended_tenants";
@@ -22,6 +23,12 @@ export interface PlatformOverviewResult {
     newCount: number;
     demoRequestedCount: number;
   };
+  properties: {
+    total: number;
+  };
+  users: {
+    total: number;
+  };
   recentLeads: Lead[];
   recentTenants: Tenant[];
   needsAttention: PlatformOverviewAttentionItem[];
@@ -35,21 +42,30 @@ export class GetPlatformOverviewUseCase {
   constructor(
     private readonly tenantRepository: ITenantRepository,
     private readonly leadRepository: ILeadRepository,
+    private readonly directoryRepository: IPlatformDirectoryRepository,
   ) {}
 
   async execute(): Promise<Result<PlatformOverviewResult, Error>> {
     try {
-      const [tenantCounts, leadCounts, recentLeadsPage, recentTenantsPage] =
-        await Promise.all([
-          this.tenantRepository.countSummary(),
-          this.leadRepository.countSummary(),
-          this.leadRepository.list({
-            page: 1,
-            limit: 8,
-            prioritizeOperational: false,
-          }),
-          this.tenantRepository.findAll({ page: 1, limit: 8 }),
-        ]);
+      const [
+        tenantCounts,
+        leadCounts,
+        propertyTotal,
+        userTotal,
+        recentLeadsPage,
+        recentTenantsPage,
+      ] = await Promise.all([
+        this.tenantRepository.countSummary(),
+        this.leadRepository.countSummary(),
+        this.directoryRepository.countProperties(),
+        this.directoryRepository.countUsers(),
+        this.leadRepository.list({
+          page: 1,
+          limit: 8,
+          prioritizeOperational: false,
+        }),
+        this.tenantRepository.findAll({ page: 1, limit: 8 }),
+      ]);
 
       const needsAttention: PlatformOverviewAttentionItem[] = [];
       if (leadCounts.newCount > 0) {
@@ -88,6 +104,8 @@ export class GetPlatformOverviewUseCase {
           newCount: leadCounts.newCount,
           demoRequestedCount: leadCounts.demoRequestedCount,
         },
+        properties: { total: propertyTotal },
+        users: { total: userTotal },
         recentLeads: recentLeadsPage.data,
         recentTenants: recentTenantsPage.data,
         needsAttention,

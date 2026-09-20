@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { openTenantAsPlatformAdmin } from "./open-tenant";
 
@@ -123,7 +124,12 @@ export function TenantsList() {
               className="border-b border-[var(--platform-border)] last:border-0"
             >
               <td className="px-4 py-3 font-medium text-[var(--platform-ink)]">
-                {tenant.name}
+                <Link
+                  href={`/platform/tenants/${tenant.id}`}
+                  className="hover:text-[var(--platform-accent)] hover:underline"
+                >
+                  {tenant.name}
+                </Link>
               </td>
               <td className="px-4 py-3 font-mono text-xs text-[var(--platform-muted)]">
                 {tenant.slug}
@@ -147,6 +153,12 @@ export function TenantsList() {
               </td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/platform/tenants/${tenant.id}`}
+                    className="text-sm font-medium text-[var(--platform-ink-soft)] hover:underline"
+                  >
+                    Detail
+                  </Link>
                   <button
                     type="button"
                     disabled={openingId !== null}

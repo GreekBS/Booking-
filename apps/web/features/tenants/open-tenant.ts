@@ -9,6 +9,8 @@ export const DASHBOARD_PROPERTIES_PATH = "/dashboard/properties";
 
 export type OpenTenantDeps = {
   tenantId: string;
+  /** Optional post-open destination; defaults to properties list. */
+  destinationPath?: string;
   impersonate: (tenantId: string) => Promise<Response>;
   updateSession: (data: { activeTenantId: string }) => Promise<unknown>;
   navigate: (url: string) => void;
@@ -54,6 +56,6 @@ export async function openTenantAsPlatformAdmin(
     };
   }
 
-  deps.navigate(DASHBOARD_PROPERTIES_PATH);
+  deps.navigate(deps.destinationPath ?? DASHBOARD_PROPERTIES_PATH);
   return { ok: true };
 }

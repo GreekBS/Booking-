@@ -10,6 +10,7 @@ export { PrismaPropertyRepository } from "./repositories/PropertyRepository";
 export { PrismaAmenityRepository } from "./repositories/AmenityRepository";
 export { PrismaAuditLogRepository } from "./repositories/AuditLogRepository";
 export { PrismaLeadRepository } from "./repositories/LeadRepository";
+export { PrismaPlatformDirectoryRepository } from "./repositories/PlatformDirectoryRepository";
 export { PrismaSessionRepository } from "./repositories/SessionRepository";
 export {
   PrismaVerificationTokenRepository,

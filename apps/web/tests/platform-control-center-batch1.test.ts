@@ -9,10 +9,12 @@ import {
 } from "@/components/platform/nav";
 
 describe("Platform Control Center Batch 1", () => {
-  it("exposes only Overview, Tenants, and Leads navigation", () => {
+  it("exposes Batch 1 core nav items that remain in Batch 2", () => {
     expect(PLATFORM_NAV_ITEMS.map((i) => i.label)).toEqual([
       "Overview",
       "Tenants",
+      "Properties",
+      "Users",
       "Leads",
     ]);
     expect(PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/channels")).toBe(

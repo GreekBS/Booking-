@@ -41,7 +41,11 @@ export * from "./platform/application/TenantSettingsUseCases";
 
 export * from "./platform/application/TenantQueryUseCases";
 export * from "./platform/application/GetPlatformOverviewUseCase";
+export * from "./platform/application/ListPlatformPropertiesUseCase";
+export * from "./platform/application/ListPlatformUsersUseCase";
+export * from "./platform/application/GetPlatformTenantDetailUseCase";
 export * from "./platform/application/ManageTenantStatusUseCase";
+export * from "./platform/ports/IPlatformDirectoryRepository";
 
 export * from "./platform/async/index";
 
