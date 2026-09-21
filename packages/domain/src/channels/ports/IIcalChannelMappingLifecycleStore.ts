@@ -65,7 +65,7 @@ export interface IcalMappingLifecycleMutationResult {
   /**
    * True when already-materialized `channel_import` blocks no longer match the
    * mapping and a fresh poll is required to rematerialize inventory.
-   * V1 never removes previously written blocks.
+   * Superseded-epoch rows are soft-released in the mapping lifecycle transaction.
    */
   readonly requiresPollRematerialization: boolean;
 }
@@ -81,7 +81,7 @@ export interface IcalMappingLifecycleMutationResult {
  * - iCal `availability_block_feed` connections keep at most one active mapping
  * - epoch bump, cursor baseline reset, and pending supersession are atomic with
  *   the mapping write
- * - no `unit_calendar_blocks` mutation (V1 no-removal)
+ * - superseded-epoch `channel_import` soft-release on epoch bump (Hold/Booking untouched)
  */
 export interface IIcalChannelMappingLifecycleStore {
   mutateUnderConnectionLock(

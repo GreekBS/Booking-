@@ -356,6 +356,22 @@ export class PrismaIcalCredentialRotationStore implements IIcalCredentialRotatio
       });
       await this.hooks.afterSupersede?.();
 
+      // Release active channel_import blocks from superseded epochs only.
+      // Newer-epoch rows and Hold/Booking inventory are never touched.
+      const releasedOldEpoch = await tx.$queryRaw<Array<{ id: string }>>`
+        UPDATE "unit_calendar_blocks"
+        SET
+          "status" = 'released'::"CalendarBlockStatus",
+          "updated_at" = NOW()
+        WHERE "tenant_id" = ${params.tenantId}::uuid
+          AND "connection_id" = ${params.connectionId}
+          AND "block_type" = 'channel_import'::"CalendarBlockType"
+          AND "status" = 'active'::"CalendarBlockStatus"
+          AND "semantic_config_version" IS NOT NULL
+          AND "semantic_config_version" < ${resultingVersion}
+        RETURNING "id"
+      `;
+
       await tx.auditLog.create({
         data: {
           tenantId: params.tenantId,
@@ -371,6 +387,7 @@ export class PrismaIcalCredentialRotationStore implements IIcalCredentialRotatio
             cursorBaselineReset: cursorRowUpdated,
             retainedCursorVersion: retainedVersion,
             supersededPendingCount: superseded.count,
+            releasedSupersededImportedInventoryCount: releasedOldEpoch.length,
             credentialRefRotated: true,
             reason: params.reason ?? null,
           } as Prisma.InputJsonValue,

@@ -51,15 +51,20 @@ export class PrismaDeactivateChannelConnectionInventoryStore
         "semantic_version_conflict",
       );
     }
-    if (connection.status !== "active" && connection.status !== "paused") {
+    if (
+      connection.status !== "active" &&
+      connection.status !== "paused" &&
+      connection.status !== "disconnected"
+    ) {
       throw new ConflictError(
         `Cannot deactivate inventory for connection in status: ${connection.status}`,
         "lifecycle_status_conflict",
       );
     }
 
-    const alreadyPaused = connection.status === "paused";
-    if (!alreadyPaused) {
+    const alreadyPaused =
+      connection.status === "paused" || connection.status === "disconnected";
+    if (connection.status === "active") {
       const updated = await tx.$executeRaw`
         UPDATE "channel_connections"
         SET

@@ -20,7 +20,7 @@ export interface DeactivateChannelConnectionInventoryCommand {
 
 export interface DeactivateChannelConnectionInventoryResult {
   connectionId: string;
-  connectionStatus: "paused";
+  connectionStatus: "paused" | "disconnected";
   releasedCount: number;
   alreadyPaused: boolean;
   semanticConfigVersion: number;
@@ -65,7 +65,8 @@ export class DeactivateChannelConnectionInventoryUseCase {
       }
       if (
         connection.status !== "active" &&
-        connection.status !== "paused"
+        connection.status !== "paused" &&
+        connection.status !== "disconnected"
       ) {
         return Result.fail(
           new ConflictError(
@@ -88,7 +89,7 @@ export class DeactivateChannelConnectionInventoryUseCase {
 
       return Result.ok({
         connectionId,
-        connectionStatus: "paused",
+        connectionStatus: connection.status === "disconnected" ? "disconnected" : "paused",
         releasedCount: outcome.releasedCount,
         alreadyPaused: outcome.alreadyPaused,
         semanticConfigVersion: outcome.semanticConfigVersion,

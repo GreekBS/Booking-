@@ -65,9 +65,9 @@ const ACTIVE_OR_PAUSED: readonly ChannelConnectionStatus[] = ["active", "paused"
  * | `unit_change`            | yes       | yes + supersede | paused             |
  * | `replacement`            | yes       | yes + supersede | paused             |
  *
- * Non-epoch mutations still report `requiresPollRematerialization: true`: the
- * operator workflow is pause → mutate → resume → poll, because V1 never removes
- * already-materialized `channel_import` blocks.
+ * Non-epoch mutations still report `requiresPollRematerialization: true`.
+ * After an epoch bump, superseded-epoch `channel_import` blocks are soft-released.
+ * Operator workflow remains pause → mutate → resume → poll for rematerialization.
  */
 export class UpsertChannelListingMappingUseCase {
   constructor(

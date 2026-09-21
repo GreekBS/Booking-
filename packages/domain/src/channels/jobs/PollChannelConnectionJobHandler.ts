@@ -11,9 +11,16 @@ function parsePayload(payload: Record<string, unknown>): string {
   return connectionId.trim();
 }
 
+export type PollJobLogFn = (fields: Record<string, unknown>) => void;
+
+/**
+ * Runs ExecuteChannelPollConnectionUseCase for poll_channel_connection jobs.
+ * Structured logging must never include feed URLs, credentials, or raw ICS.
+ */
 export class PollChannelConnectionJobHandler implements IBackgroundJobHandler {
   constructor(
     private readonly executePollConnectionUseCase: ExecuteChannelPollConnectionUseCase,
+    private readonly log: PollJobLogFn = () => {},
   ) {}
 
   canHandle(jobType: string): boolean {
@@ -27,10 +34,32 @@ export class PollChannelConnectionJobHandler implements IBackgroundJobHandler {
     }
 
     const connectionId = parsePayload(job.payload);
+    const started = Date.now();
 
     const result = await this.executePollConnectionUseCase.execute({
       tenantId,
       connectionId,
+    });
+
+    this.log({
+      action: "channels.poll_channel_connection",
+      tenantId,
+      connectionId,
+      provider: "ical",
+      jobId: job.id,
+      ackAllowed: result.ackAllowed,
+      cursorAdvanced: result.cursorAdvanced,
+      cursorReconciliation: result.cursorReconciliation,
+      loadedCursorVersion: result.loadedCursorVersion,
+      committedCursorVersion: result.committedCursorVersion,
+      receivedMessageCount: result.receivedMessageCount,
+      persistedMessageCount: result.persistedMessageCount,
+      failureKind: result.failureKind ?? null,
+      failurePhase: result.failurePhase ?? null,
+      retryClassification: result.retryClassification,
+      shouldRetryJob: result.shouldRetryJob,
+      errorMessage: result.errorMessage ?? null,
+      durationMs: Date.now() - started,
     });
 
     if (result.shouldRetryJob) {

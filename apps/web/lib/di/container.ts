@@ -384,6 +384,8 @@ import {
 
   PrismaDeactivateChannelConnectionInventoryStore,
 
+  PrismaChannelImportedInventoryCleanupStore,
+
   PrismaChannelConnectionInventoryApplyStore,
 
 } from "@hcp/database";
@@ -1304,11 +1306,15 @@ export const pauseChannelConnectionUseCase = new PauseChannelConnectionUseCase(
   channelConnectionLifecycleUnitOfWork,
 );
 
+const channelImportedInventoryCleanupStore =
+  new PrismaChannelImportedInventoryCleanupStore();
+
 export const disconnectChannelConnectionUseCase =
   new DisconnectChannelConnectionUseCase(
     channelConnectionRepository,
     permissionChecker,
     channelConnectionLifecycleUnitOfWork,
+    channelImportedInventoryCleanupStore,
   );
 
 const prepareReservationUseCase = new PrepareReservationUseCase(
@@ -1459,6 +1465,11 @@ export const executeChannelPollConnectionUseCase =
 
 const pollChannelConnectionJobHandler = new PollChannelConnectionJobHandler(
   executeChannelPollConnectionUseCase,
+  (fields) => {
+    console.log(
+      JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }),
+    );
+  },
 );
 
 const channelInboxWorkerId =

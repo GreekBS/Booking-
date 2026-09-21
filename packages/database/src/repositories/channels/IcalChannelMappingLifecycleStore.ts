@@ -43,8 +43,8 @@ interface LockedMappingRow {
  * setTenantContext → ChannelConnection FOR UPDATE → ChannelListingMapping
  * FOR UPDATE → pending ChannelInventoryReconciliation FOR UPDATE.
  *
- * Never mutates `unit_calendar_blocks`: V1 retains already-materialized
- * `channel_import` blocks and relies on a fresh poll under the new epoch.
+ * When the semantic epoch bumps, active `channel_import` rows from superseded
+ * epochs are soft-released. Hold/Booking inventory is never touched.
  */
 export class PrismaIcalChannelMappingLifecycleStore
   implements IIcalChannelMappingLifecycleStore
@@ -138,6 +138,7 @@ export class PrismaIcalChannelMappingLifecycleStore
     let cursorBaselineReset = false;
     let retainedCursorVersion: number | null = null;
     let supersededPendingCount = 0;
+    let releasedSupersededImportedInventoryCount = 0;
 
     if (params.requiresEpochBump) {
       await tx.$queryRaw`
@@ -180,6 +181,21 @@ export class PrismaIcalChannelMappingLifecycleStore
         data: { reconcileStatus: "superseded" },
       });
       supersededPendingCount = superseded.count;
+
+      const releasedOldEpoch = await tx.$queryRaw<Array<{ id: string }>>`
+        UPDATE "unit_calendar_blocks"
+        SET
+          "status" = 'released'::"CalendarBlockStatus",
+          "updated_at" = NOW()
+        WHERE "tenant_id" = ${params.tenantId}::uuid
+          AND "connection_id" = ${params.connectionId}
+          AND "block_type" = 'channel_import'::"CalendarBlockType"
+          AND "status" = 'active'::"CalendarBlockStatus"
+          AND "semantic_config_version" IS NOT NULL
+          AND "semantic_config_version" < ${resultingSemanticConfigVersion}
+        RETURNING "id"
+      `;
+      releasedSupersededImportedInventoryCount = releasedOldEpoch.length;
     }
 
     await tx.auditLog.create({
@@ -199,6 +215,7 @@ export class PrismaIcalChannelMappingLifecycleStore
           epochBumped: params.requiresEpochBump,
           cursorBaselineReset,
           supersededPendingCount,
+          releasedSupersededImportedInventoryCount,
           reason: params.reason ?? null,
         } as Prisma.InputJsonValue,
         ipAddress: params.ipAddress ?? null,

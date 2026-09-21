@@ -507,8 +507,9 @@ row after deletion. A stale queued `reconcile_ical_imported_inventory` job then 
 writes **no** `channel_import` blocks, and the job completes without retry/dead-letter storm.
 `channel_listing_mappings`, `outbox_events`, and `background_jobs` are **not** FK-cascaded.
 `unit_calendar_blocks.connection_id` has **no** FK — already-materialized `channel_import`
-blocks **survive** connection deletion. Same-epoch authoritative soft-release is **P1-S7a**;
-disconnect / old-epoch cleanup remain outside S6b.
+blocks **survive** connection deletion until disconnect/deactivate cleanup runs.
+Same-epoch authoritative soft-release is **P1-S7a**; superseded-epoch release runs
+on rotation / mapping epoch bump; disconnect releases all connection-owned imports.
 
 **P1-S6c:** **IMPLEMENTED (not activated).** Credential rotation, mapping
 lifecycle, and async lifecycle gates. Provider-1 remains **not** operationally
@@ -583,7 +584,9 @@ reconciliation → blocks. Mutation classification:
 `ical` + `availability_block_feed`, and always report
 `requiresPollRematerialization: true` — the operator workflow is
 pause → mutate → resume → poll. Same-epoch absences are soft-released by **P1-S7a**
-after the next authoritative poll; old-epoch / disconnect cleanup is not automatic.
+after the next authoritative poll. **Superseded-epoch** `channel_import` rows are
+soft-released on credential rotation / mapping epoch bump. **Disconnect** and
+**inventory/deactivate** release all connection-owned active `channel_import`.
 
 **Operator HTTP (behind `CHANNELS_OPERATOR_API_ENABLED`):**
 
@@ -591,8 +594,9 @@ after the next authoritative poll; old-epoch / disconnect cleanup is not automat
 - `PUT  .../channel-connections/:connectionId/mappings`
 - `POST .../channel-connections/:connectionId/mappings/:mappingId/deactivate`
 
-Not in P1-S6c: Booking behavior, automatic old-epoch `channel_import` cleanup,
-disconnect cleanup, reconciliation PK changes, reservation emission.
+Not in P1-S6c historically: Booking behavior, reservation emission.
+Superseded-epoch / disconnect `channel_import` cleanup is now implemented
+(rotation + mapping epoch bump + disconnect cleanup store).
 
 **P1-S7a (authoritative same-epoch inventory soft-removal):** **IMPLEMENTED (code;
 pending independent closure review).** Scope is S7a only:
@@ -607,7 +611,9 @@ pending independent closure review).** Scope is S7a only:
 - Incomplete/missing observed evidence → **never** absence-deactivate (fail closed)
 - Ownership fence: `channel_import` + `active` + tenant/connection/epoch/mapping/unit
 - Reappearance inserts a **new** active row; historical `released` rows remain
-- Same-epoch only — **no** automatic old-epoch cleanup; **no** disconnect cleanup
+- Same-epoch authoritative soft-release (**P1-S7a**)
+- Superseded-epoch release on rotation / mapping epoch bump
+- Disconnect + inventory/deactivate release all connection-owned `channel_import`
 - Atomic TX2: upsert desired → release absentees/cancelled → mark applied
 
 Migration: `20260913120000_p1_s7a_observed_inventory_evidence`.

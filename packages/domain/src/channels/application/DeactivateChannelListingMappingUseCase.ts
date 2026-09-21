@@ -44,8 +44,9 @@ const PAUSED_ONLY: readonly ChannelConnectionStatus[] = ["paused"];
  * Runs under `channel_connections FOR UPDATE` and requires a paused connection:
  * dropping the active mapping removes the inventory source, so the operator must
  * pause first. Pending reconciliation generations are superseded and the poll
- * cursor is baseline-reset under a new epoch; already-materialized
- * `channel_import` blocks are retained (V1 no-removal).
+ * cursor is baseline-reset under a new epoch. Superseded-epoch `channel_import`
+ * blocks are soft-released in the same transaction. Same-epoch authoritative
+ * soft-release remains owned by P1-S7a reconcile.
  *
  * Replacement is not done here — use `UpsertChannelListingMappingUseCase` with
  * `replaceMappingId` so the deactivate and create land in one transaction.
