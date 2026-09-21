@@ -7,7 +7,7 @@ import {
 } from "@/components/platform/nav";
 
 describe("Platform Control Center Batch 3", () => {
-  it("exposes Channels, Operations, and Platform Health in navigation", () => {
+  it("exposes Channels, Operations, Platform Health, Audit Log, and Settings", () => {
     expect(PLATFORM_NAV_ITEMS.map((i) => i.label)).toEqual([
       "Overview",
       "Tenants",
@@ -17,12 +17,14 @@ describe("Platform Control Center Batch 3", () => {
       "Channels",
       "Operations",
       "Platform Health",
+      "Audit Log",
+      "Settings",
     ]);
     expect(PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/audit")).toBe(
-      false,
+      true,
     );
     expect(PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/settings")).toBe(
-      false,
+      true,
     );
   });
 

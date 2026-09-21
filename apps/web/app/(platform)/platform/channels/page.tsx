@@ -3,6 +3,7 @@ import {
   listPlatformChannelsUseCase,
   listTenantsUseCase,
 } from "@/lib/di/container";
+import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import { formatPlatformDate, statusBadgeClass } from "@/lib/platform/format";
 import type { ChannelConnectionStatus } from "@hcp/domain";
 
@@ -66,14 +67,10 @@ export default async function PlatformChannelsPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--platform-ink)]">
-          Channels
-        </h2>
-        <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Global Channel Manager connections — read-only operational directory.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Channels"
+        description="Global Channel Manager connections — read-only operational directory."
+      />
 
       <form
         method="get"

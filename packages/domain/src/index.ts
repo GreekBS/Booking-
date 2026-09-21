@@ -53,6 +53,9 @@ export * from "./platform/application/ListPlatformJobsUseCase";
 export * from "./platform/application/ListPlatformInboxUseCase";
 export * from "./platform/application/ListPlatformOutboxUseCase";
 export * from "./platform/application/GetPlatformOperationsHealthUseCase";
+export * from "./platform/ports/IPlatformAuditRepository";
+export * from "./platform/application/ListPlatformAuditLogsUseCase";
+export * from "./platform/application/GetPlatformSystemConfigurationUseCase";
 
 export * from "./platform/async/index";
 

@@ -32,6 +32,10 @@ import {
 
   GetPlatformOperationsHealthUseCase,
 
+  ListPlatformAuditLogsUseCase,
+
+  GetPlatformSystemConfigurationUseCase,
+
   CreatePropertyUseCase,
 
   UpdatePropertyUseCase,
@@ -293,6 +297,8 @@ import {
   PrismaPlatformDirectoryRepository,
 
   PrismaPlatformOperationsRepository,
+
+  PrismaPlatformAuditRepository,
 
   PrismaAmenityRepository,
 
@@ -682,6 +688,8 @@ const platformDirectoryRepository = new PrismaPlatformDirectoryRepository();
 
 const platformOperationsRepository = new PrismaPlatformOperationsRepository();
 
+const platformAuditRepository = new PrismaPlatformAuditRepository();
+
 export const createLeadUseCase = new CreateLeadUseCase(
 
   leadRepository,
@@ -739,6 +747,13 @@ export const listPlatformOutboxUseCase = new ListPlatformOutboxUseCase(
 
 export const getPlatformOperationsHealthUseCase =
   new GetPlatformOperationsHealthUseCase(platformOperationsRepository);
+
+export const listPlatformAuditLogsUseCase = new ListPlatformAuditLogsUseCase(
+  platformAuditRepository,
+);
+
+export const getPlatformSystemConfigurationUseCase =
+  new GetPlatformSystemConfigurationUseCase(platformAuditRepository);
 
 export const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
 

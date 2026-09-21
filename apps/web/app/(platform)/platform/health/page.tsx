@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPlatformOperationsHealthUseCase } from "@/lib/di/container";
+import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import type { PlatformStatusCount } from "@hcp/domain";
 
 function countOf(rows: PlatformStatusCount[], status: string): number {
@@ -95,15 +96,10 @@ export default async function PlatformHealthPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--platform-ink)]">
-          Platform Health
-        </h2>
-        <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Internal operational summary derived from persisted Talos
-          infrastructure — not an uptime or infrastructure monitor.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Platform Health"
+        description="Internal operational summary derived from persisted Talos infrastructure — not an uptime or infrastructure monitor."
+      />
 
       <section className="rounded-md border border-[var(--platform-border)] bg-[var(--platform-card)] p-4">
         <h3 className="text-sm font-semibold">Attention summary</h3>

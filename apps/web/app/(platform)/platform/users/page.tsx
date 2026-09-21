@@ -3,6 +3,7 @@ import {
   listPlatformUsersUseCase,
   listTenantsUseCase,
 } from "@/lib/di/container";
+import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import { requireSuperAdmin } from "@/lib/tenant-context";
 import { PlatformRoleActions } from "@/features/platform-users/PlatformRoleActions";
 
@@ -63,15 +64,10 @@ export default async function PlatformUsersPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--platform-ink)]">
-          Users
-        </h2>
-        <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Global user directory with tenant memberships. A user may belong to
-          multiple tenants.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Users"
+        description="Global user directory with tenant memberships. A user may belong to multiple tenants."
+      />
 
       <form
         method="get"

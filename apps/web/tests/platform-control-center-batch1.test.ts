@@ -10,19 +10,18 @@ import {
 
 describe("Platform Control Center Batch 1", () => {
   it("exposes Batch 1 core nav items that remain in later batches", () => {
-    expect(PLATFORM_NAV_ITEMS.map((i) => i.label)).toEqual([
-      "Overview",
-      "Tenants",
-      "Properties",
-      "Users",
-      "Leads",
-      "Channels",
-      "Operations",
-      "Platform Health",
-    ]);
-    expect(PLATFORM_NAV_ITEMS.some((i) => i.href === "/platform/audit")).toBe(
-      false,
+    const labels = PLATFORM_NAV_ITEMS.map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        "Overview",
+        "Tenants",
+        "Properties",
+        "Users",
+        "Leads",
+      ]),
     );
+    expect(labels).toContain("Audit Log");
+    expect(labels).toContain("Settings");
   });
 
   it("marks active routes correctly", () => {

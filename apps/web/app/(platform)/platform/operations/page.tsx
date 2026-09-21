@@ -5,6 +5,7 @@ import {
   listPlatformOutboxUseCase,
   listTenantsUseCase,
 } from "@/lib/di/container";
+import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import { formatPlatformDate, statusBadgeClass } from "@/lib/platform/format";
 import type {
   BackgroundJobStatus,
@@ -76,15 +77,10 @@ export default async function PlatformOperationsPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--platform-ink)]">
-          Operations
-        </h2>
-        <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Read-only diagnostics for background jobs, channel inbox, and outbox.
-          No retry or mutation controls in this batch.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Operations"
+        description="Read-only diagnostics for background jobs, channel inbox, and outbox. No retry or mutation controls."
+      />
 
       <nav className="flex flex-wrap gap-1 border-b border-[var(--platform-border)]">
         {tabLinks.map((t) => {

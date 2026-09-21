@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import { LeadsList } from "@/features/leads/LeadsList";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -21,13 +22,10 @@ export default async function PlatformLeadsPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--platform-ink)]">Leads</h2>
-        <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Marketing inquiries from Get Started. New and demo-requested leads are
-          highlighted.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Leads"
+        description="Marketing inquiries from Get Started. New and demo-requested leads are highlighted."
+      />
       <Suspense
         fallback={
           <p className="text-sm text-[var(--platform-muted)]">Loading...</p>

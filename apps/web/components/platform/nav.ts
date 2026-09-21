@@ -3,8 +3,10 @@ import {
   Activity,
   Building2,
   Cable,
+  ClipboardList,
   Hotel,
   LayoutDashboard,
+  Settings,
   UserRound,
   Users,
   Workflow,
@@ -17,17 +19,51 @@ export type PlatformNavItem = {
   exact?: boolean;
 };
 
-/** Batch 3 primary navigation — Audit Log / Settings added later. */
-export const PLATFORM_NAV_ITEMS: PlatformNavItem[] = [
-  { href: "/platform", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/platform/tenants", label: "Tenants", icon: Building2 },
-  { href: "/platform/properties", label: "Properties", icon: Hotel },
-  { href: "/platform/users", label: "Users", icon: UserRound },
-  { href: "/platform/leads", label: "Leads", icon: Users },
-  { href: "/platform/channels", label: "Channels", icon: Cable },
-  { href: "/platform/operations", label: "Operations", icon: Workflow },
-  { href: "/platform/health", label: "Platform Health", icon: Activity },
+export type PlatformNavSection = {
+  id: string;
+  label?: string;
+  items: PlatformNavItem[];
+};
+
+/** Final Platform Control Center navigation (Batches 1–4). */
+export const PLATFORM_NAV_SECTIONS: PlatformNavSection[] = [
+  {
+    id: "overview",
+    items: [
+      { href: "/platform", label: "Overview", icon: LayoutDashboard, exact: true },
+    ],
+  },
+  {
+    id: "directory",
+    label: "Directory",
+    items: [
+      { href: "/platform/tenants", label: "Tenants", icon: Building2 },
+      { href: "/platform/properties", label: "Properties", icon: Hotel },
+      { href: "/platform/users", label: "Users", icon: UserRound },
+      { href: "/platform/leads", label: "Leads", icon: Users },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    items: [
+      { href: "/platform/channels", label: "Channels", icon: Cable },
+      { href: "/platform/operations", label: "Operations", icon: Workflow },
+      { href: "/platform/health", label: "Platform Health", icon: Activity },
+    ],
+  },
+  {
+    id: "governance",
+    label: "Governance",
+    items: [
+      { href: "/platform/audit", label: "Audit Log", icon: ClipboardList },
+      { href: "/platform/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
+
+export const PLATFORM_NAV_ITEMS: PlatformNavItem[] =
+  PLATFORM_NAV_SECTIONS.flatMap((section) => section.items);
 
 export function isPlatformNavActive(
   pathname: string,
@@ -53,6 +89,8 @@ export function platformPageTitle(pathname: string): string {
   if (pathname.startsWith("/platform/channels")) return "Channels";
   if (pathname.startsWith("/platform/operations")) return "Operations";
   if (pathname.startsWith("/platform/health")) return "Platform Health";
+  if (pathname.startsWith("/platform/audit")) return "Audit Log";
+  if (pathname.startsWith("/platform/settings")) return "Settings";
   return "Platform";
 }
 

@@ -3,6 +3,7 @@ import {
   listPlatformPropertiesUseCase,
   listTenantsUseCase,
 } from "@/lib/di/container";
+import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import { OpenTenantButton } from "@/features/tenants/OpenTenantButton";
 import type { PropertyStatus } from "@hcp/domain";
 
@@ -72,14 +73,10 @@ export default async function PlatformPropertiesPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--platform-ink)]">
-          Properties
-        </h2>
-        <p className="mt-1 text-sm text-[var(--platform-muted)]">
-          Global property directory across all tenants.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Properties"
+        description="Global property directory across all tenants."
+      />
 
       <form
         method="get"
