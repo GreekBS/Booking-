@@ -62,6 +62,8 @@ describe("CM-4b S4a-2a architecture fitness", () => {
     expect(factories).toMatch(/PRODUCTION_CHANNEL_PROVIDER_FACTORIES/);
     expect(factories).toMatch(/createIcalProviderRegistration/);
     expect(factories).toMatch(/createIcalProviderRegistration\(\{\s*feedFetcher:\s*domainIcalFeedFetcher\s*\}\)/);
+    expect(factories).toMatch(/createBookingComProviderRegistration/);
+    expect(factories).toMatch(/booking_com:\s*\(\)\s*=>\s*createBookingComProviderRegistration\(\)/);
     expect(factories).not.toMatch(/Object\.freeze\(\{\}\)/);
     expect(factories).not.toMatch(/from ["'].*TestChannel/);
     expect(factories).not.toMatch(/createTestChannel/);
@@ -70,6 +72,7 @@ describe("CM-4b S4a-2a architecture fitness", () => {
     expect(factories).toMatch(/CHANNELS_ENABLED_PROVIDERS/);
     expect(factories).toMatch(/bootstrapChannelProviderRegistry/);
     expect(factories).not.toMatch(/\.register\s*\(\s*createIcalProviderRegistration/);
+    expect(factories).not.toMatch(/\.register\s*\(\s*createBookingComProviderRegistration/);
   });
 
   it("does not expose transport-status (deferred past S4a-2b)", () => {

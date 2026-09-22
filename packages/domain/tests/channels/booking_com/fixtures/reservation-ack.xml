@@ -1,0 +1,20 @@
+<!--
+  CM-4c-1 contract fixture — representative OTA acknowledgement POST body (simplified).
+  Official ACK: POST OTA_HotelResNotif / OTA_HotelResModifyNotif.
+  https://developers.booking.com/connectivity/docs/reservations-api/reservations-overview
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<OTA_HotelResNotifRS>
+  <HotelReservations>
+    <HotelReservation>
+      <UniqueID Type="14" ID="1234567890"/>
+      <ResGlobalInfo>
+        <HotelReservationIDs>
+          <HotelReservationID ResID_Type="14" ResID_Value="1234567890"/>
+        </HotelReservationIDs>
+      </ResGlobalInfo>
+    </HotelReservation>
+  </HotelReservations>
+  <Success/>
+</OTA_HotelResNotifRS>
+<!-- RUID: [fixture-ruid-ack==] -->

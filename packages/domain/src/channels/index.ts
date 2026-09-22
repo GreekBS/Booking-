@@ -7,6 +7,7 @@ export * from "./providers/ical/ports/IIcalFeedFetcher";
 export * from "./providers/ical/ingress/IIcalTrustedIngressPollingProvider";
 export * from "./providers/ical/ingress/buildIcalInboundIngressItems";
 export * from "./providers/ical/ingress/icalIngressIdentityCodec";
+export * from "./providers/booking_com";
 export * from "./ports/IChannelPollDiagnosticsReporter";
 export * from "./providers/ical/parse/parseIcalCalendar";
 export * from "./providers/ical/parse/icalParseTypes";

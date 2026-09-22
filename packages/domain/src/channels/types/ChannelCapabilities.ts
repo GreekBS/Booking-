@@ -87,3 +87,26 @@ export const ICAL_PROVIDER_CAPABILITIES: ChannelProviderCapabilities = {
   },
   connectionAuth: false,
 };
+
+/**
+ * Booking.com V1 capability truth table (CM-4c-1).
+ * Machine-account vault credentials (not OAuth redirect auth).
+ * Polling + reservation import + ARI exports; webhooks deferred (CNS later).
+ */
+export const BOOKING_COM_PROVIDER_CAPABILITIES: ChannelProviderCapabilities = {
+  core: {
+    availabilityExport: true,
+    rateExport: true,
+    restrictionExport: true,
+  },
+  inbound: {
+    webhooks: false,
+    polling: true,
+    reservationImport: true,
+  },
+  optional: {
+    reservationExport: false,
+    reservationExportOperations: [],
+  },
+  connectionAuth: false,
+};

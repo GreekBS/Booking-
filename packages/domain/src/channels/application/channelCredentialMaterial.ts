@@ -49,3 +49,35 @@ export function assertIcalCredentialMaterialShape(
     throw new ValidationError("iCal credential material must include a non-empty feedUrl");
   }
 }
+
+/** Vault keys for Booking.com machine-account credentials (CM-4c-1). */
+export const BOOKING_COM_CREDENTIAL_CLIENT_ID_KEY = "client_id" as const;
+export const BOOKING_COM_CREDENTIAL_CLIENT_SECRET_KEY = "client_secret" as const;
+
+/**
+ * Booking.com machine-account credential material.
+ * client_secret must never be logged, returned to browsers, or stored plaintext outside the vault.
+ * JWT cache (if any) is server-side only and must not be persisted in this material blob.
+ */
+export function assertBookingComCredentialMaterialShape(
+  material: Record<string, string>,
+): void {
+  validateChannelCredentialMaterial(material);
+  const clientId = material[BOOKING_COM_CREDENTIAL_CLIENT_ID_KEY];
+  const clientSecret = material[BOOKING_COM_CREDENTIAL_CLIENT_SECRET_KEY];
+  if (typeof clientId !== "string" || clientId.trim().length === 0) {
+    throw new ValidationError(
+      "Booking.com credential material must include a non-empty client_id",
+    );
+  }
+  if (typeof clientSecret !== "string" || clientSecret.trim().length === 0) {
+    throw new ValidationError(
+      "Booking.com credential material must include a non-empty client_secret",
+    );
+  }
+  if (material.jwt != null || material.access_token != null || material.bearer != null) {
+    throw new ValidationError(
+      "Booking.com credential material must not embed JWT/access tokens; cache tokens server-side only",
+    );
+  }
+}

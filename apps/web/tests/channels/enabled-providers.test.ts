@@ -99,9 +99,13 @@ describe("CHANNELS_ENABLED_PROVIDERS bootstrap (S4a-2a / P1-S1)", () => {
     expect(registry.get("manual")?.providerId).toBe("manual");
   });
 
-  it("production factory catalog contains only ical (factory ≠ registration)", () => {
-    expect(Object.keys(PRODUCTION_CHANNEL_PROVIDER_FACTORIES)).toEqual(["ical"]);
+  it("production factory catalog contains ical and booking_com (factory ≠ registration)", () => {
+    expect(Object.keys(PRODUCTION_CHANNEL_PROVIDER_FACTORIES).sort()).toEqual([
+      "booking_com",
+      "ical",
+    ]);
     expect(typeof PRODUCTION_CHANNEL_PROVIDER_FACTORIES.ical).toBe("function");
+    expect(typeof PRODUCTION_CHANNEL_PROVIDER_FACTORIES.booking_com).toBe("function");
   });
 
   it("createProductionChannelProviderRegistry yields empty registry for default env", () => {
@@ -128,6 +132,25 @@ describe("CHANNELS_ENABLED_PROVIDERS bootstrap (S4a-2a / P1-S1)", () => {
     await expect(polling!.poll("conn-1", null, {})).rejects.toMatchObject({
       name: "ValidationError",
     });
+  });
+
+  it("CHANNELS_ENABLED_PROVIDERS does not enable booking_com by default", () => {
+    const registry = createProductionChannelProviderRegistry({
+      CHANNELS_ENABLED_PROVIDERS: "ical",
+    });
+    expect(registry.get("booking_com")).toBeNull();
+  });
+
+  it("CHANNELS_ENABLED_PROVIDERS=booking_com registers fail-closed Booking.com foundation", async () => {
+    const registry = createProductionChannelProviderRegistry({
+      CHANNELS_ENABLED_PROVIDERS: "booking_com",
+    });
+    expect(registry.list()).toHaveLength(1);
+    expect(registry.get("booking_com")?.providerId).toBe("booking_com");
+    expect(registry.get("booking_com")?.capabilities.inbound.reservationImport).toBe(true);
+    await expect(
+      registry.resolvePolling("booking_com")!.poll("conn-1", null, {}),
+    ).rejects.toMatchObject({ code: "CHANNEL_POLLING_NOT_READY" });
   });
 
   it("createProductionChannelProviderRegistry fails on unknown allow-list entry", () => {

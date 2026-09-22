@@ -1,0 +1,19 @@
+<!--
+  CM-4c-1 contract fixture — representative partial ARI error on HTTP 200.
+  https://developers.booking.com/connectivity/docs/b_xml-availability
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<availability>
+  <errors>
+    <error code="RATE_NOT_ACTIVE_FOR_ROOM">
+      <message>Rate '1234' is not active for room '4567'</message>
+      <details>
+        <room_ids>4567</room_ids>
+        <hotel_ids>789</hotel_ids>
+        <dates>2026-05-02</dates>
+        <rate_ids>1234</rate_ids>
+      </details>
+    </error>
+  </errors>
+</availability>
+<!-- RUID: [fixture-ruid-ari-partial==] -->

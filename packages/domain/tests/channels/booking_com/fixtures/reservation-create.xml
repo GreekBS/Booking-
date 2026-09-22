@@ -1,0 +1,42 @@
+<!--
+  CM-4c-1 contract fixture — representative OTA new reservation envelope (simplified).
+  Official retrieval: GET OTA_HotelResNotif.
+  https://developers.booking.com/connectivity/docs/reservations-api/retrieving-new-reservations-ota
+  Does not invent undocumented child elements beyond common OTA HotelReservation identity.
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<OTA_HotelResNotifRQ>
+  <HotelReservations>
+    <HotelReservation CreateDateTime="2026-09-22T10:00:00Z" ResStatus="Commit">
+      <UniqueID Type="14" ID="1234567890"/>
+      <RoomStays>
+        <RoomStay>
+          <RoomTypes>
+            <RoomType RoomTypeCode="1000202"/>
+          </RoomTypes>
+          <RatePlans>
+            <RatePlan RatePlanCode="12345"/>
+          </RatePlans>
+          <TimeSpan Start="2026-10-01" End="2026-10-05"/>
+        </RoomStay>
+      </RoomStays>
+      <ResGuests>
+        <ResGuest>
+          <Profiles>
+            <ProfileInfo>
+              <Profile>
+                <Customer>
+                  <PersonName>
+                    <GivenName>Ada</GivenName>
+                    <Surname>Lovelace</Surname>
+                  </PersonName>
+                </Customer>
+              </Profile>
+            </ProfileInfo>
+          </Profiles>
+        </ResGuest>
+      </ResGuests>
+    </HotelReservation>
+  </HotelReservations>
+</OTA_HotelResNotifRQ>
+<!-- RUID: [fixture-ruid-create==] -->

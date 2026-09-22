@@ -38,6 +38,11 @@ export const SEMANTIC_MODE_SCOPE_RELATIVE_PATHS = [
   "application/SetChannelConnectionSemanticModeUseCase.ts",
 ] as const;
 
+/** CM-4c-1 Booking.com provider boundary — transport isolation (ADR-022 §4.1). */
+export const BOOKING_COM_PROVIDER_SCOPE_RELATIVE_PATHS = [
+  "providers/booking_com",
+] as const;
+
 export const PRODUCTION_DI_FORBIDDEN_IMPORT_PATTERNS: RegExp[] = [
   /InMemoryChannelCredentialResolver/,
   /TestChannelWebhookProvider/,
@@ -78,6 +83,22 @@ export const FORBIDDEN_SEMANTIC_MODE_IMPORT_PATTERNS: RegExp[] = [
   ...FORBIDDEN_TRANSPORT_IMPORT_PATTERNS,
   /ICalPolling/,
   /IcalParser/,
+  /node-fetch/,
+  /undici/,
+];
+
+/**
+ * Booking.com provider/transport modules (CM-4c-1+).
+ * Must not reach CM-3b, Commerce, Booking/Inbox/Link persistence, or Prisma.
+ */
+export const FORBIDDEN_BOOKING_COM_PROVIDER_IMPORT_PATTERNS: RegExp[] = [
+  ...FORBIDDEN_TRANSPORT_IMPORT_PATTERNS,
+  /ImportChannelReservationCreateDryRunUseCase/,
+  /ImportChannelReservationCommandUseCase/,
+  /ProcessChannelInboxItemUseCase/,
+  /\/commerce\//,
+  /@hcp\/database/,
+  /@prisma\/client/,
   /node-fetch/,
   /undici/,
 ];
@@ -158,6 +179,16 @@ export function findForbiddenProviderContractSrcImports(source: string): string[
 export function findForbiddenSemanticModeImports(source: string): string[] {
   const violations: string[] = [];
   for (const pattern of FORBIDDEN_SEMANTIC_MODE_IMPORT_PATTERNS) {
+    if (pattern.test(source)) {
+      violations.push(pattern.source);
+    }
+  }
+  return violations;
+}
+
+export function findForbiddenBookingComProviderImports(source: string): string[] {
+  const violations: string[] = [];
+  for (const pattern of FORBIDDEN_BOOKING_COM_PROVIDER_IMPORT_PATTERNS) {
     if (pattern.test(source)) {
       violations.push(pattern.source);
     }

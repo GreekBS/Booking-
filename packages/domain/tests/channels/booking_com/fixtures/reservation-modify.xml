@@ -1,0 +1,25 @@
+<!--
+  CM-4c-1 contract fixture — representative OTA modification envelope (simplified).
+  Official retrieval: GET OTA_HotelResModifyNotif.
+  https://developers.booking.com/connectivity/docs/reservations-api/reservations-overview
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<OTA_HotelResModifyNotifRQ>
+  <HotelResModifies>
+    <HotelResModify CreateDateTime="2026-09-22T12:00:00Z" LastModifyDateTime="2026-09-22T12:05:00Z" ResStatus="Modify">
+      <UniqueID Type="14" ID="1234567890"/>
+      <RoomStays>
+        <RoomStay>
+          <RoomTypes>
+            <RoomType RoomTypeCode="1000202"/>
+          </RoomTypes>
+          <RatePlans>
+            <RatePlan RatePlanCode="12345"/>
+          </RatePlans>
+          <TimeSpan Start="2026-10-01" End="2026-10-07"/>
+        </RoomStay>
+      </RoomStays>
+    </HotelResModify>
+  </HotelResModifies>
+</OTA_HotelResModifyNotifRQ>
+<!-- RUID: [fixture-ruid-modify==] -->

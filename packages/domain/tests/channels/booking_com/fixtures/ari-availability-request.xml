@@ -1,0 +1,25 @@
+<!--
+  CM-4c-1 contract fixture — representative B.XML availability (ARI) request.
+  Official: POST https://supply-xml.booking.com/hotels/xml/availability
+  https://developers.booking.com/connectivity/docs/b_xml-availability
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<request>
+  <room id="1000202">
+    <date value="2026-10-01">
+      <roomstosell>1</roomstosell>
+      <closed>0</closed>
+    </date>
+  </room>
+  <room id="1000202">
+    <date value="2026-10-01">
+      <currencycode>EUR</currencycode>
+      <rate id="12345"/>
+      <price>150.00</price>
+      <minimumstay>2</minimumstay>
+      <maximumstay>14</maximumstay>
+      <closedonarrival>0</closedonarrival>
+      <closedondeparture>1</closedondeparture>
+    </date>
+  </room>
+</request>

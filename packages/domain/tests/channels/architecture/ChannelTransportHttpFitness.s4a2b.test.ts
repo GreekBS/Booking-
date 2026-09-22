@@ -50,9 +50,11 @@ describe("CM-4b S4a-2b architecture fitness", () => {
     const factories = read(join(WEB_LIB, "channels", "enabled-providers.ts"));
     expect(factories).toMatch(/PRODUCTION_CHANNEL_PROVIDER_FACTORIES/);
     expect(factories).toMatch(/createIcalProviderRegistration\(\{\s*feedFetcher:\s*domainIcalFeedFetcher\s*\}\)/);
+    expect(factories).toMatch(/createBookingComProviderRegistration/);
     expect(factories).toMatch(/bootstrapChannelProviderRegistry/);
     expect(factories).not.toMatch(/createTestChannel/);
     expect(factories).not.toMatch(/\.register\s*\(\s*createIcalProviderRegistration/);
+    expect(factories).not.toMatch(/\.register\s*\(\s*createBookingComProviderRegistration/);
   });
 
   it("webhook route stays inbox-first via HandleChannelWebhookTransportUseCase", () => {

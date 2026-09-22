@@ -1,6 +1,7 @@
 import {
   ChannelProviderRegistry,
   ValidationError,
+  createBookingComProviderRegistration,
   createIcalProviderRegistration,
   type ChannelProviderRegistration,
 } from "@hcp/domain";
@@ -11,11 +12,13 @@ import { domainIcalFeedFetcher } from "./ical/domainIcalFeedFetcher";
  * Presence of a factory does **not** register the provider.
  * Activation remains CHANNELS_ENABLED_PROVIDERS → bootstrap → register.
  * Simulation / test-only providers must never be registered here.
+ * Booking.com remains OFF unless explicitly listed in CHANNELS_ENABLED_PROVIDERS.
  */
 export const PRODUCTION_CHANNEL_PROVIDER_FACTORIES: Readonly<
   Record<string, () => ChannelProviderRegistration>
 > = Object.freeze({
   ical: () => createIcalProviderRegistration({ feedFetcher: domainIcalFeedFetcher }),
+  booking_com: () => createBookingComProviderRegistration(),
 });
 
 /**

@@ -1,0 +1,14 @@
+<!--
+  CM-4c-1 contract fixture — representative OTA cancellation envelope (simplified).
+  Official retrieval: GET OTA_HotelResModifyNotif (cancel).
+  https://developers.booking.com/connectivity/docs/reservations-api/reservations-overview
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<OTA_HotelResModifyNotifRQ>
+  <HotelResModifies>
+    <HotelResModify CreateDateTime="2026-09-22T10:00:00Z" LastModifyDateTime="2026-09-22T15:00:00Z" ResStatus="Cancel">
+      <UniqueID Type="14" ID="1234567890"/>
+    </HotelResModify>
+  </HotelResModifies>
+</OTA_HotelResModifyNotifRQ>
+<!-- RUID: [fixture-ruid-cancel==] -->

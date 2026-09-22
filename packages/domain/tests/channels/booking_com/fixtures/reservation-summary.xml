@@ -1,0 +1,17 @@
+<!--
+  CM-4c-1 contract fixture — representative reservations summary / recovery shape (simplified).
+  Official: /reservationssummary for missed/pre-connection basics.
+  https://developers.booking.com/connectivity/docs/reservations-api/reservations-overview
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<reservationssummary>
+  <reservation>
+    <id>1234567890</id>
+    <hotel_id>8135188</hotel_id>
+    <guest_name>Ada Lovelace</guest_name>
+    <room_id>1000202</room_id>
+    <arrival_date>2026-10-01</arrival_date>
+    <departure_date>2026-10-05</departure_date>
+  </reservation>
+</reservationssummary>
+<!-- RUID: [fixture-ruid-summary==] -->

@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import {
   ALLOWED_TRANSPORT_IMPORT_PATTERNS,
+  BOOKING_COM_PROVIDER_SCOPE_RELATIVE_PATHS,
   FORBIDDEN_TRANSPORT_IMPORT_PATTERNS,
   PRODUCTION_DI_FORBIDDEN_IMPORT_PATTERNS,
   PROVIDER_CONTRACT_SRC_SCOPE_RELATIVE_PATHS,
@@ -10,6 +11,7 @@ import {
   SEMANTIC_MODE_SCOPE_RELATIVE_PATHS,
   TRANSPORT_SCOPE_RELATIVE_PATHS,
   findDisallowedTransportImports,
+  findForbiddenBookingComProviderImports,
   findForbiddenProviderContractSrcImports,
   findForbiddenProviderHarnessImports,
   findForbiddenSemanticModeImports,
@@ -132,6 +134,35 @@ describe("Channel transport architecture fitness (CM-4a-5 enforcement)", () => {
     expect(findForbiddenTransportImports(source).length).toBeGreaterThan(0);
   });
 
+  it("detects forbidden imports in Booking.com provider negative fixture (CM-4c-1)", () => {
+    const source = readFileSync(
+      join(
+        DOMAIN_ROOT,
+        "tests",
+        "fixtures",
+        "channels-invalid-booking-com-forbidden-import.ts",
+      ),
+      "utf8",
+    );
+    expect(findForbiddenBookingComProviderImports(source).length).toBeGreaterThan(0);
+  });
+
+  describe("Booking.com provider scope scans (CM-4c-1)", () => {
+    const bookingComFiles = collectScopedFiles(BOOKING_COM_PROVIDER_SCOPE_RELATIVE_PATHS);
+
+    it("finds Booking.com provider production files", () => {
+      expect(bookingComFiles.length).toBeGreaterThanOrEqual(8);
+    });
+
+    it.each(bookingComFiles)("has no forbidden Booking.com provider imports: %s", (filePath) => {
+      const source = readFileSync(filePath, "utf8");
+      const rel = relative(DOMAIN_ROOT, filePath);
+      expect(
+        findForbiddenBookingComProviderImports(source),
+        `${rel} must not match forbidden Booking.com provider patterns`,
+      ).toEqual([]);
+    });
+  });
   it("lists CM-4a-5 provider harness contract suites", () => {
     const suitesDir = join(DOMAIN_ROOT, "tests", "channels", "contract", "harness", "suites");
     const suiteFiles = readdirSync(suitesDir).filter((entry) => entry.endsWith(".suite.ts"));

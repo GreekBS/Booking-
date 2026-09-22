@@ -1,0 +1,8 @@
+{
+  "_fixture": "CM-4c-1 Connections pending request shape",
+  "_docs": "https://developers.booking.com/connectivity/docs/connections-api/managing-connections-api",
+  "property_id": "8135188",
+  "state": "pending",
+  "connection_types": ["Reservations", "AVAILABILITY"],
+  "pricing_model": "Standard"
+}
