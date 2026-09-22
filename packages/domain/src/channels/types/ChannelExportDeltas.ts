@@ -6,6 +6,10 @@ export interface AvailabilityDelta {
   from: string;
   to: string;
   revision: number;
+  /** Optional resolved rooms-to-sell for outbound ARI (CM-4c-3). */
+  roomsToSell?: number | null;
+  /** Optional open/close flag for outbound ARI (1=closed, 0=open). */
+  closed?: 0 | 1 | null;
 }
 
 export interface RateDelta {

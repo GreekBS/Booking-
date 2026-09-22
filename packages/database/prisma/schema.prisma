@@ -781,6 +781,25 @@ model ChannelConnection {
   @@map("channel_connections")
 }
 
+/// CM-4c-3: durable Booking.com ARI push coalesce / generation ledger.
+model ChannelAriPushLedger {
+  tenantId     String @map("tenant_id") @db.Uuid
+  connectionId String @map("connection_id") @db.VarChar(255)
+  coalesceKey  String @map("coalesce_key") @db.VarChar(512)
+
+  highestGeneration       BigInt  @map("highest_generation")
+  lastSucceededGeneration BigInt? @map("last_succeeded_generation")
+  pendingPayload          Json?   @map("pending_payload")
+  lastRuid                String? @map("last_ruid") @db.VarChar(255)
+  lastOutcome             String? @map("last_outcome") @db.VarChar(40)
+  lastError               String? @map("last_error") @db.Text
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@id([tenantId, connectionId, coalesceKey])
+  @@index([tenantId, connectionId])
+  @@map("channel_ari_push_ledgers")
+}
+
 enum ChannelSecretKind {
   credential
   webhook_verification

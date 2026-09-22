@@ -226,6 +226,18 @@ import {
 
   IcalInventoryReconcileOutboxHandler,
 
+  BookingComAriPushOutboxHandler,
+
+  RequestBookingComAriPropagationUseCase,
+
+  ExecuteBookingComAriPushUseCase,
+
+  PushBookingComAriJobHandler,
+
+  PUSH_BOOKING_COM_ARI_JOB_TYPE,
+
+  BookingComAriClientNotConfigured,
+
   SweepPendingIcalInventoryReconcileUseCase,
 
   SweepPendingIcalInventoryReconcileJobHandler,
@@ -387,6 +399,8 @@ import {
   PrismaChannelPollJobQuery,
 
   PrismaEligibleIcalPollConnectionReader,
+
+  PrismaChannelAriPushLedger,
 
   PrismaChannelConnectionHealthQuery,
 
@@ -1135,6 +1149,8 @@ export const enqueueJobUseCase = new EnqueueJobUseCase(jobScheduler);
 
 // P1-S6b: typed reconcile outbox handler MUST register before LoggingHandler catch-all.
 outboxHandlerRegistry.register(new IcalInventoryReconcileOutboxHandler(enqueueJobUseCase));
+// CM-4c-3: Booking.com ARI push outbox → job bridge (before LoggingHandler).
+outboxHandlerRegistry.register(new BookingComAriPushOutboxHandler(enqueueJobUseCase));
 outboxHandlerRegistry.register(new LoggingHandler());
 
 export const processOutboxBatchUseCase = new ProcessOutboxBatchUseCase(
@@ -1541,6 +1557,39 @@ jobHandlerRegistry.register(
 jobHandlerRegistry.register(
   new SweepPendingIcalInventoryReconcileJobHandler(sweepPendingIcalInventoryReconcileUseCase),
 );
+
+const bookingComAriPushLedger = new PrismaChannelAriPushLedger();
+const bookingComAriClient = new BookingComAriClientNotConfigured();
+
+export const requestBookingComAriPropagationUseCase =
+  new RequestBookingComAriPropagationUseCase(
+    channelConnectionRepository,
+    channelListingMappingRepository,
+    outboxRepository,
+    bookingComAriPushLedger,
+  );
+
+export const executeBookingComAriPushUseCase = new ExecuteBookingComAriPushUseCase(
+  channelConnectionRepository,
+  channelListingMappingRepository,
+  bookingComAriPushLedger,
+  bookingComAriClient,
+  (fields) => {
+    console.log(
+      JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }),
+    );
+  },
+);
+
+jobHandlerRegistry.register(
+  new PushBookingComAriJobHandler(executeBookingComAriPushUseCase),
+);
+
+if (!jobHandlerRegistry.resolve(PUSH_BOOKING_COM_ARI_JOB_TYPE)) {
+  throw new Error(
+    `Background job handler missing for ${PUSH_BOOKING_COM_ARI_JOB_TYPE}`,
+  );
+}
 
 if (!jobHandlerRegistry.resolve(RECONCILE_ICAL_IMPORTED_INVENTORY_JOB_TYPE)) {
   throw new Error(

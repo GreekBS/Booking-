@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  BookingComAriNotReadyError,
   BookingComPollingProvider,
   BookingComReservationImportProvider,
   BookingComReservationsClientNotConfiguredError,
@@ -164,7 +163,19 @@ describe("CM-4c-2 — registration defaults", () => {
         to: "2026-10-02",
         revision: 1,
       }),
-    ).rejects.toBeInstanceOf(BookingComAriNotReadyError);
+    ).rejects.toThrow(/mapping must be resolved|not configured|ARI/i);
+    await expect(
+      registration.rateRestrictionExport!.publishRates({
+        tenantId: TENANT_ID,
+        unitId: "u1",
+        connectionId: CONNECTION_ID,
+        mappingId: "m1",
+        from: "2026-10-01",
+        to: "2026-10-02",
+        currency: "EUR",
+        nightlyRates: [{ date: "2026-10-01", amount: "10" }],
+      }),
+    ).rejects.toThrow(/mapping must be resolved|not configured|ARI/i);
   });
 });
 

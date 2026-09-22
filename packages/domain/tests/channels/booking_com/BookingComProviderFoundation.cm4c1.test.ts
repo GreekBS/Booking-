@@ -7,7 +7,6 @@ import {
   BOOKING_COM_TOKEN_EXCHANGE_RATE_LIMIT_PER_HOUR,
   BOOKING_COM_V1_CONNECTION_TYPES,
   BOOKING_COM_V1_DEFAULT_PRICING_MODEL,
-  BookingComAriNotReadyError,
   BookingComHotelId,
   BookingComRatePlanId,
   BookingComReservationId,
@@ -89,7 +88,7 @@ describe("CM-4c-1 — createBookingComProviderRegistration", () => {
         to: "2026-10-02",
         revision: 1,
       }),
-    ).rejects.toBeInstanceOf(BookingComAriNotReadyError);
+    ).rejects.toThrow(/mapping must be resolved|not configured/i);
 
     const mapped = await registry.resolveReservationImport("booking_com")!.mapMessage(
       {
