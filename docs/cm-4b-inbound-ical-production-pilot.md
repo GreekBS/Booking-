@@ -54,18 +54,19 @@ Per connection (DB):
 
 ### Cron / workers
 
-**Preferred execution:** always-on `apps/worker` (PostgreSQL LISTEN/NOTIFY wake +
-~1–3s recovery sweep). Cron is **not** the primary reservation-critical
-execution engine. See `docs/talos-event-driven-async-worker.md`.
+**Preferred execution:** always-on `apps/worker` (LISTEN/NOTIFY + recovery sweep +
+scheduler hooks for iCal discovery ~15m and hold expiry ~60s).
+Cron is **not** the primary reservation-critical execution engine.
+See `docs/talos-event-driven-async-worker.md`.
 
-**Production worker is not activated in this foundation batch.** Until activation,
+**Production worker is not activated in this batch.** Until activation,
 ops may still use HTTP recovery endpoints:
 
 | Cadence | Endpoint | Auth |
 |---|---|---|
 | as needed / recovery | `POST /api/internal/v1/outbox/dispatch` | `Bearer ${OUTBOX_DISPATCH_SECRET}` |
 | as needed / recovery | `POST /api/internal/v1/jobs/run` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
-| ~15m (polling schedule) | `POST /api/internal/v1/channels/schedule-ical-polls` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
+| as needed / recovery | `POST /api/internal/v1/channels/schedule-ical-polls` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
 
 Fail-closed: if polling / providers / apply are off, schedule/poll/apply no-op or refuse.
 

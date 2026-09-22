@@ -6,8 +6,7 @@
  * WAKE-UP: LISTEN/NOTIFY (best-effort)
  * RECOVERY: periodic sweep (~1–3s)
  *
- * Cron is not the primary execution engine. Future scheduler hooks can plug in
- * without changing claim/lease/idempotency semantics.
+ * SCHEDULING lives in SchedulerRunner (independent cadences) — not on the recovery tick.
  */
 
 import {
@@ -23,19 +22,11 @@ export type BatchProcessor = {
   processOutbox: (limit: number) => Promise<Result<ProcessOutboxBatchResult, Error>>;
 };
 
-/** Extension point for future timer/polling schedules (not activated in this batch). */
-export type WorkerSchedulerHook = {
-  name: string;
-  /** Optional periodic tick; orchestration only — must not bypass Channel ingress. */
-  onTick?: () => Promise<void>;
-};
-
 export type AsyncWorkerLoopOptions = {
   processors: BatchProcessor;
   jobBatchLimit: number;
   outboxBatchLimit: number;
   recoveryIntervalMs: number;
-  schedulerHooks?: WorkerSchedulerHook[];
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 };
@@ -118,7 +109,6 @@ export class AsyncWorkerLoop {
         await this.drain();
         if (dueRecovery) {
           lastRecoveryAt = now();
-          await this.runSchedulerHooks();
         }
       }
     }
@@ -202,21 +192,6 @@ export class AsyncWorkerLoop {
         emptyStreak += 1;
       }
       if (value.claimed < this.options.outboxBatchLimit) break;
-    }
-  }
-
-  private async runSchedulerHooks(): Promise<void> {
-    const hooks = this.options.schedulerHooks ?? [];
-    for (const hook of hooks) {
-      if (!hook.onTick) continue;
-      try {
-        await hook.onTick();
-      } catch (error) {
-        workerLog.error("recovery_sweep_failure", {
-          hook: hook.name,
-          reason: error instanceof Error ? error.message : "unknown",
-        });
-      }
     }
   }
 }

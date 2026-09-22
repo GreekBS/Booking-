@@ -12,6 +12,21 @@ import {
   TALOS_WORKER_RUNTIME_MODE_ENV,
 } from "@hcp/database";
 
+export type WorkerSchedulerConfig = {
+  icalSchedulerEnabled: boolean;
+  /** Default ~15 minutes — discovery cadence for ScheduleIcalPollsUseCase. */
+  icalSchedulerIntervalMs: number;
+  holdExpirySchedulerEnabled: boolean;
+  /**
+   * Default 60s — holds TTL ~15m; minute-bucket idempotency keeps multi-replica safe.
+   */
+  holdExpirySchedulerIntervalMs: number;
+  holdExpiryJobLimit: number;
+  /** Future OTA retrieval — off until a provider port is wired + explicitly enabled. */
+  providerRetrievalSchedulerEnabled: boolean;
+  providerRetrievalSchedulerIntervalMs: number;
+};
+
 export type WorkerConfig = {
   /** Durable processing connection (Prisma). */
   databaseUrl: string;
@@ -23,11 +38,24 @@ export type WorkerConfig = {
   outboxBatchLimit: number;
   listenerReconnectInitialMs: number;
   listenerReconnectMaxMs: number;
+  scheduler: WorkerSchedulerConfig;
 };
 
 const DEFAULT_RECOVERY_MS = 2_000;
 const MIN_RECOVERY_MS = 1_000;
 const MAX_RECOVERY_MS = 3_000;
+
+/** ~15 minutes — matches CHANNELS_ICAL_POLL_INTERVAL_MS default discovery cadence. */
+export const DEFAULT_ICAL_SCHEDULER_INTERVAL_MS = 15 * 60 * 1000;
+const MIN_ICAL_SCHEDULER_INTERVAL_MS = 60_000;
+
+/** 60s — prompt hold release without busy-looping. */
+export const DEFAULT_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 60_000;
+const MIN_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 10_000;
+
+/** Placeholder default for future OTA retrieval (seconds-scale possible). */
+export const DEFAULT_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS = 30_000;
+const MIN_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS = 1_000;
 
 function parseIntEnv(
   env: NodeJS.ProcessEnv,
@@ -38,6 +66,22 @@ function parseIntEnv(
   if (!raw) return fallback;
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function parseBoolEnv(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  defaultValue: boolean,
+): boolean {
+  const raw = env[name]?.trim().toLowerCase();
+  if (raw === undefined || raw === "") return defaultValue;
+  if (raw === "true" || raw === "1" || raw === "yes") return true;
+  if (raw === "false" || raw === "0" || raw === "no") return false;
+  return defaultValue;
+}
+
+function clampMin(value: number, min: number): number {
+  return value < min ? min : value;
 }
 
 /**
@@ -68,6 +112,58 @@ export function applyWorkerDatabaseEnv(
   return { databaseUrl, listenDatabaseUrl: listenRaw };
 }
 
+export function loadWorkerSchedulerConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): WorkerSchedulerConfig {
+  return {
+    // Safe defaults: enabled when the worker process runs; Production activation
+    // is still gated by not deploying the worker / DB safety refusal.
+    icalSchedulerEnabled: parseBoolEnv(
+      env,
+      "WORKER_ICAL_SCHEDULER_ENABLED",
+      true,
+    ),
+    icalSchedulerIntervalMs: clampMin(
+      parseIntEnv(
+        env,
+        "WORKER_ICAL_SCHEDULER_INTERVAL_MS",
+        DEFAULT_ICAL_SCHEDULER_INTERVAL_MS,
+      ),
+      MIN_ICAL_SCHEDULER_INTERVAL_MS,
+    ),
+    holdExpirySchedulerEnabled: parseBoolEnv(
+      env,
+      "WORKER_HOLD_EXPIRY_SCHEDULER_ENABLED",
+      true,
+    ),
+    holdExpirySchedulerIntervalMs: clampMin(
+      parseIntEnv(
+        env,
+        "WORKER_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS",
+        DEFAULT_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS,
+      ),
+      MIN_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS,
+    ),
+    holdExpiryJobLimit: clampMin(
+      parseIntEnv(env, "WORKER_HOLD_EXPIRY_JOB_LIMIT", 100),
+      1,
+    ),
+    providerRetrievalSchedulerEnabled: parseBoolEnv(
+      env,
+      "WORKER_PROVIDER_RETRIEVAL_SCHEDULER_ENABLED",
+      false,
+    ),
+    providerRetrievalSchedulerIntervalMs: clampMin(
+      parseIntEnv(
+        env,
+        "WORKER_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS",
+        DEFAULT_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS,
+      ),
+      MIN_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS,
+    ),
+  };
+}
+
 export function loadWorkerConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
   const { databaseUrl, listenDatabaseUrl } = applyWorkerDatabaseEnv(env);
 
@@ -95,6 +191,7 @@ export function loadWorkerConfig(env: NodeJS.ProcessEnv = process.env): WorkerCo
       "WORKER_LISTENER_RECONNECT_MAX_MS",
       30_000,
     ),
+    scheduler: loadWorkerSchedulerConfig(env),
   };
 }
 

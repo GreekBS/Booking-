@@ -2,6 +2,7 @@
  * Talos async worker entrypoint.
  *
  * Invokes ProcessJobBatchUseCase / ProcessOutboxBatchUseCase directly (no HTTP).
+ * Schedulers enqueue durable work via ScheduleIcalPollsUseCase / EnqueueJobUseCase.
  * Does NOT activate Production worker by default — refuses Talos Production DB.
  */
 
@@ -19,6 +20,7 @@ import { loadWorkerConfig } from "./config";
 import { AsyncWorkerLoop } from "./loop";
 import { PgWakeListener } from "./listener";
 import { workerLog } from "./logger";
+import { SchedulerRunner, buildSchedulerHooks } from "./scheduler";
 
 async function main(): Promise<void> {
   const config = loadWorkerConfig();
@@ -27,6 +29,8 @@ async function main(): Promise<void> {
   const {
     processJobBatchUseCase,
     processOutboxBatchUseCase,
+    scheduleIcalPollsUseCase,
+    enqueueJobUseCase,
   } = await import("../../web/lib/di/container");
 
   const loop = new AsyncWorkerLoop({
@@ -37,8 +41,15 @@ async function main(): Promise<void> {
     jobBatchLimit: config.jobBatchLimit,
     outboxBatchLimit: config.outboxBatchLimit,
     recoveryIntervalMs: config.recoveryIntervalMs,
-    // Future: iCal poll schedule / hold expiry timers register here.
-    schedulerHooks: [],
+  });
+
+  const scheduler = new SchedulerRunner({
+    hooks: buildSchedulerHooks(config.scheduler, {
+      scheduleIcalPollsUseCase,
+      enqueueJobUseCase,
+      // Future Booking.com / OTA retrieval ports register here.
+      providerRetrievalPorts: [],
+    }),
   });
 
   const listener = new PgWakeListener({
@@ -53,6 +64,8 @@ async function main(): Promise<void> {
 
   const shutdown = async (signal: string) => {
     workerLog.info("worker_stopping", { signal });
+    // Stop new scheduled work first; allow in-flight scheduler ticks to finish.
+    await scheduler.stop();
     await listener.stop();
     await loop.stop();
     process.exitCode = 0;
@@ -66,6 +79,7 @@ async function main(): Promise<void> {
   });
 
   loop.start();
+  scheduler.start();
   await listener.start();
   await loop.waitUntilStopped();
 }

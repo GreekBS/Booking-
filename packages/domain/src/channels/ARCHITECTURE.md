@@ -667,21 +667,23 @@ Prefer always-on worker (apps/worker):
   LISTEN/NOTIFY wake + ~1–3s recovery sweep
   → ProcessJobBatchUseCase / ProcessOutboxBatchUseCase (direct)
 
+  Scheduler hooks (independent cadences; enqueue-only):
+    ~15m  iCal → ScheduleIcalPollsUseCase
+    ~60s  hold expiry → enqueue expire_holds
+    future OTA retrieval → ReceiveChannelEventUseCase only
+
 Ops / manual / recovery HTTP (unchanged):
   POST /api/internal/v1/outbox/dispatch
   POST /api/internal/v1/jobs/run
-
-Provider polling schedule (still external or future worker timer):
-  ~every 15 minutes:
-    POST /api/internal/v1/channels/schedule-ical-polls
+  POST /api/internal/v1/channels/schedule-ical-polls
 ```
 
-**Execution model (foundation):** PostgreSQL remains the durable source of truth.
-`apps/worker` is the primary execution process (LISTEN/NOTIFY wake + recovery sweep).
+**Execution model:** PostgreSQL remains the durable source of truth.
+`apps/worker` is the primary execution + scheduling process.
 Cron is **not** the primary reservation-critical execution engine.
 See `docs/talos-event-driven-async-worker.md`.
 
-Existing `jobs/run` + `outbox/dispatch` remain ops/recovery HTTP surfaces.
+Existing `jobs/run` + `outbox/dispatch` + `schedule-ical-polls` remain ops/recovery HTTP surfaces.
 The worker invokes use cases directly and does not call these endpoints.
 
 **Operator HTTP (behind `CHANNELS_OPERATOR_API_ENABLED`):**
