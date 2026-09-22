@@ -1,37 +1,55 @@
 /**
  * Talos async worker entrypoint.
  *
- * Invokes ProcessJobBatchUseCase / ProcessOutboxBatchUseCase directly (no HTTP).
+ * Invokes ProcessJobBatchUseCase / ProcessOutboxBatchUseCase directly (no HTTP for jobs).
  * Schedulers enqueue durable work via ScheduleIcalPollsUseCase / EnqueueJobUseCase.
- * Does NOT activate Production worker by default — refuses Talos Production DB.
+ * Minimal /healthz for Railway. Does NOT activate Production by default.
  */
 
 import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-const here = fileURLToPath(new URL(".", import.meta.url));
-// Load local env files without overriding already-set process env.
-loadEnv({ path: resolve(here, "../../web/.env.local") });
-loadEnv({ path: resolve(here, "../../../.env") });
-loadEnv({ path: resolve(here, "../.env") });
-
-import { loadWorkerConfig } from "./config";
+import { loadWorkerConfig, shouldLoadLocalDotenv } from "./config";
 import { AsyncWorkerLoop } from "./loop";
 import { PgWakeListener } from "./listener";
 import { workerLog } from "./logger";
 import { SchedulerRunner, buildSchedulerHooks } from "./scheduler";
+import { WorkerHealthState } from "./healthState";
+import { startHealthServer } from "./healthServer";
+
+const here = fileURLToPath(new URL(".", import.meta.url));
+
+// Platform env is authoritative on Railway / Production. Local dotenv is opt-in only.
+if (shouldLoadLocalDotenv()) {
+  loadEnv({ path: resolve(here, "../../web/.env.local") });
+  loadEnv({ path: resolve(here, "../../../.env") });
+  loadEnv({ path: resolve(here, "../.env") });
+}
 
 async function main(): Promise<void> {
+  // Resolve + validate DB targets BEFORE importing Prisma / web DI.
   const config = loadWorkerConfig();
+  const health = new WorkerHealthState({
+    recoveryAliveWindowMs: Math.max(config.recoveryIntervalMs * 5, 15_000),
+  });
 
-  // Import DI only after DATABASE_URL is safely resolved (Prisma reads env at connect).
+  const { prisma } = await import("@hcp/database");
   const {
     processJobBatchUseCase,
     processOutboxBatchUseCase,
     scheduleIcalPollsUseCase,
     enqueueJobUseCase,
   } = await import("../../web/lib/di/container");
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    health.setProcessingDbOk(true);
+  } catch {
+    health.setProcessingDbOk(false);
+    throw new Error("Worker processing database connectivity check failed");
+  }
+
+  const healthServer = await startHealthServer(health, { port: config.healthPort });
 
   const loop = new AsyncWorkerLoop({
     processors: {
@@ -41,33 +59,42 @@ async function main(): Promise<void> {
     jobBatchLimit: config.jobBatchLimit,
     outboxBatchLimit: config.outboxBatchLimit,
     recoveryIntervalMs: config.recoveryIntervalMs,
+    onRecoverySweep: () => health.markRecoverySweep(),
   });
 
   const scheduler = new SchedulerRunner({
     hooks: buildSchedulerHooks(config.scheduler, {
       scheduleIcalPollsUseCase,
       enqueueJobUseCase,
-      // Future Booking.com / OTA retrieval ports register here.
       providerRetrievalPorts: [],
     }),
+    onActivity: () => health.markSchedulerActivity(),
   });
 
   const listener = new PgWakeListener({
     connectionUrl: config.listenDatabaseUrl,
     onWake: (kind) => loop.signalWake(kind),
     onFailure: () => {
-      // Recovery sweep continues independently of listener health.
+      health.setListenerStatus("disconnected");
     },
     reconnectInitialMs: config.listenerReconnectInitialMs,
     reconnectMaxMs: config.listenerReconnectMaxMs,
   });
 
+  const syncListenerHealth = () => {
+    health.setListenerStatus(
+      listener.isConnected() ? "connected" : "disconnected",
+    );
+  };
+
   const shutdown = async (signal: string) => {
     workerLog.info("worker_stopping", { signal });
-    // Stop new scheduled work first; allow in-flight scheduler ticks to finish.
     await scheduler.stop();
     await listener.stop();
+    syncListenerHealth();
     await loop.stop();
+    await healthServer.close().catch(() => undefined);
+    await prisma.$disconnect().catch(() => undefined);
     process.exitCode = 0;
   };
 
@@ -78,10 +105,20 @@ async function main(): Promise<void> {
     void shutdown("SIGINT");
   });
 
+  health.markProcessStarted();
   loop.start();
   scheduler.start();
+  health.markSchedulerStarted();
   await listener.start();
+  syncListenerHealth();
+
+  const healthTimer = setInterval(() => {
+    syncListenerHealth();
+  }, 5_000);
+  healthTimer.unref?.();
+
   await loop.waitUntilStopped();
+  clearInterval(healthTimer);
 }
 
 main().catch((error) => {

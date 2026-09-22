@@ -30,11 +30,17 @@ export class PgWakeListener {
   private stopped = false;
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connected = false;
   private readonly createClient: (url: string) => pg.Client;
 
   constructor(private readonly options: WakeListenerOptions) {
     this.createClient =
       options.createClient ?? ((url) => new pg.Client({ connectionString: url }));
+  }
+
+  /** Safe status for health — no connection URLs. */
+  isConnected(): boolean {
+    return this.connected && !this.stopped;
   }
 
   async start(): Promise<void> {
@@ -44,6 +50,7 @@ export class PgWakeListener {
 
   async stop(): Promise<void> {
     this.stopped = true;
+    this.connected = false;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -55,6 +62,7 @@ export class PgWakeListener {
     if (this.stopped) return;
 
     await this.disconnectQuietly();
+    this.connected = false;
 
     try {
       const client = this.createClient(this.options.connectionUrl);
@@ -72,6 +80,7 @@ export class PgWakeListener {
       });
 
       client.on("error", (err) => {
+        this.connected = false;
         workerLog.error("listener_failure", {
           reason: err instanceof Error ? err.message : "unknown",
         });
@@ -80,6 +89,7 @@ export class PgWakeListener {
       });
 
       client.on("end", () => {
+        this.connected = false;
         if (!this.stopped) {
           workerLog.warn("listener_disconnected");
           void this.scheduleReconnect();
@@ -92,6 +102,7 @@ export class PgWakeListener {
 
       const reconnected = this.reconnectAttempt > 0;
       this.reconnectAttempt = 0;
+      this.connected = true;
       workerLog.info(reconnected ? "listener_reconnected" : "listener_connected", {
         channels: `${TALOS_ASYNC_WAKE_JOBS_CHANNEL},${TALOS_ASYNC_WAKE_OUTBOX_CHANNEL}`,
       });
@@ -99,6 +110,7 @@ export class PgWakeListener {
       // After reconnect, signal recovery so pending durable work is not missed.
       this.options.onWake("any");
     } catch (error) {
+      this.connected = false;
       workerLog.error("listener_failure", {
         reason: error instanceof Error ? error.message : "connect_failed",
       });

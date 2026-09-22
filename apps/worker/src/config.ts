@@ -4,6 +4,8 @@
  * DATABASE SAFETY: resolveWorkerDatabaseUrl refuses Talos Production unless
  * TALOS_WORKER_RUNTIME_MODE=production (reserved; still blocked by mutation gate
  * until an explicit Production activation).
+ *
+ * LISTEN: WORKER_LISTEN_DATABASE_URL must be session/direct — never transaction :6543.
  */
 
 import {
@@ -11,6 +13,7 @@ import {
   WORKER_DATABASE_URL_ENV,
   TALOS_WORKER_RUNTIME_MODE_ENV,
 } from "@hcp/database";
+import { assertListenDatabaseUrlCompatible } from "./listenUrlValidation";
 
 export type WorkerSchedulerConfig = {
   icalSchedulerEnabled: boolean;
@@ -30,7 +33,7 @@ export type WorkerSchedulerConfig = {
 export type WorkerConfig = {
   /** Durable processing connection (Prisma). */
   databaseUrl: string;
-  /** LISTEN connection — prefer session/direct URL (not transaction pooler). */
+  /** LISTEN connection — session/direct only (validated). */
   listenDatabaseUrl: string;
   /** Recovery sweep interval in ms (safe default ~2s). */
   recoveryIntervalMs: number;
@@ -38,6 +41,7 @@ export type WorkerConfig = {
   outboxBatchLimit: number;
   listenerReconnectInitialMs: number;
   listenerReconnectMaxMs: number;
+  healthPort: number;
   scheduler: WorkerSchedulerConfig;
 };
 
@@ -85,7 +89,22 @@ function clampMin(value: number, min: number): number {
 }
 
 /**
+ * Local dotenv files are for developer machines only.
+ * Railway / Production / NODE_ENV=production must use platform env exclusively.
+ */
+export function shouldLoadLocalDotenv(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (env.RAILWAY_ENVIRONMENT || env.RAILWAY_ENVIRONMENT_NAME) return false;
+  if (env.TALOS_WORKER_RUNTIME_MODE?.trim() === "production") return false;
+  if (env.NODE_ENV === "production") return false;
+  if (env.WORKER_LOAD_DOTENV?.trim() === "false") return false;
+  return true;
+}
+
+/**
  * Apply worker DB URL into process.env before any Prisma client import.
+ * Validates LISTEN URL is not a transaction pooler. Never logs URLs.
  */
 export function applyWorkerDatabaseEnv(
   env: NodeJS.ProcessEnv = process.env,
@@ -104,6 +123,8 @@ export function applyWorkerDatabaseEnv(
     [WORKER_DATABASE_URL_ENV]: listenRaw,
     DATABASE_URL: listenRaw,
   });
+
+  assertListenDatabaseUrlCompatible(listenRaw);
 
   if (!env.DIRECT_URL?.trim()) {
     env.DIRECT_URL = listenRaw;
@@ -175,6 +196,12 @@ export function loadWorkerConfig(env: NodeJS.ProcessEnv = process.env): WorkerCo
   if (recoveryIntervalMs < MIN_RECOVERY_MS) recoveryIntervalMs = MIN_RECOVERY_MS;
   if (recoveryIntervalMs > MAX_RECOVERY_MS) recoveryIntervalMs = MAX_RECOVERY_MS;
 
+  const healthPort = parseIntEnv(
+    env,
+    "WORKER_HEALTH_PORT",
+    parseIntEnv(env, "PORT", 8080),
+  );
+
   return {
     databaseUrl,
     listenDatabaseUrl,
@@ -191,6 +218,7 @@ export function loadWorkerConfig(env: NodeJS.ProcessEnv = process.env): WorkerCo
       "WORKER_LISTENER_RECONNECT_MAX_MS",
       30_000,
     ),
+    healthPort,
     scheduler: loadWorkerSchedulerConfig(env),
   };
 }

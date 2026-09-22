@@ -110,4 +110,4 @@ Required: safe non-production `WORKER_DATABASE_URL` (or `DATABASE_URL`).
 
 ## Next
 
-Production worker deployment design (runtime, LISTEN URL, flags) — not this batch.
+Production worker activation is a separate GO. Deployment support: `docs/talos-railway-worker-deploy.md`.

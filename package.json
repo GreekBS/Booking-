@@ -12,7 +12,9 @@
     "db:generate": "pnpm --filter @hcp/database db:generate",
     "db:migrate": "pnpm --filter @hcp/database db:migrate",
     "db:seed": "pnpm --filter @hcp/database db:seed",
-    "db:studio": "pnpm --filter @hcp/database db:studio"
+    "db:studio": "pnpm --filter @hcp/database db:studio",
+    "worker:railway:build": "pnpm --filter @hcp/database db:generate && pnpm --filter @hcp/worker typecheck",
+    "worker:railway:start": "pnpm --filter @hcp/worker start"
   },
   "devDependencies": {
     "eslint": "^9.17.0",

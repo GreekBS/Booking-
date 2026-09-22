@@ -16,6 +16,8 @@ export type SchedulerRunnerOptions = {
   /** Injectable for tests. */
   setTimeoutFn?: typeof setTimeout;
   clearTimeoutFn?: typeof clearTimeout;
+  /** Health / activity signal after each tick attempt. */
+  onActivity?: () => void;
 };
 
 type HookRuntime = {
@@ -135,6 +137,7 @@ export class SchedulerRunner {
       try {
         if (ctx.signal.aborted) return;
         const result = await runtime.hook.run(ctx);
+        this.options.onActivity?.();
         if (result && hasMeaningfulWork(result)) {
           workerLog.info("scheduler_enqueue_result", {
             hook: runtime.hook.name,
@@ -145,6 +148,7 @@ export class SchedulerRunner {
           });
         }
       } catch (error) {
+        this.options.onActivity?.();
         workerLog.error("scheduler_invocation_failed", {
           hook: runtime.hook.name,
           reason: error instanceof Error ? error.message : "unknown",

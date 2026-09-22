@@ -29,6 +29,8 @@ export type AsyncWorkerLoopOptions = {
   recoveryIntervalMs: number;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /** Optional hook after each recovery/drain cycle (health). */
+  onRecoverySweep?: () => void;
 };
 
 export class AsyncWorkerLoop {
@@ -86,6 +88,7 @@ export class AsyncWorkerLoop {
 
     // Startup recovery: process any pending durable work before waiting.
     await this.drain();
+    this.options.onRecoverySweep?.();
 
     let lastRecoveryAt = now();
 
@@ -107,6 +110,7 @@ export class AsyncWorkerLoop {
       const dueRecovery = now() - lastRecoveryAt >= this.options.recoveryIntervalMs;
       if (dueRecovery || wakeDriven) {
         await this.drain();
+        this.options.onRecoverySweep?.();
         if (dueRecovery) {
           lastRecoveryAt = now();
         }
