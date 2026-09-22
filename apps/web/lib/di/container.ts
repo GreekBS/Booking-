@@ -1137,7 +1137,8 @@ export const processOutboxBatchUseCase = new ProcessOutboxBatchUseCase(
 /** CM-4b S4a-2a: one production registry; empty allow-list is valid (zero providers). */
 const channelProviderRegistry = createProductionChannelProviderRegistry();
 const channelConnectionRepository = new PrismaChannelConnectionRepository();
-const channelListingMappingRepository = new PrismaChannelListingMappingRepository();
+export const channelListingMappingRepository =
+  new PrismaChannelListingMappingRepository();
 const externalReservationLinkRepository = new PrismaExternalReservationLinkRepository();
 const channelInboxRepository = new PrismaChannelInboxRepository();
 const channelImportPersistence = new PrismaChannelReservationImportPersistence(outboxRepository);

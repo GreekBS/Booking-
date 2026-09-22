@@ -12,6 +12,7 @@ export function serializeOperatorConnection(
     status: value.status,
     semanticMode: value.semanticMode,
     semanticConfigVersion: value.semanticConfigVersion,
+    inventoryApplyEnabled: value.inventoryApplyEnabled,
     hasCredentialRef: value.hasCredentialRef,
     hasWebhookVerificationRef: value.hasWebhookVerificationRef,
     lastError: value.lastError,

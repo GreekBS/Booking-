@@ -11,6 +11,7 @@ import {
   Sparkles,
   Shield,
   Settings,
+  Network,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ export const adminNavItems: Array<{
   { href: "/dashboard/availability", label: "Availability", icon: CalendarDays },
   { href: "/dashboard/pricing", label: "Pricing", icon: DollarSign },
   { href: "/dashboard/bookings", label: "Bookings", icon: BookOpen },
+  { href: "/dashboard/channels", label: "Channels", icon: Network },
   { href: "/dashboard/guests", label: "Guests", icon: Users },
   { href: "/dashboard/members", label: "Members", icon: UserCog },
   { href: "/dashboard/amenities", label: "Amenities", icon: Sparkles },

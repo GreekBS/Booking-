@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
-import { NotFoundError } from "@hcp/domain";
+import { NotFoundError, ValidationError } from "@hcp/domain";
 import { upsertChannelListingMappingSchema } from "@hcp/validators";
-import { upsertChannelListingMappingUseCase } from "@/lib/di/container";
+import {
+  channelListingMappingRepository,
+  getChannelConnectionUseCase,
+  upsertChannelListingMappingUseCase,
+} from "@/lib/di/container";
 import {
   requireTenantContext,
   toPermissionActor,
@@ -15,6 +19,76 @@ type RouteContext = { params: Promise<{ connectionId: string }> };
 function assertOperatorApiEnabled(): void {
   if (!isChannelOperatorApiEnabled()) {
     throw new NotFoundError("ChannelConnectionOperatorApi", "disabled");
+  }
+}
+
+function serializeMapping(mapping: {
+  id: string;
+  connectionId: string;
+  externalListingId: string;
+  externalUnitId: string | null;
+  propertyId: string;
+  unitId: string;
+  syncDirection: string;
+  status: string;
+  mappingVersion: number;
+  lastError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): Record<string, unknown> {
+  return {
+    mappingId: mapping.id,
+    connectionId: mapping.connectionId,
+    externalListingId: mapping.externalListingId,
+    externalUnitId: mapping.externalUnitId,
+    propertyId: mapping.propertyId,
+    unitId: mapping.unitId,
+    syncDirection: mapping.syncDirection,
+    status: mapping.status,
+    mappingVersion: mapping.mappingVersion,
+    lastError: mapping.lastError,
+    createdAt: mapping.createdAt.toISOString(),
+    updatedAt: mapping.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * List listing mappings for a connection (operator-safe; no credential material).
+ * AuthZ: requireTenantContext + getChannelConnection permission gate.
+ */
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { connectionId: rawId } = await context.params;
+    const connectionId = rawId?.trim() ?? "";
+    if (!connectionId) {
+      throw new ValidationError("connectionId is required");
+    }
+
+    const tenantId = request.headers.get("x-tenant-id");
+    const actor = await requireTenantContext(tenantId);
+    assertOperatorApiEnabled();
+
+    const connectionResult = await getChannelConnectionUseCase.execute(
+      {
+        tenantId: actor.tenantId,
+        connectionId,
+      },
+      toPermissionActor(actor),
+    );
+    if (connectionResult.isFailure) {
+      return mapResultError(connectionResult.getError());
+    }
+
+    const mappings = await channelListingMappingRepository.listByConnection(
+      actor.tenantId,
+      connectionId,
+    );
+
+    return apiSuccess({
+      mappings: mappings.map(serializeMapping),
+    });
+  } catch (error) {
+    return apiError(error);
   }
 }
 
