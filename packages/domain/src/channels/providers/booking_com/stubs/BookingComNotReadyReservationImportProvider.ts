@@ -13,9 +13,11 @@ export class BookingComNotReadyReservationImportProvider
   implements IChannelReservationImportProvider
 {
   async mapMessage(
-    _message: ChannelProviderMessage,
-    _context: ChannelReservationImportContext,
+    message: ChannelProviderMessage,
+    context: ChannelReservationImportContext,
   ): Promise<ChannelReservationImportMapping> {
+    void message;
+    void context;
     return {
       kind: "unrecognized",
       reason:

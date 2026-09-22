@@ -9,6 +9,7 @@
   <HotelReservations>
     <HotelReservation CreateDateTime="2026-09-22T10:00:00Z" ResStatus="Commit">
       <UniqueID Type="14" ID="1234567890"/>
+      <BasicPropertyInfo HotelCode="8135188"/>
       <RoomStays>
         <RoomStay>
           <RoomTypes>

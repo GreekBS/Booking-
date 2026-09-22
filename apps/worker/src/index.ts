@@ -13,7 +13,7 @@ import { loadWorkerConfig, shouldLoadLocalDotenv } from "./config";
 import { AsyncWorkerLoop } from "./loop";
 import { PgWakeListener } from "./listener";
 import { workerLog } from "./logger";
-import { SchedulerRunner, buildSchedulerHooks } from "./scheduler";
+import { SchedulerRunner, buildSchedulerHooks, createBookingComProviderRetrievalPort } from "./scheduler";
 import { WorkerHealthState } from "./healthState";
 import { startHealthServer } from "./healthServer";
 
@@ -39,7 +39,33 @@ async function main(): Promise<void> {
     processOutboxBatchUseCase,
     scheduleIcalPollsUseCase,
     enqueueJobUseCase,
+    executeChannelPollConnectionUseCase,
   } = await import("../../web/lib/di/container");
+  const { PrismaEligibleBookingComRetrievalConnectionReader } = await import(
+    "@hcp/database"
+  );
+  const { parseChannelsEnabledProviders } = await import(
+    "../../web/lib/channels/enabled-providers"
+  );
+
+  const enabledProviders = parseChannelsEnabledProviders(
+    process.env.CHANNELS_ENABLED_PROVIDERS,
+  );
+  const providerRetrievalPorts =
+    enabledProviders.includes("booking_com")
+      ? [
+          createBookingComProviderRetrievalPort({
+            listActiveBookingComConnections: () =>
+              new PrismaEligibleBookingComRetrievalConnectionReader().listEligible(),
+            executePollConnection: async (target) => {
+              await executeChannelPollConnectionUseCase.execute({
+                tenantId: target.tenantId,
+                connectionId: target.connectionId,
+              });
+            },
+          }),
+        ]
+      : [];
 
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -66,7 +92,7 @@ async function main(): Promise<void> {
     hooks: buildSchedulerHooks(config.scheduler, {
       scheduleIcalPollsUseCase,
       enqueueJobUseCase,
-      providerRetrievalPorts: [],
+      providerRetrievalPorts,
     }),
     onActivity: () => health.markSchedulerActivity(),
   });

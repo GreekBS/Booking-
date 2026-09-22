@@ -15,3 +15,8 @@ export {
   PROVIDER_RETRIEVAL_SCHEDULER_FORBIDDEN_IMPORT_PATTERNS,
 } from "./providerRetrievalHook";
 export { buildSchedulerHooks } from "./buildSchedulerHooks";
+export {
+  createBookingComProviderRetrievalPort,
+  type BookingComRetrievalPortDeps,
+  type BookingComConnectionPollTarget,
+} from "./bookingComRetrievalPort";

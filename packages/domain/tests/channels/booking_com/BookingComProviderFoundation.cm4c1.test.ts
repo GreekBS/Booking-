@@ -14,7 +14,6 @@ import {
   BookingComRoomRateId,
   BookingComRoomTypeId,
   BookingComRuid,
-  ChannelPollingNotReadyError,
   ChannelProviderRegistry,
   assertBookingComCredentialMaterialShape,
   assertBookingComSetupReadyForActivation,
@@ -78,7 +77,7 @@ describe("CM-4c-1 — createBookingComProviderRegistration", () => {
 
     await expect(
       registry.resolvePolling("booking_com")!.poll("conn-1", null, {}),
-    ).rejects.toBeInstanceOf(ChannelPollingNotReadyError);
+    ).rejects.toMatchObject({ code: "BOOKING_COM_RESERVATIONS_CLIENT_NOT_CONFIGURED" });
 
     await expect(
       registry.resolveAvailabilityExport("booking_com")!.publishAvailability({

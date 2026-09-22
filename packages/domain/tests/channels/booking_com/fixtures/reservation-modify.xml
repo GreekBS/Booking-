@@ -8,6 +8,7 @@
   <HotelResModifies>
     <HotelResModify CreateDateTime="2026-09-22T12:00:00Z" LastModifyDateTime="2026-09-22T12:05:00Z" ResStatus="Modify">
       <UniqueID Type="14" ID="1234567890"/>
+      <BasicPropertyInfo HotelCode="8135188"/>
       <RoomStays>
         <RoomStay>
           <RoomTypes>

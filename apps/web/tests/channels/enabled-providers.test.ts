@@ -141,7 +141,7 @@ describe("CHANNELS_ENABLED_PROVIDERS bootstrap (S4a-2a / P1-S1)", () => {
     expect(registry.get("booking_com")).toBeNull();
   });
 
-  it("CHANNELS_ENABLED_PROVIDERS=booking_com registers fail-closed Booking.com foundation", async () => {
+  it("CHANNELS_ENABLED_PROVIDERS=booking_com registers Booking.com with fail-closed HTTP client", async () => {
     const registry = createProductionChannelProviderRegistry({
       CHANNELS_ENABLED_PROVIDERS: "booking_com",
     });
@@ -150,7 +150,7 @@ describe("CHANNELS_ENABLED_PROVIDERS bootstrap (S4a-2a / P1-S1)", () => {
     expect(registry.get("booking_com")?.capabilities.inbound.reservationImport).toBe(true);
     await expect(
       registry.resolvePolling("booking_com")!.poll("conn-1", null, {}),
-    ).rejects.toMatchObject({ code: "CHANNEL_POLLING_NOT_READY" });
+    ).rejects.toMatchObject({ code: "BOOKING_COM_RESERVATIONS_CLIENT_NOT_CONFIGURED" });
   });
 
   it("createProductionChannelProviderRegistry fails on unknown allow-list entry", () => {

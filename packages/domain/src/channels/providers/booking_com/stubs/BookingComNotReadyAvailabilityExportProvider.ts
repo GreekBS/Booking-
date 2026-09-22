@@ -19,7 +19,8 @@ export class BookingComAriNotReadyError extends DomainError {
 export class BookingComNotReadyAvailabilityExportProvider
   implements IChannelAvailabilityExportProvider
 {
-  async publishAvailability(_delta: AvailabilityDelta): Promise<ExportResult> {
+  async publishAvailability(delta: AvailabilityDelta): Promise<ExportResult> {
+    void delta;
     throw new BookingComAriNotReadyError();
   }
 }

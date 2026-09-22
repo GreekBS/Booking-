@@ -12,11 +12,13 @@ import { BookingComAriNotReadyError } from "./BookingComNotReadyAvailabilityExpo
 export class BookingComNotReadyRateRestrictionExportProvider
   implements IChannelRateRestrictionExportProvider
 {
-  async publishRates(_delta: RateDelta): Promise<ExportResult> {
+  async publishRates(delta: RateDelta): Promise<ExportResult> {
+    void delta;
     throw new BookingComAriNotReadyError();
   }
 
-  async publishRestrictions(_delta: RestrictionDelta): Promise<ExportResult> {
+  async publishRestrictions(delta: RestrictionDelta): Promise<ExportResult> {
+    void delta;
     throw new BookingComAriNotReadyError();
   }
 }

@@ -9,10 +9,13 @@ import type { ChannelPollExecutionContext } from "../../../types/ChannelTranspor
  */
 export class BookingComNotReadyPollingProvider implements IChannelPollingProvider {
   async poll(
-    _connectionId: string,
-    _cursor: string | null,
-    _context: ChannelPollExecutionContext,
+    connectionId: string,
+    cursor: string | null,
+    context: ChannelPollExecutionContext,
   ): Promise<ChannelPollResult> {
+    void connectionId;
+    void cursor;
+    void context;
     throw new ChannelPollingNotReadyError("booking_com");
   }
 }

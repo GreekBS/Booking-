@@ -186,6 +186,14 @@ import {
 
   ImportChannelReservationCommandUseCase,
 
+  ImportChannelReservationModifyDryRunUseCase,
+
+  ImportChannelReservationModifyCommandUseCase,
+
+  ImportChannelReservationCancelDryRunUseCase,
+
+  ImportChannelReservationCancelCommandUseCase,
+
   ReceiveChannelEventUseCase,
 
   ProcessChannelInboxItemUseCase,
@@ -1340,11 +1348,45 @@ const importChannelReservationCommandUseCase = new ImportChannelReservationComma
   idGenerator,
 );
 
+const importChannelReservationModifyDryRunUseCase =
+  new ImportChannelReservationModifyDryRunUseCase(
+    channelProviderRegistry,
+    channelConnectionRepository,
+    channelListingMappingRepository,
+    externalReservationLinkRepository,
+  );
+
+const importChannelReservationModifyCommandUseCase =
+  new ImportChannelReservationModifyCommandUseCase(
+    bookingRepository,
+    quoteRepository,
+    commerceFlowRepository,
+    reservationOrchestrator,
+    externalReservationLinkRepository,
+  );
+
+const importChannelReservationCancelDryRunUseCase =
+  new ImportChannelReservationCancelDryRunUseCase(
+    channelProviderRegistry,
+    channelConnectionRepository,
+    externalReservationLinkRepository,
+  );
+
+const importChannelReservationCancelCommandUseCase =
+  new ImportChannelReservationCancelCommandUseCase(
+    bookingRepository,
+    externalReservationLinkRepository,
+  );
+
 export const processChannelInboxItemUseCase = new ProcessChannelInboxItemUseCase(
   channelInboxRepository,
   importChannelReservationCreateDryRunUseCase,
   importChannelReservationCommandUseCase,
   idGenerator,
+  importChannelReservationModifyDryRunUseCase,
+  importChannelReservationModifyCommandUseCase,
+  importChannelReservationCancelDryRunUseCase,
+  importChannelReservationCancelCommandUseCase,
 );
 
 export const receiveChannelEventUseCase = new ReceiveChannelEventUseCase(

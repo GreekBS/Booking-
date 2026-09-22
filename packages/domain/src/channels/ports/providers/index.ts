@@ -1,6 +1,7 @@
 export * from "./IChannelConnectionAuthProvider";
 export * from "./IChannelWebhookProvider";
 export * from "./IChannelPollingProvider";
+export * from "./IChannelPollingDeliveryAcknowledger";
 export * from "./IChannelReservationImportProvider";
 export * from "./IChannelAvailabilityExportProvider";
 export * from "./IChannelRateRestrictionExportProvider";

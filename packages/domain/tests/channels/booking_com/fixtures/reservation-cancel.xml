@@ -8,6 +8,7 @@
   <HotelResModifies>
     <HotelResModify CreateDateTime="2026-09-22T10:00:00Z" LastModifyDateTime="2026-09-22T15:00:00Z" ResStatus="Cancel">
       <UniqueID Type="14" ID="1234567890"/>
+      <BasicPropertyInfo HotelCode="8135188"/>
     </HotelResModify>
   </HotelResModifies>
 </OTA_HotelResModifyNotifRQ>

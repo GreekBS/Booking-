@@ -38,6 +38,8 @@ import {
 
 } from "../providers/ical/ingress/IIcalTrustedIngressPollingProvider";
 
+import { isChannelPollingDeliveryAcknowledger } from "../ports/providers/IChannelPollingDeliveryAcknowledger";
+
 import type { IChannelPollDiagnosticsReporter } from "../ports/IChannelPollDiagnosticsReporter";
 
 import { NoOpChannelPollDiagnosticsReporter } from "../ports/IChannelPollDiagnosticsReporter";
@@ -440,7 +442,25 @@ export class ReceiveChannelPollBatchUseCase {
 
     });
 
-
+    if (
+      batchResult.ackAllowed &&
+      messagesToReceive.length > 0 &&
+      isChannelPollingDeliveryAcknowledger(polling)
+    ) {
+      const successfulIds = new Set(
+        batchResult.results.filter((r) => r.success).map((r) => r.messageId),
+      );
+      const toAck = messagesToReceive.filter((m) => successfulIds.has(m.messageId));
+      try {
+        await polling.acknowledgeDelivered({
+          connectionId,
+          messages: toAck,
+          credentialMaterial: pollContext.credentialMaterial,
+        });
+      } catch {
+        // Durable Receive already succeeded — inbox evidence retained.
+      }
+    }
 
     return {
 

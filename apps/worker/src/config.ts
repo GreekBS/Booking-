@@ -57,8 +57,8 @@ const MIN_ICAL_SCHEDULER_INTERVAL_MS = 60_000;
 export const DEFAULT_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 60_000;
 const MIN_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 10_000;
 
-/** Placeholder default for future OTA retrieval (seconds-scale possible). */
-export const DEFAULT_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS = 30_000;
+/** Official Booking.com guidance: poll ~once per 20 seconds. */
+export const DEFAULT_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS = 20_000;
 const MIN_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS = 1_000;
 
 function parseIntEnv(

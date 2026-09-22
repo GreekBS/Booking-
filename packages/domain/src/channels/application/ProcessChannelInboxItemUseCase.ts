@@ -7,6 +7,10 @@ import { parseChannelInboxRawPayload } from "./ChannelInboxMessageParser";
 import { classifyInboxOutcome } from "./ChannelInboxOutcomeClassifier";
 import { ImportChannelReservationCreateDryRunUseCase } from "./ImportChannelReservationCreateDryRunUseCase";
 import { ImportChannelReservationCommandUseCase } from "./ImportChannelReservationCommandUseCase";
+import { ImportChannelReservationModifyDryRunUseCase } from "./ImportChannelReservationModifyDryRunUseCase";
+import { ImportChannelReservationModifyCommandUseCase } from "./ImportChannelReservationModifyCommandUseCase";
+import { ImportChannelReservationCancelDryRunUseCase } from "./ImportChannelReservationCancelDryRunUseCase";
+import { ImportChannelReservationCancelCommandUseCase } from "./ImportChannelReservationCancelCommandUseCase";
 import { DEFAULT_INBOX_LEASE_TTL_MS } from "../jobs/ChannelInboxJobTypes";
 import type { IChannelInboxRepository } from "../ports/IChannelInboxRepository";
 
@@ -30,6 +34,10 @@ export class ProcessChannelInboxItemUseCase {
     private readonly importDryRunUseCase: ImportChannelReservationCreateDryRunUseCase,
     private readonly importCommandUseCase: ImportChannelReservationCommandUseCase,
     private readonly idGenerator: IIdGenerator,
+    private readonly modifyDryRunUseCase: ImportChannelReservationModifyDryRunUseCase | null = null,
+    private readonly modifyCommandUseCase: ImportChannelReservationModifyCommandUseCase | null = null,
+    private readonly cancelDryRunUseCase: ImportChannelReservationCancelDryRunUseCase | null = null,
+    private readonly cancelCommandUseCase: ImportChannelReservationCancelCommandUseCase | null = null,
   ) {}
 
   async execute(
@@ -56,6 +64,12 @@ export class ProcessChannelInboxItemUseCase {
     try {
       const message = parseChannelInboxRawPayload(claimed.rawPayload);
 
+      if (message.kind === "reservation.modify") {
+        return await this.processModify(claimed, tenantId, inboxItemId, processingToken, message);
+      }
+      if (message.kind === "reservation.cancel") {
+        return await this.processCancel(claimed, tenantId, inboxItemId, processingToken, message);
+      }
       if (message.kind !== "reservation.create") {
         return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
           unsupported: true,
@@ -134,6 +148,131 @@ export class ProcessChannelInboxItemUseCase {
         inboxAttemptCount: claimed.attemptCount,
       });
     }
+  }
+
+  private async processModify(
+    claimed: { attemptCount: number; connectionId: string; provider: string },
+    tenantId: string,
+    inboxItemId: string,
+    processingToken: string,
+    message: ReturnType<typeof parseChannelInboxRawPayload>,
+  ): Promise<Result<ProcessChannelInboxItemResult, Error>> {
+    if (!this.modifyDryRunUseCase || !this.modifyCommandUseCase) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        unsupported: true,
+        inboxAttemptCount: claimed.attemptCount,
+      });
+    }
+
+    const dryRun = await this.modifyDryRunUseCase.execute({
+      tenantId,
+      connectionId: claimed.connectionId,
+      provider: claimed.provider as never,
+      message,
+    });
+    if (dryRun.isFailure) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        error: dryRun.getError(),
+        inboxAttemptCount: claimed.attemptCount,
+      });
+    }
+
+    const value = dryRun.getValue();
+    if (value.duplicate) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        duplicate: true,
+        inboxAttemptCount: claimed.attemptCount,
+        resultLinkId: value.existingLink.id,
+        resultBookingId: value.existingLink.bookingId,
+      });
+    }
+
+    const applied = await this.modifyCommandUseCase.execute({
+      mapping: value.mapping,
+      existingLink: value.existingLink,
+      mappingVersion: value.mappingVersion,
+      externalRevision:
+        typeof message.payload.externalRevision === "string"
+          ? message.payload.externalRevision
+          : null,
+      lastExternalUpdateAt: message.externalUpdatedAt ?? null,
+    });
+    if (applied.isFailure) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        error: applied.getError(),
+        inboxAttemptCount: claimed.attemptCount,
+      });
+    }
+
+    const result = applied.getValue();
+    return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+      success: true,
+      inboxAttemptCount: claimed.attemptCount,
+      resultBookingId: result.booking.id,
+      resultLinkId: result.link.id,
+    });
+  }
+
+  private async processCancel(
+    claimed: { attemptCount: number; connectionId: string; provider: string },
+    tenantId: string,
+    inboxItemId: string,
+    processingToken: string,
+    message: ReturnType<typeof parseChannelInboxRawPayload>,
+  ): Promise<Result<ProcessChannelInboxItemResult, Error>> {
+    if (!this.cancelDryRunUseCase || !this.cancelCommandUseCase) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        unsupported: true,
+        inboxAttemptCount: claimed.attemptCount,
+      });
+    }
+
+    const dryRun = await this.cancelDryRunUseCase.execute({
+      tenantId,
+      connectionId: claimed.connectionId,
+      provider: claimed.provider as never,
+      message,
+    });
+    if (dryRun.isFailure) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        error: dryRun.getError(),
+        inboxAttemptCount: claimed.attemptCount,
+      });
+    }
+
+    const value = dryRun.getValue();
+    if (value.duplicate) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        duplicate: true,
+        inboxAttemptCount: claimed.attemptCount,
+        resultLinkId: value.existingLink.id,
+        resultBookingId: value.existingLink.bookingId,
+      });
+    }
+
+    const applied = await this.cancelCommandUseCase.execute({
+      mapping: value.mapping,
+      existingLink: value.existingLink,
+      externalRevision:
+        typeof message.payload.externalRevision === "string"
+          ? message.payload.externalRevision
+          : null,
+      lastExternalUpdateAt: message.externalUpdatedAt ?? null,
+    });
+    if (applied.isFailure) {
+      return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+        error: applied.getError(),
+        inboxAttemptCount: claimed.attemptCount,
+      });
+    }
+
+    const result = applied.getValue();
+    return await this.finish(claimed, tenantId, inboxItemId, processingToken, {
+      success: true,
+      inboxAttemptCount: claimed.attemptCount,
+      resultBookingId: result.booking.id,
+      resultLinkId: result.link.id,
+    });
   }
 
   private async finish(
