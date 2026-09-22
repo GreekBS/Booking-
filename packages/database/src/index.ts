@@ -1,4 +1,24 @@
 export { prisma, setTenantContext, clearTenantContext, assertValidTenantId } from "./client";
+export {
+  TALOS_ASYNC_WAKE_JOBS_CHANNEL,
+  TALOS_ASYNC_WAKE_OUTBOX_CHANNEL,
+  notifyTalosAsyncWake,
+  assertTalosAsyncWakeChannel,
+  type TalosAsyncWakeChannel,
+  type PgNotifyClient,
+} from "./async/talosAsyncWake";
+export {
+  TALOS_PRODUCTION_SUPABASE_PROJECT_REF,
+  PRODUCTION_DB_REFUSAL_MESSAGE,
+  extractSupabaseProjectRef,
+  isTalosProductionDatabaseUrl,
+  assertNotTalosProductionDatabase,
+  resolveIntegrationTestDatabaseUrl,
+  applyIntegrationTestDatabaseEnv,
+  resolveWorkerDatabaseUrl,
+  WORKER_DATABASE_URL_ENV,
+  TALOS_WORKER_RUNTIME_MODE_ENV,
+} from "./safety/databaseTargetGuard";
 export { UuidIdGenerator } from "./UuidIdGenerator";
 export { PrismaOutboxRepository } from "./repositories/OutboxRepository";
 export {

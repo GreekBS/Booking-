@@ -10,6 +10,10 @@ import type {
 import { computeNextRetryAt } from "@hcp/domain";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../client";
+import {
+  TALOS_ASYNC_WAKE_JOBS_CHANNEL,
+  notifyTalosAsyncWake,
+} from "../async/talosAsyncWake";
 
 const STALE_CLAIM_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_ATTEMPTS = 5;
@@ -82,22 +86,31 @@ export class PrismaBackgroundJobRepository implements IBackgroundJobRepository {
         },
       });
       if (existing) {
+        // Pending work may predate a connected worker — best-effort wake.
+        if (existing.status === "pending") {
+          await notifyTalosAsyncWake(prisma, TALOS_ASYNC_WAKE_JOBS_CHANNEL);
+        }
         return mapPrismaJob(existing);
       }
     }
 
     try {
-      const record = await prisma.backgroundJob.create({
-        data: {
-          tenantId: command.tenantId ?? null,
-          jobType: command.jobType,
-          payload: command.payload as Prisma.InputJsonValue,
-          status: "pending",
-          priority: command.priority ?? 0,
-          runAt: command.runAt ?? new Date(),
-          idempotencyKey: command.idempotencyKey ?? null,
-          maxAttempts: command.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-        },
+      // Durable create + transactional NOTIFY (delivered only after commit).
+      const record = await prisma.$transaction(async (tx) => {
+        const created = await tx.backgroundJob.create({
+          data: {
+            tenantId: command.tenantId ?? null,
+            jobType: command.jobType,
+            payload: command.payload as Prisma.InputJsonValue,
+            status: "pending",
+            priority: command.priority ?? 0,
+            runAt: command.runAt ?? new Date(),
+            idempotencyKey: command.idempotencyKey ?? null,
+            maxAttempts: command.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+          },
+        });
+        await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_JOBS_CHANNEL);
+        return created;
       });
       return mapPrismaJob(record);
     } catch (error) {
@@ -116,6 +129,9 @@ export class PrismaBackgroundJobRepository implements IBackgroundJobRepository {
           },
         });
         if (raced) {
+          if (raced.status === "pending") {
+            await notifyTalosAsyncWake(prisma, TALOS_ASYNC_WAKE_JOBS_CHANNEL);
+          }
           return mapPrismaJob(raced);
         }
       }
@@ -240,15 +256,18 @@ export class PrismaBackgroundJobRepository implements IBackgroundJobRepository {
       return "dead_letter";
     }
 
-    await prisma.backgroundJob.update({
-      where: { id },
-      data: {
-        status: "pending",
-        attemptCount,
-        lastError: error,
-        claimedAt: null,
-        nextRetryAt: computeNextRetryAt(attemptCount),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.backgroundJob.update({
+        where: { id },
+        data: {
+          status: "pending",
+          attemptCount,
+          lastError: error,
+          claimedAt: null,
+          nextRetryAt: computeNextRetryAt(attemptCount),
+        },
+      });
+      await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_JOBS_CHANNEL);
     });
     return "retry";
   }

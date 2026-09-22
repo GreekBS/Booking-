@@ -7,6 +7,10 @@ import type {
 } from "@hcp/domain";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../client";
+import {
+  TALOS_ASYNC_WAKE_OUTBOX_CHANNEL,
+  notifyTalosAsyncWake,
+} from "../async/talosAsyncWake";
 
 export type TransactionClient = Omit<
   typeof prisma,
@@ -48,17 +52,26 @@ export class PrismaOutboxRepository implements IOutboxRepository {
       return;
     }
 
-    const client = tx ?? prisma;
-    await client.outboxEvent.createMany({
-      data: events.map((event) => ({
-        tenantId: event.tenantId,
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-        eventType: event.eventType,
-        payload: event.payload as Prisma.InputJsonValue,
-        deliveryKey: event.deliveryKey ?? null,
-        status: "pending",
-      })),
+    const data = events.map((event) => ({
+      tenantId: event.tenantId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      payload: event.payload as Prisma.InputJsonValue,
+      deliveryKey: event.deliveryKey ?? null,
+      status: "pending" as const,
+    }));
+
+    if (tx) {
+      await tx.outboxEvent.createMany({ data });
+      // Same TX as durable write → NOTIFY after commit.
+      await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
+      return;
+    }
+
+    await prisma.$transaction(async (inner) => {
+      await inner.outboxEvent.createMany({ data });
+      await notifyTalosAsyncWake(inner, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
     });
   }
 
@@ -166,14 +179,17 @@ export class PrismaOutboxRepository implements IOutboxRepository {
       return "dead_letter";
     }
 
-    await prisma.outboxEvent.update({
-      where: { id },
-      data: {
-        status: "pending",
-        attemptCount,
-        lastError: error,
-        claimedAt: null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.outboxEvent.update({
+        where: { id },
+        data: {
+          status: "pending",
+          attemptCount,
+          lastError: error,
+          claimedAt: null,
+        },
+      });
+      await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
     });
     return "retry";
   }

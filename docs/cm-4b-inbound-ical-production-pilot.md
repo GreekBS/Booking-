@@ -52,15 +52,20 @@ Per connection (DB):
 - sealed vault credential with `feedUrl`
 - `inventory_apply_enabled = true` via operator enable endpoint
 
-### Cron / workers (external)
+### Cron / workers
 
-Suggested cadence (operators own the scheduler — not auto-configured by app):
+**Preferred execution:** always-on `apps/worker` (PostgreSQL LISTEN/NOTIFY wake +
+~1–3s recovery sweep). Cron is **not** the primary reservation-critical
+execution engine. See `docs/talos-event-driven-async-worker.md`.
+
+**Production worker is not activated in this foundation batch.** Until activation,
+ops may still use HTTP recovery endpoints:
 
 | Cadence | Endpoint | Auth |
 |---|---|---|
-| ~1m | `POST /api/internal/v1/outbox/dispatch` | `Bearer ${OUTBOX_DISPATCH_SECRET}` |
-| ~1m | `POST /api/internal/v1/jobs/run` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
-| ~15m | `POST /api/internal/v1/channels/schedule-ical-polls` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
+| as needed / recovery | `POST /api/internal/v1/outbox/dispatch` | `Bearer ${OUTBOX_DISPATCH_SECRET}` |
+| as needed / recovery | `POST /api/internal/v1/jobs/run` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
+| ~15m (polling schedule) | `POST /api/internal/v1/channels/schedule-ical-polls` | `Bearer ${BACKGROUND_JOBS_SECRET}` |
 
 Fail-closed: if polling / providers / apply are off, schedule/poll/apply no-op or refuse.
 

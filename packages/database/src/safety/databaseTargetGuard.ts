@@ -87,6 +87,45 @@ export function resolveIntegrationTestDatabaseUrl(
 }
 
 /**
+ * Resolve the database URL for the Talos async worker.
+ *
+ * Prefer WORKER_DATABASE_URL; otherwise DATABASE_URL.
+ * Refuses Talos Production unless TALOS_WORKER_RUNTIME_MODE=production
+ * (reserved for a future Production worker activation — not enabled by default).
+ */
+export const WORKER_DATABASE_URL_ENV = "WORKER_DATABASE_URL";
+export const TALOS_WORKER_RUNTIME_MODE_ENV = "TALOS_WORKER_RUNTIME_MODE";
+
+export function resolveWorkerDatabaseUrl(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const url =
+    env[WORKER_DATABASE_URL_ENV]?.trim() || env.DATABASE_URL?.trim() || "";
+  if (!url) {
+    throw new Error(
+      "Worker database URL missing. Set WORKER_DATABASE_URL (preferred) or DATABASE_URL " +
+        "to an isolated non-production database.",
+    );
+  }
+
+  if (isTalosProductionDatabaseUrl(url)) {
+    const mode = env[TALOS_WORKER_RUNTIME_MODE_ENV]?.trim();
+    if (mode !== "production") {
+      throw new Error(
+        `${PRODUCTION_DB_REFUSAL_MESSAGE} (operation=async-worker). ` +
+          `Local/dev workers must use an isolated non-production database. ` +
+          `Future Production workers require ${TALOS_WORKER_RUNTIME_MODE_ENV}=production.`,
+      );
+    }
+    // Future Production activation still requires the explicit mutation allow-list
+    // so a mis-set mode alone cannot open Production by accident during this phase.
+    assertNotTalosProductionDatabase(url, "async-worker-production-mode");
+  }
+
+  return url;
+}
+
+/**
  * After dotenv loads a possibly-Production DATABASE_URL, replace the process env
  * used by integration suites with TEST_DATABASE_URL only — or clear DB URLs so
  * suites skip without mutating Production.

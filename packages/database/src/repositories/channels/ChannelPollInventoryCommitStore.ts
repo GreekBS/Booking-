@@ -18,6 +18,10 @@ import {
   setTenantContext,
   type PrismaTransactionClient,
 } from "../../client";
+import {
+  TALOS_ASYNC_WAKE_OUTBOX_CHANNEL,
+  notifyTalosAsyncWake,
+} from "../../async/talosAsyncWake";
 
 type DbClient = typeof prisma | PrismaTransactionClient;
 
@@ -274,6 +278,7 @@ export class PrismaChannelPollInventoryCommitStore
           status: "pending",
         },
       });
+      await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
     }
   }
 
@@ -456,6 +461,7 @@ export class PrismaChannelPollInventoryCommitStore
         status: "pending",
       },
     });
+    await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
 
     return {
       ok: true,

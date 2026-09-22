@@ -7,6 +7,7 @@ import {
   assertNotTalosProductionDatabase,
   resolveIntegrationTestDatabaseUrl,
   applyIntegrationTestDatabaseEnv,
+  resolveWorkerDatabaseUrl,
 } from "../../src/safety/databaseTargetGuard";
 
 function fakeUrl(opts: {
@@ -136,5 +137,37 @@ describe("databaseTargetGuard", () => {
     expect(applyIntegrationTestDatabaseEnv(env)).toBe("configured");
     expect(env.DATABASE_URL).toBe(LOCAL_URL);
     expect(env.DIRECT_URL).toBe(LOCAL_URL);
+  });
+
+  it("resolveWorkerDatabaseUrl refuses Talos Production by default", () => {
+    expect(() =>
+      resolveWorkerDatabaseUrl({
+        WORKER_DATABASE_URL: TALOS_PROD_URL,
+      } as NodeJS.ProcessEnv),
+    ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
+
+    expect(() =>
+      resolveWorkerDatabaseUrl({
+        DATABASE_URL: TALOS_PROD_URL,
+      } as NodeJS.ProcessEnv),
+    ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
+  });
+
+  it("resolveWorkerDatabaseUrl prefers WORKER_DATABASE_URL", () => {
+    expect(
+      resolveWorkerDatabaseUrl({
+        WORKER_DATABASE_URL: LOCAL_URL,
+        DATABASE_URL: TALOS_PROD_URL,
+      } as NodeJS.ProcessEnv),
+    ).toBe(LOCAL_URL);
+  });
+
+  it("resolveWorkerDatabaseUrl production mode still requires mutation allow-list", () => {
+    expect(() =>
+      resolveWorkerDatabaseUrl({
+        WORKER_DATABASE_URL: TALOS_PROD_URL,
+        TALOS_WORKER_RUNTIME_MODE: "production",
+      } as NodeJS.ProcessEnv),
+    ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
   });
 });

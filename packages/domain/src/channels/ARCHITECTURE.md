@@ -663,16 +663,26 @@ recoveryKey= poll_channel_connection:{tenant}:{connection}:recovery:{deadLetterJ
 **Suggested external cadence (documented only — activation is post Phase 1):**
 
 ```text
-~every 1 minute:
+Prefer always-on worker (apps/worker):
+  LISTEN/NOTIFY wake + ~1–3s recovery sweep
+  → ProcessJobBatchUseCase / ProcessOutboxBatchUseCase (direct)
+
+Ops / manual / recovery HTTP (unchanged):
   POST /api/internal/v1/outbox/dispatch
   POST /api/internal/v1/jobs/run
 
-~every 15 minutes:
-  POST /api/internal/v1/channels/schedule-ical-polls
+Provider polling schedule (still external or future worker timer):
+  ~every 15 minutes:
+    POST /api/internal/v1/channels/schedule-ical-polls
 ```
 
-Existing `jobs/run` + `outbox/dispatch` remain the worker surfaces. No new
-long-running worker.
+**Execution model (foundation):** PostgreSQL remains the durable source of truth.
+`apps/worker` is the primary execution process (LISTEN/NOTIFY wake + recovery sweep).
+Cron is **not** the primary reservation-critical execution engine.
+See `docs/talos-event-driven-async-worker.md`.
+
+Existing `jobs/run` + `outbox/dispatch` remain ops/recovery HTTP surfaces.
+The worker invokes use cases directly and does not call these endpoints.
 
 **Operator HTTP (behind `CHANNELS_OPERATOR_API_ENABLED`):**
 
