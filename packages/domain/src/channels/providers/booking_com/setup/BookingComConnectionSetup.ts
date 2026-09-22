@@ -10,7 +10,7 @@ import { BookingComHotelId } from "../ids/BookingComIds";
 /**
  * Provider-specific setup metadata for Booking.com connections.
  * Reuses ChannelConnection lifecycle statuses — this is NOT a second state machine.
- * Persistence of this payload is deferred (no migration in CM-4c-1).
+ * Persisted via ChannelConnectionProviderSetup (CM-4c-4).
  */
 
 export const BOOKING_COM_SETUP_PROGRESS_STEPS = [

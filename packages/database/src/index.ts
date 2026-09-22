@@ -102,6 +102,12 @@ export { PrismaChannelPollJobQuery } from "./repositories/channels/ChannelPollJo
 export { PrismaEligibleIcalPollConnectionReader } from "./repositories/channels/EligibleIcalPollConnectionReader";
 export { PrismaEligibleBookingComRetrievalConnectionReader } from "./repositories/channels/EligibleBookingComRetrievalConnectionReader";
 export { PrismaChannelAriPushLedger } from "./repositories/channels/ChannelAriPushLedger";
+export {
+  PrismaChannelProductMappingRepository,
+  PrismaChannelConnectionProviderSetupRepository,
+  PrismaChannelInitialSyncPreviewRepository,
+  PrismaChannelReconciliationRunRepository,
+} from "./repositories/channels/ChannelProductMappingRepositories";
 export { PrismaChannelConnectionHealthQuery } from "./repositories/channels/ChannelConnectionHealthQuery";
 export { PrismaDeactivateChannelConnectionInventoryStore } from "./repositories/channels/DeactivateChannelConnectionInventoryStore";
 export { PrismaChannelImportedInventoryCleanupStore } from "./repositories/channels/ChannelImportedInventoryCleanupStore";

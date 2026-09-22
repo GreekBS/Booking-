@@ -2,6 +2,7 @@ import { Result } from "../../shared/kernel/Result";
 import { ValidationError } from "../../shared/errors/DomainError";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
 import type { IChannelListingMappingRepository } from "../ports/IChannelListingMappingRepository";
+import type { IChannelProductMappingRepository } from "../ports/IChannelProductMappingRepository";
 import type { IBookingComAriPushLedger } from "../ports/IBookingComAriPushLedger";
 import type { IBookingComAriClient } from "../providers/booking_com/ari/IBookingComAriClient";
 import { batchBookingComAriProjectionByMonth } from "../providers/booking_com/ari/bookingComAriBatch";
@@ -52,6 +53,7 @@ export class ExecuteBookingComAriPushUseCase {
     private readonly ledger: IBookingComAriPushLedger,
     private readonly ariClient: IBookingComAriClient,
     private readonly log: BookingComAriLogFn = () => {},
+    private readonly productMappings: IChannelProductMappingRepository | null = null,
   ) {}
 
   async execute(
@@ -62,9 +64,18 @@ export class ExecuteBookingComAriPushUseCase {
         command.tenantId,
         command.connectionId,
       );
-      if (!connection || connection.status !== "active") {
+      if (!connection) {
+        throw new BookingComAriPermanentPushError("Connection missing");
+      }
+      // Initial-sync work may be enqueued while pending_auth; retry until activated.
+      if (connection.status === "pending_auth") {
+        throw new BookingComAriRetryablePushError(
+          "Connection pending_auth — waiting for activation before ARI push",
+        );
+      }
+      if (connection.status !== "active") {
         throw new BookingComAriPermanentPushError(
-          `Connection not active (${connection?.status ?? "missing"})`,
+          `Connection not active (${connection.status})`,
         );
       }
       if (!connection.credentialRef) {
@@ -265,6 +276,22 @@ export class ExecuteBookingComAriPushUseCase {
   private async assertMapping(
     projection: BookingComAriResolvedProjection,
   ): Promise<void> {
+    if (this.productMappings) {
+      const product = await this.productMappings.findById(
+        projection.tenantId,
+        projection.mappingId,
+      );
+      if (product && product.status === "active") {
+        if (product.mappingVersion !== projection.mappingVersion) {
+          throw new BookingComAriPermanentPushError("Mapping version stale");
+        }
+        if (!product.externalRoomTypeId) {
+          throw new ValidationError("Room mapping required for Booking.com ARI");
+        }
+        return;
+      }
+    }
+
     const mapping = await this.mappingRepository.findById(
       projection.tenantId,
       projection.mappingId,

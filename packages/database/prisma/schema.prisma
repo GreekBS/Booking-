@@ -800,6 +800,85 @@ model ChannelAriPushLedger {
   @@map("channel_ari_push_ledgers")
 }
 
+/// CM-4c-4: provider-specific setup blob + mapping config generation.
+model ChannelConnectionProviderSetup {
+  tenantId                String   @map("tenant_id") @db.Uuid
+  connectionId            String   @map("connection_id") @db.VarChar(255)
+  provider                String   @map("provider") @db.VarChar(50)
+  setupJson               Json     @map("setup_json")
+  mappingConfigGeneration Int      @default(0) @map("mapping_config_generation")
+  updatedAt               DateTime @map("updated_at") @db.Timestamptz
+
+  @@id([tenantId, connectionId])
+  @@index([tenantId, provider])
+  @@map("channel_connection_provider_setups")
+}
+
+/// CM-4c-4: provider-generic product mappings (property/hotel, unit/room, rate, roomrate).
+model ChannelProductMapping {
+  tenantId String @map("tenant_id") @db.Uuid
+  id       String @map("id") @db.Uuid
+
+  connectionId String  @map("connection_id") @db.VarChar(255)
+  provider     String  @map("provider") @db.VarChar(50)
+  kind         String  @map("kind") @db.VarChar(32)
+  propertyId   String? @map("property_id") @db.VarChar(255)
+  unitId       String? @map("unit_id") @db.VarChar(255)
+  ratePlanId   String? @map("rate_plan_id") @db.VarChar(255)
+
+  externalHotelId     String? @map("external_hotel_id") @db.VarChar(64)
+  externalRoomTypeId  String? @map("external_room_type_id") @db.VarChar(64)
+  externalRatePlanId  String? @map("external_rate_plan_id") @db.VarChar(64)
+  externalRoomRateKey String? @map("external_room_rate_key") @db.VarChar(255)
+
+  status                  String @map("status") @db.VarChar(32)
+  mappingVersion          Int    @map("mapping_version")
+  mappingConfigGeneration Int    @map("mapping_config_generation")
+
+  createdAt DateTime @map("created_at") @db.Timestamptz
+  updatedAt DateTime @map("updated_at") @db.Timestamptz
+
+  @@id([tenantId, id])
+  @@index([tenantId, connectionId])
+  @@map("channel_product_mappings")
+}
+
+/// CM-4c-4: non-destructive initial-sync preview + confirmation token.
+model ChannelInitialSyncPreview {
+  tenantId                  String    @map("tenant_id") @db.Uuid
+  id                        String    @map("id") @db.Uuid
+  connectionId              String    @map("connection_id") @db.VarChar(255)
+  confirmationToken         String    @map("confirmation_token") @db.Char(64)
+  mappingConfigGeneration   Int       @map("mapping_config_generation")
+  talosStateFingerprint     String    @map("talos_state_fingerprint") @db.Char(64)
+  remoteSnapshotFingerprint String    @map("remote_snapshot_fingerprint") @db.VarChar(128)
+  summaryJson               Json      @map("summary_json")
+  status                    String    @map("status") @db.VarChar(32)
+  createdAt                 DateTime  @map("created_at") @db.Timestamptz
+  confirmedAt               DateTime? @map("confirmed_at") @db.Timestamptz
+
+  @@id([tenantId, id])
+  @@index([tenantId, connectionId, status])
+  @@map("channel_initial_sync_previews")
+}
+
+/// CM-4c-4: reconciliation run outcomes (reservations / ARI / mappings).
+model ChannelReconciliationRun {
+  tenantId                String   @map("tenant_id") @db.Uuid
+  id                      String   @map("id") @db.Uuid
+  connectionId            String   @map("connection_id") @db.VarChar(255)
+  scope                   String   @map("scope") @db.VarChar(32)
+  outcome                 String   @map("outcome") @db.VarChar(64)
+  mappingConfigGeneration Int      @map("mapping_config_generation")
+  autoHealEnqueued        Boolean  @default(false) @map("auto_heal_enqueued")
+  detailsJson             Json     @map("details_json")
+  completedAt             DateTime @map("completed_at") @db.Timestamptz
+
+  @@id([tenantId, id])
+  @@index([tenantId, connectionId, completedAt(sort: Desc)])
+  @@map("channel_reconciliation_runs")
+}
+
 enum ChannelSecretKind {
   credential
   webhook_verification

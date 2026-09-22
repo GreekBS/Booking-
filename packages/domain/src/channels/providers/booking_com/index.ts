@@ -26,3 +26,7 @@ export * from "./stubs/BookingComNotReadyPollingProvider";
 export * from "./stubs/BookingComNotReadyReservationImportProvider";
 export * from "./stubs/BookingComNotReadyAvailabilityExportProvider";
 export * from "./stubs/BookingComNotReadyRateRestrictionExportProvider";
+export * from "./discovery/IBookingComRemoteDiscoveryClient";
+export * from "./mapping/validateBookingComMappings";
+export * from "./sync/IBookingComRemoteAriReader";
+export * from "./sync/bookingComAriDiff";

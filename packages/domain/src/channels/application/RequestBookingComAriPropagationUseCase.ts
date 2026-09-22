@@ -3,6 +3,7 @@ import type { DomainEvent } from "../../shared/kernel/DomainEvent";
 import type { IOutboxRepository } from "../../shared/ports/InfrastructurePorts";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
 import type { IChannelListingMappingRepository } from "../ports/IChannelListingMappingRepository";
+import type { IChannelProductMappingRepository } from "../ports/IChannelProductMappingRepository";
 import type { IBookingComAriPushLedger } from "../ports/IBookingComAriPushLedger";
 import type { BookingComAriResolvedProjection } from "../providers/booking_com/ari/BookingComAriProjection";
 import {
@@ -21,6 +22,11 @@ export interface RequestBookingComAriPropagationCommand {
   projection: BookingComAriResolvedProjection;
   /** Optional setup blob from connection metadata when persisted (CM-4c-4). */
   connectionSetup?: unknown;
+  /**
+   * CM-4c-4: allow durable enqueue while connection is still pending_auth
+   * (initial sync confirm happens before activation).
+   */
+  allowPendingAuth?: boolean;
 }
 
 export type RequestBookingComAriPropagationResult =
@@ -38,6 +44,8 @@ export class RequestBookingComAriPropagationUseCase {
     private readonly mappingRepository: IChannelListingMappingRepository,
     private readonly outboxRepository: IOutboxRepository,
     private readonly ledger: IBookingComAriPushLedger,
+    /** CM-4c-4: optional product mappings (room/rate) as ARI authority. */
+    private readonly productMappings: IChannelProductMappingRepository | null = null,
   ) {}
 
   async execute(
@@ -72,7 +80,10 @@ export class RequestBookingComAriPropagationUseCase {
       if (connection.provider !== "booking_com") {
         return Result.ok({ outcome: "rejected", reason: "Connection provider mismatch" });
       }
-      if (connection.status !== "active") {
+      const statusOk =
+        connection.status === "active" ||
+        (command.allowPendingAuth === true && connection.status === "pending_auth");
+      if (!statusOk) {
         return Result.ok({
           outcome: "rejected",
           reason: `Connection status is ${connection.status}`,
@@ -82,22 +93,9 @@ export class RequestBookingComAriPropagationUseCase {
         return Result.ok({ outcome: "rejected", reason: "Credential unavailable" });
       }
 
-      const mapping = await this.mappingRepository.findById(
-        projection.tenantId,
-        projection.mappingId,
-      );
-      if (!mapping || mapping.status !== "active") {
-        return Result.ok({ outcome: "rejected", reason: "Mapping missing or inactive" });
-      }
-      if (mapping.mappingVersion !== projection.mappingVersion) {
-        return Result.ok({ outcome: "rejected", reason: "Mapping version stale" });
-      }
-      if (
-        mapping.syncDirection === "inbound" ||
-        !mapping.externalUnitId ||
-        !mapping.externalListingId
-      ) {
-        return Result.ok({ outcome: "rejected", reason: "Mapping incomplete for ARI" });
+      const mappingOk = await this.assertMappingReady(projection);
+      if (!mappingOk.ok) {
+        return Result.ok({ outcome: "rejected", reason: mappingOk.reason });
       }
 
       if (command.connectionSetup != null) {
@@ -168,5 +166,55 @@ export class RequestBookingComAriPropagationUseCase {
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
+  }
+
+  private async assertMappingReady(
+    projection: BookingComAriResolvedProjection,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (this.productMappings) {
+      const product = await this.productMappings.findById(
+        projection.tenantId,
+        projection.mappingId,
+      );
+      if (product && product.status === "active") {
+        if (product.mappingVersion !== projection.mappingVersion) {
+          return { ok: false, reason: "Mapping version stale" };
+        }
+        if (
+          product.kind !== "unit_room" &&
+          product.kind !== "room_rate" &&
+          product.kind !== "rate_plan"
+        ) {
+          return { ok: false, reason: "Product mapping kind not valid for ARI" };
+        }
+        if (
+          !product.externalHotelId ||
+          !product.externalRoomTypeId ||
+          product.connectionId !== projection.connectionId
+        ) {
+          return { ok: false, reason: "Product mapping incomplete for ARI" };
+        }
+        return { ok: true };
+      }
+    }
+
+    const mapping = await this.mappingRepository.findById(
+      projection.tenantId,
+      projection.mappingId,
+    );
+    if (!mapping || mapping.status !== "active") {
+      return { ok: false, reason: "Mapping missing or inactive" };
+    }
+    if (mapping.mappingVersion !== projection.mappingVersion) {
+      return { ok: false, reason: "Mapping version stale" };
+    }
+    if (
+      mapping.syncDirection === "inbound" ||
+      !mapping.externalUnitId ||
+      !mapping.externalListingId
+    ) {
+      return { ok: false, reason: "Mapping incomplete for ARI" };
+    }
+    return { ok: true };
   }
 }

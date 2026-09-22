@@ -282,11 +282,31 @@ import {
 
   ActivateChannelConnectionUseCase,
 
+  BookingComActivationGate,
+
   ResumeChannelConnectionUseCase,
 
   PauseChannelConnectionUseCase,
 
   DisconnectChannelConnectionUseCase,
+
+  UpsertChannelProductMappingUseCase,
+
+  ListChannelProductMappingsUseCase,
+
+  ValidateBookingComMappingsUseCase,
+
+  DiscoverBookingComRemoteConfigUseCase,
+
+  GenerateBookingComInitialSyncPreviewUseCase,
+
+  ConfirmBookingComInitialSyncUseCase,
+
+  ReconcileBookingComConnectionUseCase,
+
+  BookingComRemoteDiscoveryClientNotConfigured,
+
+  BookingComRemoteAriReaderNotConfigured,
 
 } from "@hcp/domain";
 
@@ -401,6 +421,14 @@ import {
   PrismaEligibleIcalPollConnectionReader,
 
   PrismaChannelAriPushLedger,
+
+  PrismaChannelProductMappingRepository,
+
+  PrismaChannelConnectionProviderSetupRepository,
+
+  PrismaChannelInitialSyncPreviewRepository,
+
+  PrismaChannelReconciliationRunRepository,
 
   PrismaChannelConnectionHealthQuery,
 
@@ -1163,6 +1191,11 @@ const channelProviderRegistry = createProductionChannelProviderRegistry();
 const channelConnectionRepository = new PrismaChannelConnectionRepository();
 export const channelListingMappingRepository =
   new PrismaChannelListingMappingRepository();
+const channelConnectionProviderSetupRepository =
+  new PrismaChannelConnectionProviderSetupRepository();
+const bookingComActivationGate = new BookingComActivationGate(
+  channelConnectionProviderSetupRepository,
+);
 const externalReservationLinkRepository = new PrismaExternalReservationLinkRepository();
 const channelInboxRepository = new PrismaChannelInboxRepository();
 const channelImportPersistence = new PrismaChannelReservationImportPersistence(outboxRepository);
@@ -1315,6 +1348,7 @@ export const activateChannelConnectionUseCase = new ActivateChannelConnectionUse
   permissionChecker,
   channelConnectionLifecycleUnitOfWork,
   icalCredentialRotationStore,
+  bookingComActivationGate,
 );
 
 export const resumeChannelConnectionUseCase = new ResumeChannelConnectionUseCase(
@@ -1560,6 +1594,47 @@ jobHandlerRegistry.register(
 
 const bookingComAriPushLedger = new PrismaChannelAriPushLedger();
 const bookingComAriClient = new BookingComAriClientNotConfigured();
+const channelProductMappingRepository = new PrismaChannelProductMappingRepository();
+const channelInitialSyncPreviewRepository =
+  new PrismaChannelInitialSyncPreviewRepository();
+const channelReconciliationRunRepository =
+  new PrismaChannelReconciliationRunRepository();
+const bookingComRemoteDiscoveryClient =
+  new BookingComRemoteDiscoveryClientNotConfigured();
+const bookingComRemoteAriReader = new BookingComRemoteAriReaderNotConfigured();
+
+export const upsertChannelProductMappingUseCase = new UpsertChannelProductMappingUseCase(
+  channelConnectionRepository,
+  channelConnectionProviderSetupRepository,
+  channelProductMappingRepository,
+  idGenerator,
+  (fields) => {
+    console.log(JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }));
+  },
+);
+
+export const listChannelProductMappingsUseCase = new ListChannelProductMappingsUseCase(
+  channelConnectionRepository,
+  channelConnectionProviderSetupRepository,
+  channelProductMappingRepository,
+);
+
+export const validateBookingComMappingsUseCase = new ValidateBookingComMappingsUseCase(
+  channelConnectionRepository,
+  channelConnectionProviderSetupRepository,
+  channelProductMappingRepository,
+  bookingComRemoteDiscoveryClient,
+  (fields) => {
+    console.log(JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }));
+  },
+);
+
+export const discoverBookingComRemoteConfigUseCase =
+  new DiscoverBookingComRemoteConfigUseCase(
+    channelConnectionRepository,
+    channelConnectionProviderSetupRepository,
+    bookingComRemoteDiscoveryClient,
+  );
 
 export const requestBookingComAriPropagationUseCase =
   new RequestBookingComAriPropagationUseCase(
@@ -1567,6 +1642,48 @@ export const requestBookingComAriPropagationUseCase =
     channelListingMappingRepository,
     outboxRepository,
     bookingComAriPushLedger,
+    channelProductMappingRepository,
+  );
+
+export const generateBookingComInitialSyncPreviewUseCase =
+  new GenerateBookingComInitialSyncPreviewUseCase(
+    channelConnectionRepository,
+    channelConnectionProviderSetupRepository,
+    channelProductMappingRepository,
+    channelInitialSyncPreviewRepository,
+    bookingComRemoteAriReader,
+    validateBookingComMappingsUseCase,
+    idGenerator,
+    (fields) => {
+      console.log(JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }));
+    },
+  );
+
+export const confirmBookingComInitialSyncUseCase =
+  new ConfirmBookingComInitialSyncUseCase(
+    channelConnectionRepository,
+    channelConnectionProviderSetupRepository,
+    channelInitialSyncPreviewRepository,
+    requestBookingComAriPropagationUseCase,
+    (fields) => {
+      console.log(JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }));
+    },
+  );
+
+export const reconcileBookingComConnectionUseCase =
+  new ReconcileBookingComConnectionUseCase(
+    channelConnectionRepository,
+    channelConnectionProviderSetupRepository,
+    channelProductMappingRepository,
+    channelReconciliationRunRepository,
+    bookingComRemoteDiscoveryClient,
+    bookingComRemoteAriReader,
+    null,
+    requestBookingComAriPropagationUseCase,
+    idGenerator,
+    (fields) => {
+      console.log(JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }));
+    },
   );
 
 export const executeBookingComAriPushUseCase = new ExecuteBookingComAriPushUseCase(
@@ -1579,6 +1696,7 @@ export const executeBookingComAriPushUseCase = new ExecuteBookingComAriPushUseCa
       JSON.stringify({ level: "info", ...fields, timestamp: new Date().toISOString() }),
     );
   },
+  channelProductMappingRepository,
 );
 
 jobHandlerRegistry.register(

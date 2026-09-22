@@ -12,6 +12,7 @@ import {
   type ChannelConnectionLifecycleCommandBase,
   type ChannelConnectionRotationGate,
 } from "./ChannelConnectionLifecycleActivationSupport";
+import type { BookingComActivationGate } from "./BookingComActivationGate";
 
 export type ActivateChannelConnectionCommand = ChannelConnectionLifecycleCommandBase;
 
@@ -31,7 +32,7 @@ const ACTIVATE_SOURCE_STATUSES = new Set<ChannelConnectionStatus>([
  * Activate a ChannelConnection under mandatory semantic policy and epoch CAS (CM-4b S3e).
  *
  * Source statuses: pending_auth | error → active.
- * Does not call the S3d transition store, reset cursors, or mutate semantic columns.
+ * Booking.com: CM-4c-4 setup readiness gate when bookingComActivationGate is provided.
  */
 export class ActivateChannelConnectionUseCase {
   constructor(
@@ -41,6 +42,8 @@ export class ActivateChannelConnectionUseCase {
     private readonly unitOfWork: IChannelConnectionLifecycleUnitOfWork,
     /** P1-S6c: refuses activation while a credential rotation is in flight. */
     private readonly rotationGate: ChannelConnectionRotationGate | null = null,
+    /** CM-4c-4: Booking.com mapping + initial-sync readiness. */
+    private readonly bookingComActivationGate: BookingComActivationGate | null = null,
   ) {}
 
   async execute(
@@ -61,6 +64,16 @@ export class ActivateChannelConnectionUseCase {
         mutate: (connection, now) => connection.activate(now),
         rotationGate: this.rotationGate,
       });
+
+      if (
+        prepared.connection.provider === "booking_com" &&
+        this.bookingComActivationGate
+      ) {
+        await this.bookingComActivationGate.assertReady(
+          prepared.connection.tenantId,
+          prepared.connection.id,
+        );
+      }
 
       await this.unitOfWork.runInTransaction(prepared.connection.tenantId, async (ports) => {
         await ports.connections.activateWithExpectedSemanticVersion(
