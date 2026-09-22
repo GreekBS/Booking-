@@ -1,0 +1,27 @@
+# Talos async worker — Railway Config-as-Code (repository ROOT)
+#
+# This file MUST live at the repo root so Railway/Railpack load it when
+# Root Directory = / (required for pnpm workspaces).
+#
+# Deploys ONLY @hcp/worker — never apps/web / Next.js.
+
+[build]
+builder = "RAILPACK"
+# Explicit commands bypass Railpack Nx/Next.js auto-detection.
+buildCommand = "pnpm run worker:railway:build"
+watchPatterns = [
+  "/apps/worker/**",
+  "/packages/**",
+  "/package.json",
+  "/pnpm-lock.yaml",
+  "/pnpm-workspace.yaml",
+  "/railway.toml",
+  "/railpack.json",
+]
+
+[deploy]
+startCommand = "pnpm run worker:railway:start"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30

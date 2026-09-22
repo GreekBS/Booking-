@@ -110,4 +110,5 @@ Required: safe non-production `WORKER_DATABASE_URL` (or `DATABASE_URL`).
 
 ## Next
 
-Production worker activation is a separate GO. Deployment support: `docs/talos-railway-worker-deploy.md`.
+Production worker activation is a separate GO.
+Railway config: `/railway.toml` + `/railpack.json` (repo root). Runbook: `docs/talos-railway-worker-deploy.md`.

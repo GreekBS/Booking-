@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "steps": {
+    "build": {
+      "commands": ["pnpm run worker:railway:build"]
+    }
+  },
+  "deploy": {
+    "startCommand": "pnpm run worker:railway:start"
+  }
+}

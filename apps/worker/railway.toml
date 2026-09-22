@@ -1,20 +1,11 @@
-# Talos async worker — Railway Config-as-Code
+# DEPRECATED LOCATION — do not point Railway Config File Path here.
 #
-# REQUIRED Railway service settings:
-#   Root Directory = /  (repository root — do NOT set to apps/worker)
-#   So pnpm-lock.yaml + workspaces resolve correctly.
+# Railway loads Config-as-Code from the repository root when Root Directory = /.
+# The authoritative worker config is:
 #
-# This file may be selected as the service config path, or the build/start
-# commands below may be pasted into Service Settings.
-
-[build]
-builder = "NIXPACKS"
-buildCommand = "pnpm install --frozen-lockfile && pnpm run worker:railway:build"
-
-[deploy]
-startCommand = "pnpm run worker:railway:start"
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
-# Minimal HTTP /healthz (see apps/worker health server). Railway injects PORT.
-healthcheckPath = "/healthz"
-healthcheckTimeout = 30
+#   /railway.toml
+#   /railpack.json
+#
+# See docs/talos-railway-worker-deploy.md
+#
+# Kept only as a pointer so old bookmarks do not silently configure nothing.
