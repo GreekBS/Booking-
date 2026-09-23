@@ -50,6 +50,23 @@ export class PrismaBookingRepository implements IBookingRepository {
     return records.map(bookingToDomain);
   }
 
+  async findByUnits(
+    unitIds: string[],
+    tenantId: string,
+    range?: { from: string; to: string },
+  ): Promise<Booking[]> {
+    if (unitIds.length === 0) return [];
+    const records = await prisma.booking.findMany({
+      where: {
+        tenantId,
+        unitId: { in: unitIds },
+        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+      },
+      orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+    });
+    return records.map(bookingToDomain);
+  }
+
   async search(filters: BookingSearchFilters) {
     const where: Prisma.BookingWhereInput = {
       tenantId: filters.tenantId,

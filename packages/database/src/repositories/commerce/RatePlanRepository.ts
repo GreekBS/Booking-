@@ -20,6 +20,27 @@ export class PrismaRatePlanRepository implements IRatePlanRepository {
     return ratePlanToDomain(plan, plan.seasons, plan.dowModifiers);
   }
 
+  async findByUnitIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<Map<string, RatePlanProps>> {
+    const result = new Map<string, RatePlanProps>();
+    if (unitIds.length === 0) return result;
+
+    const plans = await prisma.ratePlan.findMany({
+      where: { tenantId, unitId: { in: unitIds } },
+      include: {
+        seasons: true,
+        dowModifiers: true,
+      },
+    });
+
+    for (const plan of plans) {
+      result.set(plan.unitId, ratePlanToDomain(plan, plan.seasons, plan.dowModifiers));
+    }
+    return result;
+  }
+
   async save(tenantId: string, unitId: string, plan: RatePlanProps): Promise<void> {
     await prisma.$transaction(async (tx) => {
       await setTenantContext(tx, tenantId);

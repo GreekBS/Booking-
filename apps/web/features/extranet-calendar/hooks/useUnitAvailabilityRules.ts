@@ -1,14 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fetchAvailabilityRules } from "@/lib/admin/api";
+import {
+  fetchUnitsAvailabilityRulesBatch,
+  invalidateAvailabilityRulesBatchCache,
+} from "@/lib/admin/api";
 import type { AvailabilityRulesRecord } from "@/lib/admin/types";
 
-const CONCURRENCY = 4;
-
+/**
+ * Batched availability rules for visible units — one HTTP call.
+ */
 export function useUnitAvailabilityRules(tenantId: string | null, unitIds: string[]) {
   const [rulesByUnit, setRulesByUnit] = useState<Record<string, AvailabilityRulesRecord>>({});
   const [loading, setLoading] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   const unitKey = unitIds.join(",");
 
@@ -19,48 +24,35 @@ export function useUnitAvailabilityRules(tenantId: string | null, unitIds: strin
     }
 
     let cancelled = false;
-    const queue = [...unitIds];
-    let active = 0;
-
-    async function loadOne(unitId: string) {
+    async function load() {
+      setLoading(true);
       try {
-        const rules = await fetchAvailabilityRules(tenantId!, unitId);
-        if (!cancelled) {
-          setRulesByUnit((prev) => ({ ...prev, [unitId]: rules }));
-        }
+        const data = await fetchUnitsAvailabilityRulesBatch(tenantId!, unitIds);
+        if (!cancelled) setRulesByUnit(data);
       } catch {
         /* rules optional — cell defaults to available */
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-
-    async function pump() {
-      setLoading(true);
-      while (queue.length > 0 && !cancelled) {
-        if (active >= CONCURRENCY) {
-          await new Promise((r) => setTimeout(r, 40));
-          continue;
-        }
-        const unitId = queue.shift()!;
-        active += 1;
-        void loadOne(unitId).finally(() => {
-          active -= 1;
-        });
-      }
-      while (active > 0 && !cancelled) {
-        await new Promise((r) => setTimeout(r, 40));
-      }
-      if (!cancelled) setLoading(false);
-    }
-
-    void pump();
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [tenantId, unitKey, unitIds]);
+  }, [tenantId, unitKey, unitIds, refreshToken]);
 
-  const patchRulesForUnit = useCallback((unitId: string, rules: AvailabilityRulesRecord) => {
-    setRulesByUnit((prev) => ({ ...prev, [unitId]: rules }));
-  }, []);
+  const patchRulesForUnit = useCallback(
+    (unitId: string, rules: AvailabilityRulesRecord) => {
+      setRulesByUnit((prev) => ({ ...prev, [unitId]: rules }));
+      if (tenantId) invalidateAvailabilityRulesBatchCache(tenantId);
+    },
+    [tenantId],
+  );
 
-  return { rulesByUnit, loadingRules: loading, patchRulesForUnit };
+  const refreshRules = useCallback(() => {
+    if (tenantId) invalidateAvailabilityRulesBatchCache(tenantId);
+    setRefreshToken((t) => t + 1);
+  }, [tenantId]);
+
+  return { rulesByUnit, loadingRules: loading, patchRulesForUnit, refreshRules };
 }

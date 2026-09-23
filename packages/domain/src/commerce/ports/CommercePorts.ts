@@ -27,6 +27,12 @@ export interface CatalogPropertyReadModel {
 export interface ICatalogQueryPort {
   getUnit(unitId: string, tenantId: string): Promise<CatalogUnitReadModel | null>;
   getProperty(propertyId: string, tenantId: string): Promise<CatalogPropertyReadModel | null>;
+  /** Tenant-scoped batch unit lookup. Missing ids are omitted (caller enforces completeness). */
+  getUnitsByIds(unitIds: string[], tenantId: string): Promise<CatalogUnitReadModel[]>;
+  getPropertiesByIds(
+    propertyIds: string[],
+    tenantId: string,
+  ): Promise<CatalogPropertyReadModel[]>;
 }
 
 export interface CalendarDateRange {
@@ -44,6 +50,12 @@ export interface IHoldRepository {
     checkOut: string,
   ): Promise<Hold | null>;
   findActiveByUnit(unitId: string, tenantId: string, range?: CalendarDateRange): Promise<Hold[]>;
+  /** Batched active holds for calendar — one query across unitIds. */
+  findActiveByUnits(
+    unitIds: string[],
+    tenantId: string,
+    range?: CalendarDateRange,
+  ): Promise<Hold[]>;
   findActiveByTenant(tenantId: string, filters?: HoldListFilters): Promise<Hold[]>;
   findByIdempotencyKey(tenantId: string, idempotencyKey: string): Promise<Hold | null>;
   findExpiredActive(before: Date, limit: number): Promise<Hold[]>;
@@ -64,6 +76,12 @@ export interface IBookingRepository {
   save(booking: Booking): Promise<void>;
   findById(id: string, tenantId: string): Promise<Booking | null>;
   findByUnit(unitId: string, tenantId: string, range?: CalendarDateRange): Promise<Booking[]>;
+  /** Batched bookings for calendar — one query across unitIds. */
+  findByUnits(
+    unitIds: string[],
+    tenantId: string,
+    range?: CalendarDateRange,
+  ): Promise<Booking[]>;
   search(filters: BookingSearchFilters): Promise<PaginatedBookings>;
 }
 
@@ -116,6 +134,12 @@ export interface ICalendarBlockRepository {
     tenantId: string,
     range?: CalendarDateRange,
   ): Promise<CalendarBlockView[]>;
+  /** Batched calendar blocks — one query across unitIds. */
+  findCalendarBlocksByUnits(
+    unitIds: string[],
+    tenantId: string,
+    range?: CalendarDateRange,
+  ): Promise<CalendarBlockView[]>;
   saveOperatorBlock(params: {
     id: string;
     tenantId: string;
@@ -131,11 +155,21 @@ export interface ICalendarBlockRepository {
 
 export interface IRatePlanRepository {
   findByUnitId(unitId: string, tenantId: string): Promise<RatePlanProps | null>;
+  /** Batched rate plans — one query across unitIds. */
+  findByUnitIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<Map<string, RatePlanProps>>;
   save(tenantId: string, unitId: string, plan: RatePlanProps): Promise<void>;
 }
 
 export interface IAvailabilityRulesRepository {
   findByUnitId(unitId: string, tenantId: string): Promise<UnitAvailabilityRulesProps | null>;
+  /** Batched availability rules — one query across unitIds. */
+  findByUnitIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<Map<string, UnitAvailabilityRulesProps>>;
   save(tenantId: string, unitId: string, rules: UnitAvailabilityRulesProps): Promise<void>;
 }
 

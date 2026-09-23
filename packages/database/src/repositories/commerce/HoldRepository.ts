@@ -69,6 +69,24 @@ export class PrismaHoldRepository implements IHoldRepository {
     return records.map(holdToDomain);
   }
 
+  async findActiveByUnits(
+    unitIds: string[],
+    tenantId: string,
+    range?: { from: string; to: string },
+  ): Promise<Hold[]> {
+    if (unitIds.length === 0) return [];
+    const records = await prisma.bookingHold.findMany({
+      where: {
+        tenantId,
+        unitId: { in: unitIds },
+        status: "active",
+        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+      },
+      orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+    });
+    return records.map(holdToDomain);
+  }
+
   async findActiveByTenant(
     tenantId: string,
     filters?: import("@hcp/domain").HoldListFilters,

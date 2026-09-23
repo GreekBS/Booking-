@@ -12,6 +12,23 @@ export class PrismaAvailabilityRulesRepository implements IAvailabilityRulesRepo
     return record ? availabilityRulesToDomain(record) : null;
   }
 
+  async findByUnitIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<Map<string, import("@hcp/domain").UnitAvailabilityRulesProps>> {
+    const result = new Map<string, import("@hcp/domain").UnitAvailabilityRulesProps>();
+    if (unitIds.length === 0) return result;
+
+    const records = await prisma.unitAvailabilityRule.findMany({
+      where: { tenantId, unitId: { in: unitIds } },
+    });
+
+    for (const record of records) {
+      result.set(record.unitId, availabilityRulesToDomain(record));
+    }
+    return result;
+  }
+
   async save(
     tenantId: string,
     unitId: string,

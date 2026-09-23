@@ -1,26 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchRatePlan } from "@/lib/admin/api";
+import {
+  fetchUnitsRatePlansBatch,
+  invalidateRatePlansBatchCache,
+} from "@/lib/admin/api";
 import type { RatePlanRecord } from "@/lib/admin/types";
 
-const CONCURRENCY = 4;
-
 /**
- * Loads rate plans for visible units once requested, then caches in memory.
- * Toggling overlay modes does not trigger refetch; only new unitIds or refresh do.
+ * Batched rate plans for visible units.
+ * Toggling overlay modes does not refetch; new unitIds or refresh do.
  */
 export function useUnitRatePlans(
   tenantId: string | null,
   unitIds: string[],
   loadRequested: boolean,
 ) {
-  const [ratePlansByUnit, setRatePlansByUnit] = useState<Record<string, RatePlanRecord | null>>({});
-  const [loadingUnits, setLoadingUnits] = useState<Record<string, boolean>>({});
+  const [ratePlansByUnit, setRatePlansByUnit] = useState<
+    Record<string, RatePlanRecord | null>
+  >({});
+  const [loading, setLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const stickyLoadRef = useRef(false);
-  const loadedUnitsRef = useRef<Set<string>>(new Set());
-  const inflightRef = useRef<Set<string>>(new Set());
 
   if (loadRequested) {
     stickyLoadRef.current = true;
@@ -30,14 +31,12 @@ export function useUnitRatePlans(
   const unitKey = unitIds.join(",");
 
   const refreshRatePlans = useCallback(() => {
-    loadedUnitsRef.current.clear();
-    inflightRef.current.clear();
+    if (tenantId) invalidateRatePlansBatchCache(tenantId);
     setRatePlansByUnit({});
     setRefreshToken((t) => t + 1);
-  }, []);
+  }, [tenantId]);
 
   const patchRatePlanForUnit = useCallback((unitId: string, plan: RatePlanRecord) => {
-    loadedUnitsRef.current.add(unitId);
     setRatePlansByUnit((prev) => ({ ...prev, [unitId]: plan }));
   }, []);
 
@@ -45,60 +44,35 @@ export function useUnitRatePlans(
     if (!tenantId || !shouldLoad || unitIds.length === 0) return;
 
     let cancelled = false;
-    const pending = unitIds.filter(
-      (id) => !loadedUnitsRef.current.has(id) && !inflightRef.current.has(id),
-    );
-    if (pending.length === 0) return;
-
-    const queue = [...pending];
-    let active = 0;
-
-    async function loadOne(unitId: string) {
-      inflightRef.current.add(unitId);
-      setLoadingUnits((prev) => ({ ...prev, [unitId]: true }));
+    async function load() {
+      setLoading(true);
       try {
-        const plan = await fetchRatePlan(tenantId!, unitId);
-        if (!cancelled) {
-          loadedUnitsRef.current.add(unitId);
-          setRatePlansByUnit((prev) => ({ ...prev, [unitId]: plan }));
-        }
+        const data = await fetchUnitsRatePlansBatch(tenantId!, unitIds);
+        if (!cancelled) setRatePlansByUnit(data);
       } catch {
         if (!cancelled) {
-          loadedUnitsRef.current.add(unitId);
-          setRatePlansByUnit((prev) => ({ ...prev, [unitId]: null }));
+          const empty: Record<string, RatePlanRecord | null> = {};
+          for (const id of unitIds) empty[id] = null;
+          setRatePlansByUnit(empty);
         }
       } finally {
-        inflightRef.current.delete(unitId);
-        if (!cancelled) {
-          setLoadingUnits((prev) => ({ ...prev, [unitId]: false }));
-        }
+        if (!cancelled) setLoading(false);
       }
     }
-
-    async function pump() {
-      while (queue.length > 0 && !cancelled) {
-        if (active >= CONCURRENCY) {
-          await new Promise((r) => setTimeout(r, 40));
-          continue;
-        }
-        const unitId = queue.shift()!;
-        active += 1;
-        void loadOne(unitId).finally(() => {
-          active -= 1;
-        });
-      }
-    }
-
-    void pump();
-
+    void load();
     return () => {
       cancelled = true;
     };
   }, [tenantId, unitKey, shouldLoad, refreshToken, unitIds]);
 
+  const loadingRatePlans: Record<string, boolean> = {};
+  if (loading) {
+    for (const id of unitIds) loadingRatePlans[id] = true;
+  }
+
   return {
     ratePlansByUnit,
-    loadingRatePlans: loadingUnits,
+    loadingRatePlans,
     refreshRatePlans,
     patchRatePlanForUnit,
   };

@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchUnitCalendar, invalidateUnitCalendarCache } from "@/lib/admin/api";
+import { useCallback, useEffect, useState } from "react";
+import {
+  fetchUnitsCalendarBatch,
+  invalidateUnitCalendarCache,
+} from "@/lib/admin/api";
 import type { CalendarRecord } from "@/lib/admin/types";
 
-const CONCURRENCY = 4;
-
+/**
+ * Loads calendars for all visible units in one batched request.
+ * Date-range changes refetch once — never N× per unit.
+ */
 export function useUnitCalendars(
   tenantId: string | null,
   unitIds: string[],
@@ -13,7 +18,7 @@ export function useUnitCalendars(
   rangeEnd: string,
 ) {
   const [calendarsByUnit, setCalendarsByUnit] = useState<Record<string, CalendarRecord>>({});
-  const [loadingUnits, setLoadingUnits] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
@@ -26,59 +31,54 @@ export function useUnitCalendars(
   }, [tenantId]);
 
   useEffect(() => {
-    if (!tenantId || unitIds.length === 0) return;
+    if (!tenantId || unitIds.length === 0) {
+      setCalendarsByUnit({});
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
-    const queue = [...unitIds];
-    let active = 0;
-
-    async function loadOne(unitId: string) {
-      setLoadingUnits((prev) => ({ ...prev, [unitId]: true }));
+    async function load() {
+      setLoading(true);
       try {
-        const data = await fetchUnitCalendar(tenantId!, unitId, rangeStart, rangeEnd);
+        const data = await fetchUnitsCalendarBatch(
+          tenantId!,
+          unitIds,
+          rangeStart,
+          rangeEnd,
+        );
         if (!cancelled) {
-          setCalendarsByUnit((prev) => ({ ...prev, [unitId]: data }));
+          setCalendarsByUnit(data);
           setLastUpdatedAt(Date.now());
         }
       } catch {
         if (!cancelled) {
-          setCalendarsByUnit((prev) => ({
-            ...prev,
-            [unitId]: prev[unitId] ?? { blocks: [], holds: [], bookings: [] },
-          }));
+          const empty: Record<string, CalendarRecord> = {};
+          for (const id of unitIds) {
+            empty[id] = { blocks: [], holds: [], bookings: [] };
+          }
+          setCalendarsByUnit(empty);
         }
       } finally {
-        if (!cancelled) {
-          setLoadingUnits((prev) => ({ ...prev, [unitId]: false }));
-        }
+        if (!cancelled) setLoading(false);
       }
     }
-
-    async function pump() {
-      while (queue.length > 0 && !cancelled) {
-        if (active >= CONCURRENCY) {
-          await new Promise((r) => setTimeout(r, 40));
-          continue;
-        }
-        const unitId = queue.shift()!;
-        active += 1;
-        void loadOne(unitId).finally(() => {
-          active -= 1;
-        });
-      }
-    }
-
-    void pump();
-
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [tenantId, unitKey, rangeKey, rangeStart, rangeEnd, refreshToken]);
+  }, [tenantId, unitKey, rangeKey, rangeStart, rangeEnd, refreshToken, unitIds]);
 
-  const isRefreshing = useMemo(
-    () => Object.values(loadingUnits).some(Boolean),
-    [loadingUnits],
-  );
+  const loadingUnits: Record<string, boolean> = {};
+  if (loading) {
+    for (const id of unitIds) loadingUnits[id] = true;
+  }
 
-  return { calendarsByUnit, loadingUnits, refreshCalendars, isRefreshing, lastUpdatedAt };
+  return {
+    calendarsByUnit,
+    loadingUnits,
+    refreshCalendars,
+    isRefreshing: loading,
+    lastUpdatedAt,
+  };
 }

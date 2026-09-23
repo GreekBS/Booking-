@@ -653,21 +653,23 @@ export class GetUnitCalendarUseCase {
       );
 
       const range = { from: command.from, to: command.to };
-      const blocks = await this.calendarBlocks.findCalendarBlocks(
-        command.unitId,
-        command.tenantId,
-        range,
-      );
-      const holds = await this.holdRepository.findActiveByUnit(
-        command.unitId,
-        command.tenantId,
-        range,
-      );
-      const bookings = await this.bookingRepository.findByUnit(
-        command.unitId,
-        command.tenantId,
-        range,
-      );
+      const [blocks, holds, bookings] = await Promise.all([
+        this.calendarBlocks.findCalendarBlocks(
+          command.unitId,
+          command.tenantId,
+          range,
+        ),
+        this.holdRepository.findActiveByUnit(
+          command.unitId,
+          command.tenantId,
+          range,
+        ),
+        this.bookingRepository.findByUnit(
+          command.unitId,
+          command.tenantId,
+          range,
+        ),
+      ]);
 
       return Result.ok({
         blocks,

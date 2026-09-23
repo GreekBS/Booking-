@@ -24,6 +24,7 @@ export * from "./application/CommerceSettingsUseCases";
 export * from "./application/BookingQueryUseCases";
 export * from "./application/GetTenantDashboardOverviewUseCase";
 export * from "./ports/ITenantDashboardOverviewQuery";
+export * from "./application/BatchCalendarReadUseCases";
 export * from "./application/ChangeBookingStayUseCase";
 export * from "./application/PrepareReservationUseCase";
 export * from "./application/CreateReservationUseCase";

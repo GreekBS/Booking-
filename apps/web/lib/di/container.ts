@@ -120,6 +120,12 @@ import {
 
   GetUnitCalendarUseCase,
 
+  GetUnitsCalendarBatchUseCase,
+
+  GetUnitsRatePlansBatchUseCase,
+
+  GetUnitsAvailabilityRulesBatchUseCase,
+
   ConfigureAvailabilityRulesUseCase,
 
   ConfigureRatePlanUseCase,
@@ -1043,6 +1049,40 @@ export const getUnitCalendarUseCase = new GetUnitCalendarUseCase(
   holdRepository,
 
   bookingRepository,
+
+  permissionChecker,
+
+);
+
+export const getUnitsCalendarBatchUseCase = new GetUnitsCalendarBatchUseCase(
+
+  catalogQueryAdapter,
+
+  calendarBlockRepository,
+
+  holdRepository,
+
+  bookingRepository,
+
+  permissionChecker,
+
+);
+
+export const getUnitsRatePlansBatchUseCase = new GetUnitsRatePlansBatchUseCase(
+
+  catalogQueryAdapter,
+
+  ratePlanRepository,
+
+  permissionChecker,
+
+);
+
+export const getUnitsAvailabilityRulesBatchUseCase = new GetUnitsAvailabilityRulesBatchUseCase(
+
+  catalogQueryAdapter,
+
+  availabilityRulesRepository,
 
   permissionChecker,
 

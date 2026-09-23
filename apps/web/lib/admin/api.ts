@@ -55,14 +55,56 @@ const catalogInflight = new Map<string, Promise<import("./types").PropertyUnitCa
 const calendarCache = new Map<string, import("./types").CalendarRecord>();
 const calendarInflight = new Map<string, Promise<import("./types").CalendarRecord>>();
 
+const batchCalendarCache = new Map<
+  string,
+  Record<string, import("./types").CalendarRecord>
+>();
+const batchCalendarInflight = new Map<
+  string,
+  Promise<Record<string, import("./types").CalendarRecord>>
+>();
+
+const batchRatePlansCache = new Map<
+  string,
+  Record<string, import("./types").RatePlanRecord | null>
+>();
+const batchRatePlansInflight = new Map<
+  string,
+  Promise<Record<string, import("./types").RatePlanRecord | null>>
+>();
+
+const batchRulesCache = new Map<
+  string,
+  Record<string, import("./types").AvailabilityRulesRecord>
+>();
+const batchRulesInflight = new Map<
+  string,
+  Promise<Record<string, import("./types").AvailabilityRulesRecord>>
+>();
+
 function calendarCacheKey(tenantId: string, unitId: string, from: string, to: string): string {
   return `${tenantId}:${unitId}:${from}:${to}`;
+}
+
+function batchCalendarCacheKey(
+  tenantId: string,
+  unitIds: string[],
+  from: string,
+  to: string,
+): string {
+  return `${tenantId}:${[...unitIds].sort().join(",")}:${from}:${to}`;
+}
+
+function batchUnitIdsCacheKey(tenantId: string, unitIds: string[]): string {
+  return `${tenantId}:${[...unitIds].sort().join(",")}`;
 }
 
 export function invalidateUnitCalendarCache(tenantId?: string, unitId?: string): void {
   if (!tenantId) {
     calendarCache.clear();
     calendarInflight.clear();
+    batchCalendarCache.clear();
+    batchCalendarInflight.clear();
     return;
   }
   const prefix = unitId ? `${tenantId}:${unitId}:` : `${tenantId}:`;
@@ -71,6 +113,44 @@ export function invalidateUnitCalendarCache(tenantId?: string, unitId?: string):
   }
   for (const key of calendarInflight.keys()) {
     if (key.startsWith(prefix)) calendarInflight.delete(key);
+  }
+  // Batch keys embed sorted unit id lists — clear all tenant batch calendar entries.
+  const tenantPrefix = `${tenantId}:`;
+  for (const key of batchCalendarCache.keys()) {
+    if (key.startsWith(tenantPrefix)) batchCalendarCache.delete(key);
+  }
+  for (const key of batchCalendarInflight.keys()) {
+    if (key.startsWith(tenantPrefix)) batchCalendarInflight.delete(key);
+  }
+}
+
+export function invalidateRatePlansBatchCache(tenantId?: string): void {
+  if (!tenantId) {
+    batchRatePlansCache.clear();
+    batchRatePlansInflight.clear();
+    return;
+  }
+  const prefix = `${tenantId}:`;
+  for (const key of batchRatePlansCache.keys()) {
+    if (key.startsWith(prefix)) batchRatePlansCache.delete(key);
+  }
+  for (const key of batchRatePlansInflight.keys()) {
+    if (key.startsWith(prefix)) batchRatePlansInflight.delete(key);
+  }
+}
+
+export function invalidateAvailabilityRulesBatchCache(tenantId?: string): void {
+  if (!tenantId) {
+    batchRulesCache.clear();
+    batchRulesInflight.clear();
+    return;
+  }
+  const prefix = `${tenantId}:`;
+  for (const key of batchRulesCache.keys()) {
+    if (key.startsWith(prefix)) batchRulesCache.delete(key);
+  }
+  for (const key of batchRulesInflight.keys()) {
+    if (key.startsWith(prefix)) batchRulesInflight.delete(key);
   }
 }
 
@@ -301,6 +381,109 @@ export async function fetchUnitCalendar(
   return inflight;
 }
 
+/** Batched calendars for Availability — one HTTP call for many units. */
+export async function fetchUnitsCalendarBatch(
+  tenantId: string,
+  unitIds: string[],
+  from: string,
+  to: string,
+): Promise<Record<string, import("./types").CalendarRecord>> {
+  if (unitIds.length === 0) return {};
+  const key = batchCalendarCacheKey(tenantId, unitIds, from, to);
+  const cached = batchCalendarCache.get(key);
+  if (cached) return cached;
+
+  let inflight = batchCalendarInflight.get(key);
+  if (!inflight) {
+    inflight = adminFetch<{ units: Record<string, import("./types").CalendarRecord> }>(
+      "/calendar/batch",
+      {
+        method: "POST",
+        tenantId,
+        body: JSON.stringify({ unitIds, from, to }),
+      },
+    )
+      .then((payload) => {
+        const units = payload.units ?? {};
+        batchCalendarCache.set(key, units);
+        batchCalendarInflight.delete(key);
+        return units;
+      })
+      .catch((err) => {
+        batchCalendarInflight.delete(key);
+        throw err;
+      });
+    batchCalendarInflight.set(key, inflight);
+  }
+  return inflight;
+}
+
+export async function fetchUnitsRatePlansBatch(
+  tenantId: string,
+  unitIds: string[],
+): Promise<Record<string, import("./types").RatePlanRecord | null>> {
+  if (unitIds.length === 0) return {};
+  const key = batchUnitIdsCacheKey(tenantId, unitIds);
+  const cached = batchRatePlansCache.get(key);
+  if (cached) return cached;
+
+  let inflight = batchRatePlansInflight.get(key);
+  if (!inflight) {
+    inflight = adminFetch<{
+      units: Record<string, import("./types").RatePlanRecord | null>;
+    }>("/rate-plans/batch", {
+      method: "POST",
+      tenantId,
+      body: JSON.stringify({ unitIds }),
+    })
+      .then((payload) => {
+        const units = payload.units ?? {};
+        batchRatePlansCache.set(key, units);
+        batchRatePlansInflight.delete(key);
+        return units;
+      })
+      .catch((err) => {
+        batchRatePlansInflight.delete(key);
+        throw err;
+      });
+    batchRatePlansInflight.set(key, inflight);
+  }
+  return inflight;
+}
+
+export async function fetchUnitsAvailabilityRulesBatch(
+  tenantId: string,
+  unitIds: string[],
+): Promise<Record<string, import("./types").AvailabilityRulesRecord>> {
+  if (unitIds.length === 0) return {};
+  const key = batchUnitIdsCacheKey(tenantId, unitIds);
+  const cached = batchRulesCache.get(key);
+  if (cached) return cached;
+
+  let inflight = batchRulesInflight.get(key);
+  if (!inflight) {
+    inflight = adminFetch<{
+      units: Record<string, import("./types").AvailabilityRulesRecord>;
+    }>("/availability-rules/batch", {
+      method: "POST",
+      tenantId,
+      body: JSON.stringify({ unitIds }),
+    })
+      .then((payload) => {
+        const units = payload.units ?? {};
+        batchRulesCache.set(key, units);
+        batchRulesInflight.delete(key);
+        return units;
+      })
+      .catch((err) => {
+        batchRulesInflight.delete(key);
+        throw err;
+      });
+    batchRulesInflight.set(key, inflight);
+  }
+  return inflight;
+}
+
 export async function fetchAvailabilityRules(
   tenantId: string,
   unitId: string,
@@ -314,6 +497,7 @@ export async function updateAvailabilityRules(
   rules: import("./types").AvailabilityRulesRecord,
 ): Promise<import("./types").AvailabilityRulesRecord> {
   invalidateUnitCalendarCache(tenantId, unitId);
+  invalidateAvailabilityRulesBatchCache(tenantId);
   return adminFetch(`/units/${unitId}/availability-rules`, {
     method: "PUT",
     tenantId,
@@ -335,6 +519,7 @@ export async function updateRatePlan(
   unitId: string,
   plan: import("./types").RatePlanRecord,
 ): Promise<import("./types").RatePlanRecord> {
+  invalidateRatePlansBatchCache(tenantId);
   return adminFetch(`/units/${unitId}/rate-plan`, {
     method: "PUT",
     tenantId,
@@ -384,14 +569,17 @@ export async function releaseHold(tenantId: string, holdId: string): Promise<voi
   await adminFetch(`/holds/${holdId}/release`, { method: "POST", tenantId });
 }
 
-/** @deprecated Use fetchUnitCalendar with from/to */
+/** @deprecated Use fetchUnitsCalendarBatch */
 export async function fetchAllCalendars(
   tenantId: string,
   unitIds: string[],
   from: string,
   to: string,
 ): Promise<import("./types").CalendarRecord[]> {
-  return Promise.all(unitIds.map((unitId) => fetchUnitCalendar(tenantId, unitId, from, to)));
+  const byUnit = await fetchUnitsCalendarBatch(tenantId, unitIds, from, to);
+  return unitIds.map(
+    (unitId) => byUnit[unitId] ?? { blocks: [], holds: [], bookings: [] },
+  );
 }
 
 export async function countActiveHolds(tenantId: string): Promise<number> {

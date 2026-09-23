@@ -45,6 +45,23 @@ export class PrismaCalendarBlockRepository implements ICalendarBlockRepository {
     return records.map(calendarBlockToView);
   }
 
+  async findCalendarBlocksByUnits(
+    unitIds: string[],
+    tenantId: string,
+    range?: { from: string; to: string },
+  ) {
+    if (unitIds.length === 0) return [];
+    const records = await prisma.unitCalendarBlock.findMany({
+      where: {
+        tenantId,
+        unitId: { in: unitIds },
+        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+      },
+      orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+    });
+    return records.map(calendarBlockToView);
+  }
+
   async saveOperatorBlock(params: {
     id: string;
     tenantId: string;

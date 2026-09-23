@@ -28,6 +28,55 @@ export const calendarQuerySchema = z
     path: ["to"],
   });
 
+/** Max units per Availability calendar batch request (UI loads one property's units). */
+export const CALENDAR_BATCH_MAX_UNITS = 100;
+
+/**
+ * Max inclusive span for calendar batch [from, to) in days.
+ * Covers ~13 months of month-grid "load more" without allowing multi-year dumps.
+ */
+export const CALENDAR_BATCH_MAX_RANGE_DAYS = 400;
+
+function calendarRangeDays(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00.000Z`);
+  const end = Date.parse(`${to}T00:00:00.000Z`);
+  return Math.round((end - start) / 86_400_000);
+}
+
+export const calendarBatchRequestSchema = z
+  .object({
+    unitIds: z
+      .array(z.string().uuid())
+      .min(1)
+      .max(CALENDAR_BATCH_MAX_UNITS),
+    from: localDateSchema,
+    to: localDateSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.from >= value.to) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "from must be before to",
+        path: ["to"],
+      });
+    }
+    const days = calendarRangeDays(value.from, value.to);
+    if (days > CALENDAR_BATCH_MAX_RANGE_DAYS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Date range must be at most ${CALENDAR_BATCH_MAX_RANGE_DAYS} days`,
+        path: ["to"],
+      });
+    }
+  });
+
+export const unitIdsBatchRequestSchema = z.object({
+  unitIds: z
+    .array(z.string().uuid())
+    .min(1)
+    .max(CALENDAR_BATCH_MAX_UNITS),
+});
+
 export const createHoldSchema = z.object({
   unitId: z.string().uuid(),
   checkIn: localDateSchema,

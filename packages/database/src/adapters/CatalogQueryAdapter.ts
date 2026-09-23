@@ -56,4 +56,50 @@ export class PrismaCatalogQueryAdapter implements ICatalogQueryPort {
       status: property.status,
     };
   }
+
+  async getUnitsByIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<CatalogUnitReadModel[]> {
+    if (unitIds.length === 0) return [];
+    const units = await prisma.unit.findMany({
+      where: { tenantId, id: { in: unitIds } },
+      select: {
+        id: true,
+        tenantId: true,
+        propertyId: true,
+        maxGuests: true,
+        status: true,
+      },
+    });
+    return units.map((unit) => ({
+      id: unit.id,
+      tenantId: unit.tenantId,
+      propertyId: unit.propertyId,
+      maxGuests: unit.maxGuests,
+      status: unit.status,
+    }));
+  }
+
+  async getPropertiesByIds(
+    propertyIds: string[],
+    tenantId: string,
+  ): Promise<CatalogPropertyReadModel[]> {
+    if (propertyIds.length === 0) return [];
+    const properties = await prisma.property.findMany({
+      where: { tenantId, id: { in: propertyIds } },
+      select: {
+        id: true,
+        tenantId: true,
+        timezone: true,
+        status: true,
+      },
+    });
+    return properties.map((property) => ({
+      id: property.id,
+      tenantId: property.tenantId,
+      timezone: property.timezone,
+      status: property.status,
+    }));
+  }
 }
