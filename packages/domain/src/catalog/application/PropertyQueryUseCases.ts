@@ -77,3 +77,39 @@ export class ListPropertiesUseCase {
     }
   }
 }
+
+/**
+ * Slim property/unit catalog for dashboard pickers and filters.
+ */
+export class ListPropertyUnitCatalogUseCase {
+  constructor(
+    private readonly propertyRepository: IPropertyRepository,
+    private readonly permissionChecker: PermissionChecker,
+  ) {}
+
+  async execute(
+    tenantId: string,
+    actor: ActorContext,
+  ): Promise<Result<import("../types/PropertyUnitCatalog").PropertyUnitCatalogResult, Error>> {
+    try {
+      if (
+        !this.permissionChecker.hasPermission(actor, "property:read:tenant", tenantId)
+      ) {
+        return Result.fail(new ForbiddenError());
+      }
+
+      const propertyIds =
+        actor.role === "manager" && !actor.isSuperAdmin
+          ? actor.propertyIds
+          : null;
+
+      const result = await this.propertyRepository.listUnitCatalog(
+        tenantId,
+        propertyIds,
+      );
+      return Result.ok(result);
+    } catch (error) {
+      return Result.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+}

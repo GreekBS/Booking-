@@ -49,6 +49,9 @@ import type { PaginatedBookings, PaginatedProperties, OperatorBlockType } from "
 const propertiesCache = new Map<string, PaginatedProperties>();
 const propertiesInflight = new Map<string, Promise<PaginatedProperties>>();
 
+const catalogCache = new Map<string, import("./types").PropertyUnitCatalog>();
+const catalogInflight = new Map<string, Promise<import("./types").PropertyUnitCatalog>>();
+
 const calendarCache = new Map<string, import("./types").CalendarRecord>();
 const calendarInflight = new Map<string, Promise<import("./types").CalendarRecord>>();
 
@@ -80,6 +83,8 @@ export function invalidatePropertiesCache(tenantId?: string): void {
   if (!tenantId) {
     propertiesCache.clear();
     propertiesInflight.clear();
+    catalogCache.clear();
+    catalogInflight.clear();
     return;
   }
   const prefix = `${tenantId}:`;
@@ -89,6 +94,8 @@ export function invalidatePropertiesCache(tenantId?: string): void {
   for (const key of propertiesInflight.keys()) {
     if (key.startsWith(prefix)) propertiesInflight.delete(key);
   }
+  catalogCache.delete(tenantId);
+  catalogInflight.delete(tenantId);
 }
 
 export async function searchBookings(
@@ -138,6 +145,70 @@ export async function fetchAllProperties(
   }
 
   return inflight;
+}
+
+/** Slim property/unit catalog for pickers — prefer over fetchAllProperties when details are unused. */
+export async function fetchPropertyUnitCatalog(
+  tenantId: string,
+): Promise<import("./types").PropertyUnitCatalog> {
+  const cached = catalogCache.get(tenantId);
+  if (cached) return cached;
+
+  let inflight = catalogInflight.get(tenantId);
+  if (!inflight) {
+    inflight = adminFetch<import("./types").PropertyUnitCatalog>(
+      "/catalog/properties-units",
+      { tenantId },
+    )
+      .then((data) => {
+        catalogCache.set(tenantId, data);
+        catalogInflight.delete(tenantId);
+        return data;
+      })
+      .catch((err) => {
+        catalogInflight.delete(tenantId);
+        throw err;
+      });
+    catalogInflight.set(tenantId, inflight);
+  }
+  return inflight;
+}
+
+export function invalidatePropertyUnitCatalogCache(tenantId?: string): void {
+  if (!tenantId) {
+    catalogCache.clear();
+    catalogInflight.clear();
+    return;
+  }
+  catalogCache.delete(tenantId);
+  catalogInflight.delete(tenantId);
+}
+
+export function flattenCatalogUnits(
+  catalog: import("./types").PropertyUnitCatalog,
+): Array<{
+  id: string;
+  name: string;
+  status: string;
+  propertyId: string;
+  propertyName: string;
+}> {
+  return catalog.properties.flatMap((property) =>
+    property.units.map((unit) => ({
+      id: unit.id,
+      name: unit.name,
+      status: unit.status,
+      propertyId: property.id,
+      propertyName: property.name,
+    })),
+  );
+}
+
+/** Single-shot dashboard overview — no quote-per-booking fan-out. */
+export async function fetchDashboardOverview(
+  tenantId: string,
+): Promise<import("./types").DashboardOverviewRecord> {
+  return adminFetch("/dashboard/overview", { tenantId });
 }
 
 export function flattenUnits(properties: import("./types").PropertyRecord[]): import("./types").FlatUnit[] {

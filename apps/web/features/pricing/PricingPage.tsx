@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
-import { adminFetch, fetchAllProperties, flattenUnits, previewQuoteForStay } from "@/lib/admin/api";
-import type { FlatUnit, QuoteRecord, RatePlanRecord } from "@/lib/admin/types";
+import { adminFetch, fetchPropertyUnitCatalog, flattenCatalogUnits, previewQuoteForStay } from "@/lib/admin/api";
+import type { QuoteRecord, RatePlanRecord } from "@/lib/admin/types";
 import { formatMoney, formatRatePlanForDisplay, moneyFieldLabel, nightsBetween, normalizeRatePlanForSubmit, parseApiValidationError } from "@/lib/admin/utils";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,9 @@ const defaultRatePlan: RatePlanRecord = {
 
 export function PricingPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
-  const [units, setUnits] = useState<FlatUnit[]>([]);
+  const [units, setUnits] = useState<
+    Array<{ id: string; name: string; status: string; propertyId: string; propertyName: string }>
+  >([]);
   const [unitId, setUnitId] = useState("");
   const [plan, setPlan] = useState<RatePlanRecord>(defaultRatePlan);
   const [loading, setLoading] = useState(true);
@@ -53,9 +55,9 @@ export function PricingPage() {
   useEffect(() => {
     if (!tenantId) return;
     setLoading(true);
-    void fetchAllProperties(tenantId, 1, 100)
-      .then((res) => {
-        const flat = flattenUnits(res.data);
+    void fetchPropertyUnitCatalog(tenantId)
+      .then((catalog) => {
+        const flat = flattenCatalogUnits(catalog);
         setUnits(flat);
         if (flat[0]) {
           setUnitId(flat[0].id);

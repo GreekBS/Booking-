@@ -46,6 +46,8 @@ import {
 
   ListPropertiesUseCase,
 
+  ListPropertyUnitCatalogUseCase,
+
   AddUnitUseCase,
 
   UpdateUnitUseCase,
@@ -151,6 +153,8 @@ import {
   UpdatePublishableKeyDomainsUseCase,
 
   SearchBookingsUseCase,
+
+  GetTenantDashboardOverviewUseCase,
 
   ListHoldsUseCase,
 
@@ -337,6 +341,8 @@ import {
   PrismaTenantRepository,
 
   PrismaPropertyRepository,
+
+  PrismaTenantDashboardOverviewQuery,
 
   PrismaUserRepository,
 
@@ -583,6 +589,14 @@ export const getPropertyUseCase = new GetPropertyUseCase(
 );
 
 export const listPropertiesUseCase = new ListPropertiesUseCase(
+
+  propertyRepository,
+
+  permissionChecker,
+
+);
+
+export const listPropertyUnitCatalogUseCase = new ListPropertyUnitCatalogUseCase(
 
   propertyRepository,
 
@@ -1168,6 +1182,13 @@ export const updatePublishableKeyDomainsUseCase = new UpdatePublishableKeyDomain
 
 export const searchBookingsUseCase = new SearchBookingsUseCase(
   bookingRepository,
+  permissionChecker,
+);
+
+const tenantDashboardOverviewQuery = new PrismaTenantDashboardOverviewQuery();
+
+export const getTenantDashboardOverviewUseCase = new GetTenantDashboardOverviewUseCase(
+  tenantDashboardOverviewQuery,
   permissionChecker,
 );
 

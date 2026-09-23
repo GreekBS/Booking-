@@ -3,6 +3,7 @@ import type {
   PaginatedResult,
   PaginationParams,
 } from "../../shared/types/index";
+import type { PropertyUnitCatalogResult } from "../types/PropertyUnitCatalog";
 
 export interface IPropertyRepository {
   save(property: Property): Promise<void>;
@@ -14,6 +15,11 @@ export interface IPropertyRepository {
     params: PaginationParams,
     propertyIds?: string[] | null,
   ): Promise<PaginatedResult<Property>>;
+  /** Slim picker/filter catalog — no amenities/location/policies. */
+  listUnitCatalog(
+    tenantId: string,
+    propertyIds?: string[] | null,
+  ): Promise<PropertyUnitCatalogResult>;
 }
 
 export interface AmenityRecord {

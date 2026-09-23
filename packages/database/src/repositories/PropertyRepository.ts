@@ -256,4 +256,51 @@ export class PrismaPropertyRepository implements IPropertyRepository {
       limit: params.limit,
     };
   }
+
+  async listUnitCatalog(
+    tenantId: string,
+    propertyIds?: string[] | null,
+  ): Promise<import("@hcp/domain").PropertyUnitCatalogResult> {
+    const where = {
+      tenantId,
+      deletedAt: null,
+      ...(propertyIds && propertyIds.length > 0
+        ? { id: { in: propertyIds } }
+        : {}),
+    };
+
+    const records = await prisma.property.findMany({
+      where,
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        units: {
+          where: { deletedAt: null },
+          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            propertyId: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    return {
+      properties: records.map((p) => ({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        units: p.units.map((u) => ({
+          id: u.id,
+          propertyId: u.propertyId,
+          name: u.name,
+          status: u.status,
+        })),
+      })),
+    };
+  }
 }

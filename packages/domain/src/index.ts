@@ -113,6 +113,8 @@ export * from "./catalog/domain/events/CatalogEvents";
 
 export * from "./catalog/ports/ICatalogRepositories";
 
+export * from "./catalog/types/PropertyUnitCatalog";
+
 export * from "./catalog/application/PropertyUseCases";
 
 export * from "./catalog/application/ArchivePropertyUseCase";

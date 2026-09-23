@@ -15,14 +15,9 @@ import {
   Timer,
 } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
-import {
-  countActiveHolds,
-  estimateRevenueFromBookings,
-  fetchAllBookings,
-  fetchAllProperties,
-} from "@/lib/admin/api";
-import type { BookingRecord, PropertyRecord } from "@/lib/admin/types";
-import { addDays, formatMoney, todayIso } from "@/lib/admin/utils";
+import { fetchDashboardOverview } from "@/lib/admin/api";
+import type { DashboardOverviewRecord } from "@/lib/admin/types";
+import { formatMoney } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,12 +25,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/admin/status-badge";
 
+/**
+ * Tenant dashboard home — single overview API (no properties→bookings→quotes waterfall).
+ */
 export function DashboardOverview() {
   const { tenantId, tenantName, loading: tenantLoading, error: tenantError } = useTenant();
-  const [properties, setProperties] = useState<PropertyRecord[]>([]);
-  const [bookings, setBookings] = useState<BookingRecord[]>([]);
-  const [activeHolds, setActiveHolds] = useState(0);
-  const [revenue, setRevenue] = useState<{ total: number; currency: string } | null>(null);
+  const [overview, setOverview] = useState<DashboardOverviewRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,10 +41,7 @@ export function DashboardOverview() {
   }, [tenantLoading, tenantId]);
 
   useEffect(() => {
-    setProperties([]);
-    setBookings([]);
-    setActiveHolds(0);
-    setRevenue(null);
+    setOverview(null);
     setLoading(true);
   }, [tenantId]);
 
@@ -58,23 +50,11 @@ export function DashboardOverview() {
 
     let cancelled = false;
     async function load() {
-      const isFirstLoad = properties.length === 0;
-      if (isFirstLoad) setLoading(true);
+      setLoading(true);
       setError(null);
       try {
-        const propsRes = await fetchAllProperties(tenantId!, 1, 100);
-        if (cancelled) return;
-        setProperties(propsRes.data);
-        const allBookings = await fetchAllBookings(tenantId!);
-        if (cancelled) return;
-        const [holds, rev] = await Promise.all([
-          countActiveHolds(tenantId!),
-          estimateRevenueFromBookings(tenantId!, allBookings),
-        ]);
-        if (cancelled) return;
-        setBookings(allBookings);
-        setActiveHolds(holds);
-        setRevenue(rev);
+        const data = await fetchDashboardOverview(tenantId!);
+        if (!cancelled) setOverview(data);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load dashboard");
@@ -89,42 +69,16 @@ export function DashboardOverview() {
     };
   }, [tenantId]);
 
-  const stats = useMemo(() => {
-    const today = todayIso();
-    const weekOut = addDays(today, 7);
-    const unitCount = properties.reduce((sum, p) => sum + p.units.length, 0);
-    const activeBookings = bookings.filter((b) => !["cancelled"].includes(b.status));
-    const arrivals = activeBookings.filter((b) => b.checkIn >= today && b.checkIn <= weekOut);
-    const departures = activeBookings.filter((b) => b.checkOut >= today && b.checkOut <= weekOut);
-
-    const next30 = addDays(today, 30);
-    let bookedNights = 0;
-    for (const b of activeBookings) {
-      if (b.checkOut <= today || b.checkIn >= next30) continue;
-      const start = b.checkIn > today ? b.checkIn : today;
-      bookedNights += Math.max(1, Math.round((new Date(b.checkOut).getTime() - new Date(start).getTime()) / 86400000));
-    }
-    const capacityNights = unitCount * 30;
-    const occupancyPct = capacityNights > 0 ? Math.min(100, Math.round((bookedNights / capacityNights) * 100)) : 0;
-
-    return {
-      propertyCount: properties.length,
-      unitCount,
-      bookingCount: activeBookings.length,
-      arrivals: arrivals.length,
-      departures: departures.length,
-      occupancyPct,
-    };
-  }, [properties, bookings]);
-
-  const recentBookings = bookings.slice(0, 8);
-  const recentActivity = useMemo(() => {
-    return bookings.slice(0, 5).map((b) => ({
-      id: b.id,
-      label: `${b.guest.name} · ${b.checkIn} → ${b.checkOut}`,
-      status: b.status,
-    }));
-  }, [bookings]);
+  const recentBookings = overview?.recentBookings ?? [];
+  const recentActivity = useMemo(
+    () =>
+      recentBookings.slice(0, 5).map((b) => ({
+        id: b.id,
+        label: `${b.guestName} · ${b.checkIn} → ${b.checkOut}`,
+        status: b.status,
+      })),
+    [recentBookings],
+  );
 
   const tenantGate = renderTenantGate({
     loading: tenantLoading,
@@ -133,7 +87,7 @@ export function DashboardOverview() {
   });
   if (tenantGate) return tenantGate;
 
-  if (loading && properties.length === 0 && bookings.length === 0) {
+  if (loading && !overview) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
@@ -149,6 +103,17 @@ export function DashboardOverview() {
   if (error) {
     return <ErrorState message={error} />;
   }
+
+  if (!overview) {
+    return <ErrorState message="Dashboard overview unavailable" />;
+  }
+
+  const revenue = overview.revenue
+    ? {
+        total: Number.parseFloat(overview.revenue.total),
+        currency: overview.revenue.currency,
+      }
+    : null;
 
   return (
     <div className="space-y-8">
@@ -166,19 +131,24 @@ export function DashboardOverview() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Building2} label="Properties" value={stats.propertyCount} />
-        <StatCard icon={DoorOpen} label="Units" value={stats.unitCount} />
-        <StatCard icon={BookOpen} label="Bookings" value={stats.bookingCount} />
-        <StatCard icon={LogIn} label="Arrivals (7d)" value={stats.arrivals} />
-        <StatCard icon={LogOut} label="Departures (7d)" value={stats.departures} />
-        <StatCard icon={Timer} label="Active holds" value={activeHolds} />
+        <StatCard icon={Building2} label="Properties" value={overview.propertyCount} />
+        <StatCard icon={DoorOpen} label="Units" value={overview.unitCount} />
+        <StatCard icon={BookOpen} label="Bookings" value={overview.bookingCount} />
+        <StatCard icon={LogIn} label="Arrivals (7d)" value={overview.arrivalsNext7Days} />
+        <StatCard icon={LogOut} label="Departures (7d)" value={overview.departuresNext7Days} />
+        <StatCard icon={Timer} label="Active holds" value={overview.activeHoldCount} />
         <StatCard
           icon={DollarSign}
           label="Revenue"
           value={revenue ? formatMoney(revenue.total.toFixed(4), revenue.currency) : "—"}
-          hint={revenue ? "From confirmed booking quotes" : "No confirmed bookings"}
+          hint={revenue ? "From confirmed booking amounts" : "No confirmed bookings"}
         />
-        <StatCard icon={Percent} label="Occupancy (30d)" value={`${stats.occupancyPct}%`} hint="Estimated" />
+        <StatCard
+          icon={Percent}
+          label="Occupancy (30d)"
+          value={`${overview.occupancyPct}%`}
+          hint="Estimated"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -199,7 +169,7 @@ export function DashboardOverview() {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 transition hover:bg-muted/50"
                   >
                     <div>
-                      <p className="font-medium">{booking.guest.name}</p>
+                      <p className="font-medium">{booking.guestName}</p>
                       <p className="text-sm text-muted-foreground">
                         {booking.checkIn} → {booking.checkOut}
                       </p>
@@ -268,22 +238,20 @@ function StatCard({
   value,
   hint,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: typeof Building2;
   label: string;
   value: string | number;
   hint?: string;
 }) {
   return (
     <Card>
-      <CardContent className="flex items-start justify-between p-6">
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="mt-2 text-2xl font-semibold">{value}</p>
-          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-        </div>
-        <div className="rounded-md bg-muted p-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        </div>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{label}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
   );

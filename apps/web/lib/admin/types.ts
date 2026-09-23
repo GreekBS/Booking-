@@ -64,6 +64,47 @@ export interface PaginatedProperties {
   meta: { total: number; page: number; limit: number };
 }
 
+/** Slim catalog for pickers/filters — no amenities/location/policies. */
+export interface CatalogUnitRecord {
+  id: string;
+  propertyId: string;
+  name: string;
+  status: string;
+}
+
+export interface CatalogPropertyRecord {
+  id: string;
+  name: string;
+  status: string;
+  units: CatalogUnitRecord[];
+}
+
+export interface PropertyUnitCatalog {
+  properties: CatalogPropertyRecord[];
+}
+
+export interface DashboardOverviewRecentBooking {
+  id: string;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+  status: string;
+  totalAmount: string;
+  currency: string;
+}
+
+export interface DashboardOverviewRecord {
+  propertyCount: number;
+  unitCount: number;
+  bookingCount: number;
+  arrivalsNext7Days: number;
+  departuresNext7Days: number;
+  activeHoldCount: number;
+  revenue: { total: string; currency: string } | null;
+  occupancyPct: number;
+  recentBookings: DashboardOverviewRecentBooking[];
+}
+
 export interface AmenityRecord {
   id: string;
   tenantId: string | null;

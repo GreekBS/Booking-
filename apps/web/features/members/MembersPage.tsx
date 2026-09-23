@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
-import { adminFetch, fetchAllProperties } from "@/lib/admin/api";
+import { adminFetch, fetchPropertyUnitCatalog } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
-import type { MemberRecord, PendingInvitationRecord, PropertyRecord } from "@/lib/admin/types";
+import type { MemberRecord, PendingInvitationRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
@@ -48,7 +48,7 @@ export function MembersPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitationRecord[]>([]);
-  const [properties, setProperties] = useState<PropertyRecord[]>([]);
+  const [properties, setProperties] = useState<CatalogPropertyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -63,16 +63,16 @@ export function MembersPage() {
     setLoading(true);
     setError(null);
     try {
-      const [membersRes, propsRes] = await Promise.all([
+      const [membersRes, catalog] = await Promise.all([
         adminFetch<{
           data: MemberRecord[];
           pendingInvitations: PendingInvitationRecord[];
         }>("/members", { tenantId }),
-        fetchAllProperties(tenantId, 1, 100),
+        fetchPropertyUnitCatalog(tenantId),
       ]);
       setMembers(membersRes.data ?? []);
       setPendingInvitations(membersRes.pendingInvitations ?? []);
-      setProperties(propsRes.data);
+      setProperties(catalog.properties);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load members");
     } finally {
@@ -371,7 +371,7 @@ function MemberFormDialog({
   email?: string;
   role: string;
   propertyIds: string[];
-  properties: PropertyRecord[];
+  properties: CatalogPropertyRecord[];
   loading: boolean;
   onEmailChange?: (email: string) => void;
   onRoleChange: (role: string) => void;

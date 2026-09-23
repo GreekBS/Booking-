@@ -7,11 +7,11 @@ import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import {
   adminFetch,
   createManualBooking,
-  fetchAllProperties,
-  flattenUnits,
+  fetchPropertyUnitCatalog,
+  flattenCatalogUnits,
 } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
-import type { FlatUnit, PropertyRecord, QuoteRecord, BookingRecord } from "@/lib/admin/types";
+import type { CatalogPropertyRecord, QuoteRecord, BookingRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,8 +40,10 @@ export function ManualBookingPage() {
   const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const [step, setStep] = useState(0);
-  const [properties, setProperties] = useState<PropertyRecord[]>([]);
-  const [units, setUnits] = useState<FlatUnit[]>([]);
+  const [properties, setProperties] = useState<CatalogPropertyRecord[]>([]);
+  const [units, setUnits] = useState<
+    Array<{ id: string; name: string; status: string; propertyId: string; propertyName: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,9 +68,9 @@ export function ManualBookingPage() {
     async function load() {
       setLoading(true);
       try {
-        const props = await fetchAllProperties(tenantId!, 1, 100);
-        setProperties(props.data);
-        setUnits(flattenUnits(props.data));
+        const catalog = await fetchPropertyUnitCatalog(tenantId!);
+        setProperties(catalog.properties);
+        setUnits(flattenCatalogUnits(catalog));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load catalog");
       } finally {

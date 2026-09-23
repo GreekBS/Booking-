@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus, RefreshCw, Search } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
-import { fetchAllProperties, flattenUnits, searchBookings } from "@/lib/admin/api";
-import type { BookingRecord, FlatUnit, PropertyRecord } from "@/lib/admin/types";
+import { fetchPropertyUnitCatalog, flattenCatalogUnits, searchBookings } from "@/lib/admin/api";
+import type { BookingRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import type { SortDirection } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
 import { StickyToolbar } from "@/components/admin/sticky-toolbar";
@@ -50,8 +50,10 @@ export function BookingsPage() {
 function BookingsPageContent() {
   const { requestClose } = useWorkspace();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
-  const [properties, setProperties] = useState<PropertyRecord[]>([]);
-  const [units, setUnits] = useState<FlatUnit[]>([]);
+  const [properties, setProperties] = useState<CatalogPropertyRecord[]>([]);
+  const [units, setUnits] = useState<
+    Array<{ id: string; name: string; status: string; propertyId: string; propertyName: string }>
+  >([]);
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -97,10 +99,10 @@ function BookingsPageContent() {
     let cancelled = false;
     async function loadCatalog() {
       try {
-        const props = await fetchAllProperties(tenantId!, 1, 100);
+        const catalog = await fetchPropertyUnitCatalog(tenantId!);
         if (cancelled) return;
-        setProperties(props.data);
-        setUnits(flattenUnits(props.data));
+        setProperties(catalog.properties);
+        setUnits(flattenCatalogUnits(catalog));
         setCatalogReady(true);
       } catch (err) {
         if (cancelled) return;
