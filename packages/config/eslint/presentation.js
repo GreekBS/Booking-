@@ -20,12 +20,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: [
-        "lib/di/**/*.ts",
-        "lib/auth/**/*.ts",
-        "lib/diagnostics/**/*.ts",
-        "middleware.ts",
-      ],
+      files: ["lib/di/**/*.ts", "lib/auth/**/*.ts", "middleware.ts"],
       rules: {
         "no-restricted-imports": "off",
       },
