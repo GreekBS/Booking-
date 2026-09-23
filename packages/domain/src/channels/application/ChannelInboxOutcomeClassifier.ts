@@ -102,6 +102,16 @@ export function classifyInboxOutcome(input: ClassifyInboxOutcomeInput): Classifi
         shouldRetryJob: false,
       };
     }
+    // Out-of-order modify/cancel before create: ACK may already have succeeded.
+    // Retry until the create link exists instead of permanently dead-lettering.
+    if (isAwaitingExternalCreateMessage(error.message)) {
+      return {
+        status: "failed",
+        outcome: "TRANSIENT_ERROR",
+        outcomeDetail: error.message,
+        shouldRetryJob: true,
+      };
+    }
     return {
       status: "dead_letter",
       outcome: "VALIDATION_ERROR",
@@ -145,5 +155,13 @@ function isAvailabilityConflictMessage(message: string): boolean {
     normalized.includes("dates no longer available") ||
     normalized.includes("dates not available") ||
     normalized.includes("dates overlap with")
+  );
+}
+
+function isAwaitingExternalCreateMessage(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("cannot invent a booking") ||
+    normalized.includes("external reservation link not found")
   );
 }

@@ -24,6 +24,9 @@ export interface ConfirmBookingComInitialSyncCommand {
   mappingConfigGeneration: number;
   talosStateFingerprint: string;
   remoteSnapshotFingerprint: string;
+  /** Must match the previewed synchronization horizon. */
+  from: string;
+  to: string;
   /** Projections to enqueue via CM-4c-3 after confirmation. */
   projectionsToEnqueue: readonly BookingComAriResolvedProjection[];
 }
@@ -85,6 +88,30 @@ export class ConfirmBookingComInitialSyncUseCase {
         return Result.fail(
           new ValidationError("Stale preview: remote ARI snapshot changed"),
         );
+      }
+
+      const previewFrom =
+        typeof preview.summary.from === "string" ? preview.summary.from : null;
+      const previewTo =
+        typeof preview.summary.to === "string" ? preview.summary.to : null;
+      if (
+        !previewFrom ||
+        !previewTo ||
+        previewFrom !== command.from ||
+        previewTo !== command.to
+      ) {
+        return Result.fail(
+          new ValidationError("Stale preview: synchronization horizon changed"),
+        );
+      }
+      for (const projection of command.projectionsToEnqueue) {
+        if (projection.from !== command.from || projection.to !== command.to) {
+          return Result.fail(
+            new ValidationError(
+              "Projection horizon does not match confirmation horizon",
+            ),
+          );
+        }
       }
 
       const setupRecord = await this.setups.get(

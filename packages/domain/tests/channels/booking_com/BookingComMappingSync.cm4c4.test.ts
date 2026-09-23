@@ -549,6 +549,8 @@ describe("CM-4c-4 — initial sync preview + confirm", () => {
       mappingConfigGeneration: second.getValue().mappingConfigGeneration,
       talosStateFingerprint: "changed",
       remoteSnapshotFingerprint: "remote-fp-1",
+      from: "2026-10-01",
+      to: "2026-10-03",
       projectionsToEnqueue: [projectionFor(roomRateMappingId, mappingVersion)],
     });
     expect(stale.isFailure).toBe(true);
@@ -575,6 +577,8 @@ describe("CM-4c-4 — initial sync preview + confirm", () => {
       mappingConfigGeneration: third.getValue().mappingConfigGeneration,
       talosStateFingerprint: talosFp,
       remoteSnapshotFingerprint: "remote-fp-1",
+      from: "2026-10-01",
+      to: "2026-10-03",
       projectionsToEnqueue: [projectionFor(roomRateMappingId, mappingVersion)],
     });
     expect(ok.isSuccess).toBe(true);
@@ -627,6 +631,8 @@ describe("CM-4c-4 — initial sync preview + confirm", () => {
       mappingConfigGeneration: gen,
       talosStateFingerprint: talosFp,
       remoteSnapshotFingerprint: "remote-fp-1",
+      from: "2026-10-01",
+      to: "2026-10-03",
       projectionsToEnqueue: [projectionFor(roomRateMappingId, mappingVersion)],
     });
     expect(confirm.isFailure).toBe(true);
@@ -677,6 +683,8 @@ describe("CM-4c-4 — activation gate", () => {
       mappingConfigGeneration: preview.getValue().mappingConfigGeneration,
       talosStateFingerprint: talosFp,
       remoteSnapshotFingerprint: "remote-fp-1",
+      from: "2026-10-01",
+      to: "2026-10-03",
       projectionsToEnqueue: [projectionFor(roomRateMappingId, mappingVersion)],
     });
 

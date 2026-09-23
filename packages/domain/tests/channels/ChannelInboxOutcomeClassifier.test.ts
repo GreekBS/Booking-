@@ -79,4 +79,18 @@ describe("classifyInboxOutcome", () => {
       shouldRetryJob: true,
     });
   });
+
+  it("retries modify/cancel-before-create instead of dead-lettering", () => {
+    const result = classifyInboxOutcome({
+      error: new ValidationError(
+        "External reservation link not found; modify cannot invent a booking",
+      ),
+      inboxAttemptCount: 1,
+    });
+    expect(result).toMatchObject({
+      status: "failed",
+      outcome: "TRANSIENT_ERROR",
+      shouldRetryJob: true,
+    });
+  });
 });

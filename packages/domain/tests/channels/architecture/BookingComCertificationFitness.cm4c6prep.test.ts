@@ -59,13 +59,24 @@ describe("CM-4c certification architecture fitness", () => {
     expect(source).not.toMatch(/CommerceUseCases/);
   });
 
-  it("loop suppression stays generic (not Commerce-hardcoded)", () => {
-    const source = readFileSync(
-      join(CHANNELS_SRC, "application/channelOutboundLoopSuppression.ts"),
+  it("summary recovery is wired through Receive (not null)", () => {
+    const di = readFileSync(
+      join(DOMAIN_ROOT, "..", "..", "apps", "web", "lib", "di", "container.ts"),
       "utf8",
     );
-    expect(source).toMatch(/shouldSuppressChannelOutboundEcho/);
-    expect(source).not.toMatch(/CreateBookingUseCase/);
-    expect(source).not.toMatch(/HoldConversion/);
+    expect(di).toMatch(/BookingComSummaryRecoveryUseCase/);
+    expect(di).toMatch(/bookingComSummaryRecoveryUseCase/);
+    expect(di).toMatch(
+      /bookingComRemoteAriReader,\s*bookingComSummaryRecoveryUseCase,/,
+    );
+  });
+
+  it("confirm requires matching preview horizon", () => {
+    const source = readFileSync(
+      join(CHANNELS_SRC, "application/ConfirmBookingComInitialSyncUseCase.ts"),
+      "utf8",
+    );
+    expect(source).toMatch(/synchronization horizon changed/);
+    expect(source).toMatch(/Projection horizon does not match/);
   });
 });

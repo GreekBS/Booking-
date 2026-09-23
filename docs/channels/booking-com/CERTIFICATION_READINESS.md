@@ -145,10 +145,25 @@ No secrets/PAN in telemetry fields.
 - Booking.com Connectivity Partner / listing access externally blocked  
 - Live HTTP clients NotConfigured in Production  
 - Standard pricing only (OBP/LOS/Derived rejected)  
-- Real PostgreSQL inventory concurrency under Booking.com load: requires `TEST_DATABASE_URL` (currently often SKIPPED)  
+- Continuous Commerce/inventory → `RequestBookingComAriPropagation` fan-out is not yet wired from every Talos mutation path (initial-sync confirm + reconcile heal paths exist; live mutation bridge is remaining engineering before continuous ARI after every booking)  
+- `inboundOriginProvider` must be set by callers of ARI schedule for loop suppression to engage in production mutation flows  
+- Initial-sync local cells remain placeholder/conservative until live inventory projection is connected  
+- Real PostgreSQL inventory concurrency under Booking.com load: requires `TEST_DATABASE_URL`  
 - Official certification scripts / RUID evidence pack: require live test hotel  
 
 ---
+
+## 11b. Follow-up hardening (post CM-4c-5 audit)
+
+Fixed without live credentials:
+
+- Pause-while-queued ARI is retryable  
+- Confirm fails closed when enqueue rejects all projections  
+- Payment/VCC XML redaction before inbox persistence  
+- Local ARI cell horizon supports ≥12 months (max 400 days, fail-closed — no silent 62-day truncate)  
+- Confirm binds `from`/`to` to previewed horizon  
+- Modify/cancel-before-create inbox outcomes retry instead of dead-letter  
+- Summary recovery use case wired in DI (client remains NotConfigured until live HTTP)  
 
 ## 12. Tests / evidence
 

@@ -563,6 +563,7 @@ describe("CM-4c certification red-team — confirm fail-closed + multi-property 
         mappingConfigGeneration: 1,
         talosStateFingerprint: "talos",
         remoteSnapshotFingerprint: "remote",
+        summary: { from: "2026-10-01", to: "2026-10-02" },
       })),
       markConfirmed: vi.fn(async () => {}),
     };
@@ -615,6 +616,8 @@ describe("CM-4c certification red-team — confirm fail-closed + multi-property 
       mappingConfigGeneration: 1,
       talosStateFingerprint: "talos",
       remoteSnapshotFingerprint: "remote",
+      from: "2026-10-01",
+      to: "2026-10-02",
       projectionsToEnqueue: [projection],
     });
     expect(result.isFailure).toBe(true);

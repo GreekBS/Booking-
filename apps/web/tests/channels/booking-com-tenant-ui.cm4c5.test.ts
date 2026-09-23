@@ -105,6 +105,26 @@ describe("CM-4c-5 Booking.com tenant UI fitness", () => {
     expect(a.cells.length).toBeGreaterThan(0);
   });
 
+  it("local ARI supports ≥12 months and fails closed beyond max horizon", () => {
+    const year = buildBookingComLocalAriCells({
+      hotelId: "8135188",
+      rooms: [{ roomTypeId: "1000202", ratePlanId: "12345" }],
+      from: "2026-01-01",
+      to: "2026-12-31",
+      roomsToSell: 1,
+    });
+    expect(year.cells.length).toBeGreaterThan(300);
+
+    expect(() =>
+      buildBookingComLocalAriCells({
+        hotelId: "8135188",
+        rooms: [{ roomTypeId: "1000202", ratePlanId: null }],
+        from: "2026-01-01",
+        to: "2028-01-01",
+      }),
+    ).toThrow(/exceeds/i);
+  });
+
   it("UI never exposes Booking.com secrets or router.refresh on mapping saves", () => {
     const wizard = readFileSync(
       join(ROOT, "features", "channels", "booking-com", "BookingComWizard.tsx"),

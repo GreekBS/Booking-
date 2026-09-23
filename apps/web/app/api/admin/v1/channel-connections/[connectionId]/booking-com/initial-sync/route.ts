@@ -216,6 +216,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       mappingConfigGeneration: body.mappingConfigGeneration,
       talosStateFingerprint: body.talosStateFingerprint,
       remoteSnapshotFingerprint: body.remoteSnapshotFingerprint,
+      from: body.from,
+      to: body.to,
       projectionsToEnqueue: [...unique.values()],
     });
     if (result.isFailure) return mapResultError(result.getError());

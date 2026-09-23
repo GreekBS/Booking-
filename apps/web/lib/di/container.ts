@@ -304,6 +304,10 @@ import {
 
   ReconcileBookingComConnectionUseCase,
 
+  BookingComSummaryRecoveryUseCase,
+
+  BookingComReservationsClientNotConfigured,
+
   BookingComRemoteDiscoveryClientNotConfigured,
 
   BookingComRemoteAriReaderNotConfigured,
@@ -1692,6 +1696,15 @@ export const confirmBookingComInitialSyncUseCase =
     },
   );
 
+/** Fail-closed until live HTTP client exists; path still enters Receive only. */
+const bookingComReservationsClientForRecovery =
+  new BookingComReservationsClientNotConfigured();
+
+export const bookingComSummaryRecoveryUseCase = new BookingComSummaryRecoveryUseCase(
+  bookingComReservationsClientForRecovery,
+  receiveChannelEventUseCase,
+);
+
 export const reconcileBookingComConnectionUseCase =
   new ReconcileBookingComConnectionUseCase(
     channelConnectionRepository,
@@ -1700,7 +1713,7 @@ export const reconcileBookingComConnectionUseCase =
     channelReconciliationRunRepository,
     bookingComRemoteDiscoveryClient,
     bookingComRemoteAriReader,
-    null,
+    bookingComSummaryRecoveryUseCase,
     requestBookingComAriPropagationUseCase,
     idGenerator,
     (fields) => {

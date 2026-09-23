@@ -1,10 +1,18 @@
 import type { BookingComAriDiffCell } from "@hcp/domain";
-import { fingerprintTalosAriCells } from "@hcp/domain";
+import { fingerprintTalosAriCells, ValidationError } from "@hcp/domain";
+
+/**
+ * Max inclusive calendar days for local ARI cell materialization.
+ * Covers ≥12 months with margin; callers must not silently truncate.
+ */
+export const BOOKING_COM_LOCAL_ARI_MAX_DAYS = 400;
 
 /**
  * Builds a conservative Talos ARI local projection for initial-sync preview.
  * V1 does not import Booking.com prices; cells are Talos-authored placeholders
  * for mapped roomrates over the requested horizon.
+ *
+ * Fails closed when the horizon exceeds {@link BOOKING_COM_LOCAL_ARI_MAX_DAYS}.
  */
 export function buildBookingComLocalAriCells(input: {
   hotelId: string;
@@ -64,13 +72,18 @@ function enumerateDates(from: string, to: string): string[] {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
     return [from];
   }
+  const daySpan =
+    Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  if (daySpan > BOOKING_COM_LOCAL_ARI_MAX_DAYS) {
+    throw new ValidationError(
+      `Booking.com ARI horizon exceeds ${BOOKING_COM_LOCAL_ARI_MAX_DAYS} days (${daySpan} requested)`,
+    );
+  }
   const out: string[] = [];
   const cursor = new Date(start);
-  let guard = 0;
-  while (cursor <= end && guard < 62) {
+  while (cursor <= end) {
     out.push(cursor.toISOString().slice(0, 10));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
-    guard += 1;
   }
   return out;
 }
