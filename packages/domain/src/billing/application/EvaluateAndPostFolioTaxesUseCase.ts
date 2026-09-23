@@ -149,27 +149,27 @@ export class EvaluateAndPostFolioTaxesUseCase {
         return chargeCategoryForLineType(line.lineType) != null;
       });
 
-      const nightCount = StayPeriod.create(
+      const stay = StayPeriod.create(
         booking.stayPeriod.checkIn.value,
         booking.stayPeriod.checkOut.value,
-      ).nightCount();
-
-      const asOf = new Date(
-        `${booking.stayPeriod.checkIn.value}T12:00:00.000Z`,
       );
+      const stayNightDates = stay.nights().map((d) => d.value);
+      const asOf = new Date(`${stayNightDates[0] ?? booking.stayPeriod.checkIn.value}T12:00:00.000Z`);
+
+      const jurisdiction = profile.resolveJurisdictionAt(asOf);
 
       const rules = await this.taxRuleRepository.listForEvaluation(tenantId);
       const evaluation = this.taxEngine.evaluate(
         {
           tenantId,
           country: profile.country,
-          jurisdiction: profile.fiscalJurisdiction,
+          jurisdiction,
           currency: bundle.folio.currency,
           asOf,
           accommodationType: profile.accommodationType,
           propertyClassification: profile.propertyClassification,
           floorAreaSqm: profile.floorAreaSqm,
-          nightCount,
+          stayNightDates,
           roomOrApartmentCount: 1,
           guestCount: booking.guestCount.value,
           complimentaryStay: options?.complimentaryStay ?? false,
@@ -220,10 +220,17 @@ export class EvaluateAndPostFolioTaxesUseCase {
         };
 
         const lineType = component.taxType === "vat" ? "tax" : "fee";
+        const dailyDate =
+          component.metadata.dailyUses?.[0]?.date ??
+          (component.sourceLineId?.startsWith("climate:")
+            ? component.sourceLineId.split(":")[1]
+            : null);
         const description =
           component.taxType === "vat"
             ? `VAT ${component.appliedRatePercent ?? ""}% (${component.classificationKey})`
-            : `Climate Resilience Fee (${component.classificationKey})`;
+            : dailyDate
+              ? `Climate Resilience Fee ${dailyDate} (${component.classificationKey})`
+              : `Climate Resilience Fee (${component.classificationKey})`;
 
         const line = FolioLine.createPosted({
           id: this.idGenerator.generate(),

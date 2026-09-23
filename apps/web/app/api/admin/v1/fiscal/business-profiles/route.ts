@@ -24,7 +24,9 @@ const upsertSchema = z.object({
     postalCode: z.string().min(1),
     country: z.string().length(2),
   }),
-  fiscalJurisdiction: z.string().min(1),
+  establishmentLocationId: z.string().min(1),
+  establishmentInEligibleArea: z.boolean(),
+  servicePhysicallyExecutedInEligibleArea: z.boolean(),
   establishmentCode: z.string().nullable().optional(),
   accommodationType: z.enum([
     "hotel",
@@ -78,12 +80,19 @@ export async function PUT(request: NextRequest) {
       actor.tenantId,
       toPermissionActor(actor),
       {
-        ...body,
+        propertyId: body.propertyId,
+        legalName: body.legalName,
         tradeName: body.tradeName ?? null,
+        country: body.country,
         vatNumber: body.vatNumber ?? null,
+        establishmentLocationId: body.establishmentLocationId,
+        establishmentInEligibleArea: body.establishmentInEligibleArea,
+        servicePhysicallyExecutedInEligibleArea:
+          body.servicePhysicallyExecutedInEligibleArea,
         establishmentCode: body.establishmentCode ?? null,
         propertyClassification: body.propertyClassification ?? null,
         floorAreaSqm: body.floorAreaSqm ?? null,
+        accommodationType: body.accommodationType,
         address: {
           line1: body.address.line1,
           line2: body.address.line2 ?? null,

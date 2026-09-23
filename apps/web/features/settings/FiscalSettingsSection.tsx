@@ -24,6 +24,9 @@ interface BusinessProfile {
   tradeName: string | null;
   country: string;
   vatNumber: string | null;
+  establishmentLocationId: string;
+  establishmentInEligibleArea: boolean;
+  servicePhysicallyExecutedInEligibleArea: boolean;
   fiscalJurisdiction: string;
   accommodationType: string;
   propertyClassification: string | null;
@@ -36,6 +39,14 @@ interface BusinessProfile {
     postalCode: string;
     country: string;
   };
+}
+
+interface LocationOption {
+  locationId: string;
+  displayNameEn: string;
+  displayNameEl: string;
+  kind: string;
+  eligibleForReducedVat: boolean;
 }
 
 interface CustomerProfile {
@@ -60,6 +71,7 @@ const emptyAddress = {
 export function FiscalSettingsSection() {
   const { tenantId } = useTenant();
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([]);
   const [customerProfiles, setCustomerProfiles] = useState<CustomerProfile[]>([]);
   const [saving, setSaving] = useState(false);
@@ -69,6 +81,9 @@ export function FiscalSettingsSection() {
     tradeName: "",
     country: "GR",
     vatNumber: "",
+    establishmentLocationId: "gr-mainland",
+    establishmentInEligibleArea: false,
+    servicePhysicallyExecutedInEligibleArea: false,
     fiscalJurisdiction: "GR",
     accommodationType: "short_term_rental",
     propertyClassification: "short_term_rental",
@@ -86,7 +101,7 @@ export function FiscalSettingsSection() {
 
   const load = useCallback(async () => {
     if (!tenantId) return;
-    const [propsPage, bizList, custList] = await Promise.all([
+    const [propsPage, bizList, custList, locList] = await Promise.all([
       fetchAllProperties(tenantId),
       adminFetch<{ profiles: BusinessProfile[] }>("/fiscal/business-profiles", {
         tenantId,
@@ -94,11 +109,15 @@ export function FiscalSettingsSection() {
       adminFetch<{ profiles: CustomerProfile[] }>("/fiscal/customer-profiles", {
         tenantId,
       }),
+      adminFetch<{ locations: LocationOption[] }>("/fiscal/locations", {
+        tenantId,
+      }),
     ]);
     const props = propsPage.data ?? [];
     setProperties(props);
     setBusinessProfiles(bizList.profiles ?? []);
     setCustomerProfiles(custList.profiles ?? []);
+    setLocations(locList.locations ?? []);
     if (!propertyId && props[0]) setPropertyId(props[0].id);
   }, [tenantId, propertyId]);
 
@@ -116,6 +135,10 @@ export function FiscalSettingsSection() {
       tradeName: existing.tradeName ?? "",
       country: existing.country,
       vatNumber: existing.vatNumber ?? "",
+      establishmentLocationId: existing.establishmentLocationId ?? "gr-mainland",
+      establishmentInEligibleArea: existing.establishmentInEligibleArea ?? false,
+      servicePhysicallyExecutedInEligibleArea:
+        existing.servicePhysicallyExecutedInEligibleArea ?? false,
       fiscalJurisdiction: existing.fiscalJurisdiction,
       accommodationType: existing.accommodationType,
       propertyClassification: existing.propertyClassification ?? "unclassified",
@@ -137,7 +160,10 @@ export function FiscalSettingsSection() {
           tradeName: biz.tradeName || null,
           country: biz.country,
           vatNumber: biz.vatNumber || null,
-          fiscalJurisdiction: biz.fiscalJurisdiction,
+          establishmentLocationId: biz.establishmentLocationId,
+          establishmentInEligibleArea: biz.establishmentInEligibleArea,
+          servicePhysicallyExecutedInEligibleArea:
+            biz.servicePhysicallyExecutedInEligibleArea,
           accommodationType: biz.accommodationType,
           propertyClassification: biz.propertyClassification || null,
           floorAreaSqm: biz.floorAreaSqm ? Number(biz.floorAreaSqm) : null,
@@ -184,8 +210,9 @@ export function FiscalSettingsSection() {
         <CardHeader>
           <CardTitle>Business fiscal profile</CardTitle>
           <CardDescription>
-            Issuer identity per property/establishment. Jurisdiction is operator-assigned
-            (e.g. GR or GR-ISLAND-REDUCED) — never auto-guessed. No invoices or myDATA yet.
+            Configure establishment location. VAT jurisdiction is derived from the
+            verified statutory catalog (AADE E.2113/2025) — operators cannot
+            self-declare GR-ISLAND-REDUCED. No invoices or myDATA yet.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -226,21 +253,80 @@ export function FiscalSettingsSection() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Fiscal jurisdiction</Label>
+            <Label>Establishment location</Label>
             <Select
-              value={biz.fiscalJurisdiction}
-              onValueChange={(v) => setBiz({ ...biz, fiscalJurisdiction: v })}
+              value={biz.establishmentLocationId}
+              onValueChange={(v) => {
+                const loc = locations.find((l) => l.locationId === v);
+                setBiz({
+                  ...biz,
+                  establishmentLocationId: v,
+                  establishmentInEligibleArea: loc?.eligibleForReducedVat
+                    ? biz.establishmentInEligibleArea
+                    : false,
+                  servicePhysicallyExecutedInEligibleArea: loc?.eligibleForReducedVat
+                    ? biz.servicePhysicallyExecutedInEligibleArea
+                    : false,
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="GR">GR (standard rates)</SelectItem>
-                <SelectItem value="GR-ISLAND-REDUCED">
-                  GR-ISLAND-REDUCED (30% cut — verified eligibility only)
-                </SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.locationId} value={loc.locationId}>
+                    {loc.displayNameEn}
+                    {loc.eligibleForReducedVat ? " (eligible catalog)" : ""}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Derived VAT jurisdiction (read-only)</Label>
+            <Input value={biz.fiscalJurisdiction} readOnly />
+            <p className="text-[11px] text-muted-foreground">
+              Updated on save from location + service conditions. Reduced rate
+              requires establishment in the eligible area and physical service
+              execution there.
+            </p>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={biz.establishmentInEligibleArea}
+                disabled={
+                  !locations.find((l) => l.locationId === biz.establishmentLocationId)
+                    ?.eligibleForReducedVat
+                }
+                onChange={(e) =>
+                  setBiz({
+                    ...biz,
+                    establishmentInEligibleArea: e.target.checked,
+                  })
+                }
+              />
+              Establishment is located in the eligible island area
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={biz.servicePhysicallyExecutedInEligibleArea}
+                disabled={
+                  !locations.find((l) => l.locationId === biz.establishmentLocationId)
+                    ?.eligibleForReducedVat
+                }
+                onChange={(e) =>
+                  setBiz({
+                    ...biz,
+                    servicePhysicallyExecutedInEligibleArea: e.target.checked,
+                  })
+                }
+              />
+              Accommodation service is physically executed in the eligible area
+            </label>
           </div>
           <div className="space-y-2">
             <Label>Accommodation type</Label>

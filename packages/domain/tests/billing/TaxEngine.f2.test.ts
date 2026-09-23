@@ -189,7 +189,7 @@ describe("TaxEngine Greek VAT + climate", () => {
         accommodationType: "hotel",
         propertyClassification: "hotel_stars_3",
         floorAreaSqm: null,
-        nightCount: 2,
+        stayNightDates: ["2026-06-15", "2026-06-16"],
         roomOrApartmentCount: 1,
         guestCount: 2,
         complimentaryStay: false,
@@ -221,7 +221,7 @@ describe("TaxEngine Greek VAT + climate", () => {
     expect(vatExtra?.calculatedAmount).toBe("12.0000");
   });
 
-  it("climate fee hotel 3★ high season = €5 × nights", () => {
+  it("climate fee hotel 3★ high season = €5 × nights (per daily use)", () => {
     const evaluation = engine.evaluate(
       {
         tenantId: "t1",
@@ -232,7 +232,7 @@ describe("TaxEngine Greek VAT + climate", () => {
         accommodationType: "hotel",
         propertyClassification: "hotel_stars_3",
         floorAreaSqm: null,
-        nightCount: 3,
+        stayNightDates: ["2026-07-10", "2026-07-11", "2026-07-12"],
         roomOrApartmentCount: 1,
         guestCount: 2,
         complimentaryStay: false,
@@ -247,17 +247,19 @@ describe("TaxEngine Greek VAT + climate", () => {
       },
       rules,
     );
-    const climate = evaluation.components.find(
+    const climate = evaluation.components.filter(
       (c) => c.taxType === "climate_resilience_fee",
     );
-    expect(climate?.appliedFixedAmount).toBe("5.0000");
-    expect(climate?.calculatedAmount).toBe("15.0000");
-    expect(climate?.metadata.totalDailyUses).toBe(3);
-    expect(climate?.metadata.taxableDailyUses).toBe(3);
-    expect(climate?.metadata.requiresSeparateFiscalDocument).toBe(true);
+    expect(climate).toHaveLength(3);
+    expect(climate.every((c) => c.appliedFixedAmount === "5.0000")).toBe(true);
+    expect(climate.reduce((s, c) => s + Number(c.calculatedAmount), 0)).toBe(15);
+    expect(climate[0]?.metadata.totalDailyUses).toBe(3);
+    expect(climate[0]?.metadata.taxableDailyUses).toBe(3);
+    expect(climate[0]?.metadata.dailyUses).toHaveLength(3);
+    expect(climate[0]?.metadata.requiresSeparateFiscalDocument).toBe(true);
   });
 
-  it("climate fee low season Nov–Mar hotel 3★ = €1.50", () => {
+  it("climate fee low season Nov–Mar hotel 3★ = €1.50 per daily use", () => {
     const evaluation = engine.evaluate(
       {
         tenantId: "t1",
@@ -268,7 +270,7 @@ describe("TaxEngine Greek VAT + climate", () => {
         accommodationType: "hotel",
         propertyClassification: "hotel_stars_3",
         floorAreaSqm: null,
-        nightCount: 2,
+        stayNightDates: ["2026-01-10", "2026-01-11"],
         roomOrApartmentCount: 1,
         guestCount: 1,
         complimentaryStay: false,
@@ -277,11 +279,12 @@ describe("TaxEngine Greek VAT + climate", () => {
       },
       rules,
     );
-    const climate = evaluation.components.find(
+    const climate = evaluation.components.filter(
       (c) => c.taxType === "climate_resilience_fee",
     );
-    expect(climate?.appliedFixedAmount).toBe("1.5000");
-    expect(climate?.calculatedAmount).toBe("3.0000");
+    expect(climate).toHaveLength(2);
+    expect(climate[0]?.appliedFixedAmount).toBe("1.5000");
+    expect(climate.reduce((s, c) => s + Number(c.calculatedAmount), 0)).toBe(3);
   });
 
   it("complimentary stay → zero levy with use metadata", () => {
@@ -295,7 +298,7 @@ describe("TaxEngine Greek VAT + climate", () => {
         accommodationType: "short_term_rental",
         propertyClassification: "short_term_rental",
         floorAreaSqm: 45,
-        nightCount: 4,
+        stayNightDates: ["2026-07-10", "2026-07-11", "2026-07-12", "2026-07-13"],
         roomOrApartmentCount: 1,
         guestCount: 2,
         complimentaryStay: true,
@@ -304,13 +307,14 @@ describe("TaxEngine Greek VAT + climate", () => {
       },
       rules,
     );
-    const climate = evaluation.components.find(
+    const climate = evaluation.components.filter(
       (c) => c.taxType === "climate_resilience_fee",
     );
-    expect(climate?.calculatedAmount).toBe("0.0000");
-    expect(climate?.metadata.totalDailyUses).toBe(4);
-    expect(climate?.metadata.complimentaryDailyUses).toBe(4);
-    expect(climate?.metadata.taxableDailyUses).toBe(0);
+    expect(climate).toHaveLength(4);
+    expect(climate.every((c) => c.calculatedAmount === "0.0000")).toBe(true);
+    expect(climate[0]?.metadata.totalDailyUses).toBe(4);
+    expect(climate[0]?.metadata.complimentaryDailyUses).toBe(4);
+    expect(climate[0]?.metadata.taxableDailyUses).toBe(0);
   });
 
   it("fails when hotel classification missing", () => {
@@ -325,7 +329,7 @@ describe("TaxEngine Greek VAT + climate", () => {
           accommodationType: "hotel",
           propertyClassification: null,
           floorAreaSqm: null,
-          nightCount: 1,
+          stayNightDates: ["2026-07-10"],
           roomOrApartmentCount: 1,
           guestCount: 1,
           complimentaryStay: false,
@@ -348,7 +352,7 @@ describe("TaxEngine Greek VAT + climate", () => {
         accommodationType: "hotel",
         propertyClassification: "hotel_stars_5",
         floorAreaSqm: null,
-        nightCount: 1,
+        stayNightDates: ["2026-07-10"],
         roomOrApartmentCount: 1,
         guestCount: 1,
         complimentaryStay: false,
@@ -432,13 +436,16 @@ describe("Fiscal profiles", () => {
         postalCode: "10552",
         country: "GR",
       },
-      fiscalJurisdiction: "GR",
+      establishmentLocationId: "gr-mainland",
+      establishmentInEligibleArea: false,
+      servicePhysicallyExecutedInEligibleArea: false,
       establishmentCode: null,
       accommodationType: "hotel",
       propertyClassification: null,
       floorAreaSqm: null,
       metadata: {},
     });
+    expect(profile.fiscalJurisdiction).toBe("GR");
     expect(() => profile.assertReadyForTaxEvaluation()).toThrow(ValidationError);
   });
 });

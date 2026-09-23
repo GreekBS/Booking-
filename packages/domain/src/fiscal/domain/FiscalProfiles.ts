@@ -4,6 +4,7 @@ import type {
   AccommodationType,
   PropertyClassification,
 } from "../../billing/tax/TaxRule";
+import { greekFiscalJurisdictionResolver } from "../jurisdiction/GreekFiscalJurisdictionResolver";
 
 export interface FiscalAddress {
   line1: string;
@@ -26,8 +27,22 @@ export interface BusinessFiscalProfileProps {
   vatNumber: string | null;
   address: FiscalAddress;
   /**
-   * Fiscal jurisdiction code used by TaxEngine (e.g. GR, GR-ISLAND-REDUCED).
-   * Operator-assigned from verified eligibility — never auto-guessed.
+   * Stable catalog location id (e.g. gr-mainland, gr-island:lesvos).
+   * VAT jurisdiction is derived from this — not free-selected.
+   */
+  establishmentLocationId: string;
+  /**
+   * Establishment / branch is located in the eligible island area.
+   * Required true (with physical execution) for reduced island VAT.
+   */
+  establishmentInEligibleArea: boolean;
+  /**
+   * Accommodation service is physically executed in the eligible area.
+   */
+  servicePhysicallyExecutedInEligibleArea: boolean;
+  /**
+   * Derived VAT jurisdiction code (GR | GR-ISLAND-REDUCED).
+   * Populated by GreekFiscalJurisdictionResolver — not a free operator shortcut.
    */
   fiscalJurisdiction: string;
   /** Optional establishment / branch identity for later fiscal docs. */
@@ -46,7 +61,11 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
   }
 
   static create(
-    input: Omit<BusinessFiscalProfileProps, "createdAt" | "updatedAt"> & {
+    input: Omit<
+      BusinessFiscalProfileProps,
+      "createdAt" | "updatedAt" | "fiscalJurisdiction"
+    > & {
+      fiscalJurisdiction?: string;
       now?: Date;
     },
   ): BusinessFiscalProfile {
@@ -59,9 +78,31 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
     if (!input.legalName.trim()) {
       throw new ValidationError("legalName required");
     }
-    if (!input.fiscalJurisdiction.trim()) {
-      throw new ValidationError("fiscalJurisdiction required");
+    if (!input.establishmentLocationId?.trim()) {
+      throw new ValidationError("establishmentLocationId required");
     }
+
+    if (input.fiscalJurisdiction?.trim() === "GR-ISLAND-REDUCED") {
+      throw new ValidationError(
+        "GR-ISLAND-REDUCED cannot be set directly; configure establishment location",
+      );
+    }
+
+    const locationId = input.establishmentLocationId.trim();
+    let fiscalJurisdiction = input.fiscalJurisdiction?.trim() || "";
+    if (country === "GR") {
+      const resolved = greekFiscalJurisdictionResolver.resolve({
+        establishmentLocationId: locationId,
+        asOf: now,
+        establishmentInEligibleArea: input.establishmentInEligibleArea,
+        servicePhysicallyExecutedInEligibleArea:
+          input.servicePhysicallyExecutedInEligibleArea,
+      });
+      fiscalJurisdiction = resolved.jurisdiction;
+    } else if (!fiscalJurisdiction) {
+      fiscalJurisdiction = country;
+    }
+
     if (country === "GR" && input.vatNumber) {
       assertGreekAfmFormat(input.vatNumber);
     }
@@ -70,7 +111,11 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
       country,
       legalName: input.legalName.trim(),
       tradeName: input.tradeName?.trim() || null,
-      fiscalJurisdiction: input.fiscalJurisdiction.trim(),
+      establishmentLocationId: locationId,
+      establishmentInEligibleArea: input.establishmentInEligibleArea,
+      servicePhysicallyExecutedInEligibleArea:
+        input.servicePhysicallyExecutedInEligibleArea,
+      fiscalJurisdiction,
       establishmentCode: input.establishmentCode?.trim() || null,
       vatNumber: input.vatNumber?.trim() || null,
       address: normalizeAddress(input.address),
@@ -110,6 +155,15 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
   }
   get address(): FiscalAddress {
     return { ...this.props.address };
+  }
+  get establishmentLocationId(): string {
+    return this.props.establishmentLocationId;
+  }
+  get establishmentInEligibleArea(): boolean {
+    return this.props.establishmentInEligibleArea;
+  }
+  get servicePhysicallyExecutedInEligibleArea(): boolean {
+    return this.props.servicePhysicallyExecutedInEligibleArea;
   }
   get fiscalJurisdiction(): string {
     return this.props.fiscalJurisdiction;
@@ -174,11 +228,44 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
       validateAddress(patch.address);
       this.props.address = normalizeAddress(patch.address);
     }
-    if (patch.fiscalJurisdiction !== undefined) {
-      if (!patch.fiscalJurisdiction.trim()) {
-        throw new ValidationError("fiscalJurisdiction required");
+    if (patch.establishmentLocationId !== undefined) {
+      if (!patch.establishmentLocationId.trim()) {
+        throw new ValidationError("establishmentLocationId required");
       }
-      this.props.fiscalJurisdiction = patch.fiscalJurisdiction.trim();
+      this.props.establishmentLocationId = patch.establishmentLocationId.trim();
+    }
+    if (patch.establishmentInEligibleArea !== undefined) {
+      this.props.establishmentInEligibleArea = patch.establishmentInEligibleArea;
+    }
+    if (patch.servicePhysicallyExecutedInEligibleArea !== undefined) {
+      this.props.servicePhysicallyExecutedInEligibleArea =
+        patch.servicePhysicallyExecutedInEligibleArea;
+    }
+    // fiscalJurisdiction is never freely set to a reduced shortcut — re-derive for GR.
+    if (
+      patch.establishmentLocationId !== undefined ||
+      patch.establishmentInEligibleArea !== undefined ||
+      patch.servicePhysicallyExecutedInEligibleArea !== undefined ||
+      patch.country !== undefined ||
+      patch.fiscalJurisdiction !== undefined
+    ) {
+      if (patch.fiscalJurisdiction?.trim() === "GR-ISLAND-REDUCED") {
+        throw new ValidationError(
+          "GR-ISLAND-REDUCED cannot be set directly; configure establishment location",
+        );
+      }
+      if (this.props.country === "GR") {
+        const resolved = greekFiscalJurisdictionResolver.resolve({
+          establishmentLocationId: this.props.establishmentLocationId,
+          asOf: new Date(),
+          establishmentInEligibleArea: this.props.establishmentInEligibleArea,
+          servicePhysicallyExecutedInEligibleArea:
+            this.props.servicePhysicallyExecutedInEligibleArea,
+        });
+        this.props.fiscalJurisdiction = resolved.jurisdiction;
+      } else if (patch.fiscalJurisdiction !== undefined) {
+        this.props.fiscalJurisdiction = patch.fiscalJurisdiction.trim();
+      }
     }
     if (patch.establishmentCode !== undefined) {
       this.props.establishmentCode = patch.establishmentCode?.trim() || null;
@@ -200,6 +287,11 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
 
   /** Fail-closed checks before climate/VAT evaluation for this establishment. */
   assertReadyForTaxEvaluation(): void {
+    if (!this.props.establishmentLocationId) {
+      throw new ValidationError(
+        "BusinessFiscalProfile missing establishmentLocationId",
+      );
+    }
     if (!this.props.fiscalJurisdiction) {
       throw new ValidationError("BusinessFiscalProfile missing fiscalJurisdiction");
     }
@@ -212,6 +304,20 @@ export class BusinessFiscalProfile extends AggregateRoot<BusinessFiscalProfilePr
         "Hotel BusinessFiscalProfile requires hotel star classification",
       );
     }
+  }
+
+  /** Re-resolve derived jurisdiction at a stay date (fail closed). */
+  resolveJurisdictionAt(asOf: Date): string {
+    if (this.props.country !== "GR") {
+      return this.props.fiscalJurisdiction || this.props.country;
+    }
+    return greekFiscalJurisdictionResolver.resolve({
+      establishmentLocationId: this.props.establishmentLocationId,
+      asOf,
+      establishmentInEligibleArea: this.props.establishmentInEligibleArea,
+      servicePhysicallyExecutedInEligibleArea:
+        this.props.servicePhysicallyExecutedInEligibleArea,
+    }).jurisdiction;
   }
 }
 

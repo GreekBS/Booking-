@@ -8,7 +8,8 @@ import type { PropertyClassification, TaxRuleProps } from "./TaxRule";
  * - VAT rates: AADE Basic VAT rates (24% / 13% / 6%); tourist accommodation → 13%
  * - Island reduced VAT architecture: jurisdiction GR-ISLAND-REDUCED with 30% cut
  *   (24→17, 13→9, 6→4) per AADE E.2113/2025 / Art. 26 VAT Code — eligibility is
- *   assigned on BusinessFiscalProfile.jurisdiction, NOT guessed in TaxEngine.
+ *   derived by GreekFiscalJurisdictionResolver from the statutory location catalog,
+ *   NOT free-selected or guessed in TaxEngine.
  * - Climate Resilience Fee 2025 matrix: Law 5177/2025 Art. 44 + AADE TELΟΣ form
  *   high season Apr–Oct; low season Nov–Mar.
  *
@@ -18,7 +19,7 @@ import type { PropertyClassification, TaxRuleProps } from "./TaxRule";
 const NOW = new Date("2025-01-01T00:00:00.000Z");
 const VAT_SOURCE = "AADE Basic VAT rates; Appendix III VAT Code (tourist accommodation 13%)";
 const ISLAND_VAT_SOURCE =
-  "AADE E.2113/2025; VAT Code Art. 26 (30% reduction) — jurisdiction assigned on profile";
+  "AADE E.2113/2025; VAT Code Art. 26 (30% reduction) — jurisdiction derived via location catalog";
 const CLIMATE_SOURCE = "Law 5177/2025 Art. 44; AADE Climate Resilience Fee statement form 2025-02";
 const CLIMATE_VERSION = "2025-L5177-Art44";
 
@@ -130,8 +131,8 @@ export function greekStatutoryTaxRules(): TaxRule[] {
     );
   }
 
-  // --- Island reduced VAT jurisdiction (operator assigns GR-ISLAND-REDUCED) ---
-  // 30% cut: 24→17, 13→9. Do not list islands here — profile carries jurisdiction.
+  // --- Island reduced VAT jurisdiction (GR-ISLAND-REDUCED from resolver) ---
+  // 30% cut: 24→17, 13→9. Do not list islands here — TaxEngine is geography-agnostic.
   for (const [cat, rate] of [
     ["accommodation", "9.0000"],
     ["extra", "17.0000"],

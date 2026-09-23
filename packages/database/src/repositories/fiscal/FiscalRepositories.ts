@@ -161,6 +161,9 @@ function mapBusiness(row: {
   addressRegion: string | null;
   addressPostalCode: string;
   addressCountry: string;
+  establishmentLocationId: string;
+  establishmentInEligibleArea: boolean;
+  servicePhysicallyExecutedInEligibleArea: boolean;
   fiscalJurisdiction: string;
   establishmentCode: string | null;
   accommodationType: string;
@@ -186,6 +189,10 @@ function mapBusiness(row: {
       postalCode: row.addressPostalCode,
       country: row.addressCountry,
     },
+    establishmentLocationId: row.establishmentLocationId,
+    establishmentInEligibleArea: row.establishmentInEligibleArea,
+    servicePhysicallyExecutedInEligibleArea:
+      row.servicePhysicallyExecutedInEligibleArea,
     fiscalJurisdiction: row.fiscalJurisdiction,
     establishmentCode: row.establishmentCode,
     accommodationType: row.accommodationType as AccommodationType,
@@ -221,6 +228,10 @@ export class PrismaBusinessFiscalProfileRepository
           addressRegion: p.address.region,
           addressPostalCode: p.address.postalCode,
           addressCountry: p.address.country,
+          establishmentLocationId: p.establishmentLocationId,
+          establishmentInEligibleArea: p.establishmentInEligibleArea,
+          servicePhysicallyExecutedInEligibleArea:
+            p.servicePhysicallyExecutedInEligibleArea,
           fiscalJurisdiction: p.fiscalJurisdiction,
           establishmentCode: p.establishmentCode,
           accommodationType: p.accommodationType,
@@ -241,6 +252,10 @@ export class PrismaBusinessFiscalProfileRepository
           addressRegion: p.address.region,
           addressPostalCode: p.address.postalCode,
           addressCountry: p.address.country,
+          establishmentLocationId: p.establishmentLocationId,
+          establishmentInEligibleArea: p.establishmentInEligibleArea,
+          servicePhysicallyExecutedInEligibleArea:
+            p.servicePhysicallyExecutedInEligibleArea,
           fiscalJurisdiction: p.fiscalJurisdiction,
           establishmentCode: p.establishmentCode,
           accommodationType: p.accommodationType,

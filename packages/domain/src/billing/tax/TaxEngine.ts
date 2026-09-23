@@ -8,14 +8,24 @@ import type {
 import { resolveTaxRule } from "./resolveTaxRule";
 import { vatFromGross, vatFromNet } from "./VatConversion";
 import type {
+  ClimateDailyUseSnapshot,
   TaxComponentSnapshot,
   TaxContext,
   TaxEvaluation,
   TaxLineInput,
 } from "./TaxTypes";
 
-function monthOf(date: Date): number {
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function monthOfUtcDate(date: Date): number {
   return date.getUTCMonth() + 1;
+}
+
+function parseLocalDateUtcNoon(ymd: string): Date {
+  if (!DATE_RE.test(ymd)) {
+    throw new ValidationError(`Invalid stay night date: ${ymd}`);
+  }
+  return new Date(`${ymd}T12:00:00.000Z`);
 }
 
 function climateClassification(
@@ -74,7 +84,7 @@ function evaluateVatForLine(
     jurisdiction: ctx.jurisdiction,
     country: ctx.country,
     asOf: ctx.asOf,
-    seasonMonth: monthOf(ctx.asOf),
+    seasonMonth: monthOfUtcDate(ctx.asOf),
     floorAreaSqm: ctx.floorAreaSqm,
     tenantId: ctx.tenantId,
   });
@@ -98,12 +108,22 @@ function evaluateVatForLine(
   });
 }
 
-function evaluateClimateFee(
+/**
+ * Climate Resilience Fee: one evaluation per daily use (date × room).
+ * Seasonal / effective-date boundaries are resolved per stay night — never as a
+ * single season for the whole reservation.
+ */
+function evaluateClimateFeeDailyUses(
   catalog: readonly TaxRule[],
   ctx: TaxContext,
-): TaxComponentSnapshot {
-  if (ctx.nightCount < 0 || ctx.roomOrApartmentCount < 1) {
-    throw new ValidationError("Invalid climate fee quantities");
+): TaxComponentSnapshot[] {
+  if (ctx.roomOrApartmentCount < 1) {
+    throw new ValidationError("Invalid climate fee roomOrApartmentCount");
+  }
+  if (!ctx.stayNightDates || ctx.stayNightDates.length === 0) {
+    throw new ValidationError(
+      "stayNightDates required for Climate Resilience Fee daily-use evaluation",
+    );
   }
 
   const classification = climateClassification(
@@ -111,53 +131,104 @@ function evaluateClimateFee(
     ctx.propertyClassification,
   );
 
-  const rule = resolveTaxRule(catalog, {
-    taxType: "climate_resilience_fee",
-    classificationKey: `climate:${classification}`,
-    chargeCategory: "accommodation",
-    accommodationType: ctx.accommodationType,
-    propertyClassification: classification,
-    jurisdiction: ctx.jurisdiction,
-    country: ctx.country,
-    asOf: ctx.asOf,
-    seasonMonth: monthOf(ctx.asOf),
-    floorAreaSqm: ctx.floorAreaSqm,
-    tenantId: ctx.tenantId,
-  });
+  const complimentarySet = new Set(
+    ctx.complimentaryNightDates ??
+      (ctx.complimentaryStay ? ctx.stayNightDates : []),
+  );
 
-  if (rule.currency !== ctx.currency) {
-    throw new ValidationError("Climate fee TaxRule currency mismatch");
+  const dailyUses: ClimateDailyUseSnapshot[] = [];
+  const components: TaxComponentSnapshot[] = [];
+  let totalDailyUses = 0;
+  let complimentaryDailyUses = 0;
+  let taxableDailyUses = 0;
+
+  for (const date of ctx.stayNightDates) {
+    const asOf = parseLocalDateUtcNoon(date);
+    const seasonMonth = monthOfUtcDate(asOf);
+    const complimentaryNight = complimentarySet.has(date);
+
+    const rule = resolveTaxRule(catalog, {
+      taxType: "climate_resilience_fee",
+      classificationKey: `climate:${classification}`,
+      chargeCategory: "accommodation",
+      accommodationType: ctx.accommodationType,
+      propertyClassification: classification,
+      jurisdiction: ctx.jurisdiction,
+      country: ctx.country,
+      asOf,
+      seasonMonth,
+      floorAreaSqm: ctx.floorAreaSqm,
+      tenantId: ctx.tenantId,
+    });
+
+    if (rule.currency !== ctx.currency) {
+      throw new ValidationError("Climate fee TaxRule currency mismatch");
+    }
+    if (!rule.fixedAmount) {
+      throw new ValidationError(`Climate fee rule ${rule.id} requires fixedAmount`);
+    }
+
+    for (let roomIndex = 0; roomIndex < ctx.roomOrApartmentCount; roomIndex++) {
+      totalDailyUses += 1;
+      const complimentary = complimentaryNight || ctx.complimentaryStay;
+      if (complimentary) complimentaryDailyUses += 1;
+      else taxableDailyUses += 1;
+
+      const unit = Money.create(rule.fixedAmount, ctx.currency);
+      const amount = complimentary ? Money.zero(ctx.currency) : unit;
+
+      const daily: ClimateDailyUseSnapshot = {
+        date,
+        roomIndex,
+        complimentary,
+        ruleId: rule.id,
+        ruleValidFrom: rule.validFrom.toISOString(),
+        ruleValidUntil: rule.validUntil ? rule.validUntil.toISOString() : null,
+        appliedFixedAmount: rule.fixedAmount,
+        calculatedAmount: amount.amount,
+        seasonMonth,
+      };
+      dailyUses.push(daily);
+
+      components.push(
+        buildComponent(rule, amount, null, `climate:${date}:r${roomIndex}`, {
+          totalDailyUses: 1,
+          complimentaryDailyUses: complimentary ? 1 : 0,
+          taxableDailyUses: complimentary ? 0 : 1,
+          complimentaryStay: complimentary,
+          nightCount: 1,
+          roomOrApartmentCount: 1,
+          dailyUses: [daily],
+          requiresSeparateFiscalDocument: true,
+          fiscalDocumentKindHint: "climate_resilience_fee_special_element",
+        }),
+      );
+    }
   }
-  if (!rule.fixedAmount) {
-    throw new ValidationError(`Climate fee rule ${rule.id} requires fixedAmount`);
+
+  // Attach roll-up on first climate component for Folio/UI convenience without
+  // collapsing per-day components (each remains a first-class snapshot).
+  if (components[0]) {
+    components[0] = {
+      ...components[0],
+      metadata: {
+        ...components[0].metadata,
+        totalDailyUses,
+        complimentaryDailyUses,
+        taxableDailyUses,
+        nightCount: ctx.stayNightDates.length,
+        roomOrApartmentCount: ctx.roomOrApartmentCount,
+        dailyUses,
+      },
+    };
   }
 
-  const totalDailyUses = ctx.nightCount * ctx.roomOrApartmentCount;
-  const complimentaryDailyUses = ctx.complimentaryStay ? totalDailyUses : 0;
-  const taxableDailyUses = totalDailyUses - complimentaryDailyUses;
-
-  const unit = Money.create(rule.fixedAmount, ctx.currency);
-  let amount = Money.zero(ctx.currency);
-  if (taxableDailyUses > 0) {
-    // FIXED_PER_ROOM / per daily use: unit × taxableDailyUses
-    amount = unit.multiplyByRatio(BigInt(taxableDailyUses), 1n);
-  }
-
-  return buildComponent(rule, amount, null, null, {
-    totalDailyUses,
-    complimentaryDailyUses,
-    taxableDailyUses,
-    complimentaryStay: ctx.complimentaryStay,
-    nightCount: ctx.nightCount,
-    roomOrApartmentCount: ctx.roomOrApartmentCount,
-    requiresSeparateFiscalDocument: true,
-    fiscalDocumentKindHint: "climate_resilience_fee_special_element",
-  });
+  return components;
 }
 
 /**
  * Country-agnostic TaxEngine.
- * Greek specifics live in TaxRule catalog data, not in conditionals here.
+ * Greek geographic legislation belongs in jurisdiction resolver/catalog — not here.
  */
 export class TaxEngine {
   evaluate(context: TaxContext, rules: readonly TaxRule[]): TaxEvaluation {
@@ -177,10 +248,8 @@ export class TaxEngine {
       components.push(evaluateVatForLine(rules, context, line));
     }
 
-    // Climate Resilience Fee is a distinct levy — evaluated once per stay context
-    // when accommodation type is in scope (hotel / STR / villa / furnished).
     if (shouldEvaluateClimate(context.accommodationType)) {
-      components.push(evaluateClimateFee(rules, context));
+      components.push(...evaluateClimateFeeDailyUses(rules, context));
     }
 
     let vatTotal = Money.zero(context.currency);

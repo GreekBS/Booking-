@@ -68,7 +68,7 @@ export interface TaxRuleProps {
   country: string;
   /**
    * Fiscal jurisdiction code (e.g. GR, GR-ISLAND-REDUCED).
-   * Assigned on BusinessFiscalProfile — never guessed from geography in TaxEngine.
+   * Derived outside TaxEngine via GreekFiscalJurisdictionResolver — never guessed here.
    */
   jurisdiction: string;
   taxType: TaxType;

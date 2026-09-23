@@ -903,6 +903,11 @@ model BusinessFiscalProfile {
   addressRegion          String?  @map("address_region") @db.VarChar(128)
   addressPostalCode      String   @map("address_postal_code") @db.VarChar(32)
   addressCountry         String   @map("address_country") @db.Char(2)
+  /// Stable catalog location id — VAT jurisdiction is derived, not free-selected.
+  establishmentLocationId String  @default("gr-mainland") @map("establishment_location_id") @db.VarChar(128)
+  establishmentInEligibleArea Boolean @default(false) @map("establishment_in_eligible_area")
+  servicePhysicallyExecutedInEligibleArea Boolean @default(false) @map("service_physically_executed_in_eligible_area")
+  /// Derived VAT jurisdiction (GR | GR-ISLAND-REDUCED).
   fiscalJurisdiction     String   @map("fiscal_jurisdiction") @db.VarChar(64)
   establishmentCode      String?  @map("establishment_code") @db.VarChar(64)
   accommodationType      String   @map("accommodation_type") @db.VarChar(64)

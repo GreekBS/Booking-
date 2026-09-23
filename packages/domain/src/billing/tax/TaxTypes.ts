@@ -19,23 +19,46 @@ export interface TaxLineInput {
 export interface TaxContext {
   tenantId: string;
   country: string;
-  /** From BusinessFiscalProfile — never inferred by TaxEngine. */
+  /**
+   * Resolved VAT jurisdiction code (e.g. GR, GR-ISLAND-REDUCED).
+   * Derived outside TaxEngine — never free-selected reduced shortcut.
+   */
   jurisdiction: string;
   currency: string;
-  /** Evaluation instant for effective-dated rules. */
+  /** Evaluation instant for VAT / non-daily rules (typically check-in). */
   asOf: Date;
   accommodationType: AccommodationType;
   propertyClassification: PropertyClassification | null;
   /** Floor area sqm when size-gated climate rules apply. */
   floorAreaSqm: number | null;
-  /** Stay nights / daily uses (calendar nights). */
-  nightCount: number;
+  /**
+   * Each stay night / daily-use date (YYYY-MM-DD), exclusive of check-out.
+   * Required for climate fee night-by-night evaluation.
+   */
+  stayNightDates: string[];
   roomOrApartmentCount: number;
   guestCount: number;
-  /** Complimentary/free stay → climate levy amount 0; uses still counted. */
+  /**
+   * When true, every daily use is complimentary (levy 0, uses still counted).
+   * Prefer complimentaryNightDates for per-night control.
+   */
   complimentaryStay: boolean;
+  /** Optional set of YYYY-MM-DD nights that are complimentary. */
+  complimentaryNightDates?: string[];
   amountBasis: "NET" | "GROSS";
   lines: TaxLineInput[];
+}
+
+export interface ClimateDailyUseSnapshot {
+  date: string;
+  roomIndex: number;
+  complimentary: boolean;
+  ruleId: string;
+  ruleValidFrom: string;
+  ruleValidUntil: string | null;
+  appliedFixedAmount: string;
+  calculatedAmount: string;
+  seasonMonth: number;
 }
 
 export interface TaxComponentSnapshot {
@@ -68,6 +91,8 @@ export interface TaxComponentMetadata {
   nightCount?: number;
   roomOrApartmentCount?: number;
   amountBasis?: "NET" | "GROSS";
+  /** Per daily-use provenance — not collapsed. */
+  dailyUses?: ClimateDailyUseSnapshot[];
   /** Document boundary: climate fee needs separate F3 fiscal document. */
   requiresSeparateFiscalDocument?: boolean;
   fiscalDocumentKindHint?: "climate_resilience_fee_special_element" | null;

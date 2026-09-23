@@ -60,7 +60,9 @@ export class UpsertBusinessFiscalProfileUseCase {
       country: string;
       vatNumber?: string | null;
       address: BusinessFiscalProfileProps["address"];
-      fiscalJurisdiction: string;
+      establishmentLocationId: string;
+      establishmentInEligibleArea: boolean;
+      servicePhysicallyExecutedInEligibleArea: boolean;
       establishmentCode?: string | null;
       accommodationType: BusinessFiscalProfileProps["accommodationType"];
       propertyClassification?: BusinessFiscalProfileProps["propertyClassification"];
@@ -81,7 +83,10 @@ export class UpsertBusinessFiscalProfileUseCase {
           country: input.country,
           vatNumber: input.vatNumber ?? null,
           address: input.address,
-          fiscalJurisdiction: input.fiscalJurisdiction,
+          establishmentLocationId: input.establishmentLocationId,
+          establishmentInEligibleArea: input.establishmentInEligibleArea,
+          servicePhysicallyExecutedInEligibleArea:
+            input.servicePhysicallyExecutedInEligibleArea,
           establishmentCode: input.establishmentCode ?? null,
           accommodationType: input.accommodationType,
           propertyClassification: input.propertyClassification ?? null,
@@ -101,7 +106,10 @@ export class UpsertBusinessFiscalProfileUseCase {
         country: input.country,
         vatNumber: input.vatNumber ?? null,
         address: input.address,
-        fiscalJurisdiction: input.fiscalJurisdiction,
+        establishmentLocationId: input.establishmentLocationId,
+        establishmentInEligibleArea: input.establishmentInEligibleArea,
+        servicePhysicallyExecutedInEligibleArea:
+          input.servicePhysicallyExecutedInEligibleArea,
         establishmentCode: input.establishmentCode ?? null,
         accommodationType: input.accommodationType,
         propertyClassification: input.propertyClassification ?? null,

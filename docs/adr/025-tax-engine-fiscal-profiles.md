@@ -1,12 +1,12 @@
-# ADR-025: Tax Engine, Statutory Rules, and Fiscal Profiles (F2)
+# ADR-025: Tax Engine, Statutory Rules, and Fiscal Profiles (F2 / F2.1)
 
 ## Status
 
-Accepted (F2). Extends [ADR-024](./024-fiscal-billing-invariants.md).
+Accepted (F2). Hardened in F2.1. Extends [ADR-024](./024-fiscal-billing-invariants.md).
 
 ## Context
 
-F1 established Folio as settlement truth with append-only lines. F2 adds tax calculation and fiscal identity without fiscal documents, myDATA, or provider calls.
+F1 established Folio as settlement truth with append-only lines. F2 adds tax calculation and fiscal identity without fiscal documents, myDATA, or provider calls. F2.1 closes two correctness gaps: climate fee night-by-night seasonal evaluation, and verified derivation of Greek reduced-island VAT jurisdiction.
 
 ## Decisions
 
@@ -23,25 +23,39 @@ F1 established Folio as settlement truth with append-only lines. F2 adds tax cal
 - Historical amounts never re-read live TaxRule rows.
 - Corrections use explicit adjustment/credit FolioLines (F1 invariant 14).
 
-### Jurisdiction-aware VAT
+### Climate Resilience Fee evaluates per daily use (F2.1)
 
-- `BusinessFiscalProfile.fiscalJurisdiction` is operator-assigned (e.g. `GR`, `GR-ISLAND-REDUCED`).
-- TaxEngine never hardcodes island names or geography eligibility.
-- Island reduced rates (30% cut → 13%→9%, 24%→17%) are seeded for `GR-ISLAND-REDUCED` per AADE E.2113/2025 / VAT Code Art. 26 — eligibility remains an operator legal decision.
+- Climate levy is evaluated **per daily use** (stay night × room), not as one season for the whole reservation.
+- Seasonal boundary (April–October high / November–March low) is resolved **per stay date**.
+- A stay crossing March/April or October/November splits correctly across the applicable TaxRules.
+- TaxRule `validFrom` / `validUntil` transitions mid-stay are also resolved per daily use.
+- Each daily use preserves provenance (`date`, `roomIndex`, `ruleId`, amounts, season month) sufficient for Special Element / receipt generation, reconciliation, reporting, and roll-ups:
+  `totalDailyUses`, `complimentaryDailyUses`, `taxableDailyUses`.
+- Complimentary daily uses keep use counts with levy amount **0**.
+- Snapshot metadata includes `requiresSeparateFiscalDocument: true` and hint
+  `climate_resilience_fee_special_element` for F3.
+
+### Greek reduced VAT jurisdiction is derived, not freely selected (F2.1)
+
+- Operators configure **establishment / property location** (`establishmentLocationId`) plus statutory service conditions (`establishmentInEligibleArea`, `servicePhysicallyExecutedInEligibleArea`).
+- `GreekFiscalJurisdictionResolver` + versioned statutory catalog derive `GR` or `GR-ISLAND-REDUCED`.
+- `GR-ISLAND-REDUCED` is **not** a free UI/API shortcut; direct assignment is rejected.
+- Statutory geographic eligibility comes from authoritative AADE/legal catalog data (E.2113/2025 annex; continuing Art. 26 §4 islands from A.1150/2021; 2026 expansion), with legal source/version/effective dates.
+- Future legal changes → new effective-dated catalog entries (never rewrite historical resolution).
+- **TaxEngine remains geography-agnostic** — it only consumes a resolved jurisdiction code and TaxRules. No island-name conditionals in TaxEngine.
+- Ambiguous / insufficient / conflicting eligibility **fails closed**. Never silently apply reduced VAT.
 
 ### Fail-closed resolution
 
 - Missing required rule → `ValidationError`.
-- Ambiguous equal-priority matches → `ConflictError`.
+- Ambiguous equal-priority TaxRule matches → `ConflictError`.
 - Missing hotel star / classification for climate fee → fail closed.
+- Missing location, ineligible-date location, conflicting catalog rows, or unmet island service conditions → fail closed at jurisdiction resolution.
 
 ### Climate Resilience Fee ≠ VAT
 
 - Distinct `taxType: climate_resilience_fee`.
-- Snapshot metadata includes `requiresSeparateFiscalDocument: true` and hint
-  `climate_resilience_fee_special_element` for F3
-  (“Special Element – Receipt for Collection of the Climate Resilience Fee”).
-- Complimentary stays: levy amount **0**, but `totalDailyUses` / `complimentaryDailyUses` / `taxableDailyUses` retained for reporting.
+- Climate fee rates are national (jurisdiction wildcard) — independent of island VAT jurisdiction.
 
 ### Fiscal profile ≠ Guest
 
@@ -57,17 +71,13 @@ F1 established Folio as settlement truth with append-only lines. F2 adds tax cal
 - Money remains bigint / 4dp; NET↔GROSS uses truncation toward zero via integer ratios.
 - Greek/provider HALF_UP minor-unit policy is **not** locked in F2 — finalize at F3 fiscal-document / certified-provider layer.
 
-### Climate fee season (F2 scope)
-
-- Season month is taken from stay check-in date for rule selection.
-- Night-by-night season splits across Apr/Nov boundaries remain an F3 refinement if required.
-
 ## Sources consulted for Greek seeds
 
 - AADE Basic VAT rates (24% / 13% / 6%; tourist accommodation 13%).
-- AADE E.2113/2025 (island 30% VAT reduction architecture).
+- AADE E.2113/2025 annex (eligible islands/islets; 2026 expansion; continuing Lesvos/Kos/Samos/Chios).
+- VAT Code Art. 26 (Law 5144/2024) as amended by Law 5246/2025; AADE A.1150/2021.
 - Law 5177/2025 Art. 44 + AADE Climate Resilience Fee statement form (2025 rates; Apr–Oct high / Nov–Mar low).
 
 ## Consequences
 
-F3 must generate the separate climate-fee legal document from Folio levy snapshots without redesigning Billing.
+F3 must generate the separate climate-fee legal document from Folio levy daily-use snapshots without redesigning Billing. Jurisdiction resolution remains outside TaxEngine.
