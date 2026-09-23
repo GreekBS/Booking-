@@ -24,6 +24,7 @@ import { QuoteFactory } from "./engines/QuoteFactory";
 import { StayMutationEngine } from "./engines/StayMutationEngine";
 import { ValidationError } from "../../shared/errors/DomainError";
 import { Result } from "../../shared/kernel/Result";
+import type { MutationOrigin } from "../../shared/types/MutationOrigin";
 
 export interface PrepareHoldParams {
   tenantId: string;
@@ -33,6 +34,7 @@ export interface PrepareHoldParams {
   guestCount: number;
   holdId: string;
   sessionRef?: string | null;
+  mutationOrigin?: MutationOrigin | null;
 }
 
 export interface PrepareQuoteForHoldParams {
@@ -133,6 +135,7 @@ export class ReservationOrchestrator {
         checkOut: params.checkOut,
         guestCount: params.guestCount,
         sessionRef: params.sessionRef,
+        mutationOrigin: params.mutationOrigin ?? null,
       }),
     );
   }
@@ -151,6 +154,7 @@ export class ReservationOrchestrator {
       guestCount: reservation.guestCount,
       holdId: params.holdId,
       sessionRef: params.idempotencyKey ?? null,
+      mutationOrigin: params.mutationOrigin ?? null,
     });
     if (holdResult.isFailure) {
       return Result.fail(holdResult.getError());
@@ -182,6 +186,7 @@ export class ReservationOrchestrator {
       quote,
       guest: reservation.guest,
       confirmationMode,
+      mutationOrigin: params.mutationOrigin ?? null,
     });
 
     return Result.ok({ hold, quote, booking });
@@ -221,7 +226,8 @@ export class ReservationOrchestrator {
   commitStayChange(
     booking: Booking,
     draft: StayChangeDraft,
+    mutationOrigin?: MutationOrigin | null,
   ): Promise<Result<StayChangeCommitResult, Error>> {
-    return this.mutationEngine.commitStayChange(booking, draft);
+    return this.mutationEngine.commitStayChange(booking, draft, mutationOrigin);
   }
 }

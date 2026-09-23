@@ -85,21 +85,39 @@ describe("CM-4c-5 Booking.com tenant UI fitness", () => {
   });
 
   it("local ARI projection is deterministic for preview fingerprints", () => {
+    const room = {
+      roomTypeId: "1000202",
+      ratePlanId: "12345",
+      unitId: "unit-1",
+      activeBlocks: [] as const,
+      ratePlan: {
+        currency: "EUR",
+        baseNightlyAmount: "100.00",
+        seasons: [],
+        dowModifiers: [],
+        losDiscounts: [],
+      },
+      rules: {
+        minNights: 1,
+        maxNights: 30,
+        checkInDays: [0, 1, 2, 3, 4, 5, 6],
+        checkOutDays: [0, 1, 2, 3, 4, 5, 6],
+        advanceMinDays: 0,
+        advanceMaxDays: 365,
+        turnoverNights: 0,
+      },
+    };
     const a = buildBookingComLocalAriCells({
       hotelId: "8135188",
-      rooms: [{ roomTypeId: "1000202", ratePlanId: "12345" }],
+      rooms: [room],
       from: "2026-10-01",
       to: "2026-10-02",
-      roomsToSell: 2,
-      price: 100,
     });
     const b = buildBookingComLocalAriCells({
       hotelId: "8135188",
-      rooms: [{ roomTypeId: "1000202", ratePlanId: "12345" }],
+      rooms: [room],
       from: "2026-10-01",
       to: "2026-10-02",
-      roomsToSell: 2,
-      price: 100,
     });
     expect(a.talosStateFingerprint).toBe(b.talosStateFingerprint);
     expect(a.cells.length).toBeGreaterThan(0);
@@ -108,17 +126,40 @@ describe("CM-4c-5 Booking.com tenant UI fitness", () => {
   it("local ARI supports ≥12 months and fails closed beyond max horizon", () => {
     const year = buildBookingComLocalAriCells({
       hotelId: "8135188",
-      rooms: [{ roomTypeId: "1000202", ratePlanId: "12345" }],
+      rooms: [
+        {
+          roomTypeId: "1000202",
+          ratePlanId: "12345",
+          unitId: "unit-1",
+          activeBlocks: [],
+          ratePlan: {
+            currency: "EUR",
+            baseNightlyAmount: "100.00",
+            seasons: [],
+            dowModifiers: [],
+            losDiscounts: [],
+          },
+          rules: null,
+        },
+      ],
       from: "2026-01-01",
       to: "2026-12-31",
-      roomsToSell: 1,
     });
     expect(year.cells.length).toBeGreaterThan(300);
 
     expect(() =>
       buildBookingComLocalAriCells({
         hotelId: "8135188",
-        rooms: [{ roomTypeId: "1000202", ratePlanId: null }],
+        rooms: [
+          {
+            roomTypeId: "1000202",
+            ratePlanId: null,
+            unitId: "unit-1",
+            activeBlocks: [],
+            ratePlan: null,
+            rules: null,
+          },
+        ],
         from: "2026-01-01",
         to: "2028-01-01",
       }),

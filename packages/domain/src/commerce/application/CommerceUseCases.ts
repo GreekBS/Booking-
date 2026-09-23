@@ -14,7 +14,7 @@ import { Result } from "../../shared/kernel/Result";
 import { ForbiddenError, ValidationError } from "../../shared/errors/DomainError";
 import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
 import type { IIdGenerator } from "../../shared/ports/IIdGenerator";
-import type { IAuditLogRepository } from "../../shared/ports/InfrastructurePorts";
+import type { IAuditLogRepository, IOutboxRepository } from "../../shared/ports/InfrastructurePorts";
 import type {
   ICatalogQueryPort,
   ICalendarBlockRepository,
@@ -31,6 +31,11 @@ import {
   resolveUnitContext,
 } from "./commerceAccess";
 import { ReservationOrchestrator } from "../reservation/ReservationOrchestrator";
+import {
+  mutationOriginDirect,
+  mutationOriginOperator,
+} from "../../shared/types/MutationOrigin";
+import { UnitExternalSyncRequiredEvent } from "../../channels/application/UnitExternalSyncRequiredEvent";
 
 const DEFAULT_RULES: UnitAvailabilityRulesProps = {
   minNights: 1,
@@ -115,6 +120,7 @@ export class CreateManualBlockUseCase {
     private readonly calendarBlocks: ICalendarBlockRepository,
     private readonly permissionChecker: PermissionChecker,
     private readonly idGenerator: IIdGenerator,
+    private readonly outboxRepository: IOutboxRepository,
   ) {}
 
   async execute(
@@ -151,6 +157,20 @@ export class CreateManualBlockUseCase {
         reason: command.reason,
       });
 
+      await this.outboxRepository.saveEvents([
+        new UnitExternalSyncRequiredEvent({
+          tenantId: command.tenantId,
+          unitId: unit.id,
+          propertyId: property.id,
+          from: command.checkIn,
+          to: command.checkOut,
+          changeKinds: ["availability"],
+          mutationOrigin: mutationOriginOperator(),
+          revision: Date.now(),
+          sourceEventId: `manual-block-create:${blockId}`,
+        }),
+      ]);
+
       return Result.ok({ blockId });
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -166,8 +186,10 @@ export interface DeleteManualBlockCommand {
 
 export class DeleteManualBlockUseCase {
   constructor(
+    private readonly catalog: ICatalogQueryPort,
     private readonly calendarBlocks: ICalendarBlockRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly outboxRepository: IOutboxRepository,
   ) {}
 
   async execute(
@@ -194,7 +216,28 @@ export class DeleteManualBlockUseCase {
         return Result.fail(new ValidationError("Block does not belong to unit"));
       }
 
+      const unitCtx = await resolveUnitContext(this.catalog, command.unitId, command.tenantId);
+      if (unitCtx.isFailure) {
+        return Result.fail(unitCtx.getError());
+      }
+      const { property } = unitCtx.getValue();
+
       await this.calendarBlocks.releaseBlock(command.blockId, command.tenantId);
+
+      await this.outboxRepository.saveEvents([
+        new UnitExternalSyncRequiredEvent({
+          tenantId: command.tenantId,
+          unitId: block.unitId,
+          propertyId: property.id,
+          from: block.checkIn,
+          to: block.checkOut,
+          changeKinds: ["availability"],
+          mutationOrigin: mutationOriginOperator(),
+          revision: Date.now(),
+          sourceEventId: `manual-block-release:${command.blockId}`,
+        }),
+      ]);
+
       return Result.ok(undefined);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -429,6 +472,9 @@ export class CreateBookingUseCase {
         quote,
         guest: command.guest,
         confirmationMode: command.confirmationMode ?? "manual",
+        mutationOrigin: actor.userId.startsWith("storefront:")
+          ? mutationOriginDirect()
+          : mutationOriginOperator(),
       });
 
       await this.commerceFlowRepository.saveHoldAndBooking(hold, booking);
@@ -485,7 +531,7 @@ export class ConfirmBookingUseCase {
         return Result.fail(new ValidationError("Booking not found"));
       }
 
-      booking.confirm();
+      booking.confirm(new Date(), mutationOriginOperator());
       await this.bookingRepository.save(booking);
 
       await this.auditLogRepository.append({
@@ -539,7 +585,7 @@ export class CancelBookingUseCase {
         return Result.fail(new ValidationError("Booking not found"));
       }
 
-      booking.cancel(command.reason);
+      booking.cancel(command.reason, new Date(), mutationOriginOperator());
       await this.bookingRepository.save(booking);
 
       await this.auditLogRepository.append({
@@ -657,6 +703,7 @@ export class ConfigureAvailabilityRulesUseCase {
     private readonly catalog: ICatalogQueryPort,
     private readonly availabilityRules: IAvailabilityRulesRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly outboxRepository: IOutboxRepository,
   ) {}
 
   async execute(
@@ -679,7 +726,28 @@ export class ConfigureAvailabilityRulesUseCase {
         return Result.fail(unitCtx.getError());
       }
 
+      const { unit, property } = unitCtx.getValue();
       await this.availabilityRules.save(command.tenantId, command.unitId, command.rules);
+
+      const from = new Date().toISOString().slice(0, 10);
+      const toDate = new Date();
+      toDate.setUTCDate(toDate.getUTCDate() + 365);
+      const to = toDate.toISOString().slice(0, 10);
+
+      await this.outboxRepository.saveEvents([
+        new UnitExternalSyncRequiredEvent({
+          tenantId: command.tenantId,
+          unitId: unit.id,
+          propertyId: property.id,
+          from,
+          to,
+          changeKinds: ["restrictions", "availability"],
+          mutationOrigin: mutationOriginOperator(),
+          revision: Date.now(),
+          sourceEventId: `availability-rules:${unit.id}:${Date.now()}`,
+        }),
+      ]);
+
       return Result.ok(command.rules);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -698,6 +766,7 @@ export class ConfigureRatePlanUseCase {
     private readonly catalog: ICatalogQueryPort,
     private readonly ratePlanRepository: IRatePlanRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly outboxRepository: IOutboxRepository,
   ) {}
 
   async execute(
@@ -720,7 +789,28 @@ export class ConfigureRatePlanUseCase {
         return Result.fail(unitCtx.getError());
       }
 
+      const { unit, property } = unitCtx.getValue();
       await this.ratePlanRepository.save(command.tenantId, command.unitId, command.ratePlan);
+
+      const from = new Date().toISOString().slice(0, 10);
+      const toDate = new Date();
+      toDate.setUTCDate(toDate.getUTCDate() + 365);
+      const to = toDate.toISOString().slice(0, 10);
+
+      await this.outboxRepository.saveEvents([
+        new UnitExternalSyncRequiredEvent({
+          tenantId: command.tenantId,
+          unitId: unit.id,
+          propertyId: property.id,
+          from,
+          to,
+          changeKinds: ["rates"],
+          mutationOrigin: mutationOriginOperator(),
+          revision: Date.now(),
+          sourceEventId: `rate-plan:${unit.id}:${Date.now()}`,
+        }),
+      ]);
+
       return Result.ok(command.ratePlan);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));

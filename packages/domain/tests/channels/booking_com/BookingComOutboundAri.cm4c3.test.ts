@@ -330,7 +330,12 @@ describe("CM-4c-3 — durable schedule + push + retries", () => {
     expect(outbox.events[0]?.eventType).toBe(BOOKING_COM_ARI_PUSH_OUTBOX_EVENT_TYPE);
 
     const loop = await request.execute({
-      projection: { ...projection, inboundOriginProvider: "booking_com", generation: 11 },
+      projection: {
+        ...projection,
+        inboundOriginProvider: "booking_com",
+        inboundOriginConnectionId: CONNECTION_ID,
+        generation: 11,
+      },
     });
     expect(loop.getValue().outcome).toBe("suppressed_loop");
 

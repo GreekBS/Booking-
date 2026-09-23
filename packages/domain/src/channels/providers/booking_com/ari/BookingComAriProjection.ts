@@ -32,10 +32,12 @@ export interface BookingComAriResolvedProjection {
   readonly rates: readonly BookingComAriRateSegment[];
   readonly restrictions: readonly BookingComAriRestrictionSegment[];
   /**
-   * When set to the same provider as the outbound connection, suppress echo
-   * (reservation-origin inventory change must not loop back).
+   * When set to the same connection as the outbound connection, suppress echo
+   * (reservation-origin inventory change must not loop back to that connection).
    */
   readonly inboundOriginProvider: ChannelSource | null;
+  /** Preferred same-origin key — connection-specific (not provider-wide). */
+  readonly inboundOriginConnectionId: string | null;
   readonly pricingModel: "Standard" | "OBP" | "LOS" | "Derived";
 }
 

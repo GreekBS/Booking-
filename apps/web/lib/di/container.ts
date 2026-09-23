@@ -230,6 +230,10 @@ import {
 
   RequestBookingComAriPropagationUseCase,
 
+  PropagateChannelUnitSyncUseCase,
+
+  ChannelUnitSyncOutboxHandler,
+
   ExecuteBookingComAriPushUseCase,
 
   PushBookingComAriJobHandler,
@@ -860,10 +864,13 @@ const quoteRepository = new PrismaQuoteRepository(outboxRepository);
 const bookingRepository = new PrismaBookingRepository(outboxRepository);
 
 const calendarBlockRepository = new PrismaCalendarBlockRepository();
+export { calendarBlockRepository };
 
 const ratePlanRepository = new PrismaRatePlanRepository();
+export { ratePlanRepository };
 
 const availabilityRulesRepository = new PrismaAvailabilityRulesRepository();
+export { availabilityRulesRepository };
 
 const commerceFlowRepository = new PrismaCommerceFlowRepository(outboxRepository);
 
@@ -917,15 +924,21 @@ export const createManualBlockUseCase = new CreateManualBlockUseCase(
 
   idGenerator,
 
+  outboxRepository,
+
 );
 
 
 
 export const deleteManualBlockUseCase = new DeleteManualBlockUseCase(
 
+  catalogQueryAdapter,
+
   calendarBlockRepository,
 
   permissionChecker,
+
+  outboxRepository,
 
 );
 
@@ -1031,6 +1044,8 @@ export const configureAvailabilityRulesUseCase = new ConfigureAvailabilityRulesU
 
   permissionChecker,
 
+  outboxRepository,
+
 );
 
 
@@ -1042,6 +1057,8 @@ export const configureRatePlanUseCase = new ConfigureRatePlanUseCase(
   ratePlanRepository,
 
   permissionChecker,
+
+  outboxRepository,
 
 );
 
@@ -1191,7 +1208,7 @@ export const enqueueJobUseCase = new EnqueueJobUseCase(jobScheduler);
 outboxHandlerRegistry.register(new IcalInventoryReconcileOutboxHandler(enqueueJobUseCase));
 // CM-4c-3: Booking.com ARI push outbox → job bridge (before LoggingHandler).
 outboxHandlerRegistry.register(new BookingComAriPushOutboxHandler(enqueueJobUseCase));
-outboxHandlerRegistry.register(new LoggingHandler());
+// LoggingHandler registered later after ChannelUnitSyncOutboxHandler.
 
 export const processOutboxBatchUseCase = new ProcessOutboxBatchUseCase(
   outboxRepository,
@@ -1670,6 +1687,21 @@ export const requestBookingComAriPropagationUseCase =
     bookingComAriPushLedger,
     channelProductMappingRepository,
   );
+
+export const propagateChannelUnitSyncUseCase = new PropagateChannelUnitSyncUseCase(
+  channelConnectionRepository,
+  channelListingMappingRepository,
+  channelProductMappingRepository,
+  requestBookingComAriPropagationUseCase,
+  calendarBlockRepository,
+  ratePlanRepository,
+  availabilityRulesRepository,
+);
+
+outboxHandlerRegistry.register(
+  new ChannelUnitSyncOutboxHandler(propagateChannelUnitSyncUseCase),
+);
+outboxHandlerRegistry.register(new LoggingHandler());
 
 export const generateBookingComInitialSyncPreviewUseCase =
   new GenerateBookingComInitialSyncPreviewUseCase(

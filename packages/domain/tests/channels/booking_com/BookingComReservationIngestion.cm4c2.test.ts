@@ -701,6 +701,9 @@ describe("CM-4c-2 — modify/cancel processing + inventory conflict", () => {
       existingLink: {
         bookingId: "booking-1",
         tenantId: TENANT_ID,
+        provider: "booking_com",
+        connectionId: CONNECTION_ID,
+        externalReservationId: "1234567890",
         markSynced: vi.fn(),
       } as never,
       mappingVersion: 1,

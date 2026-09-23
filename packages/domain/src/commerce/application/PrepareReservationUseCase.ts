@@ -7,6 +7,7 @@ import type { ICatalogQueryPort } from "../ports/CommercePorts";
 import { ReservationOrchestrator } from "../reservation/ReservationOrchestrator";
 import type { CreateReservationCommand, PreparedReservationCreate } from "../reservation/types";
 import { resolveUnitContext } from "./commerceAccess";
+import type { MutationOrigin } from "../../shared/types/MutationOrigin";
 
 export class PrepareReservationUseCase {
   constructor(
@@ -18,6 +19,7 @@ export class PrepareReservationUseCase {
 
   async prepare(
     command: CreateReservationCommand,
+    mutationOrigin?: MutationOrigin | null,
   ): Promise<Result<PreparedReservationCreate, Error>> {
     try {
       const { reservation, profile } = command;
@@ -55,6 +57,7 @@ export class PrepareReservationUseCase {
         propertyTimezone: property.timezone,
         idempotencyKey: profile.idempotencyKey,
         confirmationMode: reservation.confirmationMode ?? "manual",
+        mutationOrigin: mutationOrigin ?? null,
       });
       if (prepared.isFailure) {
         return Result.fail(prepared.getError());
@@ -62,7 +65,7 @@ export class PrepareReservationUseCase {
 
       const { hold, quote, booking } = prepared.getValue();
       if (profile.confirmImmediately) {
-        booking.confirm();
+        booking.confirm(new Date(), mutationOrigin ?? null);
       }
 
       return Result.ok({ hold, quote, booking });

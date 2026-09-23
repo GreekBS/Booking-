@@ -75,7 +75,7 @@ ARI push cannot be invoked synchronously from Commerce; it is durable outbox/job
 - Permanent: disconnected / non-active terminal states, permanent provider errors.
 - Pause while queued: push deferred (retryable) so work survives resume.
 - Disconnect while queued: permanent fail (no silent push after disconnect).
-- Loop suppression: same-provider inbound origin does not echo ARI back.
+- Loop suppression: connection-id inbound origin does not echo ARI back to that connection (provider-wide echo is not used).
 
 ---
 
@@ -142,14 +142,25 @@ No secrets/PAN in telemetry fields.
 
 ## 11. Known limitations
 
-- Booking.com Connectivity Partner / listing access externally blocked  
-- Live HTTP clients NotConfigured in Production  
-- Standard pricing only (OBP/LOS/Derived rejected)  
-- Continuous Commerce/inventory → `RequestBookingComAriPropagation` fan-out is not yet wired from every Talos mutation path (initial-sync confirm + reconcile heal paths exist; live mutation bridge is remaining engineering before continuous ARI after every booking)  
-- `inboundOriginProvider` must be set by callers of ARI schedule for loop suppression to engage in production mutation flows  
-- Initial-sync local cells remain placeholder/conservative until live inventory projection is connected  
-- Real PostgreSQL inventory concurrency under Booking.com load: requires `TEST_DATABASE_URL`  
-- Official certification scripts / RUID evidence pack: require live test hotel  
+### ENGINEERING COMPLETE (this closure)
+
+- Generic Commerce → Channels mutation fan-out via Outbox (`ChannelUnitSyncOutboxHandler` → `PropagateChannelUnitSyncUseCase`)
+- Production mutation provenance (`MutationOrigin`: direct / operator / booking_engine / channel) with connection-id echo suppression
+- Real Talos inventory / rate / restriction projection (`projectTalosUnitAriSnapshot`) for continuous deltas and initial sync
+- Reservations, ARI, mappings, initial sync, reconciliation, worker/retry paths
+
+### REAL_ACCESS_REQUIRED (not engineering)
+
+- Machine-account auth against Booking.com
+- Live Booking.com HTTP / real test property
+- Live E2E + RUID evidence
+- Booking.com Connectivity certification
+- PCI/PII approval with live Extranet samples
+
+### Still environment-dependent
+
+- Real PostgreSQL inventory concurrency under Booking.com load: requires safe `TEST_DATABASE_URL` (never Production)
+- Official certification scripts / RUID evidence pack: require live test hotel
 
 ---
 
@@ -165,6 +176,20 @@ Fixed without live credentials:
 - Modify/cancel-before-create inbox outcomes retry instead of dead-letter  
 - Summary recovery use case wired in DI (client remains NotConfigured until live HTTP)  
 
+## 11c. Final engineering closure (Commerce → Channels)
+
+Fixed without live credentials:
+
+- Continuous Commerce mutations emit durable outbox events; `ChannelUnitSyncOutboxHandler` fans out to eligible active connections
+- Channel import create/modify/cancel stamp `mutationOriginChannel({ provider, connectionId, externalReservationId })`
+- Operator stay/cancel/confirm stamp `mutationOriginOperator()` — later operator edits are eligible for the originating connection
+- Same-origin suppression is **connection-id** based (two Booking.com connections are independent)
+- Manual blocks / rate plan / availability rules emit `UnitExternalSyncRequired`
+- Initial-sync preview + confirm use real Talos projection (no placeholder `roomsToSell: 1` / `price: 100`)
+- Inventory semantics: `roomsToSell = 0` iff any ACTIVE calendar block covers the night (bookings/holds/channel_import/manual already encoded — no double-subtract)
+- iCal remains capability-filtered out of ARI outbound
+
+Evidence: `BookingComFinalEngineeringClosure.test.ts`
 ## 12. Tests / evidence
 
 - `packages/domain/tests/channels/booking_com/BookingComProviderFoundation.cm4c1.test.ts`  
@@ -172,6 +197,7 @@ Fixed without live credentials:
 - `…/BookingComOutboundAri.cm4c3.test.ts`  
 - `…/BookingComMappingSync.cm4c4.test.ts`  
 - `…/BookingComCertificationRedTeam.cm4c6prep.test.ts`  
+- `…/BookingComFinalEngineeringClosure.test.ts`  
 - Architecture fitness: `BookingComMappingSyncFitness.cm4c4.test.ts`, `BookingComCertificationFitness.cm4c6prep.test.ts`, `ChannelArchitectureFitness.test.ts`  
 - Tenant UI: `apps/web/tests/channels/booking-com-tenant-ui.cm4c5.test.ts`
 

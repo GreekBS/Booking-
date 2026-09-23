@@ -12,6 +12,7 @@ import { Result } from "../../shared/kernel/Result";
 import { ForbiddenError, ValidationError } from "../../shared/errors/DomainError";
 import { PERMISSIONS } from "@hcp/permissions";
 import { assertCommercePropertyAccess } from "./commerceAccess";
+import { mutationOriginOperator } from "../../shared/types/MutationOrigin";
 
 export interface ChangeBookingStayCommand extends StayChangeDraft {
   tenantId: string;
@@ -64,7 +65,11 @@ export class ChangeBookingStayUseCase {
       }
 
       const booking = bookingResult.getValue();
-      const commitResult = await this.orchestrator.commitStayChange(booking, command);
+      const commitResult = await this.orchestrator.commitStayChange(
+        booking,
+        command,
+        mutationOriginOperator(),
+      );
       if (commitResult.isFailure) {
         return Result.fail(commitResult.getError());
       }

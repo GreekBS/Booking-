@@ -2,6 +2,7 @@ import { Result } from "../../shared/kernel/Result";
 import { ValidationError } from "../../shared/errors/DomainError";
 import type { Booking } from "../../commerce/booking/domain/Booking";
 import type { IBookingRepository } from "../../commerce/ports/CommercePorts";
+import { mutationOriginChannel } from "../../shared/types/MutationOrigin";
 import type { ExternalReservationLink } from "../domain/ExternalReservationLink";
 import type { IExternalReservationLinkRepository } from "../ports/IExternalReservationLinkRepository";
 import type { ChannelReservationCancelMapping } from "../types/ChannelReservationImportMapping";
@@ -54,7 +55,15 @@ export class ImportChannelReservationCancelCommandUseCase {
         });
       }
 
-      booking.cancel(command.mapping.reason ?? "Cancelled on Booking.com");
+      booking.cancel(
+        command.mapping.reason ?? "Cancelled on channel",
+        new Date(),
+        mutationOriginChannel({
+          provider: command.existingLink.provider,
+          connectionId: command.existingLink.connectionId,
+          externalReservationId: command.existingLink.externalReservationId,
+        }),
+      );
       await this.bookingRepository.save(booking);
 
       command.existingLink.updateExternalRevision({

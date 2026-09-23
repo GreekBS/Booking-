@@ -9,6 +9,7 @@ import type { IIdGenerator } from "../../../shared/ports/IIdGenerator";
 import type { ICatalogQueryPort } from "../../ports/CommercePorts";
 import { ValidationError } from "../../../shared/errors/DomainError";
 import { Result } from "../../../shared/kernel/Result";
+import type { MutationOrigin } from "../../../shared/types/MutationOrigin";
 
 export class StayMutationEngine {
   constructor(
@@ -120,6 +121,7 @@ export class StayMutationEngine {
   async commitStayChange(
     booking: Booking,
     draft: StayChangeDraft,
+    mutationOrigin?: MutationOrigin | null,
   ): Promise<Result<StayChangeCommitResult, Error>> {
     if (this.isUnchanged(booking, draft)) {
       return Result.fail(new ValidationError("Stay is unchanged"));
@@ -179,7 +181,7 @@ export class StayMutationEngine {
       propertyTimezone: property.timezone,
     });
 
-    booking.applyStayChange(command, quote);
+    booking.applyStayChange(command, quote, new Date(), mutationOrigin ?? null);
 
     return Result.ok({ booking, quote });
   }

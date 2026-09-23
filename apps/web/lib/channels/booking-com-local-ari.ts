@@ -1,5 +1,14 @@
-import type { BookingComAriDiffCell } from "@hcp/domain";
-import { fingerprintTalosAriCells, ValidationError } from "@hcp/domain";
+import type {
+  ActiveCalendarBlock,
+  BookingComAriDiffCell,
+  RatePlanProps,
+  UnitAvailabilityRulesProps,
+} from "@hcp/domain";
+import {
+  fingerprintTalosAriCells,
+  projectTalosUnitAriSnapshot,
+  ValidationError,
+} from "@hcp/domain";
 
 /**
  * Max inclusive calendar days for local ARI cell materialization.
@@ -8,56 +17,46 @@ import { fingerprintTalosAriCells, ValidationError } from "@hcp/domain";
 export const BOOKING_COM_LOCAL_ARI_MAX_DAYS = 400;
 
 /**
- * Builds a conservative Talos ARI local projection for initial-sync preview.
- * V1 does not import Booking.com prices; cells are Talos-authored placeholders
- * for mapped roomrates over the requested horizon.
+ * Builds Talos-authoritative ARI local cells for initial-sync preview.
+ * Uses sellable inventory (active blocks), PricingCalculator nightly amounts,
+ * and availability rules (min/max/CTA/CTD). No placeholder cells.
+ *
+ * Inventory semantics (unit capacity = 1):
+ *   roomsToSell = 0 if any ACTIVE calendar block covers the night, else 1
+ *   closed = 1 iff roomsToSell === 0
+ * Blocks already encode bookings/holds/channel_import/manual — no double-subtract.
  *
  * Fails closed when the horizon exceeds {@link BOOKING_COM_LOCAL_ARI_MAX_DAYS}.
  */
 export function buildBookingComLocalAriCells(input: {
   hotelId: string;
-  rooms: readonly { roomTypeId: string; ratePlanId: string | null }[];
+  rooms: readonly {
+    roomTypeId: string;
+    ratePlanId: string | null;
+    unitId: string;
+    activeBlocks: readonly ActiveCalendarBlock[];
+    ratePlan: RatePlanProps | null;
+    rules: UnitAvailabilityRulesProps | null;
+  }[];
   from: string;
   to: string;
-  roomsToSell?: number;
-  price?: number | null;
 }): { cells: BookingComAriDiffCell[]; talosStateFingerprint: string } {
-  const cells: BookingComAriDiffCell[] = [];
-  const dates = enumerateDates(input.from, input.to);
-  const roomsToSell = input.roomsToSell ?? 1;
+  assertHorizon(input.from, input.to);
 
+  const cells: BookingComAriDiffCell[] = [];
   for (const room of input.rooms) {
-    for (const date of dates) {
-      cells.push({
-        hotelId: input.hotelId,
-        roomTypeId: room.roomTypeId,
-        ratePlanId: room.ratePlanId,
-        date,
-        field: "roomstosell",
-        local: roomsToSell,
-        remote: null,
-      });
-      cells.push({
-        hotelId: input.hotelId,
-        roomTypeId: room.roomTypeId,
-        ratePlanId: room.ratePlanId,
-        date,
-        field: "closed",
-        local: 0,
-        remote: null,
-      });
-      if (room.ratePlanId && input.price != null) {
-        cells.push({
-          hotelId: input.hotelId,
-          roomTypeId: room.roomTypeId,
-          ratePlanId: room.ratePlanId,
-          date,
-          field: "price",
-          local: input.price,
-          remote: null,
-        });
-      }
-    }
+    const snapshot = projectTalosUnitAriSnapshot({
+      hotelId: input.hotelId,
+      roomTypeId: room.roomTypeId,
+      ratePlanId: room.ratePlanId,
+      from: input.from,
+      to: nextDayInclusiveEnd(input.to),
+      activeBlocks: room.activeBlocks,
+      ratePlan: room.ratePlan,
+      rules: room.rules,
+      includePrices: true,
+    });
+    cells.push(...snapshot.cells);
   }
 
   return {
@@ -66,11 +65,11 @@ export function buildBookingComLocalAriCells(input: {
   };
 }
 
-function enumerateDates(from: string, to: string): string[] {
+function assertHorizon(from: string, to: string): void {
   const start = new Date(`${from}T00:00:00.000Z`);
   const end = new Date(`${to}T00:00:00.000Z`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
-    return [from];
+    throw new ValidationError("Invalid ARI horizon dates");
   }
   const daySpan =
     Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
@@ -79,11 +78,11 @@ function enumerateDates(from: string, to: string): string[] {
       `Booking.com ARI horizon exceeds ${BOOKING_COM_LOCAL_ARI_MAX_DAYS} days (${daySpan} requested)`,
     );
   }
-  const out: string[] = [];
-  const cursor = new Date(start);
-  while (cursor <= end) {
-    out.push(cursor.toISOString().slice(0, 10));
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return out;
+}
+
+/** projectTalosUnitAriSnapshot uses half-open [from, to); convert inclusive end. */
+function nextDayInclusiveEnd(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y!, m! - 1, d! + 1));
+  return dt.toISOString().slice(0, 10);
 }

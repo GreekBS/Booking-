@@ -3,6 +3,7 @@ import { ConflictError, ValidationError } from "../../shared/errors/DomainError"
 import type { Booking } from "../../commerce/booking/domain/Booking";
 import type { IBookingRepository, ICommerceFlowRepository, IQuoteRepository } from "../../commerce/ports/CommercePorts";
 import type { ReservationOrchestrator } from "../../commerce/reservation/ReservationOrchestrator";
+import { mutationOriginChannel } from "../../shared/types/MutationOrigin";
 import type { ExternalReservationLink } from "../domain/ExternalReservationLink";
 import type { IExternalReservationLinkRepository } from "../ports/IExternalReservationLinkRepository";
 import type { ChannelReservationModifyMapping } from "../types/ChannelReservationImportMapping";
@@ -75,7 +76,17 @@ export class ImportChannelReservationModifyCommandUseCase {
         return Result.fail(new ValidationError("Quote not found"));
       }
 
-      const commitResult = await this.orchestrator.commitStayChange(booking, draft);
+      const origin = mutationOriginChannel({
+        provider: command.existingLink.provider,
+        connectionId: command.existingLink.connectionId,
+        externalReservationId: command.existingLink.externalReservationId,
+      });
+
+      const commitResult = await this.orchestrator.commitStayChange(
+        booking,
+        draft,
+        origin,
+      );
       if (commitResult.isFailure) {
         const err = commitResult.getError();
         if (

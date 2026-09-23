@@ -4,6 +4,9 @@ import {
   getChannelConnectionUseCase,
   reconcileBookingComConnectionUseCase,
   listChannelProductMappingsUseCase,
+  calendarBlockRepository,
+  ratePlanRepository,
+  availabilityRulesRepository,
 } from "@/lib/di/container";
 import {
   requireTenantContext,
@@ -72,14 +75,29 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const roomMaps = listed
       .getValue()
-      .mappings.filter((m) => m.status === "active" && m.kind === "room_rate");
+      .mappings.filter((m) => m.status === "active" && m.kind === "room_rate" && m.unitId);
+
+    const rooms = [];
+    for (const m of roomMaps) {
+      const unitId = m.unitId!;
+      const [activeBlocks, ratePlan, rules] = await Promise.all([
+        calendarBlockRepository.findActiveBlocks(unitId, actor.tenantId),
+        ratePlanRepository.findByUnitId(unitId, actor.tenantId),
+        availabilityRulesRepository.findByUnitId(unitId, actor.tenantId),
+      ]);
+      rooms.push({
+        roomTypeId: m.externalRoomTypeId!,
+        ratePlanId: m.externalRatePlanId,
+        unitId,
+        activeBlocks,
+        ratePlan,
+        rules,
+      });
+    }
 
     const { cells } = buildBookingComLocalAriCells({
       hotelId: hotelId ?? "0",
-      rooms: roomMaps.map((m) => ({
-        roomTypeId: m.externalRoomTypeId!,
-        ratePlanId: m.externalRatePlanId,
-      })),
+      rooms,
       from: body.from,
       to: body.to,
     });

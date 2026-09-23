@@ -5,6 +5,7 @@ import { GuestCount } from "../../shared/value-objects/GuestCount";
 import type { HoldStatus } from "../../shared/types/CommerceTypes";
 import { DEFAULT_HOLD_TTL_SECONDS } from "../../shared/types/CommerceTypes";
 import { HoldStateMachine } from "./BookingStateMachine";
+import type { MutationOrigin } from "../../../shared/types/MutationOrigin";
 import {
   HoldCreatedEvent,
   HoldExpiredEvent,
@@ -37,6 +38,7 @@ export interface CreateHoldProps {
   sessionRef?: string | null;
   ttlSeconds?: number;
   now?: Date;
+  mutationOrigin?: MutationOrigin | null;
 }
 
 export class Hold extends AggregateRoot<HoldProps> {
@@ -110,6 +112,7 @@ export class Hold extends AggregateRoot<HoldProps> {
         checkIn: hold.props.checkIn,
         checkOut: hold.props.checkOut,
         expiresAt: hold.expiresAt.toISOString(),
+        mutationOrigin: props.mutationOrigin ?? null,
       }),
     );
 
@@ -136,19 +139,35 @@ export class Hold extends AggregateRoot<HoldProps> {
     }
   }
 
-  release(at: Date = new Date()): void {
+  release(at: Date = new Date(), mutationOrigin?: MutationOrigin | null): void {
     HoldStateMachine.assertActive(this.props.status);
     this.transitionTo("released", at);
-    this.addDomainEvent(new HoldReleasedEvent(this.id, this.tenantId));
+    this.addDomainEvent(
+      new HoldReleasedEvent(this.id, this.tenantId, {
+        unitId: this.unitId,
+        propertyId: this.propertyId,
+        checkIn: this.props.checkIn,
+        checkOut: this.props.checkOut,
+        mutationOrigin: mutationOrigin ?? null,
+      }),
+    );
   }
 
-  expire(at: Date = new Date()): void {
+  expire(at: Date = new Date(), mutationOrigin?: MutationOrigin | null): void {
     HoldStateMachine.assertActive(this.props.status);
     if (!this.isExpired(at)) {
       throw new ConflictError("Hold has not yet expired");
     }
     this.transitionTo("expired", at);
-    this.addDomainEvent(new HoldExpiredEvent(this.id, this.tenantId));
+    this.addDomainEvent(
+      new HoldExpiredEvent(this.id, this.tenantId, {
+        unitId: this.unitId,
+        propertyId: this.propertyId,
+        checkIn: this.props.checkIn,
+        checkOut: this.props.checkOut,
+        mutationOrigin: mutationOrigin ?? null,
+      }),
+    );
   }
 
   markConverted(at: Date = new Date()): void {

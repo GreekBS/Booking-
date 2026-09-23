@@ -3,6 +3,7 @@ import { Result } from "../../shared/kernel/Result";
 import { ConflictError, ValidationError } from "../../shared/errors/DomainError";
 import { createChannelImportActor } from "../../commerce/application/channelImportActor";
 import type { PrepareReservationUseCase } from "../../commerce/application/PrepareReservationUseCase";
+import { mutationOriginChannel } from "../../shared/types/MutationOrigin";
 import { ExternalReservationLink } from "../domain/ExternalReservationLink";
 import { ChannelImportKey } from "../domain/value-objects/ChannelImportKey";
 import type { IChannelListingMappingRepository } from "../ports/IChannelListingMappingRepository";
@@ -71,15 +72,24 @@ export class ImportChannelReservationCommandUseCase {
         return Result.fail(mappingValidation.getError());
       }
 
-      const prepared = await this.prepareReservationUseCase.prepare({
-        reservation: normalizedCommand,
-        profile: {
-          confirmImmediately: true,
-          idempotencyKey: importKey.value,
-          actor: createChannelImportActor(tenantId),
-          writeAudit: false,
-        },
+      const origin = mutationOriginChannel({
+        provider: external.provider,
+        connectionId,
+        externalReservationId,
       });
+
+      const prepared = await this.prepareReservationUseCase.prepare(
+        {
+          reservation: normalizedCommand,
+          profile: {
+            confirmImmediately: true,
+            idempotencyKey: importKey.value,
+            actor: createChannelImportActor(tenantId),
+            writeAudit: false,
+          },
+        },
+        origin,
+      );
       if (prepared.isFailure) {
         return Result.fail(prepared.getError());
       }

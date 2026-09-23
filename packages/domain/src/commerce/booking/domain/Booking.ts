@@ -7,6 +7,7 @@ import type { Hold } from "./Hold";
 import type { Quote } from "./Quote";
 import { BookingStateMachine } from "./BookingStateMachine";
 import type { ApplyStayChangeCommand } from "../../reservation/types";
+import type { MutationOrigin } from "../../../shared/types/MutationOrigin";
 import {
   BookingCancelledEvent,
   BookingConfirmedEvent,
@@ -45,6 +46,7 @@ export interface CreateBookingProps {
   guest: GuestDetailsProps;
   confirmationMode: ConfirmationMode;
   now?: Date;
+  mutationOrigin?: MutationOrigin | null;
 }
 
 export class Booking extends AggregateRoot<BookingProps> {
@@ -138,6 +140,9 @@ export class Booking extends AggregateRoot<BookingProps> {
         holdId: booking.holdId,
         quoteId: booking.quoteId,
         quoteSnapshotId: booking.quoteSnapshotId,
+        checkIn: booking.props.checkIn,
+        checkOut: booking.props.checkOut,
+        mutationOrigin: props.mutationOrigin ?? null,
       }),
     );
 
@@ -165,22 +170,41 @@ export class Booking extends AggregateRoot<BookingProps> {
     this.transitionTo("payment_pending", at);
   }
 
-  confirm(at: Date = new Date()): void {
+  confirm(at: Date = new Date(), mutationOrigin?: MutationOrigin | null): void {
     BookingStateMachine.assertNotTerminal(this.props.status);
     BookingStateMachine.assertCanConfirm(this.props.status, this.props.confirmationMode);
 
     this.transitionTo("confirmed", at);
     this.props.confirmedAt = at;
-    this.addDomainEvent(new BookingConfirmedEvent(this.id, this.tenantId));
+    this.addDomainEvent(
+      new BookingConfirmedEvent(this.id, this.tenantId, {
+        unitId: this.unitId,
+        propertyId: this.propertyId,
+        checkIn: this.props.checkIn,
+        checkOut: this.props.checkOut,
+        mutationOrigin: mutationOrigin ?? null,
+      }),
+    );
   }
 
-  cancel(reason?: string, at: Date = new Date()): void {
+  cancel(
+    reason?: string,
+    at: Date = new Date(),
+    mutationOrigin?: MutationOrigin | null,
+  ): void {
     BookingStateMachine.assertNotTerminal(this.props.status);
     if (this.props.status === "confirmed" || this.props.status === "payment_pending" || this.props.status === "pending") {
       this.transitionTo("cancelled", at);
       this.props.cancelledAt = at;
       this.addDomainEvent(
-        new BookingCancelledEvent(this.id, this.tenantId, { reason }),
+        new BookingCancelledEvent(this.id, this.tenantId, {
+          reason,
+          unitId: this.unitId,
+          propertyId: this.propertyId,
+          checkIn: this.props.checkIn,
+          checkOut: this.props.checkOut,
+          mutationOrigin: mutationOrigin ?? null,
+        }),
       );
       return;
     }
@@ -195,7 +219,12 @@ export class Booking extends AggregateRoot<BookingProps> {
     this.props.completedAt = at;
   }
 
-  applyStayChange(command: ApplyStayChangeCommand, quote: Quote, at: Date = new Date()): void {
+  applyStayChange(
+    command: ApplyStayChangeCommand,
+    quote: Quote,
+    at: Date = new Date(),
+    mutationOrigin?: MutationOrigin | null,
+  ): void {
     BookingStateMachine.assertNotTerminal(this.props.status);
 
     if (quote.tenantId !== this.props.tenantId) {
@@ -231,6 +260,7 @@ export class Booking extends AggregateRoot<BookingProps> {
     const eventBase: Omit<StayChangeEventPayload, "before" | "after"> = {
       quoteId: quote.id,
       previousQuoteId,
+      mutationOrigin: mutationOrigin ?? null,
     };
 
     if (before.checkIn !== command.checkIn || before.checkOut !== command.checkOut) {

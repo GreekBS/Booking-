@@ -147,6 +147,14 @@ describe("ImportChannelReservationCommandUseCase", () => {
           idempotencyKey: ChannelImportKey.create(CONNECTION_ID, EXTERNAL_RESERVATION_ID).value,
         }),
       }),
+      expect.objectContaining({
+        kind: "channel",
+        channel: expect.objectContaining({
+          provider: FAKE_CHANNEL_PROVIDER_ID,
+          connectionId: CONNECTION_ID,
+          externalReservationId: EXTERNAL_RESERVATION_ID,
+        }),
+      }),
     );
   });
 

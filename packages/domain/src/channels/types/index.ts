@@ -1,3 +1,4 @@
+export * from "./ChannelUnitSyncChange";
 export * from "./ChannelTypes";
 export * from "./ChannelCapabilities";
 export * from "./ChannelSyncEnums";

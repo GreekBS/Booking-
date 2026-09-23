@@ -19,3 +19,4 @@ Use the transactional outbox pattern:
 - Repository saves always pull events before transaction commit
 - Durable outbox insert + transactional `NOTIFY` (best-effort); lost wake recovered by worker sweep (~1–3s)
 - Cron is not the primary outbox execution engine — see `docs/talos-event-driven-async-worker.md`
+- Channel ARI fan-out: Commerce Booking/Hold events and `UnitExternalSyncRequired` are handled by `ChannelUnitSyncOutboxHandler` → provider-capability-filtered durable ARI schedule (never synchronous provider HTTP inside Commerce)

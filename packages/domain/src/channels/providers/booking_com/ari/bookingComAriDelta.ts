@@ -33,6 +33,7 @@ export function projectAvailabilityDeltaToBookingCom(input: {
   mappingVersion: number;
   generation: number;
   inboundOriginProvider?: ChannelSource | null;
+  inboundOriginConnectionId?: string | null;
   pricingModel?: BookingComAriResolvedProjection["pricingModel"];
 }): BookingComAriResolvedProjection {
   const from = assertYmd(input.delta.from, "from");
@@ -64,6 +65,7 @@ export function projectAvailabilityDeltaToBookingCom(input: {
     rates: [],
     restrictions: [],
     inboundOriginProvider: input.inboundOriginProvider ?? null,
+    inboundOriginConnectionId: input.inboundOriginConnectionId ?? null,
     pricingModel: input.pricingModel ?? "Standard",
   };
 }
@@ -79,6 +81,7 @@ export function projectRateDeltaToBookingCom(input: {
   mappingVersion: number;
   generation: number;
   inboundOriginProvider?: ChannelSource | null;
+  inboundOriginConnectionId?: string | null;
   pricingModel?: BookingComAriResolvedProjection["pricingModel"];
 }): BookingComAriResolvedProjection {
   if (input.pricingModel && input.pricingModel !== "Standard") {
@@ -123,6 +126,7 @@ export function projectRateDeltaToBookingCom(input: {
     rates,
     restrictions: [],
     inboundOriginProvider: input.inboundOriginProvider ?? null,
+    inboundOriginConnectionId: input.inboundOriginConnectionId ?? null,
     pricingModel: "Standard",
   };
 }
@@ -135,6 +139,7 @@ export function projectRestrictionDeltaToBookingCom(input: {
   mappingVersion: number;
   generation: number;
   inboundOriginProvider?: ChannelSource | null;
+  inboundOriginConnectionId?: string | null;
   pricingModel?: BookingComAriResolvedProjection["pricingModel"];
 }): BookingComAriResolvedProjection {
   const from = assertYmd(input.delta.from, "from");
@@ -178,6 +183,7 @@ export function projectRestrictionDeltaToBookingCom(input: {
       },
     ],
     inboundOriginProvider: input.inboundOriginProvider ?? null,
+    inboundOriginConnectionId: input.inboundOriginConnectionId ?? null,
     pricingModel: input.pricingModel ?? "Standard",
   };
 }

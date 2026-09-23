@@ -5,6 +5,7 @@ import type { AvailabilityReason } from "../shared/types/CommerceTypes";
 import type { Hold } from "../booking/domain/Hold";
 import type { Quote } from "../booking/domain/Quote";
 import type { Booking } from "../booking/domain/Booking";
+import type { MutationOrigin } from "../../shared/types/MutationOrigin";
 
 export interface StayChangeDraft {
   unitId: string;
@@ -67,6 +68,8 @@ export interface PrepareReservationCreateParams {
   idempotencyKey?: string | null;
   confirmationMode?: ConfirmationMode;
   quotedAt?: Date;
+  /** Trusted server-side provenance only — never from browsers. */
+  mutationOrigin?: MutationOrigin | null;
 }
 
 export interface PreparedReservationCreate {

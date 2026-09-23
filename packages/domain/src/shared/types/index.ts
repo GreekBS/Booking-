@@ -32,6 +32,7 @@ export interface TenantContext {
 }
 
 export type { UseCaseAuditContext } from "./AuditContext";
+export * from "./MutationOrigin";
 
 export interface AuditEntry {
   tenantId: string | null;

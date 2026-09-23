@@ -57,7 +57,17 @@ export class RequestBookingComAriPropagationUseCase {
       if (
         shouldSuppressChannelOutboundEcho({
           outboundProvider: "booking_com",
-          inboundOriginProvider: projection.inboundOriginProvider,
+          outboundConnectionId: projection.connectionId,
+          mutationOrigin:
+            projection.inboundOriginConnectionId != null
+              ? {
+                  kind: "channel" as const,
+                  channel: {
+                    provider: projection.inboundOriginProvider ?? "booking_com",
+                    connectionId: projection.inboundOriginConnectionId,
+                  },
+                }
+              : null,
         })
       ) {
         return Result.ok({ outcome: "suppressed_loop" });
