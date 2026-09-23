@@ -727,11 +727,9 @@ export const revokeMemberUseCase = new RevokeMemberUseCase(
 
 
 export const resolveTenantContextUseCase = new ResolveTenantContextUseCase(
-
+  userRepository,
   tenantRepository,
-
   membershipRepository,
-
 );
 
 export const getMeUseCase = new GetMeUseCase(

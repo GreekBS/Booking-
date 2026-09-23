@@ -102,4 +102,34 @@ export class PrismaCatalogQueryAdapter implements ICatalogQueryPort {
       status: property.status,
     }));
   }
+
+  async getUnitPropertyContextsByUnitIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<Array<{ unitId: string; propertyId: string }>> {
+    if (unitIds.length === 0) return [];
+    const units = await prisma.unit.findMany({
+      where: { tenantId, id: { in: unitIds } },
+      select: {
+        id: true,
+        propertyId: true,
+        property: {
+          select: {
+            id: true,
+            tenantId: true,
+          },
+        },
+      },
+    });
+
+    const contexts: Array<{ unitId: string; propertyId: string }> = [];
+    for (const unit of units) {
+      // Tenant isolation: unit already scoped; property must match same tenant.
+      if (!unit.property || unit.property.tenantId !== tenantId) {
+        continue;
+      }
+      contexts.push({ unitId: unit.id, propertyId: unit.propertyId });
+    }
+    return contexts;
+  }
 }

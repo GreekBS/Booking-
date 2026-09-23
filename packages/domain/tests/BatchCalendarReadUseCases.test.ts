@@ -38,13 +38,13 @@ describe("Batch calendar read use cases", () => {
     isSuperAdmin: false,
   };
 
-  const getUnitsByIds = vi.fn();
-  const getPropertiesByIds = vi.fn();
+  const getUnitPropertyContextsByUnitIds = vi.fn();
   const catalog = {
     getUnit: vi.fn(),
     getProperty: vi.fn(),
-    getUnitsByIds,
-    getPropertiesByIds,
+    getUnitsByIds: vi.fn(),
+    getPropertiesByIds: vi.fn(),
+    getUnitPropertyContextsByUnitIds,
   };
 
   const findCalendarBlocksByUnits = vi.fn();
@@ -54,28 +54,21 @@ describe("Batch calendar read use cases", () => {
   const findByUnitIdsRules = vi.fn();
 
   beforeEach(() => {
-    getUnitsByIds.mockReset();
-    getPropertiesByIds.mockReset();
+    getUnitPropertyContextsByUnitIds.mockReset();
     findCalendarBlocksByUnits.mockReset();
     findActiveByUnits.mockReset();
     findByUnits.mockReset();
     findByUnitIdsRates.mockReset();
     findByUnitIdsRules.mockReset();
 
-    getUnitsByIds.mockImplementation(async (ids: string[]) =>
+    getUnitPropertyContextsByUnitIds.mockImplementation(async (ids: string[]) =>
       ids
         .filter((id) => id === UNIT_A1 || id === UNIT_A2)
         .map((id) => ({
-          id,
-          tenantId: TENANT_A,
+          unitId: id,
           propertyId: PROP_A,
-          maxGuests: 4,
-          status: "active",
         })),
     );
-    getPropertiesByIds.mockResolvedValue([
-      { id: PROP_A, tenantId: TENANT_A, timezone: "Europe/Athens", status: "active" },
-    ]);
     findCalendarBlocksByUnits.mockResolvedValue([]);
     findActiveByUnits.mockResolvedValue([]);
     findByUnits.mockResolvedValue([]);
@@ -166,14 +159,8 @@ describe("Batch calendar read use cases", () => {
     });
 
     it("fails safely when a foreign unit id is mixed in (no leak)", async () => {
-      getUnitsByIds.mockResolvedValue([
-        {
-          id: UNIT_A1,
-          tenantId: TENANT_A,
-          propertyId: PROP_A,
-          maxGuests: 4,
-          status: "active",
-        },
+      getUnitPropertyContextsByUnitIds.mockResolvedValue([
+        { unitId: UNIT_A1, propertyId: PROP_A },
         // UNIT_B1 omitted — not in tenant A
       ]);
 
@@ -215,17 +202,8 @@ describe("Batch calendar read use cases", () => {
     });
 
     it("allows inactive units for operator calendar reads (reaches batched DB queries)", async () => {
-      getUnitsByIds.mockResolvedValue([
-        {
-          id: UNIT_A1,
-          tenantId: TENANT_A,
-          propertyId: PROP_A,
-          maxGuests: 4,
-          status: "inactive",
-        },
-      ]);
-      getPropertiesByIds.mockResolvedValue([
-        { id: PROP_A, tenantId: TENANT_A, timezone: "Europe/Athens", status: "draft" },
+      getUnitPropertyContextsByUnitIds.mockResolvedValue([
+        { unitId: UNIT_A1, propertyId: PROP_A },
       ]);
       findCalendarBlocksByUnits.mockResolvedValue([
         {
@@ -254,6 +232,22 @@ describe("Batch calendar read use cases", () => {
       expect(result.isSuccess).toBe(true);
       expect(findCalendarBlocksByUnits).toHaveBeenCalledTimes(1);
       expect(result.getValue()[UNIT_A1]!.blocks).toHaveLength(1);
+    });
+
+    it("uses one-shot unit+property context (not serial getUnitsByIds → getPropertiesByIds)", async () => {
+      await useCase.execute(
+        {
+          tenantId: TENANT_A,
+          unitIds: [UNIT_A1, UNIT_A2],
+          from: "2026-06-01",
+          to: "2026-07-01",
+        },
+        adminActor,
+      );
+
+      expect(getUnitPropertyContextsByUnitIds).toHaveBeenCalledTimes(1);
+      expect(catalog.getUnitsByIds).not.toHaveBeenCalled();
+      expect(catalog.getPropertiesByIds).not.toHaveBeenCalled();
     });
 
     it("does not call per-unit repository methods", async () => {
@@ -319,17 +313,8 @@ describe("Batch calendar read use cases", () => {
     });
 
     it("allows inactive units for operator rate-plan batch reads", async () => {
-      getUnitsByIds.mockResolvedValue([
-        {
-          id: UNIT_A1,
-          tenantId: TENANT_A,
-          propertyId: PROP_A,
-          maxGuests: 4,
-          status: "inactive",
-        },
-      ]);
-      getPropertiesByIds.mockResolvedValue([
-        { id: PROP_A, tenantId: TENANT_A, timezone: "Europe/Athens", status: "draft" },
+      getUnitPropertyContextsByUnitIds.mockResolvedValue([
+        { unitId: UNIT_A1, propertyId: PROP_A },
       ]);
       findByUnitIdsRates.mockResolvedValue(
         new Map([

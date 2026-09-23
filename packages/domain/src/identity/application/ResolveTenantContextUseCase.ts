@@ -1,8 +1,11 @@
 import { Result } from "../../shared/kernel/Result";
-import { ForbiddenError } from "../../shared/errors/DomainError";
+import { ForbiddenError, UnauthorizedError } from "../../shared/errors/DomainError";
 import type { TenantRole } from "../../shared/types/index";
 import type { ITenantRepository } from "../../platform/ports/ITenantRepository";
-import type { IMembershipRepository } from "../ports/IdentityRepositories";
+import type {
+  IMembershipRepository,
+  IUserRepository,
+} from "../ports/IdentityRepositories";
 
 export interface ResolvedTenantContext {
   tenantId: string;
@@ -10,16 +13,29 @@ export interface ResolvedTenantContext {
   role: TenantRole | "super_admin";
   propertyIds: string[] | null;
   isSuperAdmin: boolean;
+  /** DB-authoritative platform role — never from JWT. */
+  platformRole: "super_admin" | null;
+  email: string;
+  userId: string;
 }
 
 export interface ResolveTenantContextInput {
   userId: string;
-  platformRole: "super_admin" | null;
   tenantId: string;
+  /**
+   * JWT platformRole claim for mismatch diagnostics only.
+   * Never used as authorization authority.
+   */
+  jwtPlatformRole?: "super_admin" | null;
 }
 
+/**
+ * Resolves tenant access with DB-authoritative User + Tenant reads in parallel
+ * (both IDs are known up front). Membership is loaded only for non–super-admins.
+ */
 export class ResolveTenantContextUseCase {
   constructor(
+    private readonly userRepository: IUserRepository,
     private readonly tenantRepository: ITenantRepository,
     private readonly membershipRepository: IMembershipRepository,
   ) {}
@@ -28,7 +44,15 @@ export class ResolveTenantContextUseCase {
     input: ResolveTenantContextInput,
   ): Promise<Result<ResolvedTenantContext, Error>> {
     try {
-      const tenant = await this.tenantRepository.findById(input.tenantId);
+      const [user, tenant] = await Promise.all([
+        this.userRepository.findById(input.userId),
+        this.tenantRepository.findById(input.tenantId),
+      ]);
+
+      if (!user) {
+        return Result.fail(new UnauthorizedError());
+      }
+
       if (!tenant) {
         return Result.fail(new ForbiddenError("Tenant not found"));
       }
@@ -37,13 +61,27 @@ export class ResolveTenantContextUseCase {
         return Result.fail(new ForbiddenError("Tenant suspended"));
       }
 
-      if (input.platformRole === "super_admin") {
+      const platformRole = user.platformRole;
+      const jwtRole = input.jwtPlatformRole ?? null;
+      if (jwtRole === "super_admin" && platformRole !== "super_admin") {
+        console.warn(
+          "[auth] platformRole mismatch: JWT claimed super_admin, DB role is null",
+          { userId: input.userId },
+        );
+      }
+
+      const email = user.toProps().email;
+
+      if (platformRole === "super_admin") {
         return Result.ok({
           tenantId: input.tenantId,
           tenantStatus: tenant.status,
           role: "super_admin",
           propertyIds: null,
           isSuperAdmin: true,
+          platformRole,
+          email,
+          userId: input.userId,
         });
       }
 
@@ -62,6 +100,9 @@ export class ResolveTenantContextUseCase {
         role: membership.role,
         propertyIds: membership.propertyIds,
         isSuperAdmin: false,
+        platformRole,
+        email,
+        userId: input.userId,
       });
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));

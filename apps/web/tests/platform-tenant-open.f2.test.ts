@@ -185,7 +185,6 @@ describe("Phase F.2 — tenant context after Open + stale-SA closed", () => {
         activeTenantId: TENANT,
       }),
     );
-    findById.mockResolvedValue(dbUser("super_admin"));
     resolveTenantExecute.mockResolvedValue({
       isFailure: false,
       isSuccess: true,
@@ -195,6 +194,9 @@ describe("Phase F.2 — tenant context after Open + stale-SA closed", () => {
         role: "super_admin",
         propertyIds: null,
         isSuperAdmin: true,
+        platformRole: "super_admin",
+        email: "u@example.com",
+        userId: "550e8400-e29b-41d4-a716-4466554400f1",
       }),
     });
 
@@ -203,7 +205,7 @@ describe("Phase F.2 — tenant context after Open + stale-SA closed", () => {
     expect(actor.activeTenantId).toBe(TENANT);
     expect(resolveTenantExecute).toHaveBeenCalledWith(
       expect.objectContaining({
-        platformRole: "super_admin",
+        jwtPlatformRole: "super_admin",
         tenantId: TENANT,
       }),
     );
@@ -216,7 +218,6 @@ describe("Phase F.2 — tenant context after Open + stale-SA closed", () => {
         activeTenantId: TENANT,
       }),
     );
-    findById.mockResolvedValue(dbUser(null));
     resolveTenantExecute.mockResolvedValue({
       isFailure: true,
       getError: () => new ForbiddenError("Not a member of this tenant"),
@@ -224,7 +225,7 @@ describe("Phase F.2 — tenant context after Open + stale-SA closed", () => {
 
     await expect(requireTenantContext()).rejects.toBeInstanceOf(ForbiddenError);
     expect(resolveTenantExecute).toHaveBeenCalledWith(
-      expect.objectContaining({ platformRole: null, tenantId: TENANT }),
+      expect.objectContaining({ jwtPlatformRole: "super_admin", tenantId: TENANT }),
     );
   });
 
@@ -248,6 +249,9 @@ describe("Phase F.2 — tenant context after Open + stale-SA closed", () => {
         role: "owner",
         propertyIds: null,
         isSuperAdmin: false,
+        platformRole: null,
+        email: "u@example.com",
+        userId: "550e8400-e29b-41d4-a716-4466554400f1",
       }),
     });
 

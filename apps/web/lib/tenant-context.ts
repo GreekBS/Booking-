@@ -87,25 +87,34 @@ export async function requireSuperAdmin(): Promise<SessionActor> {
 
 /**
  * Tenant context for admin APIs. Request-scoped memoization by tenant header
- * (same request only). Still runs DB tenant + membership resolution.
+ * (same request only). User + Tenant authority reads run in parallel;
+ * membership is loaded only when required. DB remains authoritative.
  */
 export const requireTenantContext = cache(
   async (tenantIdHeader?: string | null): Promise<TenantActor> => {
     const normalizedHeader = tenantIdHeader ?? null;
 
-    // platformRole here is already DB-authoritative (via requireSession).
-    const actor = await requireSession();
-    const tenantId = normalizedHeader ?? actor.activeTenantId;
+    const session = await getAuthSession();
 
+    if (!session?.user?.id) {
+      throw new UnauthorizedError();
+    }
+
+    const tenantId = normalizedHeader ?? session.user.activeTenantId ?? null;
     if (!tenantId) {
       throw new ForbiddenError("Tenant context required");
     }
 
-    const result = await resolveTenantContextUseCase.execute({
-      userId: actor.userId,
-      platformRole: actor.platformRole,
-      tenantId,
-    });
+    let result;
+    try {
+      result = await resolveTenantContextUseCase.execute({
+        userId: session.user.id,
+        tenantId,
+        jwtPlatformRole: session.user.platformRole ?? null,
+      });
+    } catch {
+      throw new ForbiddenError("Unable to verify platform authority");
+    }
 
     if (result.isFailure) {
       throw result.getError();
@@ -114,7 +123,9 @@ export const requireTenantContext = cache(
     const ctx = result.getValue();
 
     return {
-      ...actor,
+      userId: ctx.userId,
+      email: ctx.email,
+      platformRole: ctx.platformRole,
       tenantId: ctx.tenantId,
       role: ctx.role,
       propertyIds: ctx.propertyIds,

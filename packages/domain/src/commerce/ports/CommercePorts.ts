@@ -33,6 +33,14 @@ export interface ICatalogQueryPort {
     propertyIds: string[],
     tenantId: string,
   ): Promise<CatalogPropertyReadModel[]>;
+  /**
+   * One-shot tenant-scoped unit + property context for operator batch authorization.
+   * Missing/foreign units are omitted (caller enforces completeness).
+   */
+  getUnitPropertyContextsByUnitIds(
+    unitIds: string[],
+    tenantId: string,
+  ): Promise<Array<{ unitId: string; propertyId: string }>>;
 }
 
 export interface CalendarDateRange {

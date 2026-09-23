@@ -51,30 +51,18 @@ async function resolveAuthorizedUnits(
     return Result.fail(new ValidationError("unitIds required"));
   }
 
-  const units = await catalog.getUnitsByIds(uniqueIds, tenantId);
-  if (units.length !== uniqueIds.length) {
+  const contexts = await catalog.getUnitPropertyContextsByUnitIds(uniqueIds, tenantId);
+  if (contexts.length !== uniqueIds.length) {
     return Result.fail(new ValidationError("One or more units were not found"));
   }
 
-  const propertyIds = [...new Set(units.map((u) => u.propertyId))];
-  const properties = await catalog.getPropertiesByIds(propertyIds, tenantId);
-  if (properties.length !== propertyIds.length) {
-    return Result.fail(new ValidationError("One or more units were not found"));
-  }
-
-  const propertyById = new Map(properties.map((p) => [p.id, p]));
-
-  for (const unit of units) {
-    const property = propertyById.get(unit.propertyId);
-    if (!property) {
-      return Result.fail(new ValidationError("One or more units were not found"));
-    }
+  for (const ctx of contexts) {
     if (
       !canAccessCommerceProperty(
         permissionChecker,
         actor,
         tenantId,
-        unit.propertyId,
+        ctx.propertyId,
         tenantPermission,
         assignedPermission,
       )
@@ -83,7 +71,7 @@ async function resolveAuthorizedUnits(
     }
   }
 
-  return Result.ok(units.map((u) => ({ unitId: u.id, propertyId: u.propertyId })));
+  return Result.ok(contexts);
 }
 
 export interface GetUnitsCalendarBatchCommand {

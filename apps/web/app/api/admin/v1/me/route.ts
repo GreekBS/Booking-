@@ -33,8 +33,8 @@ export async function PATCH(request: Request) {
 
     const access = await resolveTenantContextUseCase.execute({
       userId: actor.userId,
-      platformRole: actor.platformRole,
       tenantId: body.activeTenantId,
+      jwtPlatformRole: actor.platformRole,
     });
 
     if (access.isFailure) {

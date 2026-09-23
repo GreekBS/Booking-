@@ -134,14 +134,13 @@ describe("requireTenantContext SA bypass (Phase F.1)", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
 
-  it("stale JWT SA + DB null + no membership → NO SA bypass", async () => {
+  it("stale JWT SA + resolver denial → NO SA bypass", async () => {
     auth.mockResolvedValue(
       jwtSession({
         platformRole: "super_admin",
         activeTenantId: "550e8400-e29b-41d4-a716-446655440020",
       }),
     );
-    findById.mockResolvedValue(dbUser({ platformRole: null }));
     resolveTenantExecute.mockResolvedValue({
       isFailure: true,
       getError: () => new ForbiddenError("Not a member of this tenant"),
@@ -151,20 +150,22 @@ describe("requireTenantContext SA bypass (Phase F.1)", () => {
 
     expect(resolveTenantExecute).toHaveBeenCalledWith(
       expect.objectContaining({
-        platformRole: null,
         userId: "550e8400-e29b-41d4-a716-4466554400f1",
+        tenantId: "550e8400-e29b-41d4-a716-446655440020",
+        jwtPlatformRole: "super_admin",
       }),
     );
+    // User lookup happens inside ResolveTenantContextUseCase (mocked), not via requireSession.
+    expect(findById).not.toHaveBeenCalled();
   });
 
-  it("JWT null + DB SA → authoritative SA bypass works", async () => {
+  it("JWT null + DB SA via resolver → authoritative SA bypass works", async () => {
     auth.mockResolvedValue(
       jwtSession({
         platformRole: null,
         activeTenantId: "550e8400-e29b-41d4-a716-446655440020",
       }),
     );
-    findById.mockResolvedValue(dbUser({ platformRole: "super_admin" }));
     resolveTenantExecute.mockResolvedValue({
       isFailure: false,
       isSuccess: true,
@@ -174,13 +175,20 @@ describe("requireTenantContext SA bypass (Phase F.1)", () => {
         role: "super_admin",
         propertyIds: null,
         isSuperAdmin: true,
+        platformRole: "super_admin",
+        email: "u@example.com",
+        userId: "550e8400-e29b-41d4-a716-4466554400f1",
       }),
     });
 
     const actor = await requireTenantContext();
     expect(actor.isSuperAdmin).toBe(true);
+    expect(actor.platformRole).toBe("super_admin");
     expect(resolveTenantExecute).toHaveBeenCalledWith(
-      expect.objectContaining({ platformRole: "super_admin" }),
+      expect.objectContaining({
+        jwtPlatformRole: null,
+        userId: "550e8400-e29b-41d4-a716-4466554400f1",
+      }),
     );
   });
 });
