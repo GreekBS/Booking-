@@ -121,6 +121,22 @@ export class ConfirmBookingComInitialSyncUseCase {
         else rejected += 1;
       }
 
+      // Fail closed: do not consume the preview token when every requested
+      // projection was rejected (operator must fix mapping/connection and re-preview).
+      // Empty projection lists (no ARI delta) and loop-suppressed-only batches remain valid.
+      if (
+        command.projectionsToEnqueue.length > 0 &&
+        enqueued === 0 &&
+        suppressed === 0 &&
+        rejected === command.projectionsToEnqueue.length
+      ) {
+        return Result.fail(
+          new ValidationError(
+            "Initial sync confirmation could not enqueue any ARI work; preview not consumed",
+          ),
+        );
+      }
+
       await this.previews.markConfirmed({
         tenantId: command.tenantId,
         previewId: preview.id,

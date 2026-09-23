@@ -5,6 +5,7 @@ import {
   parseBookingComReservationXml,
   type BookingComParsedReservation,
 } from "./parseBookingComReservationXml";
+import { redactBookingComSensitiveReservationXml } from "./redactBookingComSensitiveReservationXml";
 
 const BOOKING_COM_PROVIDER: ChannelSource = "booking_com";
 
@@ -54,6 +55,8 @@ export function mapParsedBookingComReservationToProviderMessage(input: {
   const hotelId = parsed.hotelId ?? input.fallbackHotelId ?? null;
   const revision = revisionFor(parsed, providerMessageId);
 
+  const safeRawXml = redactBookingComSensitiveReservationXml(parsed.rawXml);
+
   return {
     messageId: providerMessageId,
     kind: kindToMessageKind(parsed.kind),
@@ -65,7 +68,7 @@ export function mapParsedBookingComReservationToProviderMessage(input: {
     externalReservationId: parsed.reservationId,
     externalUpdatedAt: parsed.lastModifyDateTime ?? parsed.createDateTime ?? undefined,
     payload: {
-      [BOOKING_COM_PAYLOAD_KEYS.rawXml]: parsed.rawXml,
+      [BOOKING_COM_PAYLOAD_KEYS.rawXml]: safeRawXml,
       [BOOKING_COM_PAYLOAD_KEYS.externalRevision]: revision,
       [BOOKING_COM_PAYLOAD_KEYS.hotelId]: hotelId,
       [BOOKING_COM_PAYLOAD_KEYS.roomTypeId]: parsed.roomTypeId,

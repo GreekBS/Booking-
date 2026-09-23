@@ -68,9 +68,15 @@ export class ExecuteBookingComAriPushUseCase {
         throw new BookingComAriPermanentPushError("Connection missing");
       }
       // Initial-sync work may be enqueued while pending_auth; retry until activated.
+      // Pause must defer (not dead-letter) so durable pending ARI survives resume.
       if (connection.status === "pending_auth") {
         throw new BookingComAriRetryablePushError(
           "Connection pending_auth — waiting for activation before ARI push",
+        );
+      }
+      if (connection.status === "paused") {
+        throw new BookingComAriRetryablePushError(
+          "Connection paused — ARI push deferred until resume",
         );
       }
       if (connection.status !== "active") {

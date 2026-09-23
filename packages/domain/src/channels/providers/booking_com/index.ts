@@ -20,6 +20,7 @@ export * from "./BookingComRateRestrictionExportProvider";
 export * from "./http/BookingComReservationsClientNotConfigured";
 export * from "./parse/parseBookingComReservationXml";
 export * from "./parse/mapBookingComReservationToProviderMessage";
+export * from "./parse/redactBookingComSensitiveReservationXml";
 export * from "./recovery/BookingComSummaryRecoveryUseCase";
 export * from "./retrieval/createBookingComProviderRetrievalPort";
 export * from "./stubs/BookingComNotReadyPollingProvider";
