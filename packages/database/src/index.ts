@@ -58,6 +58,11 @@ export {
   PrismaCustomerBillingProfileRepository,
   seedGreekStatutoryTaxRules,
 } from "./repositories/fiscal/FiscalRepositories";
+export {
+  PrismaFiscalSeriesRepository,
+  PrismaFiscalDocumentRepository,
+  PrismaFiscalAllocationRepository,
+} from "./repositories/fiscal/FiscalDocumentRepositories";
 export { PrismaHoldRepository } from "./repositories/commerce/HoldRepository";
 export { PrismaQuoteRepository } from "./repositories/commerce/QuoteRepository";
 export { PrismaBookingRepository } from "./repositories/commerce/BookingRepository";

@@ -246,6 +246,10 @@ model Tenant {
   taxRules                     TaxRule[]
   businessFiscalProfiles       BusinessFiscalProfile[]
   customerBillingProfiles      CustomerBillingProfile[]
+  fiscalSeries                 FiscalSeries[]
+  fiscalDocuments              FiscalDocument[]
+  fiscalDocumentLines          FiscalDocumentLine[]
+  fiscalLineAllocations        FiscalLineAllocation[]
 
   @@map("tenants")
 }
@@ -378,6 +382,8 @@ model Property {
   quotes         Quote[]
   bookings       Booking[]
   businessFiscalProfiles BusinessFiscalProfile[]
+  fiscalSeries           FiscalSeries[]
+  fiscalDocuments        FiscalDocument[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -946,6 +952,128 @@ model CustomerBillingProfile {
 
   @@index([tenantId])
   @@map("customer_billing_profiles")
+}
+
+/// F3: Fiscal document series — next_sequence advanced only inside issue transaction.
+model FiscalSeries {
+  id            String   @id @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  propertyId    String   @map("property_id") @db.Uuid
+  documentKind  String   @map("document_kind") @db.VarChar(64)
+  seriesCode    String   @map("series_code") @db.VarChar(32)
+  nextSequence  Int      @map("next_sequence")
+  active        Boolean  @default(true)
+  label         String?  @db.VarChar(255)
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property  Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  documents FiscalDocument[]
+
+  @@unique([tenantId, propertyId, documentKind, seriesCode])
+  @@index([tenantId])
+  @@index([tenantId, propertyId, documentKind, active])
+  @@map("fiscal_series")
+}
+
+model FiscalDocument {
+  id                      String    @id @db.Uuid
+  tenantId                String    @map("tenant_id") @db.Uuid
+  propertyId              String    @map("property_id") @db.Uuid
+  documentKind            String    @map("document_kind") @db.VarChar(64)
+  status                  String    @db.VarChar(32)
+  seriesId                String?   @map("series_id") @db.Uuid
+  seriesCode              String?   @map("series_code") @db.VarChar(32)
+  sequenceNumber          Int?      @map("sequence_number")
+  issuanceIdempotencyKey  String?   @map("issuance_idempotency_key") @db.VarChar(128)
+  issuedAt                DateTime? @map("issued_at") @db.Timestamptz
+  currency                String    @db.Char(3)
+  issuerSnapshot          Json      @map("issuer_snapshot")
+  customerSnapshot        Json?     @map("customer_snapshot")
+  netTotal                Decimal   @map("net_total") @db.Decimal(19, 4)
+  vatTotal                Decimal   @map("vat_total") @db.Decimal(19, 4)
+  otherTaxTotal           Decimal   @map("other_tax_total") @db.Decimal(19, 4)
+  levyTotal               Decimal   @map("levy_total") @db.Decimal(19, 4)
+  grossTotal              Decimal   @map("gross_total") @db.Decimal(19, 4)
+  roundingPolicy          String    @default("deterministic_money_4dp") @map("rounding_policy") @db.VarChar(64)
+  paymentMethodSummary    String?   @map("payment_method_summary") @db.VarChar(255)
+  sourceBookingId         String?   @map("source_booking_id") @db.Uuid
+  originalDocumentId      String?   @map("original_document_id") @db.Uuid
+  creditReason            String?   @map("credit_reason") @db.VarChar(512)
+  creditedScope           String?   @map("credited_scope") @db.VarChar(16)
+  metadata                Json      @default("{}")
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property    Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  series      FiscalSeries?        @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+  original    FiscalDocument?      @relation("FiscalDocumentCredits", fields: [originalDocumentId], references: [id], onDelete: Restrict)
+  credits     FiscalDocument[]     @relation("FiscalDocumentCredits")
+  lines       FiscalDocumentLine[]
+  allocations FiscalLineAllocation[]
+
+  @@unique([tenantId, seriesId, sequenceNumber])
+  @@unique([tenantId, issuanceIdempotencyKey])
+  @@index([tenantId, issuedAt])
+  @@index([tenantId, propertyId, status])
+  @@index([tenantId, sourceBookingId])
+  @@index([tenantId, originalDocumentId])
+  @@map("fiscal_documents")
+}
+
+model FiscalDocumentLine {
+  id                   String   @id @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  fiscalDocumentId     String   @map("fiscal_document_id") @db.Uuid
+  sortOrder            Int      @map("sort_order")
+  description          String   @db.VarChar(512)
+  quantity             Decimal  @db.Decimal(19, 4)
+  unit                 String?  @db.VarChar(64)
+  netAmount            Decimal  @map("net_amount") @db.Decimal(19, 4)
+  vatAmount            Decimal  @map("vat_amount") @db.Decimal(19, 4)
+  levyAmount           Decimal  @map("levy_amount") @db.Decimal(19, 4)
+  grossAmount          Decimal  @map("gross_amount") @db.Decimal(19, 4)
+  currency             String   @db.Char(3)
+  classificationKey    String?  @map("classification_key") @db.VarChar(128)
+  taxSnapshot          Json?    @map("tax_snapshot")
+  sourceFolioId        String?  @map("source_folio_id") @db.Uuid
+  sourceFolioLineId    String?  @map("source_folio_line_id") @db.Uuid
+  dailyUseProvenance   Json?    @map("daily_use_provenance")
+  metadata             Json     @default("{}")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document FiscalDocument @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
+  allocations FiscalLineAllocation[]
+
+  @@index([tenantId, fiscalDocumentId])
+  @@index([tenantId, sourceFolioLineId])
+  @@map("fiscal_document_lines")
+}
+
+/// Amount-level FolioLine ↔ FiscalDocumentLine coverage.
+model FiscalLineAllocation {
+  id                   String   @id @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  folioId              String   @map("folio_id") @db.Uuid
+  folioLineId          String   @map("folio_line_id") @db.Uuid
+  fiscalDocumentId     String   @map("fiscal_document_id") @db.Uuid
+  fiscalDocumentLineId String   @map("fiscal_document_line_id") @db.Uuid
+  allocatedAmount      Decimal  @map("allocated_amount") @db.Decimal(19, 4)
+  currency             String   @db.Char(3)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document     FiscalDocument     @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
+  documentLine FiscalDocumentLine @relation(fields: [fiscalDocumentLineId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, folioId])
+  @@index([tenantId, folioLineId])
+  @@index([tenantId, fiscalDocumentId])
+  @@map("fiscal_line_allocations")
 }
 
 model ChannelConnection {

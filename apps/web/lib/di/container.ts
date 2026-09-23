@@ -156,6 +156,24 @@ import {
 
   ListCustomerBillingProfilesUseCase,
 
+  CreateFiscalSeriesUseCase,
+
+  ListFiscalSeriesUseCase,
+
+  SetFiscalSeriesActiveUseCase,
+
+  CreateFiscalDocumentDraftUseCase,
+
+  IssueFiscalDocumentUseCase,
+
+  GetFiscalDocumentUseCase,
+
+  ListFiscalDocumentsUseCase,
+
+  GetFolioFiscalCoverageUseCase,
+
+  CreateCreditFiscalDocumentDraftUseCase,
+
   GetPublicPropertyBySlugUseCase,
 
   GetTenantSettingsUseCase,
@@ -411,6 +429,12 @@ import {
   PrismaBusinessFiscalProfileRepository,
 
   PrismaCustomerBillingProfileRepository,
+
+  PrismaFiscalSeriesRepository,
+
+  PrismaFiscalDocumentRepository,
+
+  PrismaFiscalAllocationRepository,
 
   PrismaCalendarBlockRepository,
 
@@ -913,6 +937,12 @@ const businessFiscalProfileRepository = new PrismaBusinessFiscalProfileRepositor
 
 const customerBillingProfileRepository = new PrismaCustomerBillingProfileRepository();
 
+const fiscalSeriesRepository = new PrismaFiscalSeriesRepository();
+
+const fiscalDocumentRepository = new PrismaFiscalDocumentRepository();
+
+const fiscalAllocationRepository = new PrismaFiscalAllocationRepository();
+
 const calendarBlockRepository = new PrismaCalendarBlockRepository();
 export { calendarBlockRepository };
 
@@ -1252,6 +1282,71 @@ export const listCustomerBillingProfilesUseCase = new ListCustomerBillingProfile
   customerBillingProfileRepository,
   permissionChecker,
 );
+
+export const createFiscalSeriesUseCase = new CreateFiscalSeriesUseCase(
+  fiscalSeriesRepository,
+  idGenerator,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const listFiscalSeriesUseCase = new ListFiscalSeriesUseCase(
+  fiscalSeriesRepository,
+  permissionChecker,
+);
+
+export const setFiscalSeriesActiveUseCase = new SetFiscalSeriesActiveUseCase(
+  fiscalSeriesRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const createFiscalDocumentDraftUseCase = new CreateFiscalDocumentDraftUseCase(
+  fiscalDocumentRepository,
+  fiscalSeriesRepository,
+  fiscalAllocationRepository,
+  folioRepository,
+  bookingRepository,
+  businessFiscalProfileRepository,
+  customerBillingProfileRepository,
+  idGenerator,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const issueFiscalDocumentUseCase = new IssueFiscalDocumentUseCase(
+  fiscalDocumentRepository,
+  fiscalSeriesRepository,
+  fiscalAllocationRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const getFiscalDocumentUseCase = new GetFiscalDocumentUseCase(
+  fiscalDocumentRepository,
+  permissionChecker,
+);
+
+export const listFiscalDocumentsUseCase = new ListFiscalDocumentsUseCase(
+  fiscalDocumentRepository,
+  permissionChecker,
+);
+
+export const getFolioFiscalCoverageUseCase = new GetFolioFiscalCoverageUseCase(
+  folioRepository,
+  fiscalAllocationRepository,
+  bookingRepository,
+  permissionChecker,
+);
+
+export const createCreditFiscalDocumentDraftUseCase =
+  new CreateCreditFiscalDocumentDraftUseCase(
+    fiscalDocumentRepository,
+    fiscalSeriesRepository,
+    idGenerator,
+    permissionChecker,
+    auditLogRepository,
+  );
 
 export const getTenantSettingsUseCase = new GetTenantSettingsUseCase(
   tenantRepository,

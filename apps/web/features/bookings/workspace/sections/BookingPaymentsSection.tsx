@@ -11,6 +11,7 @@ import {
   WorkspaceSection,
 } from "@/features/workspace/components/WorkspaceSection";
 import type { BookingSectionProps } from "../types";
+import { FolioFiscalIssuePanel } from "@/features/fiscal/FolioFiscalIssuePanel";
 
 interface FolioLineDto {
   id: string;
@@ -201,10 +202,24 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
                   )}
                 />
               </WorkspaceDetailList>
+              <FolioFiscalIssuePanel
+                folioId={folio.id}
+                propertyId={booking.propertyId}
+                lines={folio.lines.map((l) => ({
+                  id: l.id,
+                  description: l.description,
+                  amount: l.amount,
+                  currency: l.currency,
+                  lineType: l.lineType,
+                  taxSnapshot: l.taxSnapshot
+                    ? { taxType: l.taxSnapshot.taxType }
+                    : null,
+                }))}
+              />
               <p className="text-[11px] text-muted-foreground">
-                Tax lines are append-only snapshots. Climate Resilience Fee is not
-                VAT and will require a separate legal document in F3. No invoice /
-                myDATA actions here.
+                Tax lines are append-only snapshots. Climate fee uses a separate
+                Special Element document. Issuance is local only — pending
+                fiscalization integration (no AADE/MARK).
               </p>
             </div>
           );

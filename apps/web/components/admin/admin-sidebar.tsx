@@ -27,6 +27,7 @@ export const adminNavItems: Array<{
   { href: "/dashboard/availability", label: "Availability", icon: CalendarDays },
   { href: "/dashboard/pricing", label: "Pricing", icon: DollarSign },
   { href: "/dashboard/bookings", label: "Bookings", icon: BookOpen },
+  { href: "/dashboard/fiscal-documents", label: "Fiscal docs", icon: DollarSign },
   { href: "/dashboard/channels", label: "Channels", icon: Network },
   { href: "/dashboard/guests", label: "Guests", icon: Users },
   { href: "/dashboard/members", label: "Members", icon: UserCog },
