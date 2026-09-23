@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { PageHeader } from "@/components/admin/page-header";
@@ -33,6 +34,16 @@ import {
   listChannelConnections,
 } from "./channel-api";
 import type { OperatorChannelConnection } from "./types";
+import {
+  BookingComProviderCard,
+  ComingSoonProviderCard,
+} from "./booking-com/BookingComProviderCard";
+import {
+  beginBookingComSetup,
+  fetchBookingComCapabilities,
+  formatBookingComApiError,
+} from "./booking-com/booking-com-api";
+import type { BookingComCapabilities } from "./booking-com/types";
 
 function statusVariant(
   status: string,
@@ -44,21 +55,29 @@ function statusVariant(
 }
 
 export function ChannelsPage() {
+  const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const [connections, setConnections] = useState<OperatorChannelConnection[]>([]);
+  const [partner, setPartner] = useState<BookingComCapabilities | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [startingBooking, setStartingBooking] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      setConnections(await listChannelConnections(tenantId));
+      const [list, caps] = await Promise.all([
+        listChannelConnections(tenantId),
+        fetchBookingComCapabilities(tenantId).catch(() => null),
+      ]);
+      setConnections(list);
+      setPartner(caps);
     } catch (err) {
       setError(formatChannelApiError(err));
     } finally {
@@ -70,7 +89,16 @@ export function ChannelsPage() {
     void load();
   }, [load]);
 
-  async function create() {
+  const bookingConnection = useMemo(
+    () => connections.find((c) => c.provider === "booking_com") ?? null,
+    [connections],
+  );
+  const icalConnections = useMemo(
+    () => connections.filter((c) => c.provider === "ical"),
+    [connections],
+  );
+
+  async function createIcal() {
     if (!tenantId || !displayName.trim()) return;
     setCreating(true);
     setCreateError(null);
@@ -86,6 +114,21 @@ export function ChannelsPage() {
     }
   }
 
+  async function startBookingCom() {
+    if (!tenantId) return;
+    setStartingBooking(true);
+    try {
+      const result = await beginBookingComSetup(tenantId, {
+        displayName: "Booking.com",
+      });
+      router.push(`/dashboard/channels/${result.connection.connectionId}/setup`);
+    } catch (err) {
+      setError(formatBookingComApiError(err));
+    } finally {
+      setStartingBooking(false);
+    }
+  }
+
   const tenantGate = renderTenantGate({
     loading: tenantLoading,
     error: tenantError,
@@ -96,76 +139,110 @@ export function ChannelsPage() {
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
-    <div>
+    <div className="space-y-8">
       <PageHeader
         title="Channels"
-        description="Configure iCal feeds that block externally reserved dates. iCal does not create Talos bookings."
+        description="Connect distribution channels. Booking.com and iCal are available according to your environment; Airbnb and Expedia are listed for future use only."
         actions={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add iCal connection
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/channels/help">Help Center</Link>
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add iCal connection
+            </Button>
+          </div>
         }
       />
 
-      {connections.length === 0 ? (
-        <EmptyState
-          title="No channel connections"
-          description="Create an iCal connection to import external blocked dates."
-          action={{ label: "Add iCal connection", onClick: () => setDialogOpen(true) }}
-        />
-      ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Semantic mode</TableHead>
-                <TableHead>Inventory apply</TableHead>
-                <TableHead>Health</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {connections.map((c) => (
-                <TableRow key={c.connectionId}>
-                  <TableCell>
-                    <Link
-                      href={`/dashboard/channels/${c.connectionId}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {c.displayName}
-                    </Link>
-                    <div className="font-mono text-[11px] text-muted-foreground">
-                      {c.connectionId}
-                    </div>
-                  </TableCell>
-                  <TableCell className="capitalize">{c.provider}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(c.status)} className="capitalize">
-                      {c.status.replace(/_/g, " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs">{c.semanticMode}</TableCell>
-                  <TableCell>
-                    {c.inventoryApplyEnabled ? "Enabled" : "Disabled"}
-                  </TableCell>
-                  <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
-                    {c.lastError ? (
-                      <span className="text-destructive">{c.lastError}</span>
-                    ) : c.hasCredentialRef ? (
-                      "Credential present"
-                    ) : (
-                      "No credential"
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      <section aria-labelledby="providers-heading" className="space-y-3">
+        <h2 id="providers-heading" className="text-sm font-semibold tracking-wide text-muted-foreground">
+          Providers
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <BookingComProviderCard
+            connection={bookingConnection}
+            partner={partner}
+            onStart={() => void startBookingCom()}
+            starting={startingBooking}
+          />
+          <ComingSoonProviderCard
+            name="Airbnb"
+            description="Airbnb Connectivity is not implemented yet. This card is informational only."
+          />
+          <ComingSoonProviderCard
+            name="Expedia"
+            description="Expedia Partner Solutions is not implemented yet. This card is informational only."
+          />
+          <CardIcalSummary
+            count={icalConnections.length}
+            onAdd={() => setDialogOpen(true)}
+          />
         </div>
-      )}
+      </section>
+
+      <section aria-labelledby="connections-heading" className="space-y-3">
+        <h2 id="connections-heading" className="text-sm font-semibold tracking-wide text-muted-foreground">
+          All connections
+        </h2>
+        {connections.length === 0 ? (
+          <EmptyState
+            title="No channel connections"
+            description="Connect Booking.com or add an iCal feed to get started."
+            action={{ label: "Add iCal connection", onClick: () => setDialogOpen(true) }}
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Health</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {connections.map((c) => (
+                  <TableRow key={c.connectionId}>
+                    <TableCell>
+                      <Link
+                        href={
+                          c.provider === "booking_com" &&
+                          (c.status === "draft" || c.status === "pending_auth")
+                            ? `/dashboard/channels/${c.connectionId}/setup`
+                            : `/dashboard/channels/${c.connectionId}`
+                        }
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {c.displayName}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="capitalize">
+                      {c.provider === "booking_com" ? "Booking.com" : c.provider}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(c.status)} className="capitalize">
+                        {c.status.replace(/_/g, " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
+                      {c.lastError ? (
+                        <span className="text-destructive">{c.lastError}</span>
+                      ) : c.hasCredentialRef ? (
+                        "Credential present"
+                      ) : (
+                        "No credential"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -194,13 +271,41 @@ export function ChannelsPage() {
             </Button>
             <Button
               disabled={!displayName.trim() || creating}
-              onClick={() => void create()}
+              onClick={() => void createIcal()}
             >
               {creating ? "Creating…" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function CardIcalSummary({
+  count,
+  onAdd,
+}: {
+  count: number;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold">iCal</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Import external blocked dates. Does not create Talos bookings.
+          </p>
+        </div>
+        <Badge variant="secondary">{count} connected</Badge>
+      </div>
+      <div className="mt-4">
+        <Button onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+          Add iCal connection
+        </Button>
+      </div>
     </div>
   );
 }

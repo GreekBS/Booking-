@@ -70,10 +70,15 @@ export class UpsertChannelProductMappingUseCase {
           new ValidationError("Product mapping upsert supports booking_com in CM-4c-4"),
         );
       }
-      if (
-        connection.status === "disconnected" ||
-        connection.status === "draft"
-      ) {
+      if (connection.status === "disconnected") {
+        return Result.fail(
+          new ValidationError(
+            `Cannot update mappings while connection is ${connection.status}`,
+          ),
+        );
+      }
+      // draft is allowed for Booking.com setup rehearsal before credentials exist.
+      if (connection.status === "draft" && connection.provider !== "booking_com") {
         return Result.fail(
           new ValidationError(
             `Cannot update mappings while connection is ${connection.status}`,

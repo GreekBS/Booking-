@@ -308,7 +308,15 @@ import {
 
   BookingComRemoteAriReaderNotConfigured,
 
+  FakeBookingComRemoteDiscoveryClient,
+
+  FakeBookingComRemoteAriReader,
+
+  defaultFixtureSnapshot,
+
 } from "@hcp/domain";
+
+import { isBookingComFixtureTransportEnabled } from "@/lib/channels/booking-com-operator-access";
 
 import {
 
@@ -1599,9 +1607,23 @@ const channelInitialSyncPreviewRepository =
   new PrismaChannelInitialSyncPreviewRepository();
 const channelReconciliationRunRepository =
   new PrismaChannelReconciliationRunRepository();
-const bookingComRemoteDiscoveryClient =
-  new BookingComRemoteDiscoveryClientNotConfigured();
-const bookingComRemoteAriReader = new BookingComRemoteAriReaderNotConfigured();
+export { channelReconciliationRunRepository };
+export { channelProductMappingRepository };
+export { channelConnectionProviderSetupRepository };
+
+const bookingComFixtureEnabled = isBookingComFixtureTransportEnabled();
+const bookingComRemoteDiscoveryClient = bookingComFixtureEnabled
+  ? new FakeBookingComRemoteDiscoveryClient()
+  : new BookingComRemoteDiscoveryClientNotConfigured();
+const bookingComRemoteAriReader = bookingComFixtureEnabled
+  ? new FakeBookingComRemoteAriReader({
+      hotelId: defaultFixtureSnapshot().hotel!.hotelId,
+      from: "2026-01-01",
+      to: "2026-12-31",
+      fingerprint: "fixture-remote-ari",
+      cells: [],
+    })
+  : new BookingComRemoteAriReaderNotConfigured();
 
 export const upsertChannelProductMappingUseCase = new UpsertChannelProductMappingUseCase(
   channelConnectionRepository,

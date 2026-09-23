@@ -56,7 +56,7 @@ describe("tenant channel operator UI fitness", () => {
     expect(api).not.toMatch(/GET.*credentials/i);
 
     const detail = readFileSync(
-      join(ROOT, "features", "channels", "ChannelDetailPage.tsx"),
+      join(ROOT, "features", "channels", "IcalChannelDetailPage.tsx"),
       "utf8",
     );
     expect(detail).toContain(

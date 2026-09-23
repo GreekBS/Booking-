@@ -41,6 +41,8 @@ export interface GenerateBookingComInitialSyncPreviewResult {
   previewId: string;
   confirmationToken: string;
   mappingConfigGeneration: number;
+  talosStateFingerprint: string;
+  remoteSnapshotFingerprint: string;
   diff: BookingComAriDiffSummary;
   blockingIssueCount: number;
   warningIssueCount: number;
@@ -200,6 +202,8 @@ export class GenerateBookingComInitialSyncPreviewUseCase {
         previewId,
         confirmationToken,
         mappingConfigGeneration: setupRecord.mappingConfigGeneration,
+        talosStateFingerprint: command.talosStateFingerprint,
+        remoteSnapshotFingerprint: remote.fingerprint,
         diff,
         blockingIssueCount: validated.blocking.length,
         warningIssueCount: validated.warnings.length,

@@ -92,7 +92,7 @@ describe("CM-4c-4 architecture fitness", () => {
     }
   });
 
-  it("DI wires NotConfigured discovery/ARI readers (no live HTTP)", () => {
+  it("DI wires NotConfigured discovery/ARI readers by default (fixture only behind env gate)", () => {
     const di = readFileSync(
       join(DOMAIN_ROOT, "..", "..", "apps", "web", "lib", "di", "container.ts"),
       "utf8",
@@ -100,7 +100,10 @@ describe("CM-4c-4 architecture fitness", () => {
     expect(di).toMatch(/BookingComRemoteDiscoveryClientNotConfigured/);
     expect(di).toMatch(/BookingComRemoteAriReaderNotConfigured/);
     expect(di).toMatch(/BookingComActivationGate/);
-    expect(di).not.toMatch(/new FakeBookingComRemoteDiscoveryClient/);
-    expect(di).not.toMatch(/new FakeBookingComRemoteAriReader/);
+    expect(di).toMatch(/isBookingComFixtureTransportEnabled/);
+    // Fixture fakes may appear only behind the non-Production env gate.
+    expect(di).toMatch(
+      /bookingComFixtureEnabled\s*\?\s*new FakeBookingComRemoteDiscoveryClient/,
+    );
   });
 });
