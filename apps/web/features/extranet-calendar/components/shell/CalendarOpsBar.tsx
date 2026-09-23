@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { PropertyRecord } from "@/lib/admin/types";
+import type { CatalogPropertyRecord } from "@/lib/admin/types";
 import { OPS_BAR_HEIGHT_PX } from "../../constants";
 import type { CalendarDensity } from "../../lib/density";
 import type { OverlayToggles } from "../../lib/overlay-types";
@@ -29,7 +29,7 @@ const OVERLAY_BUTTONS: Array<{ key: keyof OverlayToggles; label: string }> = [
 const SHOW_OVERLAY_TOOLBAR_CONTROLS = false;
 
 interface CalendarOpsBarProps {
-  properties: PropertyRecord[];
+  properties: CatalogPropertyRecord[];
   selectedPropertyId: string | null;
   onSelectedPropertyChange: (value: string) => void;
   units: RackUnit[];

@@ -37,13 +37,9 @@ export function DashboardOverview() {
   useEffect(() => {
     if (!tenantLoading && !tenantId) {
       setLoading(false);
+      setOverview(null);
     }
   }, [tenantLoading, tenantId]);
-
-  useEffect(() => {
-    setOverview(null);
-    setLoading(true);
-  }, [tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -58,6 +54,7 @@ export function DashboardOverview() {
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load dashboard");
+          setOverview(null);
         }
       } finally {
         if (!cancelled) setLoading(false);

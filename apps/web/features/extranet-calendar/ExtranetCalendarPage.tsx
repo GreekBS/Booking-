@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
-import { fetchAllProperties } from "@/lib/admin/api";
-import type { PropertyRecord } from "@/lib/admin/types";
+import { fetchPropertyUnitCatalog } from "@/lib/admin/api";
+import type { CatalogPropertyRecord } from "@/lib/admin/types";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,7 +33,7 @@ function ExtranetCalendarContent() {
   const { closeWorkspace, openDateWorkspace } = useWorkspace();
   const { clearSelection } = useTimelineInteraction();
 
-  const [properties, setProperties] = useState<PropertyRecord[]>([]);
+  const [properties, setProperties] = useState<CatalogPropertyRecord[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [loadedMonthCount, setLoadedMonthCount] = useState(MONTHS_INITIAL);
@@ -45,8 +45,8 @@ function ExtranetCalendarContent() {
     setCatalogLoading(true);
     setCatalogError(null);
     try {
-      const res = await fetchAllProperties(tenantId, 1, 100);
-      setProperties(res.data);
+      const catalog = await fetchPropertyUnitCatalog(tenantId);
+      setProperties(catalog.properties);
     } catch (err) {
       setCatalogError(err instanceof Error ? err.message : "Failed to load properties");
     } finally {

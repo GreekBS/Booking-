@@ -32,8 +32,10 @@ const DEFAULT_RULES: UnitAvailabilityRulesProps = {
 };
 
 /**
- * Resolve all requested units under tenant isolation.
- * Any missing / foreign unit fails the whole batch with a non-leaky error.
+ * Resolve all requested units under tenant isolation for operator READ batches.
+ * Missing/foreign unit IDs fail the whole batch (non-leaky).
+ * Inactive units are allowed — calendar/rates/rules are operator inventory views,
+ * not guest booking eligibility checks.
  */
 async function resolveAuthorizedUnits(
   catalog: ICatalogQueryPort,
@@ -66,9 +68,6 @@ async function resolveAuthorizedUnits(
     const property = propertyById.get(unit.propertyId);
     if (!property) {
       return Result.fail(new ValidationError("One or more units were not found"));
-    }
-    if (unit.status !== "active" || property.status !== "active") {
-      return Result.fail(new ValidationError("Unit is not available for booking"));
     }
     if (
       !canAccessCommerceProperty(

@@ -29,6 +29,7 @@ import { PERMISSIONS } from "@hcp/permissions";
 import {
   assertCommercePropertyAccess,
   resolveUnitContext,
+  resolveUnitContextForOperatorRead,
 } from "./commerceAccess";
 import { ReservationOrchestrator } from "../reservation/ReservationOrchestrator";
 import {
@@ -638,7 +639,11 @@ export class GetUnitCalendarUseCase {
     actor: ActorContext,
   ): Promise<Result<UnitCalendarResult, Error>> {
     try {
-      const unitCtx = await resolveUnitContext(this.catalog, command.unitId, command.tenantId);
+      const unitCtx = await resolveUnitContextForOperatorRead(
+        this.catalog,
+        command.unitId,
+        command.tenantId,
+      );
       if (unitCtx.isFailure) {
         return Result.fail(unitCtx.getError());
       }
@@ -833,7 +838,7 @@ export class GetAvailabilityRulesUseCase {
     actor: ActorContext,
   ): Promise<Result<UnitAvailabilityRulesProps, Error>> {
     try {
-      const unitCtx = await resolveUnitContext(this.catalog, unitId, tenantId);
+      const unitCtx = await resolveUnitContextForOperatorRead(this.catalog, unitId, tenantId);
       if (unitCtx.isFailure) {
         return Result.fail(unitCtx.getError());
       }
@@ -869,7 +874,7 @@ export class GetRatePlanUseCase {
     actor: ActorContext,
   ): Promise<Result<RatePlanProps | null, Error>> {
     try {
-      const unitCtx = await resolveUnitContext(this.catalog, unitId, tenantId);
+      const unitCtx = await resolveUnitContextForOperatorRead(this.catalog, unitId, tenantId);
       if (unitCtx.isFailure) {
         return Result.fail(unitCtx.getError());
       }

@@ -13,6 +13,8 @@ interface AdminFetchOptions extends RequestInit {
   tenantId?: string;
 }
 
+import type { PaginatedBookings, PaginatedProperties, OperatorBlockType } from "./types";
+
 export async function adminFetch<T>(path: string, options: AdminFetchOptions = {}): Promise<T> {
   const { tenantId, ...init } = options;
   const headers = new Headers(init.headers);
@@ -43,8 +45,6 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
 
   return payload as T;
 }
-
-import type { PaginatedBookings, PaginatedProperties, OperatorBlockType } from "./types";
 
 const propertiesCache = new Map<string, PaginatedProperties>();
 const propertiesInflight = new Map<string, Promise<PaginatedProperties>>();
@@ -284,11 +284,29 @@ export function flattenCatalogUnits(
   );
 }
 
-/** Single-shot dashboard overview — no quote-per-booking fan-out. */
+/** Single-shot dashboard overview — no quote-per-booking fan-out.
+ * Concurrent callers (e.g. Strict Mode remount) share one in-flight request per tenant.
+ * Not a durable cache — cleared when the promise settles.
+ */
+const overviewInflight = new Map<
+  string,
+  Promise<import("./types").DashboardOverviewRecord>
+>();
+
 export async function fetchDashboardOverview(
   tenantId: string,
 ): Promise<import("./types").DashboardOverviewRecord> {
-  return adminFetch("/dashboard/overview", { tenantId });
+  const existing = overviewInflight.get(tenantId);
+  if (existing) return existing;
+
+  const pending = adminFetch<import("./types").DashboardOverviewRecord>(
+    "/dashboard/overview",
+    { tenantId },
+  ).finally(() => {
+    overviewInflight.delete(tenantId);
+  });
+  overviewInflight.set(tenantId, pending);
+  return pending;
 }
 
 export function flattenUnits(properties: import("./types").PropertyRecord[]): import("./types").FlatUnit[] {

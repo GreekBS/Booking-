@@ -1,11 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import type { PropertyRecord } from "@/lib/admin/types";
+import type { CatalogPropertyRecord } from "@/lib/admin/types";
 import type { RackPropertyGroup } from "../types";
 
+/** Minimal property shape for Availability rack / selectors (slim catalog compatible). */
+export type CalendarCatalogProperty = Pick<
+  CatalogPropertyRecord,
+  "id" | "name" | "status" | "units"
+>;
+
 export function buildRackGroup(
-  properties: PropertyRecord[],
+  properties: CalendarCatalogProperty[],
   selectedPropertyId: string | null,
   unitSearch: string,
 ): RackPropertyGroup | null {
@@ -35,7 +41,7 @@ export function buildRackGroup(
 }
 
 export function useRackGroup(
-  properties: PropertyRecord[],
+  properties: CalendarCatalogProperty[],
   selectedPropertyId: string | null,
   unitSearch: string,
 ) {
@@ -45,7 +51,10 @@ export function useRackGroup(
   );
 }
 
-export function countCatalogUnits(properties: PropertyRecord[], selectedPropertyId: string | null) {
+export function countCatalogUnits(
+  properties: CalendarCatalogProperty[],
+  selectedPropertyId: string | null,
+) {
   if (!selectedPropertyId) return 0;
   const property = properties.find((p) => p.id === selectedPropertyId);
   return property?.units.length ?? 0;

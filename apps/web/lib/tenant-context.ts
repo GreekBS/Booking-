@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@/lib/auth/config";
 import {
   resolveTenantContextUseCase,
@@ -22,14 +23,24 @@ export interface TenantActor extends SessionActor {
 }
 
 /**
+ * Request-scoped Auth.js session read (React cache).
+ * Dedupes repeated auth() within one RSC/route request only — never cross-request.
+ */
+export const getAuthSession = cache(async () => auth());
+
+/**
  * Authenticated identity from JWT (`session.user.id` ← `sub`), with
  * `platformRole` hydrated from the database on every request.
  *
  * middleware may still use JWT platformRole as a UX filter only.
  * This function is the security authority for server-side privilege.
+ *
+ * Request-scoped memoization only (React cache) — DB remains authoritative;
+ * no JWT privilege shortcut; no cross-request cache.
  */
-export async function requireSession(): Promise<SessionActor> {
-  const session = await auth();
+export const requireSession = cache(async (): Promise<SessionActor> => {
+  const session = await getAuthSession();
+
   if (!session?.user?.id) {
     throw new UnauthorizedError();
   }
@@ -64,7 +75,7 @@ export async function requireSession(): Promise<SessionActor> {
     platformRole,
     activeTenantId: session.user.activeTenantId,
   };
-}
+});
 
 export async function requireSuperAdmin(): Promise<SessionActor> {
   const actor = await requireSession();
@@ -74,38 +85,44 @@ export async function requireSuperAdmin(): Promise<SessionActor> {
   return actor;
 }
 
-export async function requireTenantContext(
-  tenantIdHeader?: string | null,
-): Promise<TenantActor> {
-  // platformRole here is already DB-authoritative (via requireSession).
-  const actor = await requireSession();
-  const tenantId = tenantIdHeader ?? actor.activeTenantId;
+/**
+ * Tenant context for admin APIs. Request-scoped memoization by tenant header
+ * (same request only). Still runs DB tenant + membership resolution.
+ */
+export const requireTenantContext = cache(
+  async (tenantIdHeader?: string | null): Promise<TenantActor> => {
+    const normalizedHeader = tenantIdHeader ?? null;
 
-  if (!tenantId) {
-    throw new ForbiddenError("Tenant context required");
-  }
+    // platformRole here is already DB-authoritative (via requireSession).
+    const actor = await requireSession();
+    const tenantId = normalizedHeader ?? actor.activeTenantId;
 
-  const result = await resolveTenantContextUseCase.execute({
-    userId: actor.userId,
-    platformRole: actor.platformRole,
-    tenantId,
-  });
+    if (!tenantId) {
+      throw new ForbiddenError("Tenant context required");
+    }
 
-  if (result.isFailure) {
-    throw result.getError();
-  }
+    const result = await resolveTenantContextUseCase.execute({
+      userId: actor.userId,
+      platformRole: actor.platformRole,
+      tenantId,
+    });
 
-  const ctx = result.getValue();
+    if (result.isFailure) {
+      throw result.getError();
+    }
 
-  return {
-    ...actor,
-    tenantId: ctx.tenantId,
-    role: ctx.role,
-    propertyIds: ctx.propertyIds,
-    isSuperAdmin: ctx.isSuperAdmin,
-    activeTenantId: tenantId,
-  };
-}
+    const ctx = result.getValue();
+
+    return {
+      ...actor,
+      tenantId: ctx.tenantId,
+      role: ctx.role,
+      propertyIds: ctx.propertyIds,
+      isSuperAdmin: ctx.isSuperAdmin,
+      activeTenantId: tenantId,
+    };
+  },
+);
 
 export function toPermissionActor(actor: TenantActor) {
   return {

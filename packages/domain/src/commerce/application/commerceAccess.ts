@@ -18,6 +18,31 @@ export async function resolveUnitContext(
   unitId: string,
   tenantId: string,
 ): Promise<Result<UnitContext, Error>> {
+  return resolveUnitContextInternal(catalog, unitId, tenantId, {
+    requireActiveForBooking: true,
+  });
+}
+
+/**
+ * Operator inventory/pricing READ paths — unit may be inactive/archived but still visible.
+ * Does not weaken booking/write paths that use {@link resolveUnitContext}.
+ */
+export async function resolveUnitContextForOperatorRead(
+  catalog: ICatalogQueryPort,
+  unitId: string,
+  tenantId: string,
+): Promise<Result<UnitContext, Error>> {
+  return resolveUnitContextInternal(catalog, unitId, tenantId, {
+    requireActiveForBooking: false,
+  });
+}
+
+async function resolveUnitContextInternal(
+  catalog: ICatalogQueryPort,
+  unitId: string,
+  tenantId: string,
+  options: { requireActiveForBooking: boolean },
+): Promise<Result<UnitContext, Error>> {
   const unit = await catalog.getUnit(unitId, tenantId);
   if (!unit) {
     return Result.fail(new ValidationError("Unit not found"));
@@ -28,7 +53,10 @@ export async function resolveUnitContext(
     return Result.fail(new ValidationError("Property not found"));
   }
 
-  if (unit.status !== "active" || property.status !== "active") {
+  if (
+    options.requireActiveForBooking &&
+    (unit.status !== "active" || property.status !== "active")
+  ) {
     return Result.fail(new ValidationError("Unit is not available for booking"));
   }
 

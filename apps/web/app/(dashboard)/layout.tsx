@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth/config";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { requireSession } from "@/lib/tenant-context";
+import { getAuthSession, requireSession } from "@/lib/tenant-context";
 import { shouldRedirectSuperAdminToPlatform } from "@/lib/dashboard-routing";
 
 export default async function DashboardLayout({
@@ -9,13 +8,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const session = await getAuthSession();
   if (!session?.user) {
     redirect("/login");
   }
 
   // DB-authoritative platformRole for UX routing only — not a privilege grant.
-  // JWT activeTenantId is session selection state established by Open / switcher.
+  // Reuses request-scoped requireSession / getAuthSession (no duplicate User lookup).
   const actor = await requireSession();
   if (
     shouldRedirectSuperAdminToPlatform({

@@ -214,6 +214,48 @@ describe("Batch calendar read use cases", () => {
       expect(findByUnits).not.toHaveBeenCalled();
     });
 
+    it("allows inactive units for operator calendar reads (reaches batched DB queries)", async () => {
+      getUnitsByIds.mockResolvedValue([
+        {
+          id: UNIT_A1,
+          tenantId: TENANT_A,
+          propertyId: PROP_A,
+          maxGuests: 4,
+          status: "inactive",
+        },
+      ]);
+      getPropertiesByIds.mockResolvedValue([
+        { id: PROP_A, tenantId: TENANT_A, timezone: "Europe/Athens", status: "draft" },
+      ]);
+      findCalendarBlocksByUnits.mockResolvedValue([
+        {
+          id: "blk-inactive",
+          unitId: UNIT_A1,
+          blockType: "manual",
+          status: "active",
+          checkIn: "2026-06-01",
+          checkOut: "2026-06-03",
+          sourceId: null,
+          reason: null,
+          expiresAt: null,
+        },
+      ]);
+
+      const result = await useCase.execute(
+        {
+          tenantId: TENANT_A,
+          unitIds: [UNIT_A1],
+          from: "2026-06-01",
+          to: "2026-07-01",
+        },
+        adminActor,
+      );
+
+      expect(result.isSuccess).toBe(true);
+      expect(findCalendarBlocksByUnits).toHaveBeenCalledTimes(1);
+      expect(result.getValue()[UNIT_A1]!.blocks).toHaveLength(1);
+    });
+
     it("does not call per-unit repository methods", async () => {
       const findCalendarBlocks = vi.fn();
       const findActiveByUnit = vi.fn();
@@ -274,6 +316,44 @@ describe("Batch calendar read use cases", () => {
       expect(result.getValue()[UNIT_A1]?.baseNightlyAmount).toBe("120.0000");
       expect(result.getValue()[UNIT_A2]).toBeNull();
       expect(findByUnitIdsRates).toHaveBeenCalledTimes(1);
+    });
+
+    it("allows inactive units for operator rate-plan batch reads", async () => {
+      getUnitsByIds.mockResolvedValue([
+        {
+          id: UNIT_A1,
+          tenantId: TENANT_A,
+          propertyId: PROP_A,
+          maxGuests: 4,
+          status: "inactive",
+        },
+      ]);
+      getPropertiesByIds.mockResolvedValue([
+        { id: PROP_A, tenantId: TENANT_A, timezone: "Europe/Athens", status: "draft" },
+      ]);
+      findByUnitIdsRates.mockResolvedValue(
+        new Map([
+          [
+            UNIT_A1,
+            {
+              baseNightlyAmount: "99.0000",
+              currency: "EUR",
+              seasons: [],
+              dowModifiers: [],
+              losDiscounts: [],
+            },
+          ],
+        ]),
+      );
+
+      const result = await useCase.execute(
+        { tenantId: TENANT_A, unitIds: [UNIT_A1] },
+        adminActor,
+      );
+
+      expect(result.isSuccess).toBe(true);
+      expect(findByUnitIdsRates).toHaveBeenCalledTimes(1);
+      expect(result.getValue()[UNIT_A1]?.baseNightlyAmount).toBe("99.0000");
     });
   });
 

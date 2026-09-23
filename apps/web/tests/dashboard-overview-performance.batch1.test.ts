@@ -104,6 +104,7 @@ describe("Performance Batch 1 — dashboard overview / slim catalog", () => {
       join(root, "features", "bookings", "ManualBookingPage.tsx"),
       join(root, "features", "pricing", "PricingPage.tsx"),
       join(root, "features", "members", "MembersPage.tsx"),
+      join(root, "features", "extranet-calendar", "ExtranetCalendarPage.tsx"),
     ];
     for (const page of pages) {
       const source = readFileSync(page, "utf8");
