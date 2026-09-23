@@ -34,6 +34,10 @@ Billing owns settlement truth. Fiscal (documents, myDATA, providers) is not impl
 - Paid amount is **not** inferred from Booking status; F1 paid = 0 (`paidAmountSource: no_allocations`).
 - One Booking → N Folios via distinct `folioKey`; default key `primary`.
 
+## F2 status
+
+Invariants **6** (historical tax snapshots) and **13** (guest ≠ invoice recipient) are implemented — see [ADR-025](./025-tax-engine-fiscal-profiles.md).
+
 ## Consequences
 
 Later phases must not weaken these invariants. Greek fiscalization is provider-agnostic via ports (F5/F6), not embedded in Booking.

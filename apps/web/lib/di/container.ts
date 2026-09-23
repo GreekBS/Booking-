@@ -146,6 +146,16 @@ import {
 
   GetFolioUseCase,
 
+  EvaluateAndPostFolioTaxesUseCase,
+
+  UpsertBusinessFiscalProfileUseCase,
+
+  ListBusinessFiscalProfilesUseCase,
+
+  UpsertCustomerBillingProfileUseCase,
+
+  ListCustomerBillingProfilesUseCase,
+
   GetPublicPropertyBySlugUseCase,
 
   GetTenantSettingsUseCase,
@@ -395,6 +405,12 @@ import {
   PrismaBookingRepository,
 
   PrismaFolioRepository,
+
+  PrismaTaxRuleRepository,
+
+  PrismaBusinessFiscalProfileRepository,
+
+  PrismaCustomerBillingProfileRepository,
 
   PrismaCalendarBlockRepository,
 
@@ -891,6 +907,12 @@ const bookingRepository = new PrismaBookingRepository(outboxRepository);
 
 const folioRepository = new PrismaFolioRepository();
 
+const taxRuleRepository = new PrismaTaxRuleRepository();
+
+const businessFiscalProfileRepository = new PrismaBusinessFiscalProfileRepository();
+
+const customerBillingProfileRepository = new PrismaCustomerBillingProfileRepository();
+
 const calendarBlockRepository = new PrismaCalendarBlockRepository();
 export { calendarBlockRepository };
 
@@ -1197,6 +1219,37 @@ export const listFoliosForBookingUseCase = new ListFoliosForBookingUseCase(
 export const getFolioUseCase = new GetFolioUseCase(
   bookingRepository,
   folioRepository,
+  permissionChecker,
+);
+
+export const evaluateAndPostFolioTaxesUseCase = new EvaluateAndPostFolioTaxesUseCase(
+  bookingRepository,
+  folioRepository,
+  businessFiscalProfileRepository,
+  taxRuleRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const upsertBusinessFiscalProfileUseCase = new UpsertBusinessFiscalProfileUseCase(
+  businessFiscalProfileRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const listBusinessFiscalProfilesUseCase = new ListBusinessFiscalProfilesUseCase(
+  businessFiscalProfileRepository,
+  permissionChecker,
+);
+
+export const upsertCustomerBillingProfileUseCase = new UpsertCustomerBillingProfileUseCase(
+  customerBillingProfileRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const listCustomerBillingProfilesUseCase = new ListCustomerBillingProfilesUseCase(
+  customerBillingProfileRepository,
   permissionChecker,
 );
 

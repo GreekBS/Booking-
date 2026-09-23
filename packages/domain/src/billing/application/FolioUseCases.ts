@@ -35,6 +35,7 @@ export interface FolioReadModel {
     sourceLineRef: string | null;
     sortOrder: number;
     postedAt: string;
+    taxSnapshot?: import("../domain/Folio").FolioLineTaxSnapshot | null;
   }>;
   balance: FolioBalance;
 }
@@ -68,6 +69,7 @@ function toReadModel(bundle: FolioWithLines): FolioReadModel {
         sourceLineRef: line.source.sourceLineRef,
         sortOrder: line.sortOrder,
         postedAt: line.postedAt.toISOString(),
+        taxSnapshot: line.taxSnapshot,
       })),
     balance,
   };

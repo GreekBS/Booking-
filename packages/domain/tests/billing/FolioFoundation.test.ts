@@ -170,6 +170,8 @@ describe("Folio aggregate", () => {
     expect(balance.paidAmount).toBe("0.0000");
     expect(balance.paidAmountSource).toBe("no_allocations");
     expect(balance.outstandingBalance).toBe("180.0000");
+    expect(balance.vatTotal).toBe("0.0000");
+    expect(balance.leviesTotal).toBe("0.0000");
   });
 });
 

@@ -243,6 +243,9 @@ model Tenant {
   paymentRecords               PaymentRecord[]
   folios                       Folio[]
   folioLines                   FolioLine[]
+  taxRules                     TaxRule[]
+  businessFiscalProfiles       BusinessFiscalProfile[]
+  customerBillingProfiles      CustomerBillingProfile[]
 
   @@map("tenants")
 }
@@ -374,6 +377,7 @@ model Property {
   bookingHolds   BookingHold[]
   quotes         Quote[]
   bookings       Booking[]
+  businessFiscalProfiles BusinessFiscalProfile[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -807,6 +811,8 @@ model FolioLine {
   sortOrder     Int              @map("sort_order")
   postedAt      DateTime         @map("posted_at") @db.Timestamptz
   createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  /// Immutable tax/levy evaluation snapshot (F2). Never a live TaxRule FK.
+  taxSnapshot   Json?            @map("tax_snapshot")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   folio  Folio  @relation(fields: [folioId], references: [id], onDelete: Cascade)
@@ -814,6 +820,127 @@ model FolioLine {
   @@index([tenantId, folioId, sortOrder])
   @@unique([tenantId, folioId, sourceType, sourceId, sourceLineRef])
   @@map("folio_lines")
+}
+
+enum TaxRuleScope {
+  platform_statutory
+  tenant_commercial
+}
+
+enum TaxType {
+  vat
+  climate_resilience_fee
+  other_levy
+}
+
+enum TaxCalculationKind {
+  PERCENTAGE
+  FIXED_PER_NIGHT
+  FIXED_PER_ROOM
+  FIXED_PER_STAY
+  PER_PERSON
+  PER_PERSON_PER_NIGHT
+}
+
+enum TaxBasis {
+  NET
+  GROSS
+  QUANTITY
+}
+
+enum CustomerBillingType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+/// Effective-dated tax/levy catalog. Platform statutory rows have null tenantId.
+model TaxRule {
+  id                       String             @id @db.VarChar(128)
+  tenantId                 String?            @map("tenant_id") @db.Uuid
+  scope                    TaxRuleScope
+  country                  String             @db.Char(2)
+  jurisdiction             String             @db.VarChar(64)
+  taxType                  TaxType            @map("tax_type")
+  classificationKey        String             @map("classification_key") @db.VarChar(128)
+  chargeCategory           String?            @map("charge_category") @db.VarChar(64)
+  accommodationType        String?            @map("accommodation_type") @db.VarChar(64)
+  propertyClassification   String?            @map("property_classification") @db.VarChar(64)
+  calculationKind          TaxCalculationKind @map("calculation_kind")
+  ratePercent              Decimal?           @map("rate_percent") @db.Decimal(19, 4)
+  fixedAmount              Decimal?           @map("fixed_amount") @db.Decimal(19, 4)
+  currency                 String             @db.Char(3)
+  basis                    TaxBasis
+  validFrom                DateTime           @map("valid_from") @db.Timestamptz
+  validUntil               DateTime?          @map("valid_until") @db.Timestamptz
+  seasonMonths             Int[]              @default([]) @map("season_months")
+  floorAreaMinSqm          Int?               @map("floor_area_min_sqm")
+  floorAreaMaxExclusiveSqm Int?               @map("floor_area_max_exclusive_sqm")
+  legalSource              String?            @map("legal_source") @db.VarChar(512)
+  legalVersion             String?            @map("legal_version") @db.VarChar(128)
+  priority                 Int                @default(100)
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([country, jurisdiction, taxType, classificationKey, validFrom])
+  @@index([tenantId])
+  @@index([validFrom, validUntil])
+  @@map("tax_rules")
+}
+
+model BusinessFiscalProfile {
+  id                     String   @id @default(uuid()) @db.Uuid
+  tenantId               String   @map("tenant_id") @db.Uuid
+  propertyId             String   @map("property_id") @db.Uuid
+  legalName              String   @map("legal_name") @db.VarChar(255)
+  tradeName              String?  @map("trade_name") @db.VarChar(255)
+  country                String   @db.Char(2)
+  vatNumber              String?  @map("vat_number") @db.VarChar(32)
+  addressLine1           String   @map("address_line1") @db.VarChar(255)
+  addressLine2           String?  @map("address_line2") @db.VarChar(255)
+  addressCity            String   @map("address_city") @db.VarChar(128)
+  addressRegion          String?  @map("address_region") @db.VarChar(128)
+  addressPostalCode      String   @map("address_postal_code") @db.VarChar(32)
+  addressCountry         String   @map("address_country") @db.Char(2)
+  fiscalJurisdiction     String   @map("fiscal_jurisdiction") @db.VarChar(64)
+  establishmentCode      String?  @map("establishment_code") @db.VarChar(64)
+  accommodationType      String   @map("accommodation_type") @db.VarChar(64)
+  propertyClassification String?  @map("property_classification") @db.VarChar(64)
+  floorAreaSqm           Int?     @map("floor_area_sqm")
+  metadata               Json     @default("{}")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, propertyId])
+  @@index([tenantId])
+  @@map("business_fiscal_profiles")
+}
+
+model CustomerBillingProfile {
+  id                String              @id @default(uuid()) @db.Uuid
+  tenantId          String              @map("tenant_id") @db.Uuid
+  type              CustomerBillingType
+  legalName         String              @map("legal_name") @db.VarChar(255)
+  vatNumber         String?             @map("vat_number") @db.VarChar(32)
+  country           String              @db.Char(2)
+  addressLine1      String              @map("address_line1") @db.VarChar(255)
+  addressLine2      String?             @map("address_line2") @db.VarChar(255)
+  addressCity       String              @map("address_city") @db.VarChar(128)
+  addressRegion     String?             @map("address_region") @db.VarChar(128)
+  addressPostalCode String              @map("address_postal_code") @db.VarChar(32)
+  addressCountry    String              @map("address_country") @db.Char(2)
+  email             String?             @db.VarChar(255)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("customer_billing_profiles")
 }
 
 model ChannelConnection {

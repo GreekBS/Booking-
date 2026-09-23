@@ -21,6 +21,9 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.paymentRecord.deleteMany();
   await prisma.folioLine.deleteMany();
   await prisma.folio.deleteMany();
+  await prisma.customerBillingProfile.deleteMany();
+  await prisma.businessFiscalProfile.deleteMany();
+  await prisma.taxRule.deleteMany({ where: { tenantId: { not: null } } });
   await prisma.booking.deleteMany();
   await prisma.quote.deleteMany();
   await prisma.bookingHold.deleteMany();

@@ -6,6 +6,7 @@ import {
   type FolioLineType,
   type FolioLineSourceType,
   type FolioStatus,
+  type FolioLineTaxSnapshot,
 } from "@hcp/domain";
 import type { FolioWithLines, IFolioRepository } from "@hcp/domain";
 
@@ -22,6 +23,7 @@ function mapLine(row: {
   sourceLineRef: string | null;
   sortOrder: number;
   postedAt: Date;
+  taxSnapshot: Prisma.JsonValue | null;
 }): FolioLine {
   return FolioLine.rehydrate({
     id: row.id,
@@ -38,6 +40,7 @@ function mapLine(row: {
     },
     sortOrder: row.sortOrder,
     postedAt: row.postedAt,
+    taxSnapshot: (row.taxSnapshot as FolioLineTaxSnapshot | null) ?? null,
   });
 }
 
@@ -72,6 +75,27 @@ function mapFolio(
   return { folio, lines };
 }
 
+function lineCreateData(line: FolioLine) {
+  const p = line.toProps();
+  return {
+    id: p.id,
+    tenantId: p.tenantId,
+    folioId: p.folioId,
+    lineType: p.lineType,
+    description: p.description,
+    amount: new Prisma.Decimal(p.amount),
+    currency: p.currency,
+    sourceType: p.source.sourceType,
+    sourceId: p.source.sourceId,
+    sourceLineRef: p.source.sourceLineRef,
+    sortOrder: p.sortOrder,
+    postedAt: p.postedAt,
+    taxSnapshot: p.taxSnapshot
+      ? (p.taxSnapshot as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull,
+  };
+}
+
 export class PrismaFolioRepository implements IFolioRepository {
   async saveNew(folio: Folio): Promise<"created" | "already_exists"> {
     const props = folio.toProps();
@@ -94,23 +118,7 @@ export class PrismaFolioRepository implements IFolioRepository {
         });
         if (lines.length > 0) {
           await tx.folioLine.createMany({
-            data: lines.map((line) => {
-              const p = line.toProps();
-              return {
-                id: p.id,
-                tenantId: p.tenantId,
-                folioId: p.folioId,
-                lineType: p.lineType,
-                description: p.description,
-                amount: new Prisma.Decimal(p.amount),
-                currency: p.currency,
-                sourceType: p.source.sourceType,
-                sourceId: p.source.sourceId,
-                sourceLineRef: p.source.sourceLineRef,
-                sortOrder: p.sortOrder,
-                postedAt: p.postedAt,
-              };
-            }),
+            data: lines.map(lineCreateData),
           });
         }
       });
@@ -121,6 +129,41 @@ export class PrismaFolioRepository implements IFolioRepository {
         error.code === "P2002"
       ) {
         return "already_exists";
+      }
+      throw error;
+    }
+  }
+
+  async appendLines(
+    tenantId: string,
+    folioId: string,
+    lines: FolioLine[],
+  ): Promise<"appended" | "conflict"> {
+    if (lines.length === 0) return "appended";
+    try {
+      await prisma.$transaction(async (tx) => {
+        await setTenantContext(tx, tenantId);
+        const folio = await tx.folio.findFirst({
+          where: { id: folioId, tenantId },
+        });
+        if (!folio) {
+          throw new Error("Folio not found for append");
+        }
+        await tx.folioLine.createMany({
+          data: lines.map(lineCreateData),
+        });
+        await tx.folio.update({
+          where: { id: folioId },
+          data: { updatedAt: new Date() },
+        });
+      });
+      return "appended";
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return "conflict";
       }
       throw error;
     }

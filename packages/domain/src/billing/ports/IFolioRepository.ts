@@ -25,6 +25,15 @@ export interface IFolioRepository {
     bookingId: string,
     folioKey: string,
   ): Promise<FolioWithLines | null>;
+
+  /**
+   * Append newly posted lines only. Never updates/deletes existing posted lines.
+   */
+  appendLines(
+    tenantId: string,
+    folioId: string,
+    lines: FolioLine[],
+  ): Promise<"appended" | "conflict">;
 }
 
 export type { FolioProps, FolioLineProps };

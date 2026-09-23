@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FiscalSettingsSection } from "./FiscalSettingsSection";
 
 export function SettingsPage() {
   const { profile, tenantId, tenantName, loading: tenantLoading, error: tenantError } = useTenant();
@@ -309,6 +310,8 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <FiscalSettingsSection />
 
         <Card className="lg:col-span-2">
           <CardHeader>

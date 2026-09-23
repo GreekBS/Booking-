@@ -29,7 +29,8 @@ export type FolioLineSourceType =
   | "quote_snapshot_night"
   | "quote_snapshot_fee_placeholder"
   | "quote_snapshot_tax_placeholder"
-  | "manual";
+  | "manual"
+  | "tax_evaluation";
 
 export interface FolioLineSource {
   sourceType: FolioLineSourceType;
@@ -37,6 +38,26 @@ export interface FolioLineSource {
   sourceId: string;
   /** Optional finer reference (night date, "fees", "taxes", snapshotId). */
   sourceLineRef: string | null;
+}
+
+/** Immutable tax/levy snapshot posted with a FolioLine (never live TaxRule). */
+export interface FolioLineTaxSnapshot {
+  taxType: string;
+  classificationKey: string;
+  calculationKind: string;
+  appliedRatePercent: string | null;
+  appliedFixedAmount: string | null;
+  taxableBase: string | null;
+  calculatedAmount: string;
+  currency: string;
+  ruleId: string;
+  ruleScope: string;
+  ruleValidFrom: string;
+  ruleValidUntil: string | null;
+  jurisdiction: string;
+  legalSource: string | null;
+  legalVersion: string | null;
+  metadata: Record<string, unknown>;
 }
 
 export interface FolioLineProps {
@@ -51,6 +72,7 @@ export interface FolioLineProps {
   source: FolioLineSource;
   sortOrder: number;
   postedAt: Date;
+  taxSnapshot: FolioLineTaxSnapshot | null;
 }
 
 export interface FolioProps {
@@ -84,6 +106,10 @@ export interface FolioBalance {
   /** Explicit: paid is known and zero because allocations are unsupported. */
   paidAmountSource: "no_allocations";
   outstandingBalance: string;
+  /** Sum of posted VAT taxSnapshot lines (taxType=vat). */
+  vatTotal: string;
+  /** Sum of posted climate/other levy lines distinguished via taxSnapshot. */
+  leviesTotal: string;
 }
 
 const PRIMARY_KEY = "primary";
@@ -111,6 +137,7 @@ export class FolioLine {
     source: FolioLineSource;
     sortOrder: number;
     postedAt?: Date;
+    taxSnapshot?: FolioLineTaxSnapshot | null;
   }): FolioLine {
     if (!input.description.trim()) {
       throw new ValidationError("Folio line description required");
@@ -130,11 +157,18 @@ export class FolioLine {
       },
       sortOrder: input.sortOrder,
       postedAt: input.postedAt ?? new Date(),
+      taxSnapshot: input.taxSnapshot ? { ...input.taxSnapshot, metadata: { ...input.taxSnapshot.metadata } } : null,
     });
   }
 
   static rehydrate(props: FolioLineProps): FolioLine {
-    return new FolioLine({ ...props, postedAt: new Date(props.postedAt) });
+    return new FolioLine({
+      ...props,
+      postedAt: new Date(props.postedAt),
+      taxSnapshot: props.taxSnapshot
+        ? { ...props.taxSnapshot, metadata: { ...props.taxSnapshot.metadata } }
+        : null,
+    });
   }
 
   get id(): string {
@@ -177,11 +211,23 @@ export class FolioLine {
     return this.props.postedAt;
   }
 
+  get taxSnapshot(): FolioLineTaxSnapshot | null {
+    return this.props.taxSnapshot
+      ? { ...this.props.taxSnapshot, metadata: { ...this.props.taxSnapshot.metadata } }
+      : null;
+  }
+
   toProps(): FolioLineProps {
     return {
       ...this.props,
       source: { ...this.props.source },
       postedAt: new Date(this.props.postedAt),
+      taxSnapshot: this.props.taxSnapshot
+        ? {
+            ...this.props.taxSnapshot,
+            metadata: { ...this.props.taxSnapshot.metadata },
+          }
+        : null,
     };
   }
 
@@ -350,6 +396,16 @@ export class Folio extends AggregateRoot<FolioProps> {
     const paid = Money.zero(currency);
     const outstanding = total.subtract(paid);
 
+    let vatTotal = Money.zero(currency);
+    let leviesTotal = Money.zero(currency);
+    for (const line of this._lines) {
+      const snap = line.taxSnapshot;
+      if (!snap) continue;
+      const m = Money.create(snap.calculatedAmount, snap.currency);
+      if (snap.taxType === "vat") vatTotal = vatTotal.add(m);
+      else leviesTotal = leviesTotal.add(m);
+    }
+
     return {
       currency,
       chargesSubtotal: charges.amount,
@@ -361,6 +417,8 @@ export class Folio extends AggregateRoot<FolioProps> {
       paidAmount: paid.amount,
       paidAmountSource: "no_allocations",
       outstandingBalance: outstanding.amount,
+      vatTotal: vatTotal.amount,
+      leviesTotal: leviesTotal.amount,
     };
   }
 }
