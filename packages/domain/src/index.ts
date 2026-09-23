@@ -105,6 +105,8 @@ export * from "./marketing/application/UpdateLeadStatusUseCase";
 
 
 
+export * from "./billing/index";
+
 export * from "./catalog/domain/Property";
 
 export * from "./catalog/domain/Unit";

@@ -140,6 +140,12 @@ import {
 
   GetBookingUseCase,
 
+  OpenPrimaryFolioFromBookingUseCase,
+
+  ListFoliosForBookingUseCase,
+
+  GetFolioUseCase,
+
   GetPublicPropertyBySlugUseCase,
 
   GetTenantSettingsUseCase,
@@ -387,6 +393,8 @@ import {
   PrismaQuoteRepository,
 
   PrismaBookingRepository,
+
+  PrismaFolioRepository,
 
   PrismaCalendarBlockRepository,
 
@@ -881,6 +889,8 @@ const quoteRepository = new PrismaQuoteRepository(outboxRepository);
 
 const bookingRepository = new PrismaBookingRepository(outboxRepository);
 
+const folioRepository = new PrismaFolioRepository();
+
 const calendarBlockRepository = new PrismaCalendarBlockRepository();
 export { calendarBlockRepository };
 
@@ -1170,7 +1180,25 @@ export const getBookingUseCase = new GetBookingUseCase(
 
 );
 
+export const openPrimaryFolioFromBookingUseCase = new OpenPrimaryFolioFromBookingUseCase(
+  bookingRepository,
+  quoteRepository,
+  folioRepository,
+  idGenerator,
+  permissionChecker,
+);
 
+export const listFoliosForBookingUseCase = new ListFoliosForBookingUseCase(
+  bookingRepository,
+  folioRepository,
+  permissionChecker,
+);
+
+export const getFolioUseCase = new GetFolioUseCase(
+  bookingRepository,
+  folioRepository,
+  permissionChecker,
+);
 
 export const getTenantSettingsUseCase = new GetTenantSettingsUseCase(
   tenantRepository,

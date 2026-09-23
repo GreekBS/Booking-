@@ -241,6 +241,8 @@ model Tenant {
   quotes                       Quote[]
   bookings                     Booking[]
   paymentRecords               PaymentRecord[]
+  folios                       Folio[]
+  folioLines                   FolioLine[]
 
   @@map("tenants")
 }
@@ -726,6 +728,7 @@ model Booking {
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   quote          Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   paymentRecords PaymentRecord[]
+  folios         Folio[]
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -750,6 +753,67 @@ model PaymentRecord {
 
   @@index([tenantId, bookingId])
   @@map("payment_records")
+}
+
+enum FolioStatus {
+  open
+  closed
+}
+
+enum FolioLineType {
+  accommodation
+  extra
+  service
+  discount
+  adjustment
+  fee
+  tax
+}
+
+/// Billing settlement surface — not a fiscal document (F1).
+model Folio {
+  id        String      @id @default(uuid()) @db.Uuid
+  tenantId  String      @map("tenant_id") @db.Uuid
+  bookingId String      @map("booking_id") @db.Uuid
+  /// Distinguishes intentional multi-folios; default open uses "primary".
+  folioKey  String      @map("folio_key") @db.VarChar(64)
+  currency  String      @db.Char(3)
+  status    FolioStatus @default(open)
+  label     String?     @db.VarChar(255)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  lines  FolioLine[]
+
+  @@unique([tenantId, bookingId, folioKey])
+  @@index([tenantId, bookingId])
+  @@map("folios")
+}
+
+/// Append-only posted financial lines. No update/delete of posted amounts.
+model FolioLine {
+  id            String           @id @default(uuid()) @db.Uuid
+  tenantId      String           @map("tenant_id") @db.Uuid
+  folioId       String           @map("folio_id") @db.Uuid
+  lineType      FolioLineType    @map("line_type")
+  description   String           @db.VarChar(512)
+  amount        Decimal          @db.Decimal(19, 4)
+  currency      String           @db.Char(3)
+  sourceType    String           @map("source_type") @db.VarChar(64)
+  sourceId      String           @map("source_id") @db.VarChar(255)
+  sourceLineRef String?          @map("source_line_ref") @db.VarChar(255)
+  sortOrder     Int              @map("sort_order")
+  postedAt      DateTime         @map("posted_at") @db.Timestamptz
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  folio  Folio  @relation(fields: [folioId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, folioId, sortOrder])
+  @@unique([tenantId, folioId, sourceType, sourceId, sourceLineRef])
+  @@map("folio_lines")
 }
 
 model ChannelConnection {

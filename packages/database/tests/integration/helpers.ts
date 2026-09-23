@@ -19,6 +19,8 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.storefrontIdempotencyRecord.deleteMany();
   await prisma.tenantPublishableKey.deleteMany();
   await prisma.paymentRecord.deleteMany();
+  await prisma.folioLine.deleteMany();
+  await prisma.folio.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.quote.deleteMany();
   await prisma.bookingHold.deleteMany();
@@ -63,10 +65,11 @@ export async function verifyRlsPoliciesActive(): Promise<boolean> {
         'rate_seasons', 'rate_dow_modifiers', 'unit_calendar_blocks',
         'booking_holds', 'quotes', 'bookings', 'payment_records',
         'tenant_publishable_keys', 'storefront_idempotency_records',
-        'channel_semantic_transition_commands', 'channel_poll_cursors'
+        'channel_semantic_transition_commands', 'channel_poll_cursors',
+        'folios', 'folio_lines'
       )
   `;
-  return rows.length === 18 && rows.every((row) => row.rowsecurity === true);
+  return rows.length === 20 && rows.every((row) => row.rowsecurity === true);
 }
 
 export { prisma, setTenantContext, clearTenantContext };
