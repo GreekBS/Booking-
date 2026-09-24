@@ -1,5 +1,5 @@
 import { ConflictError, type ICalendarBlockRepository } from "@hcp/domain";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import {
   calendarBlockToActive,
   calendarBlockToView,
@@ -10,23 +10,27 @@ import {
 
 export class PrismaCalendarBlockRepository implements ICalendarBlockRepository {
   async findActiveBlocks(unitId: string, tenantId: string) {
-    const records = await prisma.unitCalendarBlock.findMany({
-      where: {
-        tenantId,
-        unitId,
-        status: "active",
-      },
-      orderBy: { checkIn: "asc" },
-    });
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.unitCalendarBlock.findMany({
+        where: {
+          tenantId,
+          unitId,
+          status: "active",
+        },
+        orderBy: { checkIn: "asc" },
+      });
 
-    return records.map(calendarBlockToActive);
+      return records.map(calendarBlockToActive);
+    });
   }
 
   async findById(id: string, tenantId: string) {
-    const record = await prisma.unitCalendarBlock.findFirst({
-      where: { id, tenantId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.unitCalendarBlock.findFirst({
+        where: { id, tenantId },
+      });
+      return record ? calendarBlockToView(record) : null;
     });
-    return record ? calendarBlockToView(record) : null;
   }
 
   async findCalendarBlocks(
@@ -34,15 +38,17 @@ export class PrismaCalendarBlockRepository implements ICalendarBlockRepository {
     tenantId: string,
     range?: { from: string; to: string },
   ) {
-    const records = await prisma.unitCalendarBlock.findMany({
-      where: {
-        tenantId,
-        unitId,
-        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
-      },
-      orderBy: { checkIn: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.unitCalendarBlock.findMany({
+        where: {
+          tenantId,
+          unitId,
+          ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+        },
+        orderBy: { checkIn: "asc" },
+      });
+      return records.map(calendarBlockToView);
     });
-    return records.map(calendarBlockToView);
   }
 
   async findCalendarBlocksByUnits(
@@ -51,15 +57,17 @@ export class PrismaCalendarBlockRepository implements ICalendarBlockRepository {
     range?: { from: string; to: string },
   ) {
     if (unitIds.length === 0) return [];
-    const records = await prisma.unitCalendarBlock.findMany({
-      where: {
-        tenantId,
-        unitId: { in: unitIds },
-        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
-      },
-      orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.unitCalendarBlock.findMany({
+        where: {
+          tenantId,
+          unitId: { in: unitIds },
+          ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+        },
+        orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+      });
+      return records.map(calendarBlockToView);
     });
-    return records.map(calendarBlockToView);
   }
 
   async saveOperatorBlock(params: {
@@ -73,8 +81,7 @@ export class PrismaCalendarBlockRepository implements ICalendarBlockRepository {
     reason?: string | null;
   }): Promise<void> {
     try {
-      await prisma.$transaction(async (tx) => {
-        await setTenantContext(tx, params.tenantId);
+      await withTenantTransaction(params.tenantId, async (tx) => {
         await tx.unitCalendarBlock.create({
           data: {
             id: params.id,
@@ -98,13 +105,15 @@ export class PrismaCalendarBlockRepository implements ICalendarBlockRepository {
   }
 
   async releaseBlock(id: string, tenantId: string): Promise<void> {
-    await prisma.unitCalendarBlock.updateMany({
-      where: {
-        id,
-        tenantId,
-        blockType: { in: ["manual", "maintenance", "cleaning", "owner"] },
-      },
-      data: { status: "cancelled" },
+    await withTenantTransaction(tenantId, async (tx) => {
+      await tx.unitCalendarBlock.updateMany({
+        where: {
+          id,
+          tenantId,
+          blockType: { in: ["manual", "maintenance", "cleaning", "owner"] },
+        },
+        data: { status: "cancelled" },
+      });
     });
   }
 }

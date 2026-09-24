@@ -15,7 +15,7 @@ import {
 import type { Prisma } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 import {
@@ -80,29 +80,25 @@ export class PrismaChannelPollInventoryCommitStore
   async commit(
     command: ChannelPollInventoryCommitCommand,
   ): Promise<ChannelPollInventoryCommitResult> {
-    if ("$transaction" in this.client) {
-      try {
-        return await this.client.$transaction(
-          async (tx) => this.runInTransaction(tx, command),
-          this.transactionOptions,
-        );
-      } catch (error) {
-        if (error instanceof ConflictError) {
-          return this.resolveConflictAfterRollback(command);
-        }
-        throw error;
+    try {
+      return await withTenantTransaction(
+        command.tenantId,
+        (tx) => this.runInTransaction(tx, command),
+        this.transactionOptions,
+      );
+    } catch (error) {
+      if (error instanceof ConflictError) {
+        return this.resolveConflictAfterRollback(command);
       }
+      throw error;
     }
-
-    await setTenantContext(this.client, command.tenantId);
-    return this.runInTransaction(this.client, command);
   }
 
   private async resolveConflictAfterRollback(
     command: ChannelPollInventoryCommitCommand,
   ): Promise<ChannelPollInventoryCommitResult> {
-    await setTenantContext(prisma, command.tenantId);
-    const reloaded = await prisma.channelPollCursor.findUnique({
+    return withTenantTransaction(command.tenantId, async (tx) => {
+    const reloaded = await tx.channelPollCursor.findUnique({
       where: {
         tenantId_connectionId: {
           tenantId: command.tenantId,
@@ -140,6 +136,7 @@ export class PrismaChannelPollInventoryCommitStore
       "deferred_retry",
       true,
     );
+    });
   }
 
   /**
@@ -150,15 +147,11 @@ export class PrismaChannelPollInventoryCommitStore
     command: ChannelPollInventoryCommitCommand,
     cursorVersion: number,
   ): Promise<void> {
-    if ("$transaction" in this.client) {
-      await this.client.$transaction(
-        async (tx) => this.runEnsureGeneration(tx, command, cursorVersion),
-        this.transactionOptions,
-      );
-      return;
-    }
-    await setTenantContext(this.client, command.tenantId);
-    await this.runEnsureGeneration(this.client, command, cursorVersion);
+    await withTenantTransaction(
+      command.tenantId,
+      (tx) => this.runEnsureGeneration(tx, command, cursorVersion),
+      this.transactionOptions,
+    );
   }
 
   private async runEnsureGeneration(
@@ -166,8 +159,6 @@ export class PrismaChannelPollInventoryCommitStore
     command: ChannelPollInventoryCommitCommand,
     cursorVersion: number,
   ): Promise<void> {
-    await setTenantContext(tx, command.tenantId);
-
     const connection = await this.lockConnection(
       tx,
       command.tenantId,
@@ -286,8 +277,6 @@ export class PrismaChannelPollInventoryCommitStore
     tx: PrismaTransactionClient,
     command: ChannelPollInventoryCommitCommand,
   ): Promise<ChannelPollInventoryCommitResult> {
-    await setTenantContext(tx, command.tenantId);
-
     if (!this.applyEnabled()) {
       return this.fail(
         command,

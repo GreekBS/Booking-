@@ -1,4 +1,14 @@
-export { prisma, setTenantContext, clearTenantContext, assertValidTenantId } from "./client";
+export {
+  prisma,
+  prismaAdmin,
+  setTenantContext,
+  clearTenantContext,
+  assertValidTenantId,
+  withTenantTransaction,
+  getTenantTransaction,
+  requireTenantTransaction,
+  resolveRuntimeDatabaseUrl,
+} from "./client";
 export {
   TALOS_ASYNC_WAKE_JOBS_CHANNEL,
   TALOS_ASYNC_WAKE_OUTBOX_CHANNEL,

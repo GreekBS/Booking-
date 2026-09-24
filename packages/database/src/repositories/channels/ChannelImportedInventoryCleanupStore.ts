@@ -5,7 +5,7 @@ import type {
   ReleaseAllChannelImportedInventoryCommand,
   ReleaseSupersededEpochChannelImportedInventoryCommand,
 } from "@hcp/domain";
-import { prisma, setTenantContext, type PrismaTransactionClient } from "../../client";
+import { withTenantTransaction, type PrismaTransactionClient } from "../../client";
 
 const RELEASE_ALLOWED = new Set(["active", "paused", "error", "disconnected"]);
 
@@ -19,8 +19,7 @@ export class PrismaChannelImportedInventoryCleanupStore
   async releaseAllForConnection(
     command: ReleaseAllChannelImportedInventoryCommand,
   ): Promise<ChannelImportedInventoryCleanupResult> {
-    return prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, command.tenantId);
+    return withTenantTransaction(command.tenantId, async (tx) => {
       const connection = await this.lockAndCas(
         tx,
         command.tenantId,
@@ -59,8 +58,7 @@ export class PrismaChannelImportedInventoryCleanupStore
   async releaseSupersededEpochs(
     command: ReleaseSupersededEpochChannelImportedInventoryCommand,
   ): Promise<ChannelImportedInventoryCleanupResult> {
-    return prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, command.tenantId);
+    return withTenantTransaction(command.tenantId, async (tx) => {
       const connection = await this.lockAndCas(
         tx,
         command.tenantId,

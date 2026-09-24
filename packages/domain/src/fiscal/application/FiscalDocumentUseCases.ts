@@ -29,6 +29,7 @@ import type { FiscalDocumentKind } from "../documents/FiscalDocumentKinds";
 import {
   assertSeriesKindCompatible,
   isClimateFeeDocumentKind,
+  isCreditDocumentKind,
 } from "../documents/FiscalDocumentKinds";
 import type {
   FiscalCustomerSnapshot,
@@ -574,7 +575,7 @@ export class IssueFiscalDocumentUseCase {
         existing.document.documentKind,
       );
 
-      // Re-check coverage against current allocations (race-safe final check in TX).
+      // Re-check coverage against current allocations (advisory only — TX re-checks under FOR UPDATE).
       const folioLineIds = existing.lines
         .map((l) => l.sourceFolioLineId)
         .filter((id): id is string => !!id);
@@ -585,44 +586,41 @@ export class IssueFiscalDocumentUseCase {
         );
 
       const allocations: FiscalLineAllocation[] = [];
-      for (const line of existing.lines) {
-        if (!line.sourceFolioLineId || !line.sourceFolioId) continue;
-        const allocateAmount = isClimateFeeDocumentKind(
-          existing.document.documentKind,
-        )
-          ? line.levyAmount
-          : Money.create(line.netAmount, line.currency)
-              .add(Money.create(line.vatAmount, line.currency))
-              .add(Money.create(line.levyAmount, line.currency)).amount;
+      // Credits must not create FolioLine allocations (coverage stays with original).
+      if (!isCreditDocumentKind(existing.document.documentKind)) {
+        for (const line of existing.lines) {
+          if (!line.sourceFolioLineId || !line.sourceFolioId) continue;
+          const allocateAmount = isClimateFeeDocumentKind(
+            existing.document.documentKind,
+          )
+            ? line.levyAmount
+            : Money.create(line.netAmount, line.currency)
+                .add(Money.create(line.vatAmount, line.currency))
+                .add(Money.create(line.levyAmount, line.currency)).amount;
 
-        const existingForLine = priorAlloc
-          .filter((a) => a.folioLineId === line.sourceFolioLineId)
-          .reduce(
-            (m, a) => m.add(Money.create(a.allocatedAmount, a.currency)),
-            Money.zero(line.currency),
+          const existingForLine = priorAlloc
+            .filter((a) => a.folioLineId === line.sourceFolioLineId)
+            .reduce(
+              (m, a) => m.add(Money.create(a.allocatedAmount, a.currency)),
+              Money.zero(line.currency),
+            );
+          // Soft pre-check; authoritative gate is inside issueAtomic under FOR UPDATE.
+          void existingForLine;
+
+          allocations.push(
+            FiscalLineAllocation.create({
+              id: this.idGenerator.generate(),
+              tenantId,
+              folioId: line.sourceFolioId,
+              folioLineId: line.sourceFolioLineId,
+              fiscalDocumentId: existing.document.id,
+              fiscalDocumentLineId: line.id,
+              allocatedAmount: allocateAmount,
+              currency: line.currency,
+              createdAt: new Date(),
+            }),
           );
-        // Soft pre-check; TX will persist allocations with unique constraints.
-        if (
-          BigInt(existingForLine.amount.replace(".", "")) +
-            BigInt(allocateAmount.replace(".", "")) <
-          0n
-        ) {
-          /* noop — assertCanAllocate needs line amount from folio; skip soft */
         }
-
-        allocations.push(
-          FiscalLineAllocation.create({
-            id: this.idGenerator.generate(),
-            tenantId,
-            folioId: line.sourceFolioId,
-            folioLineId: line.sourceFolioLineId,
-            fiscalDocumentId: existing.document.id,
-            fiscalDocumentLineId: line.id,
-            allocatedAmount: allocateAmount,
-            currency: line.currency,
-            createdAt: new Date(),
-          }),
-        );
       }
 
       // Domain markIssued happens inside repository after sequence allocation,

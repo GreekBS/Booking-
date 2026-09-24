@@ -21,7 +21,7 @@ import type {
 } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 
@@ -418,14 +418,6 @@ export class PrismaChannelConnectionRepository implements IChannelConnectionRepo
     tenantId: string,
     operation: (tx: PrismaTransactionClient) => Promise<T>,
   ): Promise<T> {
-    if ("$transaction" in this.client) {
-      return this.client.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
-        return operation(tx);
-      });
-    }
-
-    await setTenantContext(this.client, tenantId);
-    return operation(this.client);
+    return withTenantTransaction(tenantId, operation);
   }
 }

@@ -1,23 +1,25 @@
 import type { IRatePlanRepository, RatePlanProps } from "@hcp/domain";
 import { randomUUID } from "node:crypto";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import { ratePlanToDomain } from "./commerceMappers";
 
 export class PrismaRatePlanRepository implements IRatePlanRepository {
   async findByUnitId(unitId: string, tenantId: string) {
-    const plan = await prisma.ratePlan.findFirst({
-      where: { unitId, tenantId },
-      include: {
-        seasons: true,
-        dowModifiers: true,
-      },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const plan = await tx.ratePlan.findFirst({
+        where: { unitId, tenantId },
+        include: {
+          seasons: true,
+          dowModifiers: true,
+        },
+      });
+
+      if (!plan) {
+        return null;
+      }
+
+      return ratePlanToDomain(plan, plan.seasons, plan.dowModifiers);
     });
-
-    if (!plan) {
-      return null;
-    }
-
-    return ratePlanToDomain(plan, plan.seasons, plan.dowModifiers);
   }
 
   async findByUnitIds(
@@ -27,24 +29,24 @@ export class PrismaRatePlanRepository implements IRatePlanRepository {
     const result = new Map<string, RatePlanProps>();
     if (unitIds.length === 0) return result;
 
-    const plans = await prisma.ratePlan.findMany({
-      where: { tenantId, unitId: { in: unitIds } },
-      include: {
-        seasons: true,
-        dowModifiers: true,
-      },
-    });
+    return withTenantTransaction(tenantId, async (tx) => {
+      const plans = await tx.ratePlan.findMany({
+        where: { tenantId, unitId: { in: unitIds } },
+        include: {
+          seasons: true,
+          dowModifiers: true,
+        },
+      });
 
-    for (const plan of plans) {
-      result.set(plan.unitId, ratePlanToDomain(plan, plan.seasons, plan.dowModifiers));
-    }
-    return result;
+      for (const plan of plans) {
+        result.set(plan.unitId, ratePlanToDomain(plan, plan.seasons, plan.dowModifiers));
+      }
+      return result;
+    });
   }
 
   async save(tenantId: string, unitId: string, plan: RatePlanProps): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, tenantId);
-
+    await withTenantTransaction(tenantId, async (tx) => {
       const existing = await tx.ratePlan.findFirst({
         where: { unitId, tenantId },
       });

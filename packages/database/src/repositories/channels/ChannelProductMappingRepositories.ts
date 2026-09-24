@@ -15,7 +15,7 @@ import type {
   IChannelReconciliationRunRepository,
 } from "@hcp/domain";
 import { Prisma } from "@prisma/client";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import { createDefaultBookingComConnectionSetup } from "@hcp/domain";
 
 function toDomainProduct(record: {
@@ -62,23 +62,25 @@ export class PrismaChannelProductMappingRepository
   implements IChannelProductMappingRepository
 {
   async findById(tenantId: string, id: string): Promise<ChannelProductMapping | null> {
-    await setTenantContext(prisma, tenantId);
-    const record = await prisma.channelProductMapping.findUnique({
-      where: { tenantId_id: { tenantId, id } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelProductMapping.findUnique({
+        where: { tenantId_id: { tenantId, id } },
+      });
+      return record ? toDomainProduct(record) : null;
     });
-    return record ? toDomainProduct(record) : null;
   }
 
   async listByConnection(
     tenantId: string,
     connectionId: string,
   ): Promise<readonly ChannelProductMapping[]> {
-    await setTenantContext(prisma, tenantId);
-    const records = await prisma.channelProductMapping.findMany({
-      where: { tenantId, connectionId },
-      orderBy: { updatedAt: "desc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.channelProductMapping.findMany({
+        where: { tenantId, connectionId },
+        orderBy: { updatedAt: "desc" },
+      });
+      return records.map(toDomainProduct);
     });
-    return records.map(toDomainProduct);
   }
 
   async listActiveByConnectionAndKind(
@@ -86,53 +88,55 @@ export class PrismaChannelProductMappingRepository
     connectionId: string,
     kind: ChannelProductMappingKind,
   ): Promise<readonly ChannelProductMapping[]> {
-    await setTenantContext(prisma, tenantId);
-    const records = await prisma.channelProductMapping.findMany({
-      where: { tenantId, connectionId, kind, status: "active" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.channelProductMapping.findMany({
+        where: { tenantId, connectionId, kind, status: "active" },
+      });
+      return records.map(toDomainProduct);
     });
-    return records.map(toDomainProduct);
   }
 
   async save(mapping: ChannelProductMapping): Promise<void> {
     const props = mapping.toProps();
-    await setTenantContext(prisma, props.tenantId);
-    await prisma.channelProductMapping.upsert({
-      where: { tenantId_id: { tenantId: props.tenantId, id: props.id } },
-      create: {
-        tenantId: props.tenantId,
-        id: props.id,
-        connectionId: props.connectionId,
-        provider: props.provider,
-        kind: props.kind,
-        propertyId: props.propertyId,
-        unitId: props.unitId,
-        ratePlanId: props.ratePlanId,
-        externalHotelId: props.externalHotelId,
-        externalRoomTypeId: props.externalRoomTypeId,
-        externalRatePlanId: props.externalRatePlanId,
-        externalRoomRateKey: props.externalRoomRateKey,
-        status: props.status,
-        mappingVersion: props.mappingVersion,
-        mappingConfigGeneration: props.mappingConfigGeneration,
-        createdAt: props.createdAt,
-        updatedAt: props.updatedAt,
-      },
-      update: {
-        connectionId: props.connectionId,
-        provider: props.provider,
-        kind: props.kind,
-        propertyId: props.propertyId,
-        unitId: props.unitId,
-        ratePlanId: props.ratePlanId,
-        externalHotelId: props.externalHotelId,
-        externalRoomTypeId: props.externalRoomTypeId,
-        externalRatePlanId: props.externalRatePlanId,
-        externalRoomRateKey: props.externalRoomRateKey,
-        status: props.status,
-        mappingVersion: props.mappingVersion,
-        mappingConfigGeneration: props.mappingConfigGeneration,
-        updatedAt: props.updatedAt,
-      },
+    await withTenantTransaction(props.tenantId, async (tx) => {
+      await tx.channelProductMapping.upsert({
+        where: { tenantId_id: { tenantId: props.tenantId, id: props.id } },
+        create: {
+          tenantId: props.tenantId,
+          id: props.id,
+          connectionId: props.connectionId,
+          provider: props.provider,
+          kind: props.kind,
+          propertyId: props.propertyId,
+          unitId: props.unitId,
+          ratePlanId: props.ratePlanId,
+          externalHotelId: props.externalHotelId,
+          externalRoomTypeId: props.externalRoomTypeId,
+          externalRatePlanId: props.externalRatePlanId,
+          externalRoomRateKey: props.externalRoomRateKey,
+          status: props.status,
+          mappingVersion: props.mappingVersion,
+          mappingConfigGeneration: props.mappingConfigGeneration,
+          createdAt: props.createdAt,
+          updatedAt: props.updatedAt,
+        },
+        update: {
+          connectionId: props.connectionId,
+          provider: props.provider,
+          kind: props.kind,
+          propertyId: props.propertyId,
+          unitId: props.unitId,
+          ratePlanId: props.ratePlanId,
+          externalHotelId: props.externalHotelId,
+          externalRoomTypeId: props.externalRoomTypeId,
+          externalRatePlanId: props.externalRatePlanId,
+          externalRoomRateKey: props.externalRoomRateKey,
+          status: props.status,
+          mappingVersion: props.mappingVersion,
+          mappingConfigGeneration: props.mappingConfigGeneration,
+          updatedAt: props.updatedAt,
+        },
+      });
     });
   }
 }
@@ -144,44 +148,46 @@ export class PrismaChannelConnectionProviderSetupRepository
     tenantId: string,
     connectionId: string,
   ): Promise<ChannelConnectionProviderSetupRecord | null> {
-    await setTenantContext(prisma, tenantId);
-    const record = await prisma.channelConnectionProviderSetup.findUnique({
-      where: { tenantId_connectionId: { tenantId, connectionId } },
-    });
-    if (!record) return null;
-    return {
-      tenantId: record.tenantId,
-      connectionId: record.connectionId,
-      provider: record.provider,
-      setup: record.setupJson as Record<string, unknown>,
-      mappingConfigGeneration: record.mappingConfigGeneration,
-      updatedAt: record.updatedAt,
-    };
-  }
-
-  async upsert(record: ChannelConnectionProviderSetupRecord): Promise<void> {
-    await setTenantContext(prisma, record.tenantId);
-    await prisma.channelConnectionProviderSetup.upsert({
-      where: {
-        tenantId_connectionId: {
-          tenantId: record.tenantId,
-          connectionId: record.connectionId,
-        },
-      },
-      create: {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelConnectionProviderSetup.findUnique({
+        where: { tenantId_connectionId: { tenantId, connectionId } },
+      });
+      if (!record) return null;
+      return {
         tenantId: record.tenantId,
         connectionId: record.connectionId,
         provider: record.provider,
-        setupJson: record.setup as Prisma.InputJsonValue,
+        setup: record.setupJson as Record<string, unknown>,
         mappingConfigGeneration: record.mappingConfigGeneration,
         updatedAt: record.updatedAt,
-      },
-      update: {
-        provider: record.provider,
-        setupJson: record.setup as Prisma.InputJsonValue,
-        mappingConfigGeneration: record.mappingConfigGeneration,
-        updatedAt: record.updatedAt,
-      },
+      };
+    });
+  }
+
+  async upsert(record: ChannelConnectionProviderSetupRecord): Promise<void> {
+    await withTenantTransaction(record.tenantId, async (tx) => {
+      await tx.channelConnectionProviderSetup.upsert({
+        where: {
+          tenantId_connectionId: {
+            tenantId: record.tenantId,
+            connectionId: record.connectionId,
+          },
+        },
+        create: {
+          tenantId: record.tenantId,
+          connectionId: record.connectionId,
+          provider: record.provider,
+          setupJson: record.setup as Prisma.InputJsonValue,
+          mappingConfigGeneration: record.mappingConfigGeneration,
+          updatedAt: record.updatedAt,
+        },
+        update: {
+          provider: record.provider,
+          setupJson: record.setup as Prisma.InputJsonValue,
+          mappingConfigGeneration: record.mappingConfigGeneration,
+          updatedAt: record.updatedAt,
+        },
+      });
     });
   }
 
@@ -210,31 +216,32 @@ export class PrismaChannelInitialSyncPreviewRepository
   implements IChannelInitialSyncPreviewRepository
 {
   async save(preview: ChannelInitialSyncPreviewRecord): Promise<void> {
-    await setTenantContext(prisma, preview.tenantId);
-    await prisma.channelInitialSyncPreview.upsert({
-      where: { tenantId_id: { tenantId: preview.tenantId, id: preview.id } },
-      create: {
-        tenantId: preview.tenantId,
-        id: preview.id,
-        connectionId: preview.connectionId,
-        confirmationToken: preview.confirmationToken,
-        mappingConfigGeneration: preview.mappingConfigGeneration,
-        talosStateFingerprint: preview.talosStateFingerprint,
-        remoteSnapshotFingerprint: preview.remoteSnapshotFingerprint,
-        summaryJson: preview.summary as Prisma.InputJsonValue,
-        status: preview.status,
-        createdAt: preview.createdAt,
-        confirmedAt: preview.confirmedAt,
-      },
-      update: {
-        confirmationToken: preview.confirmationToken,
-        mappingConfigGeneration: preview.mappingConfigGeneration,
-        talosStateFingerprint: preview.talosStateFingerprint,
-        remoteSnapshotFingerprint: preview.remoteSnapshotFingerprint,
-        summaryJson: preview.summary as Prisma.InputJsonValue,
-        status: preview.status,
-        confirmedAt: preview.confirmedAt,
-      },
+    await withTenantTransaction(preview.tenantId, async (tx) => {
+      await tx.channelInitialSyncPreview.upsert({
+        where: { tenantId_id: { tenantId: preview.tenantId, id: preview.id } },
+        create: {
+          tenantId: preview.tenantId,
+          id: preview.id,
+          connectionId: preview.connectionId,
+          confirmationToken: preview.confirmationToken,
+          mappingConfigGeneration: preview.mappingConfigGeneration,
+          talosStateFingerprint: preview.talosStateFingerprint,
+          remoteSnapshotFingerprint: preview.remoteSnapshotFingerprint,
+          summaryJson: preview.summary as Prisma.InputJsonValue,
+          status: preview.status,
+          createdAt: preview.createdAt,
+          confirmedAt: preview.confirmedAt,
+        },
+        update: {
+          confirmationToken: preview.confirmationToken,
+          mappingConfigGeneration: preview.mappingConfigGeneration,
+          talosStateFingerprint: preview.talosStateFingerprint,
+          remoteSnapshotFingerprint: preview.remoteSnapshotFingerprint,
+          summaryJson: preview.summary as Prisma.InputJsonValue,
+          status: preview.status,
+          confirmedAt: preview.confirmedAt,
+        },
+      });
     });
   }
 
@@ -242,11 +249,12 @@ export class PrismaChannelInitialSyncPreviewRepository
     tenantId: string,
     previewId: string,
   ): Promise<ChannelInitialSyncPreviewRecord | null> {
-    await setTenantContext(prisma, tenantId);
-    const record = await prisma.channelInitialSyncPreview.findUnique({
-      where: { tenantId_id: { tenantId, id: previewId } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelInitialSyncPreview.findUnique({
+        where: { tenantId_id: { tenantId, id: previewId } },
+      });
+      return record ? mapPreview(record) : null;
     });
-    return record ? mapPreview(record) : null;
   }
 
   async findPendingByToken(
@@ -254,16 +262,17 @@ export class PrismaChannelInitialSyncPreviewRepository
     connectionId: string,
     confirmationToken: string,
   ): Promise<ChannelInitialSyncPreviewRecord | null> {
-    await setTenantContext(prisma, tenantId);
-    const record = await prisma.channelInitialSyncPreview.findFirst({
-      where: {
-        tenantId,
-        connectionId,
-        confirmationToken,
-        status: "pending",
-      },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelInitialSyncPreview.findFirst({
+        where: {
+          tenantId,
+          connectionId,
+          confirmationToken,
+          status: "pending",
+        },
+      });
+      return record ? mapPreview(record) : null;
     });
-    return record ? mapPreview(record) : null;
   }
 
   async markConfirmed(input: {
@@ -271,10 +280,11 @@ export class PrismaChannelInitialSyncPreviewRepository
     previewId: string;
     confirmedAt: Date;
   }): Promise<void> {
-    await setTenantContext(prisma, input.tenantId);
-    await prisma.channelInitialSyncPreview.update({
-      where: { tenantId_id: { tenantId: input.tenantId, id: input.previewId } },
-      data: { status: "confirmed", confirmedAt: input.confirmedAt },
+    await withTenantTransaction(input.tenantId, async (tx) => {
+      await tx.channelInitialSyncPreview.update({
+        where: { tenantId_id: { tenantId: input.tenantId, id: input.previewId } },
+        data: { status: "confirmed", confirmedAt: input.confirmedAt },
+      });
     });
   }
 
@@ -283,15 +293,16 @@ export class PrismaChannelInitialSyncPreviewRepository
     connectionId: string,
     exceptPreviewId?: string,
   ): Promise<void> {
-    await setTenantContext(prisma, tenantId);
-    await prisma.channelInitialSyncPreview.updateMany({
-      where: {
-        tenantId,
-        connectionId,
-        status: "pending",
-        ...(exceptPreviewId ? { id: { not: exceptPreviewId } } : {}),
-      },
-      data: { status: "superseded" },
+    await withTenantTransaction(tenantId, async (tx) => {
+      await tx.channelInitialSyncPreview.updateMany({
+        where: {
+          tenantId,
+          connectionId,
+          status: "pending",
+          ...(exceptPreviewId ? { id: { not: exceptPreviewId } } : {}),
+        },
+        data: { status: "superseded" },
+      });
     });
   }
 }
@@ -328,19 +339,20 @@ export class PrismaChannelReconciliationRunRepository
   implements IChannelReconciliationRunRepository
 {
   async save(run: ChannelReconciliationRunRecord): Promise<void> {
-    await setTenantContext(prisma, run.tenantId);
-    await prisma.channelReconciliationRun.create({
-      data: {
-        tenantId: run.tenantId,
-        id: run.id,
-        connectionId: run.connectionId,
-        scope: run.scope,
-        outcome: run.outcome,
-        mappingConfigGeneration: run.mappingConfigGeneration,
-        autoHealEnqueued: run.autoHealEnqueued,
-        detailsJson: run.details as Prisma.InputJsonValue,
-        completedAt: run.completedAt,
-      },
+    await withTenantTransaction(run.tenantId, async (tx) => {
+      await tx.channelReconciliationRun.create({
+        data: {
+          tenantId: run.tenantId,
+          id: run.id,
+          connectionId: run.connectionId,
+          scope: run.scope,
+          outcome: run.outcome,
+          mappingConfigGeneration: run.mappingConfigGeneration,
+          autoHealEnqueued: run.autoHealEnqueued,
+          detailsJson: run.details as Prisma.InputJsonValue,
+          completedAt: run.completedAt,
+        },
+      });
     });
   }
 
@@ -349,22 +361,23 @@ export class PrismaChannelReconciliationRunRepository
     connectionId: string,
     limit: number,
   ): Promise<readonly ChannelReconciliationRunRecord[]> {
-    await setTenantContext(prisma, tenantId);
-    const records = await prisma.channelReconciliationRun.findMany({
-      where: { tenantId, connectionId },
-      orderBy: { completedAt: "desc" },
-      take: limit,
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.channelReconciliationRun.findMany({
+        where: { tenantId, connectionId },
+        orderBy: { completedAt: "desc" },
+        take: limit,
+      });
+      return records.map((r) => ({
+        tenantId: r.tenantId,
+        id: r.id,
+        connectionId: r.connectionId,
+        scope: r.scope as ChannelReconciliationRunRecord["scope"],
+        outcome: r.outcome as ChannelReconciliationOutcomeCode,
+        mappingConfigGeneration: r.mappingConfigGeneration,
+        autoHealEnqueued: r.autoHealEnqueued,
+        details: r.detailsJson as Record<string, unknown>,
+        completedAt: r.completedAt,
+      }));
     });
-    return records.map((r) => ({
-      tenantId: r.tenantId,
-      id: r.id,
-      connectionId: r.connectionId,
-      scope: r.scope as ChannelReconciliationRunRecord["scope"],
-      outcome: r.outcome as ChannelReconciliationOutcomeCode,
-      mappingConfigGeneration: r.mappingConfigGeneration,
-      autoHealEnqueued: r.autoHealEnqueued,
-      details: r.detailsJson as Record<string, unknown>,
-      completedAt: r.completedAt,
-    }));
   }
 }

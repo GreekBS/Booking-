@@ -1,5 +1,6 @@
 import { ConflictError, type ICommerceFlowRepository } from "@hcp/domain";
 import type { Hold, Booking, Quote } from "@hcp/domain";
+import { withTenantTransaction } from "../../client";
 import {
   PrismaOutboxRepository,
   saveAggregateWithOutbox,
@@ -15,14 +16,16 @@ export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
     const bookingEvents = booking.pullDomainEvents();
 
     try {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        [...holdEvents, ...bookingEvents],
-        async (tx) => {
-          await persistHoldTx(tx, hold);
-          await persistBookingTx(tx, booking);
-        },
-      );
+      await withTenantTransaction(hold.tenantId, async () => {
+        await saveAggregateWithOutbox(
+          this.outboxRepository,
+          [...holdEvents, ...bookingEvents],
+          async (tx) => {
+            await persistHoldTx(tx, hold);
+            await persistBookingTx(tx, booking);
+          },
+        );
+      });
     } catch (error) {
       if (isExclusionViolation(error)) {
         throw new ConflictError("Dates no longer available");
@@ -36,14 +39,16 @@ export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
     const bookingEvents = booking.pullDomainEvents();
 
     try {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        [...quoteEvents, ...bookingEvents],
-        async (tx) => {
-          await persistQuoteTx(tx, quote);
-          await persistBookingTx(tx, booking);
-        },
-      );
+      await withTenantTransaction(quote.tenantId, async () => {
+        await saveAggregateWithOutbox(
+          this.outboxRepository,
+          [...quoteEvents, ...bookingEvents],
+          async (tx) => {
+            await persistQuoteTx(tx, quote);
+            await persistBookingTx(tx, booking);
+          },
+        );
+      });
     } catch (error) {
       if (isExclusionViolation(error)) {
         throw new ConflictError("Dates no longer available");
@@ -58,15 +63,17 @@ export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
     const bookingEvents = booking.pullDomainEvents();
 
     try {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        [...holdEvents, ...quoteEvents, ...bookingEvents],
-        async (tx) => {
-          await persistHoldTx(tx, hold);
-          await persistQuoteTx(tx, quote);
-          await persistBookingTx(tx, booking);
-        },
-      );
+      await withTenantTransaction(hold.tenantId, async () => {
+        await saveAggregateWithOutbox(
+          this.outboxRepository,
+          [...holdEvents, ...quoteEvents, ...bookingEvents],
+          async (tx) => {
+            await persistHoldTx(tx, hold);
+            await persistQuoteTx(tx, quote);
+            await persistBookingTx(tx, booking);
+          },
+        );
+      });
     } catch (error) {
       if (isExclusionViolation(error)) {
         throw new ConflictError("Dates no longer available");

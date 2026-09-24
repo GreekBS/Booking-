@@ -2,7 +2,7 @@ import type {
   ITenantDashboardOverviewQuery,
   TenantDashboardOverviewReadModel,
 } from "@hcp/domain";
-import { prisma } from "../../client";
+import { withTenantTransaction } from "../../client";
 
 function formatDateColumn(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -39,6 +39,7 @@ export class PrismaTenantDashboardOverviewQuery
     occupancyThroughIso: string;
     recentLimit: number;
   }): Promise<TenantDashboardOverviewReadModel> {
+    return withTenantTransaction(input.tenantId, async (tx) => {
     const bookingScope = propertyScopeWhere(input.allowedPropertyIds);
     const propertyScope = propertyIdScopeWhere(input.allowedPropertyIds);
     const today = new Date(`${input.todayIso}T00:00:00.000Z`);
@@ -51,6 +52,16 @@ export class PrismaTenantDashboardOverviewQuery
       status: { not: "cancelled" as const },
     };
 
+    const parallelStart = Date.now();
+    const timed = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
+      const t0 = Date.now();
+      try {
+        return await fn();
+      } finally {
+        // TEMPORARY audit — do not commit
+        console.log(`[PERF] dashboard.overview.query.${label} ${Date.now() - t0}ms`);
+      }
+    };
     const [
       propertyCount,
       unitCount,
@@ -63,88 +74,110 @@ export class PrismaTenantDashboardOverviewQuery
       recentRecords,
       occupancyBookings,
     ] = await Promise.all([
-      prisma.property.count({
-        where: {
-          tenantId: input.tenantId,
-          deletedAt: null,
-          ...propertyScope,
-        },
-      }),
-      prisma.unit.count({
-        where: {
-          tenantId: input.tenantId,
-          deletedAt: null,
-          ...(input.allowedPropertyIds === null
-            ? {}
-            : input.allowedPropertyIds.length === 0
-              ? { propertyId: { in: [] } }
-              : { propertyId: { in: input.allowedPropertyIds } }),
-        },
-      }),
-      prisma.booking.count({ where: nonCancelled }),
-      prisma.booking.count({
-        where: {
-          ...nonCancelled,
-          checkIn: { gte: today, lte: arrivalsThrough },
-        },
-      }),
-      prisma.booking.count({
-        where: {
-          ...nonCancelled,
-          checkOut: { gte: today, lte: arrivalsThrough },
-        },
-      }),
-      prisma.bookingHold.count({
-        where: {
-          tenantId: input.tenantId,
-          status: "active",
-          ...bookingScope,
-        },
-      }),
-      prisma.booking.aggregate({
-        where: {
-          tenantId: input.tenantId,
-          ...bookingScope,
-          status: { in: ["confirmed", "completed"] },
-        },
-        _sum: { totalAmount: true },
-        _count: { _all: true },
-      }),
-      prisma.booking.findFirst({
-        where: {
-          tenantId: input.tenantId,
-          ...bookingScope,
-          status: { in: ["confirmed", "completed"] },
-        },
-        select: { currency: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.booking.findMany({
-        where: nonCancelled,
-        orderBy: { createdAt: "desc" },
-        take: input.recentLimit,
-        select: {
-          id: true,
-          guestName: true,
-          checkIn: true,
-          checkOut: true,
-          status: true,
-          totalAmount: true,
-          currency: true,
-        },
-      }),
-      prisma.booking.findMany({
-        where: {
-          ...nonCancelled,
-          checkIn: { lt: occupancyThrough },
-          checkOut: { gt: today },
-        },
-        select: {
-          checkIn: true,
-          checkOut: true,
-        },
-      }),
+      timed("propertyCount", () =>
+        tx.property.count({
+          where: {
+            tenantId: input.tenantId,
+            deletedAt: null,
+            ...propertyScope,
+          },
+        }),
+      ),
+      timed("unitCount", () =>
+        tx.unit.count({
+          where: {
+            tenantId: input.tenantId,
+            deletedAt: null,
+            ...(input.allowedPropertyIds === null
+              ? {}
+              : input.allowedPropertyIds.length === 0
+                ? { propertyId: { in: [] } }
+                : { propertyId: { in: input.allowedPropertyIds } }),
+          },
+        }),
+      ),
+      timed("bookingCount", () => tx.booking.count({ where: nonCancelled })),
+      timed("arrivalsNext7Days", () =>
+        tx.booking.count({
+          where: {
+            ...nonCancelled,
+            checkIn: { gte: today, lte: arrivalsThrough },
+          },
+        }),
+      ),
+      timed("departuresNext7Days", () =>
+        tx.booking.count({
+          where: {
+            ...nonCancelled,
+            checkOut: { gte: today, lte: arrivalsThrough },
+          },
+        }),
+      ),
+      timed("activeHoldCount", () =>
+        tx.bookingHold.count({
+          where: {
+            tenantId: input.tenantId,
+            status: "active",
+            ...bookingScope,
+          },
+        }),
+      ),
+      timed("revenueAgg", () =>
+        tx.booking.aggregate({
+          where: {
+            tenantId: input.tenantId,
+            ...bookingScope,
+            status: { in: ["confirmed", "completed"] },
+          },
+          _sum: { totalAmount: true },
+          _count: { _all: true },
+        }),
+      ),
+      timed("currencyRow", () =>
+        tx.booking.findFirst({
+          where: {
+            tenantId: input.tenantId,
+            ...bookingScope,
+            status: { in: ["confirmed", "completed"] },
+          },
+          select: { currency: true },
+          orderBy: { createdAt: "desc" },
+        }),
+      ),
+      timed("recentRecords", () =>
+        tx.booking.findMany({
+          where: nonCancelled,
+          orderBy: { createdAt: "desc" },
+          take: input.recentLimit,
+          select: {
+            id: true,
+            guestName: true,
+            checkIn: true,
+            checkOut: true,
+            status: true,
+            totalAmount: true,
+            currency: true,
+          },
+        }),
+      ),
+      timed("occupancyBookings", () =>
+        tx.booking.findMany({
+          where: {
+            ...nonCancelled,
+            checkIn: { lt: occupancyThrough },
+            checkOut: { gt: today },
+          },
+          select: {
+            checkIn: true,
+            checkOut: true,
+          },
+        }),
+      ),
     ]);
+    // TEMPORARY perf — remove after live diagnosis (no secrets).
+    console.log(
+      `[PERF] dashboard.overview.dbParallel ${Date.now() - parallelStart}ms`,
+    );
 
     let revenue: TenantDashboardOverviewReadModel["revenue"] = null;
     if (revenueAgg._count._all > 0) {
@@ -195,5 +228,6 @@ export class PrismaTenantDashboardOverviewQuery
         currency: r.currency,
       })),
     };
+    });
   }
 }

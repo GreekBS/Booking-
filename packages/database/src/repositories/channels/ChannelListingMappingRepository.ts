@@ -9,7 +9,7 @@ import type {
 } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 
@@ -43,18 +43,10 @@ export class PrismaChannelListingMappingRepository implements IChannelListingMap
 
   async save(mapping: ChannelListingMappingAggregate): Promise<void> {
     const props = mapping.toProps();
-    if ("$transaction" in this.client) {
-      await this.client.$transaction(async (tx) => {
-        await setTenantContext(tx, props.tenantId);
-        await this.lockConnection(tx, props.tenantId, props.connectionId);
-        await this.upsert(tx, mapping);
-      });
-      return;
-    }
-
-    await setTenantContext(this.client, props.tenantId);
-    await this.lockConnection(this.client, props.tenantId, props.connectionId);
-    await this.upsert(this.client, mapping);
+    await withTenantTransaction(props.tenantId, async (tx) => {
+      await this.lockConnection(tx, props.tenantId, props.connectionId);
+      await this.upsert(tx, mapping);
+    });
   }
 
   /** Caller must already hold channel_connections FOR UPDATE in `tx`. */
@@ -66,22 +58,22 @@ export class PrismaChannelListingMappingRepository implements IChannelListingMap
   }
 
   async findById(tenantId: string, mappingId: string): Promise<ChannelListingMapping | null> {
-    const client = this.readClient();
-    await setTenantContext(client, tenantId);
-    const record = await client.channelListingMapping.findUnique({
-      where: { tenantId_id: { tenantId, id: mappingId } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelListingMapping.findUnique({
+        where: { tenantId_id: { tenantId, id: mappingId } },
+      });
+      return record ? toDomain(record) : null;
     });
-    return record ? toDomain(record) : null;
   }
 
   async listByConnection(tenantId: string, connectionId: string): Promise<ChannelListingMapping[]> {
-    const client = this.readClient();
-    await setTenantContext(client, tenantId);
-    const records = await client.channelListingMapping.findMany({
-      where: { tenantId, connectionId },
-      orderBy: { updatedAt: "desc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.channelListingMapping.findMany({
+        where: { tenantId, connectionId },
+        orderBy: { updatedAt: "desc" },
+      });
+      return records.map(toDomain);
     });
-    return records.map(toDomain);
   }
 
   async findByExternalListing(
@@ -90,22 +82,18 @@ export class PrismaChannelListingMappingRepository implements IChannelListingMap
     externalListingId: string,
     externalUnitId?: string | null,
   ): Promise<ChannelListingMapping | null> {
-    const client = this.readClient();
-    await setTenantContext(client, tenantId);
-    const unitId = externalUnitId ?? null;
-    const record = await client.channelListingMapping.findFirst({
-      where: {
-        tenantId,
-        connectionId,
-        externalListingId,
-        externalUnitId: unitId,
-      },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const unitId = externalUnitId ?? null;
+      const record = await tx.channelListingMapping.findFirst({
+        where: {
+          tenantId,
+          connectionId,
+          externalListingId,
+          externalUnitId: unitId,
+        },
+      });
+      return record ? toDomain(record) : null;
     });
-    return record ? toDomain(record) : null;
-  }
-
-  private readClient(): MappingDatabaseClient {
-    return "$transaction" in this.client ? prisma : this.client;
   }
 
   private async lockConnection(

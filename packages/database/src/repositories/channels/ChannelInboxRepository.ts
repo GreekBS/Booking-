@@ -7,7 +7,7 @@ import {
   type MarkChannelInboxFailedParams,
 } from "@hcp/domain";
 import { Prisma } from "@prisma/client";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import { toDomainInboxItem, toPrismaCreateData } from "./channelInboxMappers";
 
 type InboxRow = {
@@ -91,58 +91,64 @@ function isUniqueViolation(error: unknown): boolean {
 export class PrismaChannelInboxRepository implements IChannelInboxRepository {
   async insert(item: ChannelInboxItem): Promise<InsertChannelInboxResult> {
     const props = item.toProps();
-    await setTenantContext(prisma, props.tenantId);
 
-    try {
-      const created = await prisma.channelInboxItem.create({
-        data: toPrismaCreateData(item),
-      });
-      return { item: toDomainInboxItem(created), inserted: true };
-    } catch (error) {
-      if (!isUniqueViolation(error)) {
-        throw error;
+    return withTenantTransaction(props.tenantId, async (tx) => {
+      try {
+        const created = await tx.channelInboxItem.create({
+          data: toPrismaCreateData(item),
+        });
+        return { item: toDomainInboxItem(created), inserted: true };
+      } catch (error) {
+        if (!isUniqueViolation(error)) {
+          throw error;
+        }
+        const existing = await tx.channelInboxItem.findFirst({
+          where: { tenantId: props.tenantId, deduplicationKey: props.deduplicationKey },
+        });
+        if (!existing) {
+          throw error;
+        }
+        return { item: toDomainInboxItem(existing), inserted: false };
       }
-      const existing = await this.findByDeduplicationKey(props.tenantId, props.deduplicationKey);
-      if (!existing) {
-        throw error;
-      }
-      return { item: existing, inserted: false };
-    }
+    });
   }
 
   async findById(tenantId: string, inboxItemId: string): Promise<ChannelInboxItem | null> {
-    await setTenantContext(prisma, tenantId);
-    const record = await prisma.channelInboxItem.findUnique({
-      where: { tenantId_id: { tenantId, id: inboxItemId } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelInboxItem.findUnique({
+        where: { tenantId_id: { tenantId, id: inboxItemId } },
+      });
+      return record ? toDomainInboxItem(record) : null;
     });
-    return record ? toDomainInboxItem(record) : null;
   }
 
   async findByDeduplicationKey(
     tenantId: string,
     deduplicationKey: string,
   ): Promise<ChannelInboxItem | null> {
-    await setTenantContext(prisma, tenantId);
-    const record = await prisma.channelInboxItem.findFirst({
-      where: { tenantId, deduplicationKey },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.channelInboxItem.findFirst({
+        where: { tenantId, deduplicationKey },
+      });
+      return record ? toDomainInboxItem(record) : null;
     });
-    return record ? toDomainInboxItem(record) : null;
   }
 
   async countReplayItemsForSource(tenantId: string, sourceInboxItemId: string): Promise<number> {
-    await setTenantContext(prisma, tenantId);
-    const prefix = `ingress:replay:${sourceInboxItemId}:`;
-    return prisma.channelInboxItem.count({
-      where: {
-        tenantId,
-        deduplicationKey: { startsWith: prefix },
-      },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const prefix = `ingress:replay:${sourceInboxItemId}:`;
+      return tx.channelInboxItem.count({
+        where: {
+          tenantId,
+          deduplicationKey: { startsWith: prefix },
+        },
+      });
     });
   }
 
   async claim(params: ClaimChannelInboxItemParams): Promise<ChannelInboxItem | null> {
-    await setTenantContext(prisma, params.tenantId);
-    const rows = await prisma.$queryRaw<InboxRow[]>`
+    return withTenantTransaction(params.tenantId, async (tx) => {
+      const rows = await tx.$queryRaw<InboxRow[]>`
       UPDATE "channel_inbox_items"
       SET
         "status" = 'processing'::"ChannelInboxProcessingStatus",
@@ -164,58 +170,61 @@ export class PrismaChannelInboxRepository implements IChannelInboxRepository {
         )
       RETURNING *
     `;
-    return rows[0] ? mapRow(rows[0]) : null;
+      return rows[0] ? mapRow(rows[0]) : null;
+    });
   }
 
   async complete(params: CompleteChannelInboxItemParams): Promise<boolean> {
-    await setTenantContext(prisma, params.tenantId);
-    const updated = await prisma.channelInboxItem.updateMany({
-      where: {
-        tenantId: params.tenantId,
-        id: params.inboxItemId,
-        processingToken: params.processingToken,
-      },
-      data: {
-        status: params.status,
-        outcome: params.outcome,
-        outcomeDetail: params.outcomeDetail ?? null,
-        lastError: params.lastError ?? null,
-        resultBookingId: params.resultBookingId ?? null,
-        resultLinkId: params.resultLinkId ?? null,
-        processedAt: params.processedAt,
-        leaseOwner: null,
-        leaseExpiresAt: null,
-        leaseHeartbeatAt: null,
-        processingToken: null,
-        processingStartedAt: null,
-        updatedAt: params.processedAt,
-      },
+    return withTenantTransaction(params.tenantId, async (tx) => {
+      const updated = await tx.channelInboxItem.updateMany({
+        where: {
+          tenantId: params.tenantId,
+          id: params.inboxItemId,
+          processingToken: params.processingToken,
+        },
+        data: {
+          status: params.status,
+          outcome: params.outcome,
+          outcomeDetail: params.outcomeDetail ?? null,
+          lastError: params.lastError ?? null,
+          resultBookingId: params.resultBookingId ?? null,
+          resultLinkId: params.resultLinkId ?? null,
+          processedAt: params.processedAt,
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          leaseHeartbeatAt: null,
+          processingToken: null,
+          processingStartedAt: null,
+          updatedAt: params.processedAt,
+        },
+      });
+      return updated.count === 1;
     });
-    return updated.count === 1;
   }
 
   async markFailed(params: MarkChannelInboxFailedParams): Promise<boolean> {
-    await setTenantContext(prisma, params.tenantId);
-    const updated = await prisma.channelInboxItem.updateMany({
-      where: {
-        tenantId: params.tenantId,
-        id: params.inboxItemId,
-        processingToken: params.processingToken,
-      },
-      data: {
-        status: "failed",
-        outcome: params.outcome,
-        outcomeDetail: params.outcomeDetail ?? null,
-        lastError: params.lastError ?? null,
-        processedAt: null,
-        leaseOwner: null,
-        leaseExpiresAt: null,
-        leaseHeartbeatAt: null,
-        processingToken: null,
-        processingStartedAt: null,
-        updatedAt: params.processedAt,
-      },
+    return withTenantTransaction(params.tenantId, async (tx) => {
+      const updated = await tx.channelInboxItem.updateMany({
+        where: {
+          tenantId: params.tenantId,
+          id: params.inboxItemId,
+          processingToken: params.processingToken,
+        },
+        data: {
+          status: "failed",
+          outcome: params.outcome,
+          outcomeDetail: params.outcomeDetail ?? null,
+          lastError: params.lastError ?? null,
+          processedAt: null,
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          leaseHeartbeatAt: null,
+          processingToken: null,
+          processingStartedAt: null,
+          updatedAt: params.processedAt,
+        },
+      });
+      return updated.count === 1;
     });
-    return updated.count === 1;
   }
 }

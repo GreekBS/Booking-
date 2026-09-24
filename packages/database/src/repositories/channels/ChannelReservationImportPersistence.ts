@@ -3,6 +3,7 @@ import {
   type ChannelReservationImportCommit,
   type IChannelReservationImportPersistencePort,
 } from "@hcp/domain";
+import { withTenantTransaction } from "../../client";
 import {
   PrismaOutboxRepository,
   saveAggregateWithOutbox,
@@ -26,16 +27,18 @@ export class PrismaChannelReservationImportPersistence
     const bookingEvents = booking.pullDomainEvents();
 
     try {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        [...holdEvents, ...quoteEvents, ...bookingEvents],
-        async (tx) => {
-          await persistHoldTx(tx, hold);
-          await persistQuoteTx(tx, quote);
-          await persistBookingTx(tx, booking);
-          await persistExternalReservationLinkTx(tx, link);
-        },
-      );
+      await withTenantTransaction(hold.tenantId, async () => {
+        await saveAggregateWithOutbox(
+          this.outboxRepository,
+          [...holdEvents, ...quoteEvents, ...bookingEvents],
+          async (tx) => {
+            await persistHoldTx(tx, hold);
+            await persistQuoteTx(tx, quote);
+            await persistBookingTx(tx, booking);
+            await persistExternalReservationLinkTx(tx, link);
+          },
+        );
+      });
     } catch (error) {
       if (isExclusionViolation(error)) {
         throw new ConflictError("Dates no longer available");

@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma, setTenantContext } from "../../client";
+import { prisma, withTenantTransaction } from "../../client";
 import {
   BusinessFiscalProfile,
   CustomerBillingProfile,
@@ -85,11 +85,12 @@ export class PrismaTaxRuleRepository implements ITaxRuleRepository {
    * Tenant commercial never replaces platform statutory (resolveTaxRule).
    */
   async listForEvaluation(tenantId: string): Promise<TaxRule[]> {
-    await setTenantContext(prisma, tenantId);
-    const tenantRows = await prisma.taxRule.findMany({
-      where: { tenantId, scope: "tenant_commercial" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const tenantRows = await tx.taxRule.findMany({
+        where: { tenantId, scope: "tenant_commercial" },
+      });
+      return [...greekStatutoryTaxRules(), ...tenantRows.map(mapTaxRule)];
     });
-    return [...greekStatutoryTaxRules(), ...tenantRows.map(mapTaxRule)];
   }
 
   async listPlatformStatutory(): Promise<TaxRule[]> {
@@ -210,8 +211,7 @@ export class PrismaBusinessFiscalProfileRepository
 {
   async save(profile: BusinessFiscalProfile): Promise<void> {
     const p = profile.toProps();
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, p.tenantId);
+    await withTenantTransaction(p.tenantId, async (tx) => {
       await tx.businessFiscalProfile.upsert({
         where: { id: p.id },
         create: {
@@ -272,31 +272,34 @@ export class PrismaBusinessFiscalProfileRepository
     tenantId: string,
     id: string,
   ): Promise<BusinessFiscalProfile | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.businessFiscalProfile.findFirst({
-      where: { id, tenantId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.businessFiscalProfile.findFirst({
+        where: { id, tenantId },
+      });
+      return row ? mapBusiness(row) : null;
     });
-    return row ? mapBusiness(row) : null;
   }
 
   async findByProperty(
     tenantId: string,
     propertyId: string,
   ): Promise<BusinessFiscalProfile | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.businessFiscalProfile.findFirst({
-      where: { tenantId, propertyId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.businessFiscalProfile.findFirst({
+        where: { tenantId, propertyId },
+      });
+      return row ? mapBusiness(row) : null;
     });
-    return row ? mapBusiness(row) : null;
   }
 
   async listByTenant(tenantId: string): Promise<BusinessFiscalProfile[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.businessFiscalProfile.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.businessFiscalProfile.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "asc" },
+      });
+      return rows.map(mapBusiness);
     });
-    return rows.map(mapBusiness);
   }
 }
 
@@ -343,8 +346,7 @@ export class PrismaCustomerBillingProfileRepository
 {
   async save(profile: CustomerBillingProfile): Promise<void> {
     const p = profile.toProps();
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, p.tenantId);
+    await withTenantTransaction(p.tenantId, async (tx) => {
       await tx.customerBillingProfile.upsert({
         where: { id: p.id },
         create: {
@@ -386,24 +388,27 @@ export class PrismaCustomerBillingProfileRepository
     tenantId: string,
     id: string,
   ): Promise<CustomerBillingProfile | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.customerBillingProfile.findFirst({
-      where: { id, tenantId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.customerBillingProfile.findFirst({
+        where: { id, tenantId },
+      });
+      return row ? mapCustomer(row) : null;
     });
-    return row ? mapCustomer(row) : null;
   }
 
   async listByTenant(tenantId: string): Promise<CustomerBillingProfile[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.customerBillingProfile.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.customerBillingProfile.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "asc" },
+      });
+      return rows.map(mapCustomer);
     });
-    return rows.map(mapCustomer);
   }
 
   async delete(tenantId: string, id: string): Promise<void> {
-    await setTenantContext(prisma, tenantId);
-    await prisma.customerBillingProfile.deleteMany({ where: { id, tenantId } });
+    await withTenantTransaction(tenantId, async (tx) => {
+      await tx.customerBillingProfile.deleteMany({ where: { id, tenantId } });
+    });
   }
 }

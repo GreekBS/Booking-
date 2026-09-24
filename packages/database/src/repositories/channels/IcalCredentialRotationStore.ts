@@ -24,7 +24,7 @@ import {
 import { Prisma } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 import { PrismaChannelConnectionRepository } from "./ChannelConnectionRepository";
@@ -505,14 +505,7 @@ export class PrismaIcalCredentialRotationStore implements IIcalCredentialRotatio
     tenantId: string,
     operation: (tx: PrismaTransactionClient) => Promise<T>,
   ): Promise<T> {
-    if ("$transaction" in this.client) {
-      return this.client.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
-        return operation(tx);
-      }, this.transactionOptions);
-    }
-    await setTenantContext(this.client, tenantId);
-    return operation(this.client);
+    return withTenantTransaction(tenantId, operation, this.transactionOptions);
   }
 
   private async lockRotatableConnection(

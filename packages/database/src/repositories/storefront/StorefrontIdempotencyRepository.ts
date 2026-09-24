@@ -1,5 +1,5 @@
 import type { IStorefrontIdempotencyRepository } from "@hcp/domain";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 
 export class PrismaStorefrontIdempotencyRepository implements IStorefrontIdempotencyRepository {
   async findResourceId(
@@ -7,25 +7,27 @@ export class PrismaStorefrontIdempotencyRepository implements IStorefrontIdempot
     scope: "hold" | "booking",
     idempotencyKey: string,
   ): Promise<string | null> {
-    const record = await prisma.storefrontIdempotencyRecord.findUnique({
-      where: {
-        tenantId_scope_idempotencyKey: {
-          tenantId,
-          scope,
-          idempotencyKey,
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.storefrontIdempotencyRecord.findUnique({
+        where: {
+          tenantId_scope_idempotencyKey: {
+            tenantId,
+            scope,
+            idempotencyKey,
+          },
         },
-      },
+      });
+
+      if (!record) {
+        return null;
+      }
+
+      if (record.expiresAt.getTime() <= Date.now()) {
+        return null;
+      }
+
+      return record.resourceId;
     });
-
-    if (!record) {
-      return null;
-    }
-
-    if (record.expiresAt.getTime() <= Date.now()) {
-      return null;
-    }
-
-    return record.resourceId;
   }
 
   async save(
@@ -35,8 +37,7 @@ export class PrismaStorefrontIdempotencyRepository implements IStorefrontIdempot
     resourceId: string,
     expiresAt: Date,
   ): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, tenantId);
+    await withTenantTransaction(tenantId, async (tx) => {
       await tx.storefrontIdempotencyRecord.upsert({
         where: {
           tenantId_scope_idempotencyKey: {

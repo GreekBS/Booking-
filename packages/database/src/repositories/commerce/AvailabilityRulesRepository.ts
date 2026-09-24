@@ -1,15 +1,17 @@
 import type { IAvailabilityRulesRepository } from "@hcp/domain";
 import { randomUUID } from "node:crypto";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import { availabilityRulesToDomain } from "./commerceMappers";
 
 export class PrismaAvailabilityRulesRepository implements IAvailabilityRulesRepository {
   async findByUnitId(unitId: string, tenantId: string) {
-    const record = await prisma.unitAvailabilityRule.findFirst({
-      where: { unitId, tenantId },
-    });
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.unitAvailabilityRule.findFirst({
+        where: { unitId, tenantId },
+      });
 
-    return record ? availabilityRulesToDomain(record) : null;
+      return record ? availabilityRulesToDomain(record) : null;
+    });
   }
 
   async findByUnitIds(
@@ -19,14 +21,16 @@ export class PrismaAvailabilityRulesRepository implements IAvailabilityRulesRepo
     const result = new Map<string, import("@hcp/domain").UnitAvailabilityRulesProps>();
     if (unitIds.length === 0) return result;
 
-    const records = await prisma.unitAvailabilityRule.findMany({
-      where: { tenantId, unitId: { in: unitIds } },
-    });
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.unitAvailabilityRule.findMany({
+        where: { tenantId, unitId: { in: unitIds } },
+      });
 
-    for (const record of records) {
-      result.set(record.unitId, availabilityRulesToDomain(record));
-    }
-    return result;
+      for (const record of records) {
+        result.set(record.unitId, availabilityRulesToDomain(record));
+      }
+      return result;
+    });
   }
 
   async save(
@@ -34,9 +38,7 @@ export class PrismaAvailabilityRulesRepository implements IAvailabilityRulesRepo
     unitId: string,
     rules: Parameters<IAvailabilityRulesRepository["save"]>[2],
   ): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, tenantId);
-
+    await withTenantTransaction(tenantId, async (tx) => {
       await tx.unitAvailabilityRule.upsert({
         where: { unitId },
         create: {

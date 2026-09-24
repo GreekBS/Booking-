@@ -7,7 +7,7 @@ import {
   type PaginatedResult,
   type PaginationParams,
 } from "@hcp/domain";
-import { prisma, setTenantContext } from "../client";
+import { withTenantTransaction } from "../client";
 import {
   PrismaOutboxRepository,
   saveAggregateWithOutbox,
@@ -85,12 +85,11 @@ export class PrismaPropertyRepository implements IPropertyRepository {
     const props = property.toProps();
     const events = property.pullDomainEvents();
 
-    await saveAggregateWithOutbox(
-      this.outboxRepository,
-      events,
-      async (tx: TransactionClient) => {
-        await setTenantContext(tx, props.tenantId);
-
+    await withTenantTransaction(props.tenantId, async () => {
+      await saveAggregateWithOutbox(
+        this.outboxRepository,
+        events,
+        async (tx: TransactionClient) => {
         await tx.property.upsert({
         where: { id: props.id },
         create: {
@@ -174,11 +173,13 @@ export class PrismaPropertyRepository implements IPropertyRepository {
         });
       }
       },
-    );
+      );
+    });
   }
 
   async findById(tenantId: string, propertyId: string): Promise<Property | null> {
-    const record = await prisma.property.findFirst({
+    return withTenantTransaction(tenantId, async (tx) => {
+    const record = await tx.property.findFirst({
       where: { id: propertyId, tenantId, deletedAt: null },
       include: {
         units: true,
@@ -193,10 +194,12 @@ export class PrismaPropertyRepository implements IPropertyRepository {
       record.units,
       record.amenities.map((a) => a.amenityId),
     );
+    });
   }
 
   async findBySlug(tenantId: string, slug: string): Promise<Property | null> {
-    const record = await prisma.property.findFirst({
+    return withTenantTransaction(tenantId, async (tx) => {
+    const record = await tx.property.findFirst({
       where: { tenantId, slug, deletedAt: null },
       include: {
         units: true,
@@ -211,11 +214,14 @@ export class PrismaPropertyRepository implements IPropertyRepository {
       record.units,
       record.amenities.map((a) => a.amenityId),
     );
+    });
   }
 
   async existsBySlug(tenantId: string, slug: string): Promise<boolean> {
-    const count = await prisma.property.count({ where: { tenantId, slug } });
-    return count > 0;
+    return withTenantTransaction(tenantId, async (tx) => {
+      const count = await tx.property.count({ where: { tenantId, slug } });
+      return count > 0;
+    });
   }
 
   async findAll(
@@ -233,8 +239,9 @@ export class PrismaPropertyRepository implements IPropertyRepository {
         : {}),
     };
 
+    return withTenantTransaction(tenantId, async (tx) => {
     const [records, total] = await Promise.all([
-      prisma.property.findMany({
+      tx.property.findMany({
         where,
         skip,
         take: params.limit,
@@ -244,7 +251,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
           amenities: { select: { amenityId: true } },
         },
       }),
-      prisma.property.count({ where }),
+      tx.property.count({ where }),
     ]);
 
     return {
@@ -255,6 +262,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
       page: params.page,
       limit: params.limit,
     };
+    });
   }
 
   async listUnitCatalog(
@@ -269,7 +277,8 @@ export class PrismaPropertyRepository implements IPropertyRepository {
         : {}),
     };
 
-    const records = await prisma.property.findMany({
+    return withTenantTransaction(tenantId, async (tx) => {
+    const records = await tx.property.findMany({
       where,
       orderBy: { name: "asc" },
       select: {
@@ -302,5 +311,6 @@ export class PrismaPropertyRepository implements IPropertyRepository {
         })),
       })),
     };
+    });
   }
 }

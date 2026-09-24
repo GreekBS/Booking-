@@ -13,7 +13,7 @@ import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 
@@ -74,37 +74,31 @@ export class PrismaChannelInventoryReconciliationApplyStore
   ) {}
 
   async apply(command: ChannelInventoryApplyCommand): Promise<ChannelInventoryApplyResult> {
-    if ("$transaction" in this.client) {
-      try {
-        return await this.client.$transaction(
-          async (tx) => this.runInTransaction(tx, command),
-          this.transactionOptions,
-        );
-      } catch (error) {
-        if (this.isRetryable(error)) {
-          return {
-            ok: false,
-            execution: "RETRY",
-            code: "internal_error",
-            message: error instanceof Error ? error.message : String(error),
-            reconcileStatus: "pending",
-            shouldRetryJob: true,
-          };
-        }
-        throw error;
+    try {
+      return await withTenantTransaction(
+        command.tenantId,
+        (tx) => this.runInTransaction(tx, command),
+        this.transactionOptions,
+      );
+    } catch (error) {
+      if (this.isRetryable(error)) {
+        return {
+          ok: false,
+          execution: "RETRY",
+          code: "internal_error",
+          message: error instanceof Error ? error.message : String(error),
+          reconcileStatus: "pending",
+          shouldRetryJob: true,
+        };
       }
+      throw error;
     }
-
-    await setTenantContext(this.client, command.tenantId);
-    return this.runInTransaction(this.client, command);
   }
 
   private async runInTransaction(
     tx: PrismaTransactionClient,
     command: ChannelInventoryApplyCommand,
   ): Promise<ChannelInventoryApplyResult> {
-    await setTenantContext(tx, command.tenantId);
-
     if (!this.applyEnabled()) {
       return {
         ok: true,

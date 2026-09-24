@@ -4,7 +4,7 @@ import type {
   DeactivateChannelConnectionInventoryStoreResult,
   IDeactivateChannelConnectionInventoryStore,
 } from "@hcp/domain";
-import { prisma, setTenantContext, type PrismaTransactionClient } from "../../client";
+import { withTenantTransaction, type PrismaTransactionClient } from "../../client";
 
 /**
  * P1-S7b — connection FOR UPDATE → pause if active → release all owned active channel_import → audit.
@@ -15,10 +15,7 @@ export class PrismaDeactivateChannelConnectionInventoryStore
   async deactivate(
     command: DeactivateChannelConnectionInventoryStoreCommand,
   ): Promise<DeactivateChannelConnectionInventoryStoreResult> {
-    return prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, command.tenantId);
-      return this.run(tx, command);
-    });
+    return withTenantTransaction(command.tenantId, (tx) => this.run(tx, command));
   }
 
   private async run(

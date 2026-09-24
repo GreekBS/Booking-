@@ -1,6 +1,6 @@
 import { ConflictError } from "@hcp/domain";
 import { Booking, type BookingSearchFilters, type IBookingRepository } from "@hcp/domain";
-import { prisma } from "../../client";
+import { withTenantTransaction } from "../../client";
 import type { Prisma } from "@prisma/client";
 import {
   PrismaOutboxRepository,
@@ -16,8 +16,10 @@ export class PrismaBookingRepository implements IBookingRepository {
     const events = booking.pullDomainEvents();
 
     try {
-      await saveAggregateWithOutbox(this.outboxRepository, events, async (tx) => {
-        await persistBookingTx(tx, booking);
+      await withTenantTransaction(booking.tenantId, async () => {
+        await saveAggregateWithOutbox(this.outboxRepository, events, async (tx) => {
+          await persistBookingTx(tx, booking);
+        });
       });
     } catch (error) {
       if (isExclusionViolation(error)) {
@@ -28,10 +30,12 @@ export class PrismaBookingRepository implements IBookingRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<Booking | null> {
-    const record = await prisma.booking.findFirst({
-      where: { id, tenantId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.booking.findFirst({
+        where: { id, tenantId },
+      });
+      return record ? bookingToDomain(record) : null;
     });
-    return record ? bookingToDomain(record) : null;
   }
 
   async findByUnit(
@@ -39,15 +43,17 @@ export class PrismaBookingRepository implements IBookingRepository {
     tenantId: string,
     range?: { from: string; to: string },
   ): Promise<Booking[]> {
-    const records = await prisma.booking.findMany({
-      where: {
-        tenantId,
-        unitId,
-        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
-      },
-      orderBy: { checkIn: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.booking.findMany({
+        where: {
+          tenantId,
+          unitId,
+          ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+        },
+        orderBy: { checkIn: "asc" },
+      });
+      return records.map(bookingToDomain);
     });
-    return records.map(bookingToDomain);
   }
 
   async findByUnits(
@@ -56,15 +62,17 @@ export class PrismaBookingRepository implements IBookingRepository {
     range?: { from: string; to: string },
   ): Promise<Booking[]> {
     if (unitIds.length === 0) return [];
-    const records = await prisma.booking.findMany({
-      where: {
-        tenantId,
-        unitId: { in: unitIds },
-        ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
-      },
-      orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.booking.findMany({
+        where: {
+          tenantId,
+          unitId: { in: unitIds },
+          ...(range ? stayOverlapsRangeWhere(range.from, range.to) : {}),
+        },
+        orderBy: [{ unitId: "asc" }, { checkIn: "asc" }],
+      });
+      return records.map(bookingToDomain);
     });
-    return records.map(bookingToDomain);
   }
 
   async search(filters: BookingSearchFilters) {
@@ -113,22 +121,24 @@ export class PrismaBookingRepository implements IBookingRepository {
           : filters.sortBy;
 
     const skip = (filters.page - 1) * filters.limit;
-    const [records, total] = await Promise.all([
-      prisma.booking.findMany({
-        where,
-        skip,
-        take: filters.limit,
-        orderBy: { [orderByField]: filters.sortDir },
-      }),
-      prisma.booking.count({ where }),
-    ]);
+    return withTenantTransaction(filters.tenantId, async (tx) => {
+      const [records, total] = await Promise.all([
+        tx.booking.findMany({
+          where,
+          skip,
+          take: filters.limit,
+          orderBy: { [orderByField]: filters.sortDir },
+        }),
+        tx.booking.count({ where }),
+      ]);
 
-    return {
-      data: records.map(bookingToDomain),
-      total,
-      page: filters.page,
-      limit: filters.limit,
-    };
+      return {
+        data: records.map(bookingToDomain),
+        total,
+        page: filters.page,
+        limit: filters.limit,
+      };
+    });
   }
 }
 

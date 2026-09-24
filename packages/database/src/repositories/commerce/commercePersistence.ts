@@ -1,7 +1,6 @@
 import type { Hold, Booking, Quote } from "@hcp/domain";
 import type { HoldStatus, BookingStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
-import { setTenantContext } from "../../client";
 import type { TransactionClient } from "../OutboxRepository";
 import {
   mapCalendarBlockStatusForBooking,
@@ -10,8 +9,6 @@ import {
 } from "./commerceMappers";
 
 export async function persistHoldTx(tx: TransactionClient, hold: Hold): Promise<void> {
-  await setTenantContext(tx, hold.tenantId);
-
   const checkIn = hold.stayPeriod.checkIn.value;
   const checkOut = hold.stayPeriod.checkOut.value;
 
@@ -41,8 +38,6 @@ export async function persistHoldTx(tx: TransactionClient, hold: Hold): Promise<
 }
 
 export async function persistQuoteTx(tx: TransactionClient, quote: Quote): Promise<void> {
-  await setTenantContext(tx, quote.tenantId);
-
   const existing = await tx.quote.findUnique({ where: { id: quote.id } });
   if (existing) {
     return;
@@ -73,8 +68,6 @@ export async function persistQuoteTx(tx: TransactionClient, quote: Quote): Promi
 }
 
 export async function persistBookingTx(tx: TransactionClient, booking: Booking): Promise<void> {
-  await setTenantContext(tx, booking.tenantId);
-
   const checkIn = booking.stayPeriod.checkIn.value;
   const checkOut = booking.stayPeriod.checkOut.value;
   const totalAmount = await resolveBookingTotalAmount(tx, booking);

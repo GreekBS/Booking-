@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { prisma } from "../client";
+import { prisma, withTenantTransaction } from "../client";
 import {
   User,
   Membership,
@@ -132,28 +132,30 @@ export class PrismaMembershipRepository implements IMembershipRepository {
     const props = membership.toProps();
     const events = membership.pullDomainEvents();
 
-    await saveAggregateWithOutbox(
-      this.outboxRepository,
-      events,
-      async (tx: TransactionClient) => {
-        await tx.membership.upsert({
-          where: { id: props.id },
-          create: {
-            id: props.id,
-            userId: props.userId,
-            tenantId: props.tenantId,
-            role: props.role as TenantRole,
-            propertyIds: props.propertyIds ?? [],
-            status: props.status as MembershipStatus,
-          },
-          update: {
-            role: props.role as TenantRole,
-            propertyIds: props.propertyIds ?? [],
-            status: props.status as MembershipStatus,
-          },
-        });
-      },
-    );
+    await withTenantTransaction(props.tenantId, async () => {
+      await saveAggregateWithOutbox(
+        this.outboxRepository,
+        events,
+        async (tx: TransactionClient) => {
+          await tx.membership.upsert({
+            where: { id: props.id },
+            create: {
+              id: props.id,
+              userId: props.userId,
+              tenantId: props.tenantId,
+              role: props.role as TenantRole,
+              propertyIds: props.propertyIds ?? [],
+              status: props.status as MembershipStatus,
+            },
+            update: {
+              role: props.role as TenantRole,
+              propertyIds: props.propertyIds ?? [],
+              status: props.status as MembershipStatus,
+            },
+          });
+        },
+      );
+    });
   }
 
   async findById(id: string): Promise<Membership | null> {
@@ -165,15 +167,19 @@ export class PrismaMembershipRepository implements IMembershipRepository {
     userId: string,
     tenantId: string,
   ): Promise<Membership | null> {
-    const record = await prisma.membership.findUnique({
-      where: { userId_tenantId: { userId, tenantId } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.membership.findUnique({
+        where: { userId_tenantId: { userId, tenantId } },
+      });
+      return record ? mapMembership(record) : null;
     });
-    return record ? mapMembership(record) : null;
   }
 
   async findByTenant(tenantId: string): Promise<Membership[]> {
-    const records = await prisma.membership.findMany({ where: { tenantId } });
-    return records.map(mapMembership);
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.membership.findMany({ where: { tenantId } });
+      return records.map(mapMembership);
+    });
   }
 
   async findByUser(userId: string): Promise<Membership[]> {
@@ -189,31 +195,33 @@ export class PrismaInvitationRepository implements IInvitationRepository {
     const props = invitation.toProps();
     const events = invitation.pullDomainEvents();
 
-    await saveAggregateWithOutbox(
-      this.outboxRepository,
-      events,
-      async (tx: TransactionClient) => {
-        await tx.invitation.upsert({
-          where: { id: props.id },
-          create: {
-            id: props.id,
-            tenantId: props.tenantId,
-            email: props.email,
-            role: props.role as TenantRole,
-            propertyIds: props.propertyIds ?? [],
-            tokenHash: props.tokenHash,
-            expiresAt: props.expiresAt,
-            acceptedAt: props.acceptedAt,
-            invitedById: props.invitedBy,
-          },
-          update: {
-            acceptedAt: props.acceptedAt,
-            tokenHash: props.tokenHash,
-            expiresAt: props.expiresAt,
-          },
-        });
-      },
-    );
+    await withTenantTransaction(props.tenantId, async () => {
+      await saveAggregateWithOutbox(
+        this.outboxRepository,
+        events,
+        async (tx: TransactionClient) => {
+          await tx.invitation.upsert({
+            where: { id: props.id },
+            create: {
+              id: props.id,
+              tenantId: props.tenantId,
+              email: props.email,
+              role: props.role as TenantRole,
+              propertyIds: props.propertyIds ?? [],
+              tokenHash: props.tokenHash,
+              expiresAt: props.expiresAt,
+              acceptedAt: props.acceptedAt,
+              invitedById: props.invitedBy,
+            },
+            update: {
+              acceptedAt: props.acceptedAt,
+              tokenHash: props.tokenHash,
+              expiresAt: props.expiresAt,
+            },
+          });
+        },
+      );
+    });
   }
 
   async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
@@ -222,37 +230,43 @@ export class PrismaInvitationRepository implements IInvitationRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<Invitation | null> {
-    const record = await prisma.invitation.findFirst({
-      where: { id, tenantId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.invitation.findFirst({
+        where: { id, tenantId },
+      });
+      return record ? mapInvitation(record) : null;
     });
-    return record ? mapInvitation(record) : null;
   }
 
   async findPendingByEmailAndTenant(
     email: string,
     tenantId: string,
   ): Promise<Invitation | null> {
-    const record = await prisma.invitation.findFirst({
-      where: {
-        email: email.toLowerCase(),
-        tenantId,
-        acceptedAt: null,
-        expiresAt: { gt: new Date() },
-      },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.invitation.findFirst({
+        where: {
+          email: email.toLowerCase(),
+          tenantId,
+          acceptedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      return record ? mapInvitation(record) : null;
     });
-    return record ? mapInvitation(record) : null;
   }
 
   async findPendingByTenant(tenantId: string): Promise<Invitation[]> {
-    const records = await prisma.invitation.findMany({
-      where: {
-        tenantId,
-        acceptedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: "desc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.invitation.findMany({
+        where: {
+          tenantId,
+          acceptedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return records.map(mapInvitation);
     });
-    return records.map(mapInvitation);
   }
 }
 

@@ -6,7 +6,7 @@ import type {
 import type { PrismaClient } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 
@@ -31,15 +31,9 @@ export class PrismaChannelConnectionStatusFinder implements IChannelConnectionSt
     tenantId: string,
     connectionId: string,
   ): Promise<ChannelConnectionRedriveGate | null> {
-    const client = this.client;
-    if ("$transaction" in client) {
-      return client.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
-        return this.read(tx, tenantId, connectionId);
-      });
-    }
-    await setTenantContext(client, tenantId);
-    return this.read(client, tenantId, connectionId);
+    return withTenantTransaction(tenantId, (tx) =>
+      this.read(tx, tenantId, connectionId),
+    );
   }
 
   private async read(

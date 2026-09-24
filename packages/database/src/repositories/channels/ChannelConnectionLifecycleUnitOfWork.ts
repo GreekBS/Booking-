@@ -5,7 +5,7 @@ import type {
 import type { PrismaClient } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 import { PrismaAuditLogRepository } from "../AuditLogRepository";
@@ -41,15 +41,11 @@ export class PrismaChannelConnectionLifecycleUnitOfWork
     tenantId: string,
     work: (ports: ChannelConnectionLifecycleTransactionPorts) => Promise<T>,
   ): Promise<T> {
-    if ("$transaction" in this.client) {
-      return this.client.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
-        return work(this.createPorts(tx));
-      }, this.transactionOptions);
-    }
-
-    await setTenantContext(this.client, tenantId);
-    return work(this.createPorts(this.client));
+    return withTenantTransaction(
+      tenantId,
+      async (tx) => work(this.createPorts(tx)),
+      this.transactionOptions,
+    );
   }
 
   private createPorts(client: DbClient): ChannelConnectionLifecycleTransactionPorts {

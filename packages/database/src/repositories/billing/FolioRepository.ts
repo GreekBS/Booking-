@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import {
   Folio,
   FolioLine,
@@ -101,8 +101,7 @@ export class PrismaFolioRepository implements IFolioRepository {
     const props = folio.toProps();
     const lines = folio.lines;
     try {
-      await prisma.$transaction(async (tx) => {
-        await setTenantContext(tx, props.tenantId);
+      await withTenantTransaction(props.tenantId, async (tx) => {
         await tx.folio.create({
           data: {
             id: props.id,
@@ -141,8 +140,7 @@ export class PrismaFolioRepository implements IFolioRepository {
   ): Promise<"appended" | "conflict"> {
     if (lines.length === 0) return "appended";
     try {
-      await prisma.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
+      await withTenantTransaction(tenantId, async (tx) => {
         const folio = await tx.folio.findFirst({
           where: { id: folioId, tenantId },
         });
@@ -170,27 +168,29 @@ export class PrismaFolioRepository implements IFolioRepository {
   }
 
   async findById(tenantId: string, folioId: string): Promise<FolioWithLines | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.folio.findFirst({
-      where: { id: folioId, tenantId },
-      include: { lines: { orderBy: { sortOrder: "asc" } } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.folio.findFirst({
+        where: { id: folioId, tenantId },
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+      });
+      if (!row) return null;
+      const lines = row.lines.map(mapLine);
+      return mapFolio(row, lines);
     });
-    if (!row) return null;
-    const lines = row.lines.map(mapLine);
-    return mapFolio(row, lines);
   }
 
   async findByBooking(
     tenantId: string,
     bookingId: string,
   ): Promise<FolioWithLines[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.folio.findMany({
-      where: { tenantId, bookingId },
-      include: { lines: { orderBy: { sortOrder: "asc" } } },
-      orderBy: { createdAt: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.folio.findMany({
+        where: { tenantId, bookingId },
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+        orderBy: { createdAt: "asc" },
+      });
+      return rows.map((row) => mapFolio(row, row.lines.map(mapLine)));
     });
-    return rows.map((row) => mapFolio(row, row.lines.map(mapLine)));
   }
 
   async findByBookingAndKey(
@@ -198,12 +198,13 @@ export class PrismaFolioRepository implements IFolioRepository {
     bookingId: string,
     folioKey: string,
   ): Promise<FolioWithLines | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.folio.findFirst({
-      where: { tenantId, bookingId, folioKey },
-      include: { lines: { orderBy: { sortOrder: "asc" } } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.folio.findFirst({
+        where: { tenantId, bookingId, folioKey },
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+      });
+      if (!row) return null;
+      return mapFolio(row, row.lines.map(mapLine));
     });
-    if (!row) return null;
-    return mapFolio(row, row.lines.map(mapLine));
   }
 }

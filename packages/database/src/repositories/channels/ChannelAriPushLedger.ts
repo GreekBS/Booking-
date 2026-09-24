@@ -5,7 +5,7 @@ import type {
   BookingComAriPushLedgerRecord,
 } from "@hcp/domain";
 import { Prisma } from "@prisma/client";
-import { prisma } from "../../client";
+import { withTenantTransaction } from "../../client";
 
 function mapRow(record: {
   tenantId: string;
@@ -41,44 +41,46 @@ export class PrismaChannelAriPushLedger implements IBookingComAriPushLedger {
     coalesceKey: string;
     projection: BookingComAriResolvedProjection;
   }): Promise<BookingComAriPushLedgerRecord> {
-    const existing = await prisma.channelAriPushLedger.findUnique({
-      where: {
-        tenantId_connectionId_coalesceKey: {
+    return withTenantTransaction(input.projection.tenantId, async (tx) => {
+      const existing = await tx.channelAriPushLedger.findUnique({
+        where: {
+          tenantId_connectionId_coalesceKey: {
+            tenantId: input.projection.tenantId,
+            connectionId: input.projection.connectionId,
+            coalesceKey: input.coalesceKey,
+          },
+        },
+      });
+
+      if (existing && input.projection.generation < Number(existing.highestGeneration)) {
+        return mapRow(existing);
+      }
+
+      const record = await tx.channelAriPushLedger.upsert({
+        where: {
+          tenantId_connectionId_coalesceKey: {
+            tenantId: input.projection.tenantId,
+            connectionId: input.projection.connectionId,
+            coalesceKey: input.coalesceKey,
+          },
+        },
+        create: {
           tenantId: input.projection.tenantId,
           connectionId: input.projection.connectionId,
           coalesceKey: input.coalesceKey,
+          highestGeneration: BigInt(input.projection.generation),
+          pendingPayload: input.projection as unknown as Prisma.InputJsonValue,
+          lastOutcome: "pending",
         },
-      },
-    });
-
-    if (existing && input.projection.generation < Number(existing.highestGeneration)) {
-      return mapRow(existing);
-    }
-
-    const record = await prisma.channelAriPushLedger.upsert({
-      where: {
-        tenantId_connectionId_coalesceKey: {
-          tenantId: input.projection.tenantId,
-          connectionId: input.projection.connectionId,
-          coalesceKey: input.coalesceKey,
+        update: {
+          highestGeneration: BigInt(input.projection.generation),
+          pendingPayload: input.projection as unknown as Prisma.InputJsonValue,
+          lastOutcome: "pending",
+          lastError: null,
         },
-      },
-      create: {
-        tenantId: input.projection.tenantId,
-        connectionId: input.projection.connectionId,
-        coalesceKey: input.coalesceKey,
-        highestGeneration: BigInt(input.projection.generation),
-        pendingPayload: input.projection as unknown as Prisma.InputJsonValue,
-        lastOutcome: "pending",
-      },
-      update: {
-        highestGeneration: BigInt(input.projection.generation),
-        pendingPayload: input.projection as unknown as Prisma.InputJsonValue,
-        lastOutcome: "pending",
-        lastError: null,
-      },
+      });
+      return mapRow(record);
     });
-    return mapRow(record);
   }
 
   async get(input: {
@@ -86,16 +88,18 @@ export class PrismaChannelAriPushLedger implements IBookingComAriPushLedger {
     connectionId: string;
     coalesceKey: string;
   }): Promise<BookingComAriPushLedgerRecord | null> {
-    const record = await prisma.channelAriPushLedger.findUnique({
-      where: {
-        tenantId_connectionId_coalesceKey: {
-          tenantId: input.tenantId,
-          connectionId: input.connectionId,
-          coalesceKey: input.coalesceKey,
+    return withTenantTransaction(input.tenantId, async (tx) => {
+      const record = await tx.channelAriPushLedger.findUnique({
+        where: {
+          tenantId_connectionId_coalesceKey: {
+            tenantId: input.tenantId,
+            connectionId: input.connectionId,
+            coalesceKey: input.coalesceKey,
+          },
         },
-      },
+      });
+      return record ? mapRow(record) : null;
     });
-    return record ? mapRow(record) : null;
   }
 
   async markSucceeded(input: {
@@ -105,30 +109,32 @@ export class PrismaChannelAriPushLedger implements IBookingComAriPushLedger {
     generation: number;
     ruid: string | null;
   }): Promise<void> {
-    const existing = await this.get(input);
-    const nextSucceeded = Math.max(
-      existing?.lastSucceededGeneration ?? 0,
-      input.generation,
-    );
-    const clearPending =
-      !!existing?.pendingProjection &&
-      existing.pendingProjection.generation <= input.generation;
+    await withTenantTransaction(input.tenantId, async (tx) => {
+      const existing = await this.get(input);
+      const nextSucceeded = Math.max(
+        existing?.lastSucceededGeneration ?? 0,
+        input.generation,
+      );
+      const clearPending =
+        !!existing?.pendingProjection &&
+        existing.pendingProjection.generation <= input.generation;
 
-    await prisma.channelAriPushLedger.update({
-      where: {
-        tenantId_connectionId_coalesceKey: {
-          tenantId: input.tenantId,
-          connectionId: input.connectionId,
-          coalesceKey: input.coalesceKey,
+      await tx.channelAriPushLedger.update({
+        where: {
+          tenantId_connectionId_coalesceKey: {
+            tenantId: input.tenantId,
+            connectionId: input.connectionId,
+            coalesceKey: input.coalesceKey,
+          },
         },
-      },
-      data: {
-        lastSucceededGeneration: BigInt(nextSucceeded),
-        ...(clearPending ? { pendingPayload: Prisma.JsonNull } : {}),
-        lastRuid: input.ruid,
-        lastOutcome: "succeeded",
-        lastError: null,
-      },
+        data: {
+          lastSucceededGeneration: BigInt(nextSucceeded),
+          ...(clearPending ? { pendingPayload: Prisma.JsonNull } : {}),
+          lastRuid: input.ruid,
+          lastOutcome: "succeeded",
+          lastError: null,
+        },
+      });
     });
   }
 
@@ -140,19 +146,21 @@ export class PrismaChannelAriPushLedger implements IBookingComAriPushLedger {
     error?: string | null;
     ruid?: string | null;
   }): Promise<void> {
-    await prisma.channelAriPushLedger.update({
-      where: {
-        tenantId_connectionId_coalesceKey: {
-          tenantId: input.tenantId,
-          connectionId: input.connectionId,
-          coalesceKey: input.coalesceKey,
+    await withTenantTransaction(input.tenantId, async (tx) => {
+      await tx.channelAriPushLedger.update({
+        where: {
+          tenantId_connectionId_coalesceKey: {
+            tenantId: input.tenantId,
+            connectionId: input.connectionId,
+            coalesceKey: input.coalesceKey,
+          },
         },
-      },
-      data: {
-        lastOutcome: input.outcome,
-        lastError: input.error ?? null,
-        ...(input.ruid !== undefined ? { lastRuid: input.ruid } : {}),
-      },
+        data: {
+          lastOutcome: input.outcome,
+          lastError: input.error ?? null,
+          ...(input.ruid !== undefined ? { lastRuid: input.ruid } : {}),
+        },
+      });
     });
   }
 }

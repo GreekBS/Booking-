@@ -10,7 +10,7 @@ import {
 import type { Prisma } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 import { PrismaChannelConnectionRepository } from "./ChannelConnectionRepository";
@@ -57,22 +57,17 @@ export class PrismaIcalChannelMappingLifecycleStore
   async mutateUnderConnectionLock(
     params: IcalMappingLifecycleMutationParams,
   ): Promise<IcalMappingLifecycleMutationResult> {
-    if ("$transaction" in this.client) {
-      return this.client.$transaction(
-        async (tx) => this.runInTransaction(tx, params),
-        this.transactionOptions,
-      );
-    }
-    await setTenantContext(this.client, params.tenantId);
-    return this.runInTransaction(this.client, params);
+    return withTenantTransaction(
+      params.tenantId,
+      (tx) => this.runInTransaction(tx, params),
+      this.transactionOptions,
+    );
   }
 
   private async runInTransaction(
     tx: PrismaTransactionClient,
     params: IcalMappingLifecycleMutationParams,
   ): Promise<IcalMappingLifecycleMutationResult> {
-    await setTenantContext(tx, params.tenantId);
-
     const connection = await this.lockConnection(
       tx,
       params.tenantId,

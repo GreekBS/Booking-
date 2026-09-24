@@ -1,6 +1,5 @@
 import type { ExternalReservationLink } from "@hcp/domain";
 import type { ExternalReservationLinkStatus as PrismaExternalReservationLinkStatus } from "@prisma/client";
-import { setTenantContext } from "../../client";
 import type { TransactionClient } from "../OutboxRepository";
 
 export async function persistExternalReservationLinkTx(
@@ -8,7 +7,6 @@ export async function persistExternalReservationLinkTx(
   link: ExternalReservationLink,
 ): Promise<void> {
   const props = link.toProps();
-  await setTenantContext(tx, props.tenantId);
 
   await tx.externalReservationLink.create({
     data: {

@@ -100,10 +100,13 @@ export function resolveWorkerDatabaseUrl(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   const url =
-    env[WORKER_DATABASE_URL_ENV]?.trim() || env.DATABASE_URL?.trim() || "";
+    env[WORKER_DATABASE_URL_ENV]?.trim() ||
+    env.RUNTIME_DATABASE_URL?.trim() ||
+    env.DATABASE_URL?.trim() ||
+    "";
   if (!url) {
     throw new Error(
-      "Worker database URL missing. Set WORKER_DATABASE_URL (preferred) or DATABASE_URL " +
+      "Worker database URL missing. Set WORKER_DATABASE_URL (preferred), RUNTIME_DATABASE_URL, or DATABASE_URL " +
         "to an isolated non-production database.",
     );
   }

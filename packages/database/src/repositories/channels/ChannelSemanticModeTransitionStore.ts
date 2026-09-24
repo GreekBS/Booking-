@@ -18,7 +18,7 @@ import {
 import type { Prisma } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 import { PrismaChannelPollCursorRepository } from "./ChannelPollCursorRepository";
@@ -94,14 +94,11 @@ export class PrismaChannelSemanticModeTransitionStore
       reason: command.reason,
     });
 
-    if ("$transaction" in this.client) {
-      return this.client.$transaction(
-        async (tx) => this.runInTransaction(tx, command, fingerprint),
-        this.transactionOptions,
-      );
-    }
-
-    return this.runInTransaction(this.client, command, fingerprint);
+    return withTenantTransaction(
+      command.tenantId,
+      (tx) => this.runInTransaction(tx, command, fingerprint),
+      this.transactionOptions,
+    );
   }
 
   private async runInTransaction(
@@ -109,8 +106,6 @@ export class PrismaChannelSemanticModeTransitionStore
     command: SemanticModeTransitionCommand,
     fingerprint: string,
   ): Promise<SemanticModeTransitionResult> {
-    await setTenantContext(tx, command.tenantId);
-
     const claim = await this.claimOrLoadReceipt(tx, command, fingerprint);
     if (claim.kind === "replay") {
       return claim.result;

@@ -5,7 +5,7 @@ import {
   type IPendingIcalInventoryReconciliationReader,
   type PendingInventoryReconciliationRef,
 } from "@hcp/domain";
-import { prisma, setTenantContext } from "../../client";
+import { prisma, withTenantTransaction } from "../../client";
 
 export class PrismaPendingIcalInventoryReconciliationReader
   implements IPendingIcalInventoryReconciliationReader
@@ -35,27 +35,28 @@ export class PrismaPendingIcalInventoryReconciliationReader
     connectionId: string,
     cursorVersion: number,
   ): Promise<PendingInventoryReconciliationRef | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.channelInventoryReconciliation.findUnique({
-      where: {
-        tenantId_connectionId_cursorVersion: {
-          tenantId,
-          connectionId,
-          cursorVersion,
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.channelInventoryReconciliation.findUnique({
+        where: {
+          tenantId_connectionId_cursorVersion: {
+            tenantId,
+            connectionId,
+            cursorVersion,
+          },
         },
-      },
+      });
+      if (!row || row.reconcileStatus !== "pending") {
+        return null;
+      }
+      return {
+        tenantId: row.tenantId,
+        connectionId: row.connectionId,
+        cursorVersion: row.cursorVersion,
+        semanticConfigVersion: row.semanticConfigVersion,
+        mappingId: row.mappingId,
+        mappingVersion: row.mappingVersion,
+      };
     });
-    if (!row || row.reconcileStatus !== "pending") {
-      return null;
-    }
-    return {
-      tenantId: row.tenantId,
-      connectionId: row.connectionId,
-      cursorVersion: row.cursorVersion,
-      semanticConfigVersion: row.semanticConfigVersion,
-      mappingId: row.mappingId,
-      mappingVersion: row.mappingVersion,
-    };
   }
 }
 

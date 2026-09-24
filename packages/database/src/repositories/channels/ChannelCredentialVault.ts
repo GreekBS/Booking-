@@ -13,7 +13,7 @@ import {
 import type { PrismaClient } from "@prisma/client";
 import {
   prisma,
-  setTenantContext,
+  withTenantTransaction,
   type PrismaTransactionClient,
 } from "../../client";
 import {
@@ -166,13 +166,6 @@ export class PrismaChannelCredentialVault
     tenantId: string,
     work: (tx: PrismaTransactionClient) => Promise<T>,
   ): Promise<T> {
-    if ("$transaction" in this.client) {
-      return this.client.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
-        return work(tx);
-      });
-    }
-    await setTenantContext(this.client, tenantId);
-    return work(this.client);
+    return withTenantTransaction(tenantId, work);
   }
 }

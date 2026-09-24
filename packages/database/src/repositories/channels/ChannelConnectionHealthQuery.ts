@@ -4,43 +4,44 @@ import {
   type ChannelReconciliationHealthSummary,
   type IChannelConnectionHealthQuery,
 } from "@hcp/domain";
-import { prisma, setTenantContext } from "../../client";
+import { prisma, withTenantTransaction } from "../../client";
 
 export class PrismaChannelConnectionHealthQuery implements IChannelConnectionHealthQuery {
   async getReconciliationSummary(params: {
     tenantId: string;
     connectionId: string;
   }): Promise<ChannelReconciliationHealthSummary> {
-    await setTenantContext(prisma, params.tenantId);
-    const [latest, pendingCount] = await Promise.all([
-      prisma.channelInventoryReconciliation.findFirst({
-        where: {
-          tenantId: params.tenantId,
-          connectionId: params.connectionId,
-        },
-        orderBy: [{ cursorVersion: "desc" }],
-      }),
-      prisma.channelInventoryReconciliation.count({
-        where: {
-          tenantId: params.tenantId,
-          connectionId: params.connectionId,
-          reconcileStatus: "pending",
-        },
-      }),
-    ]);
+    return withTenantTransaction(params.tenantId, async (tx) => {
+      const [latest, pendingCount] = await Promise.all([
+        tx.channelInventoryReconciliation.findFirst({
+          where: {
+            tenantId: params.tenantId,
+            connectionId: params.connectionId,
+          },
+          orderBy: [{ cursorVersion: "desc" }],
+        }),
+        tx.channelInventoryReconciliation.count({
+          where: {
+            tenantId: params.tenantId,
+            connectionId: params.connectionId,
+            reconcileStatus: "pending",
+          },
+        }),
+      ]);
 
-    return {
-      latest: latest
-        ? {
-            cursorVersion: latest.cursorVersion,
-            status: latest.reconcileStatus,
-            appliedAt: latest.appliedAt,
-            errorCode: latest.reconcileErrorCode,
-            completeObservedEvidence: latest.completeObservedEvidence,
-          }
-        : null,
-      pendingCount,
-    };
+      return {
+        latest: latest
+          ? {
+              cursorVersion: latest.cursorVersion,
+              status: latest.reconcileStatus,
+              appliedAt: latest.appliedAt,
+              errorCode: latest.reconcileErrorCode,
+              completeObservedEvidence: latest.completeObservedEvidence,
+            }
+          : null,
+        pendingCount,
+      };
+    });
   }
 
   async findLatestReconcileJob(params: {
@@ -74,14 +75,15 @@ export class PrismaChannelConnectionHealthQuery implements IChannelConnectionHea
     tenantId: string;
     connectionId: string;
   }): Promise<number> {
-    await setTenantContext(prisma, params.tenantId);
-    return prisma.unitCalendarBlock.count({
-      where: {
-        tenantId: params.tenantId,
-        connectionId: params.connectionId,
-        blockType: "channel_import",
-        status: "active",
-      },
+    return withTenantTransaction(params.tenantId, async (tx) => {
+      return tx.unitCalendarBlock.count({
+        where: {
+          tenantId: params.tenantId,
+          connectionId: params.connectionId,
+          blockType: "channel_import",
+          status: "active",
+        },
+      });
     });
   }
 }

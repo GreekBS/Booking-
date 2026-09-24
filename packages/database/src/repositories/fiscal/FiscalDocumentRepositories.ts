@@ -1,10 +1,14 @@
 import { Prisma } from "@prisma/client";
-import { prisma, setTenantContext } from "../../client";
+import { withTenantTransaction } from "../../client";
 import {
   FiscalSeries,
   FiscalDocument,
   FiscalDocumentLine,
   FiscalLineAllocation,
+  assertCanAllocate,
+  assertCreditWithinOriginal,
+  isCreditDocumentKind,
+  ValidationError,
   type FiscalDocumentKind,
   type FiscalDocumentStatus,
   type FiscalIssuerSnapshot,
@@ -18,6 +22,139 @@ import {
   type FolioLineTaxSnapshot,
 } from "@hcp/domain";
 import { PrismaOutboxRepository } from "../OutboxRepository";
+
+function absAmountString(amount: string): string {
+  return amount.startsWith("-") ? amount.slice(1) : amount;
+}
+
+/**
+ * Authoritative FolioLine allocation gate inside the issuance TX.
+ * Locks folio_lines in deterministic id order, re-reads committed allocations,
+ * and rejects over-allocation. Concurrency-safe under READ COMMITTED because
+ * FOR UPDATE serializes writers on the same FolioLine rows.
+ */
+async function assertAllocationsFitUnderLineLocks(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  allocations: FiscalLineAllocation[],
+): Promise<void> {
+  if (allocations.length === 0) return;
+
+  const byLine = new Map<string, { currency: string; amounts: string[] }>();
+  for (const a of allocations) {
+    const p = a.toProps();
+    if (p.tenantId !== tenantId) {
+      throw new ValidationError("Cross-tenant allocation rejected");
+    }
+    const abs = absAmountString(p.allocatedAmount);
+    const cur = byLine.get(p.folioLineId);
+    if (!cur) {
+      byLine.set(p.folioLineId, {
+        currency: p.currency,
+        amounts: [abs],
+      });
+    } else {
+      if (cur.currency !== p.currency) {
+        throw new ValidationError("Allocation currency mismatch within issuance");
+      }
+      cur.amounts.push(abs);
+    }
+  }
+
+  const lineIds = [...byLine.keys()].sort();
+  const locked = await tx.$queryRaw<
+    Array<{ id: string; amount: Prisma.Decimal; currency: string }>
+  >`
+    SELECT id, amount, currency
+    FROM folio_lines
+    WHERE tenant_id = ${tenantId}::uuid
+      AND id IN (${Prisma.join(lineIds.map((id) => Prisma.sql`${id}::uuid`))})
+    ORDER BY id
+    FOR UPDATE
+  `;
+  if (locked.length !== lineIds.length) {
+    throw new ValidationError("One or more FolioLines not found for allocation lock");
+  }
+
+  for (const row of locked) {
+    const req = byLine.get(row.id);
+    if (!req) continue;
+    if (row.currency !== req.currency) {
+      throw new ValidationError(
+        `FolioLine ${row.id} currency ${row.currency} != allocation ${req.currency}`,
+      );
+    }
+    const agg = await tx.fiscalLineAllocation.aggregate({
+      where: { tenantId, folioLineId: row.id },
+      _sum: { allocatedAmount: true },
+    });
+    const existing = agg._sum.allocatedAmount?.toFixed(4) ?? "0.0000";
+    let requestSum = new Prisma.Decimal(0);
+    for (const abs of req.amounts) {
+      requestSum = requestSum.add(new Prisma.Decimal(abs));
+    }
+    assertCanAllocate(
+      row.amount.toFixed(4),
+      row.currency,
+      existing,
+      requestSum.toFixed(4),
+    );
+  }
+}
+
+/**
+ * Authoritative credit capacity gate: lock original ISSUED document, sum
+ * committed (ISSUED) credits, reject over-credit. DRAFT credits do not consume
+ * legal capacity — only ISSUED credits count.
+ */
+async function assertCreditFitsUnderOriginalLock(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  originalDocumentId: string,
+  newCreditGross: string,
+  currency: string,
+): Promise<void> {
+  const locked = await tx.$queryRaw<
+    Array<{
+      id: string;
+      status: string;
+      gross_total: Prisma.Decimal;
+      currency: string;
+    }>
+  >`
+    SELECT id, status, gross_total, currency
+    FROM fiscal_documents
+    WHERE tenant_id = ${tenantId}::uuid
+      AND id = ${originalDocumentId}::uuid
+    FOR UPDATE
+  `;
+  const original = locked[0];
+  if (!original) {
+    throw new ValidationError("Original fiscal document not found for credit lock");
+  }
+  if (original.status !== "ISSUED") {
+    throw new ValidationError("Can only credit an ISSUED document");
+  }
+  if (original.currency !== currency) {
+    throw new ValidationError("Credit currency mismatch with original");
+  }
+
+  const credited = await tx.fiscalDocument.aggregate({
+    where: {
+      tenantId,
+      originalDocumentId,
+      status: "ISSUED",
+    },
+    _sum: { grossTotal: true },
+  });
+  const already = credited._sum.grossTotal?.toFixed(4) ?? "0.0000";
+  assertCreditWithinOriginal(
+    original.gross_total.toFixed(4),
+    currency,
+    already,
+    newCreditGross,
+  );
+}
 
 type SeriesRow = {
   id: string;
@@ -233,8 +370,7 @@ function lineCreateData(line: FiscalDocumentLine) {
 export class PrismaFiscalSeriesRepository implements IFiscalSeriesRepository {
   async save(series: FiscalSeries): Promise<void> {
     const p = series.toProps();
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, p.tenantId);
+    await withTenantTransaction(p.tenantId, async (tx) => {
       await tx.fiscalSeries.upsert({
         where: { id: p.id },
         create: {
@@ -259,9 +395,10 @@ export class PrismaFiscalSeriesRepository implements IFiscalSeriesRepository {
   }
 
   async findById(tenantId: string, id: string): Promise<FiscalSeries | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.fiscalSeries.findFirst({ where: { id, tenantId } });
-    return row ? mapSeries(row) : null;
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.fiscalSeries.findFirst({ where: { id, tenantId } });
+      return row ? mapSeries(row) : null;
+    });
   }
 
   async findActive(
@@ -269,21 +406,23 @@ export class PrismaFiscalSeriesRepository implements IFiscalSeriesRepository {
     propertyId: string,
     documentKind: FiscalDocumentKind,
   ): Promise<FiscalSeries[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.fiscalSeries.findMany({
-      where: { tenantId, propertyId, documentKind, active: true },
-      orderBy: { seriesCode: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalSeries.findMany({
+        where: { tenantId, propertyId, documentKind, active: true },
+        orderBy: { seriesCode: "asc" },
+      });
+      return rows.map(mapSeries);
     });
-    return rows.map(mapSeries);
   }
 
   async listByTenant(tenantId: string): Promise<FiscalSeries[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.fiscalSeries.findMany({
-      where: { tenantId },
-      orderBy: [{ propertyId: "asc" }, { documentKind: "asc" }, { seriesCode: "asc" }],
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalSeries.findMany({
+        where: { tenantId },
+        orderBy: [{ propertyId: "asc" }, { documentKind: "asc" }, { seriesCode: "asc" }],
+      });
+      return rows.map(mapSeries);
     });
-    return rows.map(mapSeries);
   }
 }
 
@@ -298,8 +437,7 @@ export class PrismaFiscalDocumentRepository implements IFiscalDocumentRepository
     if (p.status !== "DRAFT") {
       throw new Error("saveDraft only accepts DRAFT documents");
     }
-    await prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, p.tenantId);
+    await withTenantTransaction(p.tenantId, async (tx) => {
       await tx.fiscalDocument.upsert({
         where: { id: p.id },
         create: documentCreateData(document),
@@ -340,54 +478,58 @@ export class PrismaFiscalDocumentRepository implements IFiscalDocumentRepository
     tenantId: string,
     id: string,
   ): Promise<FiscalDocumentWithLines | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.fiscalDocument.findFirst({
-      where: { id, tenantId },
-      include: { lines: { orderBy: { sortOrder: "asc" } } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.fiscalDocument.findFirst({
+        where: { id, tenantId },
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+      });
+      if (!row) return null;
+      return mapDocument(row, row.lines.map(mapLine));
     });
-    if (!row) return null;
-    return mapDocument(row, row.lines.map(mapLine));
   }
 
   async findByIssuanceIdempotencyKey(
     tenantId: string,
     key: string,
   ): Promise<FiscalDocumentWithLines | null> {
-    await setTenantContext(prisma, tenantId);
-    const row = await prisma.fiscalDocument.findFirst({
-      where: { tenantId, issuanceIdempotencyKey: key },
-      include: { lines: { orderBy: { sortOrder: "asc" } } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.fiscalDocument.findFirst({
+        where: { tenantId, issuanceIdempotencyKey: key },
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+      });
+      if (!row) return null;
+      return mapDocument(row, row.lines.map(mapLine));
     });
-    if (!row) return null;
-    return mapDocument(row, row.lines.map(mapLine));
   }
 
   async listByTenant(
     tenantId: string,
     opts?: { propertyId?: string; limit?: number },
   ): Promise<FiscalDocument[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.fiscalDocument.findMany({
-      where: {
-        tenantId,
-        ...(opts?.propertyId ? { propertyId: opts.propertyId } : {}),
-      },
-      orderBy: [{ issuedAt: "desc" }, { createdAt: "desc" }],
-      take: opts?.limit ?? 100,
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalDocument.findMany({
+        where: {
+          tenantId,
+          ...(opts?.propertyId ? { propertyId: opts.propertyId } : {}),
+        },
+        orderBy: [{ issuedAt: "desc" }, { createdAt: "desc" }],
+        take: opts?.limit ?? 100,
+      });
+      return rows.map((r) => mapDocument(r).document);
     });
-    return rows.map((r) => mapDocument(r).document);
   }
 
   async listCreditsAgainst(
     tenantId: string,
     originalDocumentId: string,
   ): Promise<FiscalDocument[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.fiscalDocument.findMany({
-      where: { tenantId, originalDocumentId },
-      orderBy: { createdAt: "asc" },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalDocument.findMany({
+        where: { tenantId, originalDocumentId },
+        orderBy: { createdAt: "asc" },
+      });
+      return rows.map((r) => mapDocument(r).document);
     });
-    return rows.map((r) => mapDocument(r).document);
   }
 
   async issueAtomic(
@@ -400,10 +542,15 @@ export class PrismaFiscalDocumentRepository implements IFiscalDocumentRepository
       throw new Error("seriesId required for issuance");
     }
 
-    try {
-      return await prisma.$transaction(async (tx) => {
-        await setTenantContext(tx, tenantId);
+    const isCredit = isCreditDocumentKind(command.document.documentKind);
+    if (isCredit && command.allocations.length > 0) {
+      throw new ValidationError(
+        "Credit documents must not create FolioLine fiscal allocations",
+      );
+    }
 
+    try {
+      return await withTenantTransaction(tenantId, async (tx) => {
         // Idempotent retry: return existing ISSUED doc for this key.
         const existing = await tx.fiscalDocument.findFirst({
           where: { tenantId, issuanceIdempotencyKey: key },
@@ -418,7 +565,31 @@ export class PrismaFiscalDocumentRepository implements IFiscalDocumentRepository
           };
         }
 
-        // Lock series row and allocate next sequence (rolls back with TX on failure).
+        // 1) FolioLine locks + authoritative remaining check (non-credits).
+        if (command.allocations.length) {
+          await assertAllocationsFitUnderLineLocks(
+            tx,
+            tenantId,
+            command.allocations,
+          );
+        }
+
+        // 2) Credit capacity lock on original document.
+        if (isCredit) {
+          const originalId = command.document.correlation?.originalDocumentId;
+          if (!originalId) {
+            throw new ValidationError("Credit document missing originalDocumentId");
+          }
+          await assertCreditFitsUnderOriginalLock(
+            tx,
+            tenantId,
+            originalId,
+            command.document.totals.grossTotal,
+            command.document.currency,
+          );
+        }
+
+        // 3) Lock series row and allocate next sequence (rolls back with TX on failure).
         const locked = await tx.$queryRaw<
           Array<{ id: string; next_sequence: number; active: boolean; document_kind: string }>
         >`
@@ -547,57 +718,60 @@ export class PrismaFiscalAllocationRepository
     folioLineIds: string[],
   ): Promise<FiscalLineAllocation[]> {
     if (folioLineIds.length === 0) return [];
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.fiscalLineAllocation.findMany({
-      where: { tenantId, folioLineId: { in: folioLineIds } },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalLineAllocation.findMany({
+        where: { tenantId, folioLineId: { in: folioLineIds } },
+      });
+      return rows.map((r) =>
+        FiscalLineAllocation.rehydrate({
+          id: r.id,
+          tenantId: r.tenantId,
+          folioId: r.folioId,
+          folioLineId: r.folioLineId,
+          fiscalDocumentId: r.fiscalDocumentId,
+          fiscalDocumentLineId: r.fiscalDocumentLineId,
+          allocatedAmount: r.allocatedAmount.toFixed(4),
+          currency: r.currency,
+          createdAt: r.createdAt,
+        }),
+      );
     });
-    return rows.map((r) =>
-      FiscalLineAllocation.rehydrate({
-        id: r.id,
-        tenantId: r.tenantId,
-        folioId: r.folioId,
-        folioLineId: r.folioLineId,
-        fiscalDocumentId: r.fiscalDocumentId,
-        fiscalDocumentLineId: r.fiscalDocumentLineId,
-        allocatedAmount: r.allocatedAmount.toFixed(4),
-        currency: r.currency,
-        createdAt: r.createdAt,
-      }),
-    );
   }
 
   async listByFolioId(
     tenantId: string,
     folioId: string,
   ): Promise<FiscalLineAllocation[]> {
-    await setTenantContext(prisma, tenantId);
-    const rows = await prisma.fiscalLineAllocation.findMany({
-      where: { tenantId, folioId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalLineAllocation.findMany({
+        where: { tenantId, folioId },
+      });
+      return rows.map((r) =>
+        FiscalLineAllocation.rehydrate({
+          id: r.id,
+          tenantId: r.tenantId,
+          folioId: r.folioId,
+          folioLineId: r.folioLineId,
+          fiscalDocumentId: r.fiscalDocumentId,
+          fiscalDocumentLineId: r.fiscalDocumentLineId,
+          allocatedAmount: r.allocatedAmount.toFixed(4),
+          currency: r.currency,
+          createdAt: r.createdAt,
+        }),
+      );
     });
-    return rows.map((r) =>
-      FiscalLineAllocation.rehydrate({
-        id: r.id,
-        tenantId: r.tenantId,
-        folioId: r.folioId,
-        folioLineId: r.folioLineId,
-        fiscalDocumentId: r.fiscalDocumentId,
-        fiscalDocumentLineId: r.fiscalDocumentLineId,
-        allocatedAmount: r.allocatedAmount.toFixed(4),
-        currency: r.currency,
-        createdAt: r.createdAt,
-      }),
-    );
   }
 
   async sumAllocatedForFolioLine(
     tenantId: string,
     folioLineId: string,
   ): Promise<string> {
-    await setTenantContext(prisma, tenantId);
-    const agg = await prisma.fiscalLineAllocation.aggregate({
-      where: { tenantId, folioLineId },
-      _sum: { allocatedAmount: true },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const agg = await tx.fiscalLineAllocation.aggregate({
+        where: { tenantId, folioLineId },
+        _sum: { allocatedAmount: true },
+      });
+      return agg._sum.allocatedAmount?.toFixed(4) ?? "0.0000";
     });
-    return agg._sum.allocatedAmount?.toFixed(4) ?? "0.0000";
   }
 }

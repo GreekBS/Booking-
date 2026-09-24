@@ -6,7 +6,7 @@ import type {
   PublishableKeyRecord,
 } from "@hcp/domain";
 import { hashToken } from "../IdentityRepositories";
-import { prisma } from "../../client";
+import { prisma, withTenantTransaction } from "../../client";
 
 export class PrismaPublishableKeyRepository implements IPublishableKeyRepository {
   async findByKeyHash(keyHash: string): Promise<PublishableKeyRecord | null> {
@@ -33,12 +33,14 @@ export class PrismaPublishableKeyRepository implements IPublishableKeyRepository
   }
 
   async listByTenant(tenantId: string): Promise<PublishableKeyListItem[]> {
-    const records = await prisma.tenantPublishableKey.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: "desc" },
-    });
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.tenantPublishableKey.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+      });
 
-    return records.map(mapListItem);
+      return records.map(mapListItem);
+    });
   }
 
   async create(params: {
@@ -48,15 +50,17 @@ export class PrismaPublishableKeyRepository implements IPublishableKeyRepository
     environment: PublishableKeyRecord["environment"];
     allowedDomains: string[];
   }): Promise<CreatePublishableKeyResult> {
-    await prisma.tenantPublishableKey.create({
-      data: {
-        id: params.id,
-        tenantId: params.tenantId,
-        keyHash: hashToken(params.rawKey),
-        keyPrefix: params.rawKey.slice(0, 16),
-        environment: params.environment,
-        allowedDomains: params.allowedDomains,
-      },
+    await withTenantTransaction(params.tenantId, async (tx) => {
+      await tx.tenantPublishableKey.create({
+        data: {
+          id: params.id,
+          tenantId: params.tenantId,
+          keyHash: hashToken(params.rawKey),
+          keyPrefix: params.rawKey.slice(0, 16),
+          environment: params.environment,
+          allowedDomains: params.allowedDomains,
+        },
+      });
     });
 
     return {
@@ -68,9 +72,11 @@ export class PrismaPublishableKeyRepository implements IPublishableKeyRepository
   }
 
   async revoke(id: string, tenantId: string): Promise<void> {
-    await prisma.tenantPublishableKey.updateMany({
-      where: { id, tenantId, isActive: true },
-      data: { isActive: false },
+    await withTenantTransaction(tenantId, async (tx) => {
+      await tx.tenantPublishableKey.updateMany({
+        where: { id, tenantId, isActive: true },
+        data: { isActive: false },
+      });
     });
   }
 
@@ -79,19 +85,23 @@ export class PrismaPublishableKeyRepository implements IPublishableKeyRepository
     tenantId: string,
     allowedDomains: string[],
   ): Promise<PublishableKeyListItem> {
-    const record = await prisma.tenantPublishableKey.update({
-      where: { id, tenantId },
-      data: { allowedDomains },
-    });
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.tenantPublishableKey.update({
+        where: { id, tenantId },
+        data: { allowedDomains },
+      });
 
-    return mapListItem(record);
+      return mapListItem(record);
+    });
   }
 
   async findById(id: string, tenantId: string): Promise<PublishableKeyListItem | null> {
-    const record = await prisma.tenantPublishableKey.findFirst({
-      where: { id, tenantId },
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.tenantPublishableKey.findFirst({
+        where: { id, tenantId },
+      });
+      return record ? mapListItem(record) : null;
     });
-    return record ? mapListItem(record) : null;
   }
 }
 
@@ -120,15 +130,17 @@ export async function insertPublishableKey(params: {
   environment: PublishableKeyRecord["environment"];
   allowedDomains: string[];
 }): Promise<void> {
-  await prisma.tenantPublishableKey.create({
-    data: {
-      id: params.id,
-      tenantId: params.tenantId,
-      keyHash: hashToken(params.rawKey),
-      keyPrefix: params.rawKey.slice(0, 16),
-      environment: params.environment,
-      allowedDomains: params.allowedDomains,
-    },
+  await withTenantTransaction(params.tenantId, async (tx) => {
+    await tx.tenantPublishableKey.create({
+      data: {
+        id: params.id,
+        tenantId: params.tenantId,
+        keyHash: hashToken(params.rawKey),
+        keyPrefix: params.rawKey.slice(0, 16),
+        environment: params.environment,
+        allowedDomains: params.allowedDomains,
+      },
+    });
   });
 }
 

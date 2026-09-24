@@ -5,7 +5,7 @@ import type {
   EnableChannelConnectionInventoryApplyStoreResult,
   IChannelConnectionInventoryApplyStore,
 } from "@hcp/domain";
-import { prisma, setTenantContext, type PrismaTransactionClient } from "../../client";
+import { withTenantTransaction, type PrismaTransactionClient } from "../../client";
 
 type LockedEnableConnectionRow = {
   id: string;
@@ -44,19 +44,13 @@ export class PrismaChannelConnectionInventoryApplyStore
   async enable(
     command: ChannelConnectionInventoryApplyStoreCommand,
   ): Promise<EnableChannelConnectionInventoryApplyStoreResult> {
-    return prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, command.tenantId);
-      return this.runEnable(tx, command);
-    });
+    return withTenantTransaction(command.tenantId, (tx) => this.runEnable(tx, command));
   }
 
   async disable(
     command: ChannelConnectionInventoryApplyStoreCommand,
   ): Promise<DisableChannelConnectionInventoryApplyStoreResult> {
-    return prisma.$transaction(async (tx) => {
-      await setTenantContext(tx, command.tenantId);
-      return this.runDisable(tx, command);
-    });
+    return withTenantTransaction(command.tenantId, (tx) => this.runDisable(tx, command));
   }
 
   private async runEnable(
