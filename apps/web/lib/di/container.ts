@@ -174,6 +174,20 @@ import {
 
   CreateCreditFiscalDocumentDraftUseCase,
 
+  RecordManualPaymentUseCase,
+
+  GetPaymentUseCase,
+
+  ListPaymentsUseCase,
+
+  AllocatePaymentUseCase,
+
+  ReversePaymentAllocationUseCase,
+
+  CreateRefundUseCase,
+
+  GetFolioSettlementUseCase,
+
   GetPublicPropertyBySlugUseCase,
 
   GetTenantSettingsUseCase,
@@ -435,6 +449,10 @@ import {
   PrismaFiscalDocumentRepository,
 
   PrismaFiscalAllocationRepository,
+
+  PrismaPaymentRepository,
+
+  PrismaPaymentSettlementRepository,
 
   PrismaCalendarBlockRepository,
 
@@ -943,6 +961,10 @@ const fiscalDocumentRepository = new PrismaFiscalDocumentRepository();
 
 const fiscalAllocationRepository = new PrismaFiscalAllocationRepository();
 
+const paymentRepository = new PrismaPaymentRepository();
+
+const paymentSettlementRepository = new PrismaPaymentSettlementRepository();
+
 const calendarBlockRepository = new PrismaCalendarBlockRepository();
 export { calendarBlockRepository };
 
@@ -1238,17 +1260,64 @@ export const openPrimaryFolioFromBookingUseCase = new OpenPrimaryFolioFromBookin
   folioRepository,
   idGenerator,
   permissionChecker,
+  paymentSettlementRepository,
 );
 
 export const listFoliosForBookingUseCase = new ListFoliosForBookingUseCase(
   bookingRepository,
   folioRepository,
   permissionChecker,
+  paymentSettlementRepository,
 );
 
 export const getFolioUseCase = new GetFolioUseCase(
   bookingRepository,
   folioRepository,
+  permissionChecker,
+  paymentSettlementRepository,
+);
+
+export const recordManualPaymentUseCase = new RecordManualPaymentUseCase(
+  bookingRepository,
+  paymentRepository,
+  paymentSettlementRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const getPaymentUseCase = new GetPaymentUseCase(
+  paymentRepository,
+  permissionChecker,
+);
+
+export const listPaymentsUseCase = new ListPaymentsUseCase(
+  paymentRepository,
+  permissionChecker,
+);
+
+export const allocatePaymentUseCase = new AllocatePaymentUseCase(
+  folioRepository,
+  paymentSettlementRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const reversePaymentAllocationUseCase = new ReversePaymentAllocationUseCase(
+  paymentSettlementRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const createRefundUseCase = new CreateRefundUseCase(
+  paymentSettlementRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const getFolioSettlementUseCase = new GetFolioSettlementUseCase(
+  bookingRepository,
+  folioRepository,
+  paymentSettlementRepository,
   permissionChecker,
 );
 

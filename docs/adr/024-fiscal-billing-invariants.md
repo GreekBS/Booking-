@@ -32,12 +32,16 @@ Billing owns settlement truth. Fiscal (documents, myDATA, providers) is not impl
 
 - QuoteSnapshot `feesAmount` / `taxesAmount`, when non-zero, project as **placeholder** fee/tax lines with explicit `sourceType` — **not** Greek VAT / climate fee.
 - Paid amount is **not** inferred from Booking status; F1 paid = 0 (`paidAmountSource: no_allocations`).
+- **F4 (ADR-027):** Folio settlement derives from committed `PaymentAllocation` − `PaymentAllocationReversal` (+ refund-driven FIFO reversals). `paidAmountSource: allocations` when settlement lines exist.
 - One Booking → N Folios via distinct `folioKey`; default key `primary`.
 
 ## F2 status
 
 Invariants **6** (historical tax snapshots) and **13** (guest ≠ invoice recipient) are implemented — see [ADR-025](./025-tax-engine-fiscal-profiles.md).
 
+## F4 status
+
+Payments / allocations / refunds / settlement — see [ADR-027](./027-payments-allocations-refunds.md).
 ## Consequences
 
 Later phases must not weaken these invariants. Greek fiscalization is provider-agnostic via ports (F5/F6), not embedded in Booking.

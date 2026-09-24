@@ -63,6 +63,10 @@ export {
 } from "./repositories/PlatformSuperAdminMutation";
 export { PrismaFolioRepository } from "./repositories/billing/FolioRepository";
 export {
+  PrismaPaymentRepository,
+  PrismaPaymentSettlementRepository,
+} from "./repositories/billing/PaymentRepositories";
+export {
   PrismaTaxRuleRepository,
   PrismaBusinessFiscalProfileRepository,
   PrismaCustomerBillingProfileRepository,

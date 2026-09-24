@@ -19,3 +19,4 @@ Phase 2 prepares for payments without coupling domain logic to Stripe, Viva, or 
 - Stripe adapter added in Phase 2.5 without domain changes
 - Use cases orchestrate payment intent creation after booking enters `payment_pending`
 - Domain tests use confirmation modes without invoking real gateway
+- **F4 (ADR-027):** Settlement truth lives on `payments` / allocations / refunds — **not** `payment_records`. Legacy `payment_records` remains the ADR-015 gateway intent ledger only; do not treat it as Folio paid balance.

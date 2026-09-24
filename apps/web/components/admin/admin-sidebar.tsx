@@ -12,6 +12,7 @@ import {
   Shield,
   Settings,
   Network,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export const adminNavItems: Array<{
   { href: "/dashboard/availability", label: "Availability", icon: CalendarDays },
   { href: "/dashboard/pricing", label: "Pricing", icon: DollarSign },
   { href: "/dashboard/bookings", label: "Bookings", icon: BookOpen },
+  { href: "/dashboard/payments", label: "Payments", icon: Wallet },
   { href: "/dashboard/fiscal-documents", label: "Fiscal docs", icon: DollarSign },
   { href: "/dashboard/channels", label: "Channels", icon: Network },
   { href: "/dashboard/guests", label: "Guests", icon: Users },

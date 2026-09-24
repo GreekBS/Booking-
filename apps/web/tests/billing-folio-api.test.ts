@@ -39,7 +39,13 @@ describe("admin folio routes (F1)", () => {
       Result.ok({
         id: "f1",
         folioKey: "primary",
-        balance: { paidAmount: "0.0000", paidAmountSource: "no_allocations" },
+        balance: {
+          paidAmount: "0.0000",
+          paidAmountSource: "no_allocations",
+          netSettledAmount: "0.0000",
+          refundedAmount: "0.0000",
+          overpaymentAmount: "0.0000",
+        },
       }) as never,
     );
 

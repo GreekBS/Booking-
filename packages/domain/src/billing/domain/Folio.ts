@@ -98,13 +98,15 @@ export interface FolioBalance {
   taxesTotal: string;
   /** Σ of all posted line amounts (signed). */
   folioTotal: string;
-  /**
-   * F1: always zero — PaymentAllocations do not exist yet.
-   * Not inferred from Booking.status / confirmationMode.
-   */
+  /** Net settled on folio via payment allocations (minus reversals). */
   paidAmount: string;
-  /** Explicit: paid is known and zero because allocations are unsupported. */
-  paidAmountSource: "no_allocations";
+  paidAmountSource: "no_allocations" | "allocations";
+  /** Gross allocated to folio before reversals (F4). */
+  allocatedPaidAmount?: string;
+  /** Allocation reversals unsettling folio coverage (F4). */
+  refundedAmount?: string;
+  netSettledAmount?: string;
+  overpaymentAmount?: string;
   outstandingBalance: string;
   /** Sum of posted VAT taxSnapshot lines (taxType=vat). */
   vatTotal: string;
@@ -356,7 +358,13 @@ export class Folio extends AggregateRoot<FolioProps> {
     this.props.updatedAt = new Date();
   }
 
-  computeBalance(): FolioBalance {
+  computeBalance(settlement?: {
+    netSettledAmount: string;
+    allocatedPaidAmount?: string;
+    refundedAmount?: string;
+    overpaymentAmount?: string;
+    paidAmountSource?: "no_allocations" | "allocations";
+  }): FolioBalance {
     const currency = this.props.currency;
     let charges = Money.zero(currency);
     let discounts = Money.zero(currency);
@@ -393,8 +401,34 @@ export class Folio extends AggregateRoot<FolioProps> {
       }
     }
 
-    const paid = Money.zero(currency);
-    const outstanding = total.subtract(paid);
+    let paid: Money;
+    let paidAmountSource: FolioBalance["paidAmountSource"] = "no_allocations";
+    let allocatedPaidAmount: string | undefined;
+    let refundedAmount: string | undefined;
+    let netSettledAmount: string | undefined;
+    let overpaymentAmount: string | undefined;
+    let outstanding: Money;
+
+    if (settlement) {
+      const net = Money.create(settlement.netSettledAmount, currency);
+      paid = net;
+      paidAmountSource = settlement.paidAmountSource ?? "allocations";
+      allocatedPaidAmount = settlement.allocatedPaidAmount;
+      refundedAmount = settlement.refundedAmount;
+      netSettledAmount = settlement.netSettledAmount;
+      overpaymentAmount =
+        settlement.overpaymentAmount ??
+        (toScaled(net.amount) > toScaled(total.amount)
+          ? net.subtract(total).amount
+          : Money.zero(currency).amount);
+      outstanding = total.subtract(net);
+      if (toScaled(outstanding.amount) < 0n) {
+        outstanding = Money.zero(currency);
+      }
+    } else {
+      paid = Money.zero(currency);
+      outstanding = total.subtract(paid);
+    }
 
     let vatTotal = Money.zero(currency);
     let leviesTotal = Money.zero(currency);
@@ -415,10 +449,24 @@ export class Folio extends AggregateRoot<FolioProps> {
       taxesTotal: taxes.amount,
       folioTotal: total.amount,
       paidAmount: paid.amount,
-      paidAmountSource: "no_allocations",
+      paidAmountSource,
+      ...(allocatedPaidAmount !== undefined ? { allocatedPaidAmount } : {}),
+      ...(refundedAmount !== undefined ? { refundedAmount } : {}),
+      ...(netSettledAmount !== undefined ? { netSettledAmount } : {}),
+      ...(overpaymentAmount !== undefined ? { overpaymentAmount } : {}),
       outstandingBalance: outstanding.amount,
       vatTotal: vatTotal.amount,
       leviesTotal: leviesTotal.amount,
     };
   }
+}
+
+function toScaled(amount: string): bigint {
+  const negative = amount.startsWith("-");
+  const unsigned = negative ? amount.slice(1) : amount;
+  const parts = unsigned.split(".");
+  const w = parts[0] ?? "0";
+  const f = (parts[1] ?? "0000").padEnd(4, "0").slice(0, 4);
+  const scaled = BigInt(w) * 10_000n + BigInt(f);
+  return negative ? -scaled : scaled;
 }

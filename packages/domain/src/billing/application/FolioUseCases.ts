@@ -13,6 +13,8 @@ import type { FolioBalance, FolioLine } from "../domain/Folio";
 import type { IFolioRepository, FolioWithLines } from "../ports/IFolioRepository";
 import { projectQuoteSnapshotToFolioLines } from "./projectQuoteSnapshotToFolioLines";
 import { assertCanAccessBookingProperty, assertCanOpenFolio } from "./billingAccess";
+import { computeFolioSettlement } from "../payments/Settlement";
+import type { IPaymentSettlementRepository } from "../payments/ports/IPaymentRepositories";
 
 export interface FolioReadModel {
   id: string;
@@ -40,11 +42,44 @@ export interface FolioReadModel {
   balance: FolioBalance;
 }
 
-function toReadModel(bundle: FolioWithLines): FolioReadModel {
-  const { folio, lines } = bundle;
-  // Ensure balance uses provided lines (rehydrated folio may already contain them)
+async function resolveBalance(
+  folio: Folio,
+  lines: FolioLine[],
+  tenantId: string,
+  settlementRepository: IPaymentSettlementRepository | null | undefined,
+): Promise<FolioBalance> {
   const working = Folio.rehydrate(folio.toProps(), lines);
-  const balance = working.computeBalance();
+  const lineBalance = working.computeBalance();
+  if (!settlementRepository) {
+    return lineBalance;
+  }
+  const sums = await settlementRepository.getFolioSettlementAmounts(tenantId, folio.id);
+  const settlement = computeFolioSettlement({
+    folioTotal: lineBalance.folioTotal,
+    currency: lineBalance.currency,
+    allocationsToFolio: sums.allocationsToFolio,
+    reversalsForThoseAllocations: sums.reversalsForThoseAllocations,
+  });
+  return working.computeBalance({
+    netSettledAmount: settlement.netSettledAmount,
+    allocatedPaidAmount: settlement.allocatedPaidAmount,
+    refundedAmount: settlement.refundedAmount,
+    overpaymentAmount: settlement.overpaymentAmount,
+    paidAmountSource: settlement.paidAmountSource,
+  });
+}
+
+async function toReadModel(
+  bundle: FolioWithLines,
+  settlementRepository?: IPaymentSettlementRepository | null,
+): Promise<FolioReadModel> {
+  const { folio, lines } = bundle;
+  const balance = await resolveBalance(
+    folio,
+    lines,
+    folio.tenantId,
+    settlementRepository,
+  );
   return {
     id: folio.id,
     tenantId: folio.tenantId,
@@ -82,6 +117,7 @@ export class OpenPrimaryFolioFromBookingUseCase {
     private readonly folioRepository: IFolioRepository,
     private readonly idGenerator: IIdGenerator,
     private readonly permissionChecker: PermissionChecker,
+    private readonly paymentSettlementRepository?: IPaymentSettlementRepository | null,
   ) {}
 
   async execute(
@@ -123,7 +159,7 @@ export class OpenPrimaryFolioFromBookingUseCase {
         Folio.primaryKey(),
       );
       if (existing) {
-        return Result.ok(toReadModel(existing));
+        return Result.ok(await toReadModel(existing, this.paymentSettlementRepository));
       }
 
       const quote = await this.quoteRepository.findById(booking.quoteId, tenantId);
@@ -166,14 +202,17 @@ export class OpenPrimaryFolioFromBookingUseCase {
         if (!raced) {
           return Result.fail(new ValidationError("Folio race unresolved"));
         }
-        return Result.ok(toReadModel(raced));
+        return Result.ok(await toReadModel(raced, this.paymentSettlementRepository));
       }
 
       return Result.ok(
-        toReadModel({
-          folio,
-          lines: folio.lines as FolioLine[],
-        }),
+        await toReadModel(
+          {
+            folio,
+            lines: folio.lines as FolioLine[],
+          },
+          this.paymentSettlementRepository,
+        ),
       );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -186,6 +225,7 @@ export class ListFoliosForBookingUseCase {
     private readonly bookingRepository: IBookingRepository,
     private readonly folioRepository: IFolioRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly paymentSettlementRepository?: IPaymentSettlementRepository | null,
   ) {}
 
   async execute(
@@ -211,7 +251,10 @@ export class ListFoliosForBookingUseCase {
       }
 
       const list = await this.folioRepository.findByBooking(tenantId, bookingId);
-      return Result.ok(list.map(toReadModel));
+      const models = await Promise.all(
+        list.map((bundle) => toReadModel(bundle, this.paymentSettlementRepository)),
+      );
+      return Result.ok(models);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
@@ -223,6 +266,7 @@ export class GetFolioUseCase {
     private readonly bookingRepository: IBookingRepository,
     private readonly folioRepository: IFolioRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly paymentSettlementRepository?: IPaymentSettlementRepository | null,
   ) {}
 
   async execute(
@@ -255,7 +299,7 @@ export class GetFolioUseCase {
         return Result.fail(new ForbiddenError("Not allowed to read this folio"));
       }
 
-      return Result.ok(toReadModel(bundle));
+      return Result.ok(await toReadModel(bundle, this.paymentSettlementRepository));
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
