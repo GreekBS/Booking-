@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { adminFetch } from "@/lib/admin/api";
 import { formatMoney } from "@/lib/admin/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,39 +23,57 @@ interface PaymentRow {
 }
 
 export function PaymentsPage() {
-  const { tenantId } = useTenant();
+  const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    properties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !propertyId) return;
     setLoading(true);
     try {
-      const res = await adminFetch<{ payments: PaymentRow[] }>("/payments", {
-        tenantId,
-      });
+      const res = await adminFetch<{ payments: PaymentRow[] }>(
+        `/payments?propertyId=${encodeURIComponent(propertyId)}`,
+        { tenantId },
+      );
       setRows(res.payments ?? []);
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, propertyId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
+    tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties,
+  });
+  if (propertyGate) return propertyGate;
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Manual and recorded payments for this tenant (F4 settlement).
+          Manual and recorded payments for the active property (F4 settlement).
         </p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>All payments</CardTitle>
-          <CardDescription>Newest first — up to 100 records.</CardDescription>
+          <CardTitle>Payments</CardTitle>
+          <CardDescription>Newest first — up to 100 records for this property.</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (

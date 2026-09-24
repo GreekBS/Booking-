@@ -732,6 +732,18 @@ export class ListFiscalDocumentsUseCase {
   > {
     try {
       assertTenantRead(this.permissionChecker, actor, tenantId);
+      if (opts?.propertyId) {
+        if (
+          !this.permissionChecker.canAccessProperty(
+            actor,
+            tenantId,
+            opts.propertyId,
+            "property:read",
+          )
+        ) {
+          return Result.fail(new ForbiddenError("Property access denied"));
+        }
+      }
       const rows = await this.documentRepository.listByTenant(tenantId, opts);
       return Result.ok(
         rows.map((d) => ({

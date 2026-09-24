@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus, RefreshCw, Search } from "lucide-react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { fetchPropertyUnitCatalog, flattenCatalogUnits, searchBookings } from "@/lib/admin/api";
 import type { BookingRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import type { SortDirection } from "@/lib/admin/utils";
@@ -50,6 +54,12 @@ export function BookingsPage() {
 function BookingsPageContent() {
   const { requestClose } = useWorkspace();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    properties: activeProperties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [properties, setProperties] = useState<CatalogPropertyRecord[]>([]);
   const [units, setUnits] = useState<
     Array<{ id: string; name: string; status: string; propertyId: string; propertyName: string }>
@@ -65,7 +75,6 @@ function BookingsPageContent() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [propertyFilter, setPropertyFilter] = useState("all");
   const [unitFilter, setUnitFilter] = useState("all");
   const [arrivalFrom, setArrivalFrom] = useState("");
   const [arrivalTo, setArrivalTo] = useState("");
@@ -91,7 +100,9 @@ function BookingsPageContent() {
     setTotal(0);
     setLoading(true);
     setError(null);
-  }, [tenantId]);
+    setUnitFilter("all");
+    setPage(1);
+  }, [tenantId, propertyId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -118,7 +129,7 @@ function BookingsPageContent() {
   }, [tenantId]);
 
   const loadBookings = useCallback(async () => {
-    if (!tenantId || !catalogReady) return;
+    if (!tenantId || !catalogReady || !propertyId) return;
 
     const isFirstLoad = !initializedRef.current;
     if (isFirstLoad) setLoading(true);
@@ -133,7 +144,7 @@ function BookingsPageContent() {
         sortDir,
         guestSearch: debouncedSearch || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
-        propertyId: propertyFilter !== "all" ? propertyFilter : undefined,
+        propertyId,
         unitId: unitFilter !== "all" ? unitFilter : undefined,
         checkInFrom: arrivalFrom || undefined,
         checkInTo: arrivalTo || undefined,
@@ -152,12 +163,12 @@ function BookingsPageContent() {
   }, [
     tenantId,
     catalogReady,
+    propertyId,
     page,
     sortKey,
     sortDir,
     debouncedSearch,
     statusFilter,
-    propertyFilter,
     unitFilter,
     arrivalFrom,
     arrivalTo,
@@ -172,19 +183,21 @@ function BookingsPageContent() {
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const workspaceUnitOptions = useMemo(
     () =>
-      units.map((u) => ({
-        unitId: u.id,
-        unitName: u.name,
-        propertyId: u.propertyId,
-      })),
-    [units],
+      units
+        .filter((u) => u.propertyId === propertyId)
+        .map((u) => ({
+          unitId: u.id,
+          unitName: u.name,
+          propertyId: u.propertyId,
+        })),
+    [units, propertyId],
   );
   const propertyMap = useMemo(() => new Map(properties.map((p) => [p.id, p])), [properties]);
 
-  const filteredUnits = useMemo(() => {
-    if (propertyFilter === "all") return units;
-    return units.filter((u) => u.propertyId === propertyFilter);
-  }, [units, propertyFilter]);
+  const filteredUnits = useMemo(
+    () => units.filter((u) => u.propertyId === propertyId),
+    [units, propertyId],
+  );
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -206,12 +219,16 @@ function BookingsPageContent() {
     );
   }
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties: activeProperties,
   });
-  if (tenantGate) return tenantGate;
+  if (propertyGate) return propertyGate;
   if (loading && !initialized) return <Skeleton className="h-[520px] w-full" />;
   if (error && !initialized) return <ErrorState message={error} onRetry={() => void loadBookings()} />;
 
@@ -256,7 +273,7 @@ function BookingsPageContent() {
             </Button>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
               <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
@@ -266,15 +283,6 @@ function BookingsPageContent() {
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={propertyFilter} onValueChange={(v) => { setPropertyFilter(v); setUnitFilter("all"); setPage(1); }}>
-              <SelectTrigger><SelectValue placeholder="Property" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All properties</SelectItem>
-                {properties.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
               </SelectContent>
             </Select>
             <Select value={unitFilter} onValueChange={(v) => { setUnitFilter(v); setPage(1); }}>

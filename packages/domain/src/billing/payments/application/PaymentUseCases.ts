@@ -279,15 +279,38 @@ export class ListPaymentsUseCase {
   async execute(
     tenantId: string,
     actor: ActorContext,
-    opts?: { bookingId?: string; limit?: number },
+    opts?: { bookingId?: string; propertyId?: string; limit?: number },
   ): Promise<Result<PaymentReadModel[], Error>> {
     try {
       assertCanReadPayments(this.permissionChecker, actor, tenantId);
+
+      if (opts?.propertyId) {
+        if (
+          !this.permissionChecker.canAccessProperty(
+            actor,
+            tenantId,
+            opts.propertyId,
+            "property:read",
+          )
+        ) {
+          return Result.fail(new ForbiddenError("Property access denied"));
+        }
+        if (
+          actor.propertyIds !== null &&
+          !actor.isSuperAdmin &&
+          actor.role !== "admin" &&
+          !actor.propertyIds.includes(opts.propertyId)
+        ) {
+          return Result.fail(new ForbiddenError("Property access denied"));
+        }
+      }
+
       const list = opts?.bookingId
         ? await this.paymentRepository.listByBooking(tenantId, opts.bookingId)
         : await this.paymentRepository.listByTenant(tenantId, {
             limit: opts?.limit,
             bookingId: opts?.bookingId,
+            propertyId: opts?.propertyId,
           });
       return Result.ok(list.map(toPaymentReadModel));
     } catch (error) {

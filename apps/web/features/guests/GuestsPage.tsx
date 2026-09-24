@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { fetchAllBookings } from "@/lib/admin/api";
 import type { BookingRecord, GuestRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -45,17 +49,23 @@ function aggregateGuests(bookings: BookingRecord[]): GuestRecord[] {
 
 export function GuestsPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    properties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [guests, setGuests] = useState<GuestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!tenantId) return;
+    if (!tenantId || !propertyId) return;
     async function load() {
       setLoading(true);
       try {
-        const bookings = await fetchAllBookings(tenantId!);
+        const bookings = await fetchAllBookings(tenantId!, { propertyId: propertyId! });
         setGuests(aggregateGuests(bookings));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load guests");
@@ -64,7 +74,7 @@ export function GuestsPage() {
       }
     }
     void load();
-  }, [tenantId]);
+  }, [tenantId, propertyId]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -74,12 +84,16 @@ export function GuestsPage() {
     );
   }, [guests, search]);
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties,
   });
-  if (tenantGate) return tenantGate;
+  if (propertyGate) return propertyGate;
   if (loading) return <Skeleton className="h-96 w-full" />;
   if (error) return <ErrorState message={error} />;
 
@@ -87,7 +101,7 @@ export function GuestsPage() {
     <div>
       <PageHeader
         title="Guests"
-        description="Guest profiles derived from booking history"
+        description="Guest profiles derived from booking history for the active property"
       />
 
       <div className="mb-4">

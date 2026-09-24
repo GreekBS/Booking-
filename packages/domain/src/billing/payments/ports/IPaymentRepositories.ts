@@ -12,7 +12,7 @@ export interface IPaymentRepository {
   findByIdempotencyKey(tenantId: string, key: string): Promise<Payment | null>;
   listByTenant(
     tenantId: string,
-    opts?: { limit?: number; bookingId?: string },
+    opts?: { limit?: number; bookingId?: string; propertyId?: string },
   ): Promise<Payment[]>;
   listByBooking(tenantId: string, bookingId: string): Promise<Payment[]>;
 }

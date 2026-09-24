@@ -10,7 +10,8 @@ import type { AvailabilityRulesRecord, CalendarRecord, RatePlanRecord } from "@/
 interface AvailabilityCalendarGridProps {
   gridRef: React.RefObject<HTMLDivElement | null>;
   properties: PropertyRecord[];
-  propertyFilter: string;
+  /** Active property id — only this property's units are shown. */
+  propertyId: string;
   unitSearch: string;
   dates: string[];
   today: string;
@@ -27,7 +28,7 @@ interface AvailabilityCalendarGridProps {
 export function AvailabilityCalendarGrid({
   gridRef,
   properties,
-  propertyFilter,
+  propertyId,
   unitSearch,
   dates,
   today,
@@ -40,9 +41,7 @@ export function AvailabilityCalendarGrid({
   onTogglePropertyCollapse,
   selectionBar,
 }: AvailabilityCalendarGridProps) {
-  const filteredProperties = properties.filter(
-    (p) => propertyFilter === "all" || p.id === propertyFilter,
-  );
+  const filteredProperties = properties.filter((p) => p.id === propertyId);
 
   const todayIndex = dates.indexOf(today);
   const gridMinWidth = UNIT_COL_WIDTH_PX + dates.length * CELL_WIDTH_PX;

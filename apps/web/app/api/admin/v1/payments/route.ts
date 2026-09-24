@@ -46,13 +46,19 @@ export async function GET(request: NextRequest) {
     const tenantId = request.headers.get("x-tenant-id");
     const actor = await requireTenantContext(tenantId);
     const bookingId = request.nextUrl.searchParams.get("bookingId") ?? undefined;
+    const propertyId =
+      request.nextUrl.searchParams.get("propertyId") ?? undefined;
     const limitRaw = request.nextUrl.searchParams.get("limit");
     const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
 
     const result = await listPaymentsUseCase.execute(
       actor.tenantId,
       toPermissionActor(actor),
-      { bookingId, limit: Number.isFinite(limit) ? limit : undefined },
+      {
+        bookingId,
+        propertyId,
+        limit: Number.isFinite(limit) ? limit : undefined,
+      },
     );
     if (result.isFailure) return mapResultError(result.getError());
     return apiSuccess({ payments: result.getValue() });

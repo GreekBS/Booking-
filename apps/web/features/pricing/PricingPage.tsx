@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { adminFetch, fetchPropertyUnitCatalog, flattenCatalogUnits, previewQuoteForStay } from "@/lib/admin/api";
 import type { QuoteRecord, RatePlanRecord } from "@/lib/admin/types";
 import { formatMoney, formatRatePlanForDisplay, moneyFieldLabel, nightsBetween, normalizeRatePlanForSubmit, parseApiValidationError } from "@/lib/admin/utils";
@@ -35,7 +39,13 @@ const defaultRatePlan: RatePlanRecord = {
 
 export function PricingPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
-  const [units, setUnits] = useState<
+  const {
+    propertyId,
+    properties: activeProperties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
+  const [allUnits, setAllUnits] = useState<
     Array<{ id: string; name: string; status: string; propertyId: string; propertyName: string }>
   >([]);
   const [unitId, setUnitId] = useState("");
@@ -52,24 +62,39 @@ export function PricingPage() {
     guestCount: 2,
   });
 
+  const units = useMemo(
+    () => allUnits.filter((u) => u.propertyId === propertyId),
+    [allUnits, propertyId],
+  );
+
   useEffect(() => {
     if (!tenantId) return;
     setLoading(true);
     void fetchPropertyUnitCatalog(tenantId)
       .then((catalog) => {
-        const flat = flattenCatalogUnits(catalog);
-        setUnits(flat);
-        if (flat[0]) {
-          setUnitId(flat[0].id);
-        } else {
-          setLoading(false);
-        }
+        setAllUnits(flattenCatalogUnits(catalog));
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Failed to load units");
         setLoading(false);
       });
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!propertyId) {
+      setUnitId("");
+      return;
+    }
+    const scoped = allUnits.filter((u) => u.propertyId === propertyId);
+    if (scoped.length === 0) {
+      setUnitId("");
+      setLoading(false);
+      return;
+    }
+    setUnitId((current) =>
+      scoped.some((u) => u.id === current) ? current : scoped[0]!.id,
+    );
+  }, [propertyId, allUnits]);
 
   useEffect(() => {
     if (!tenantId || !unitId) return;
@@ -149,21 +174,25 @@ export function PricingPage() {
     }
   }
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties: activeProperties,
   });
-  if (tenantGate) return tenantGate;
+  if (propertyGate) return propertyGate;
 
-  if (loading) return <Skeleton className="h-96 w-full" />;
+  if (loading && allUnits.length === 0) return <Skeleton className="h-96 w-full" />;
 
   if (units.length === 0) {
     return (
       <EmptyState
         title="No units available"
-        description="Create a property and unit before configuring pricing."
-        action={{ label: "Go to properties", href: "/dashboard/properties", onClick: () => {} }}
+        description="Create a unit for the active property before configuring pricing."
+        action={{ label: "Go to units", href: "/dashboard/units", onClick: () => {} }}
       />
     );
   }

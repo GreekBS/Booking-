@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { fetchPropertyUnitCatalog } from "@/lib/admin/api";
 import type { CatalogPropertyRecord } from "@/lib/admin/types";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -20,7 +24,6 @@ import { ExtranetCalendarShell } from "./components/shell/ExtranetCalendarShell"
 import { buildMonthGridModel, startOfMonthIso } from "./lib/month-grid-model";
 import { todayIso } from "./lib/timeline-model";
 import { countCatalogUnits, useRackGroup } from "./lib/rack-model";
-import { useSelectedProperty } from "./hooks/useSelectedProperty";
 import { useSelectedUnit } from "./hooks/useSelectedUnit";
 import { useUnitAvailabilityRules } from "./hooks/useUnitAvailabilityRules";
 import { useUnitCalendars } from "./hooks/useUnitCalendars";
@@ -29,6 +32,13 @@ import { DEFAULT_DENSITY, type CalendarDensity } from "./lib/density";
 
 function ExtranetCalendarContent() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId: selectedPropertyId,
+    setActiveProperty,
+    properties: activeProperties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const { overlays, toggleOverlay } = useOverlays();
   const { closeWorkspace, openDateWorkspace } = useWorkspace();
   const { clearSelection } = useTimelineInteraction();
@@ -57,10 +67,6 @@ function ExtranetCalendarContent() {
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
-
-  const propertyIds = useMemo(() => properties.map((p) => p.id), [properties]);
-  const { selectedPropertyId, setSelectedPropertyId, ready: propertySelectionReady } =
-    useSelectedProperty(tenantId, propertyIds);
 
   const propertyGroup = useRackGroup(properties, selectedPropertyId, "");
   const unitIds = useMemo(() => propertyGroup?.catalogUnitIds ?? [], [propertyGroup]);
@@ -103,9 +109,9 @@ function ExtranetCalendarContent() {
       closeWorkspace();
       clearSelection();
       setLoadedMonthCount(MONTHS_INITIAL);
-      setSelectedPropertyId(propertyId);
+      setActiveProperty(propertyId);
     },
-    [selectedPropertyId, closeWorkspace, clearSelection, setSelectedPropertyId],
+    [selectedPropertyId, closeWorkspace, clearSelection, setActiveProperty],
   );
 
   const handleSelectedUnitChange = useCallback(
@@ -135,12 +141,19 @@ function ExtranetCalendarContent() {
     refreshRatePlans();
   }
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
-    tenantId,
-  });
-  if (tenantGate) return tenantGate;
+  const propertyGate = renderActivePropertyGate(
+    {
+      tenantLoading,
+      tenantError,
+      tenantId,
+      propertyReady,
+      propertyError,
+      propertyId: selectedPropertyId,
+      properties: activeProperties,
+    },
+    { skeletonClassName: "h-full w-full rounded-none" },
+  );
+  if (propertyGate) return propertyGate;
 
   if (catalogLoading && properties.length === 0) {
     return <Skeleton className="h-full w-full rounded-none" />;
@@ -158,7 +171,7 @@ function ExtranetCalendarContent() {
     );
   }
 
-  if (!propertySelectionReady || !unitSelectionReady) {
+  if (!unitSelectionReady) {
     return <Skeleton className="h-full w-full rounded-none" />;
   }
 

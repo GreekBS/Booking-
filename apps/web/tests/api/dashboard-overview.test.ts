@@ -55,7 +55,7 @@ describe("GET /api/admin/v1/dashboard/overview", () => {
     const body = await response.json();
 
     expect(requireTenantContext).toHaveBeenCalledWith("tenant-a");
-    expect(execute).toHaveBeenCalledWith("tenant-a", actor);
+    expect(execute).toHaveBeenCalledWith("tenant-a", actor, undefined);
     expect(response.status).toBe(200);
     expect(body).toEqual(overview);
     expect(body.recentBookings).toEqual([]);
@@ -91,6 +91,6 @@ describe("GET /api/admin/v1/dashboard/overview", () => {
     await GET(request);
     expect(requireTenantContext).toHaveBeenCalledWith("other-tenant");
     // Actor.tenantId from DB context is what the use case receives — never the raw header alone
-    expect(execute).toHaveBeenCalledWith(actor.tenantId, actor);
+    expect(execute).toHaveBeenCalledWith(actor.tenantId, actor, undefined);
   });
 });

@@ -295,13 +295,23 @@ export class PrismaPaymentRepository implements IPaymentRepository {
 
   async listByTenant(
     tenantId: string,
-    opts?: { limit?: number; bookingId?: string },
+    opts?: { limit?: number; bookingId?: string; propertyId?: string },
   ): Promise<Payment[]> {
     return withTenantTransaction(tenantId, async (tx) => {
       const rows = await tx.payment.findMany({
         where: {
           tenantId,
           ...(opts?.bookingId ? { bookingId: opts.bookingId } : {}),
+          ...(opts?.propertyId
+            ? {
+                booking: {
+                  is: {
+                    tenantId,
+                    propertyId: opts.propertyId,
+                  },
+                },
+              }
+            : {}),
         },
         orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
         take: opts?.limit ?? 100,

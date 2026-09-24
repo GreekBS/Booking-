@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AdminBreadcrumbs } from "./admin-breadcrumbs";
+import { ActivePropertySelector } from "./active-property-selector";
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -65,6 +66,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         <Button variant="ghost" size="icon" aria-label="Notifications (coming soon)" disabled>
           <Bell className="h-4 w-4" />
         </Button>
+
+        <ActivePropertySelector />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

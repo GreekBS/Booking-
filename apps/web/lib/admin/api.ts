@@ -14,6 +14,7 @@ interface AdminFetchOptions extends RequestInit {
 }
 
 import type { PaginatedBookings, PaginatedProperties, OperatorBlockType } from "./types";
+import { perfClientLog, perfNow } from "@/lib/perf-diag";
 
 export async function adminFetch<T>(path: string, options: AdminFetchOptions = {}): Promise<T> {
   const { tenantId, ...init } = options;
@@ -26,6 +27,7 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
     headers.set("X-Tenant-Id", tenantId);
   }
 
+  const start = perfNow();
   const response = await fetch(`/api/admin/v1${path}`, {
     ...init,
     headers,
@@ -34,6 +36,14 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
   const payload = (await response.json()) as {
     error?: { code?: string; message?: string };
   } & T;
+
+  const elapsed = perfNow() - start;
+  const shortPath = path.split("?")[0] ?? path;
+  perfClientLog("client.adminFetch", elapsed, {
+    path: shortPath.slice(0, 64),
+    status: response.status,
+    method: (init.method ?? "GET").toString().slice(0, 8),
+  });
 
   if (!response.ok) {
     throw new AdminApiError(
@@ -191,8 +201,15 @@ export async function searchBookings(
   return adminFetch(`/bookings?${query.toString()}`, { tenantId });
 }
 
-export async function fetchAllBookings(tenantId: string): Promise<import("./types").BookingRecord[]> {
-  const result = await searchBookings(tenantId, { page: 1, limit: 100 });
+export async function fetchAllBookings(
+  tenantId: string,
+  opts?: { propertyId?: string },
+): Promise<import("./types").BookingRecord[]> {
+  const result = await searchBookings(tenantId, {
+    page: 1,
+    limit: 100,
+    propertyId: opts?.propertyId,
+  });
   return result.data ?? [];
 }
 
@@ -295,18 +312,43 @@ const overviewInflight = new Map<
 
 export async function fetchDashboardOverview(
   tenantId: string,
+  propertyId?: string | null,
 ): Promise<import("./types").DashboardOverviewRecord> {
-  const existing = overviewInflight.get(tenantId);
+  const cacheKey = propertyId ? `${tenantId}:${propertyId}` : tenantId;
+  const existing = overviewInflight.get(cacheKey);
   if (existing) return existing;
 
+  const query = propertyId
+    ? `?propertyId=${encodeURIComponent(propertyId)}`
+    : "";
   const pending = adminFetch<import("./types").DashboardOverviewRecord>(
-    "/dashboard/overview",
+    `/dashboard/overview${query}`,
     { tenantId },
   ).finally(() => {
-    overviewInflight.delete(tenantId);
+    overviewInflight.delete(cacheKey);
   });
-  overviewInflight.set(tenantId, pending);
+  overviewInflight.set(cacheKey, pending);
   return pending;
+}
+
+/** Clear property-sensitive in-flight/overview caches after active property switch. */
+export function invalidateActivePropertyScopedCaches(tenantId?: string): void {
+  if (!tenantId) {
+    overviewInflight.clear();
+    invalidateUnitCalendarCache();
+    invalidateRatePlansBatchCache();
+    invalidateAvailabilityRulesBatchCache();
+    return;
+  }
+  const prefix = `${tenantId}:`;
+  for (const key of overviewInflight.keys()) {
+    if (key === tenantId || key.startsWith(prefix)) {
+      overviewInflight.delete(key);
+    }
+  }
+  invalidateUnitCalendarCache(tenantId);
+  invalidateRatePlansBatchCache(tenantId);
+  invalidateAvailabilityRulesBatchCache(tenantId);
 }
 
 export function flattenUnits(properties: import("./types").PropertyRecord[]): import("./types").FlatUnit[] {

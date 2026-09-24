@@ -159,4 +159,42 @@ describe("GetTenantDashboardOverviewUseCase", () => {
     expect(value.activeHoldCount).toBe(4);
     expect(value.bookingCount).toBe(12);
   });
+
+  it("narrows allowedPropertyIds when propertyId is provided and authorized", async () => {
+    const result = await useCase.execute(
+      "tenant-a",
+      {
+        userId: "admin-1",
+        role: "admin",
+        propertyIds: null,
+        isSuperAdmin: false,
+      },
+      { propertyId: "prop-x" },
+    );
+
+    expect(result.isSuccess).toBe(true);
+    expect(getOverview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-a",
+        allowedPropertyIds: ["prop-x"],
+      }),
+    );
+  });
+
+  it("rejects propertyId outside manager assignment", async () => {
+    const result = await useCase.execute(
+      "tenant-a",
+      {
+        userId: "mgr-1",
+        role: "manager",
+        propertyIds: ["prop-a"],
+        isSuperAdmin: false,
+      },
+      { propertyId: "prop-forged" },
+    );
+
+    expect(result.isFailure).toBe(true);
+    expect(result.getError()).toBeInstanceOf(ForbiddenError);
+    expect(getOverview).not.toHaveBeenCalled();
+  });
 });

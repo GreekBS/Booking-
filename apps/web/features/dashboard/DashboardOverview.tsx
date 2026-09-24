@@ -14,7 +14,11 @@ import {
   CalendarDays,
   Timer,
 } from "lucide-react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { fetchDashboardOverview } from "@/lib/admin/api";
 import type { DashboardOverviewRecord } from "@/lib/admin/types";
 import { formatMoney } from "@/lib/admin/utils";
@@ -30,6 +34,12 @@ import { StatusBadge } from "@/components/admin/status-badge";
  */
 export function DashboardOverview() {
   const { tenantId, tenantName, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    properties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [overview, setOverview] = useState<DashboardOverviewRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +52,14 @@ export function DashboardOverview() {
   }, [tenantLoading, tenantId]);
 
   useEffect(() => {
-    if (!tenantId) return;
+    if (!tenantId || !propertyId) return;
 
     let cancelled = false;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchDashboardOverview(tenantId!);
+        const data = await fetchDashboardOverview(tenantId!, propertyId);
         if (!cancelled) setOverview(data);
       } catch (err) {
         if (!cancelled) {
@@ -64,7 +74,7 @@ export function DashboardOverview() {
     return () => {
       cancelled = true;
     };
-  }, [tenantId]);
+  }, [tenantId, propertyId]);
 
   const recentBookings = overview?.recentBookings ?? [];
   const recentActivity = useMemo(
@@ -77,12 +87,16 @@ export function DashboardOverview() {
     [recentBookings],
   );
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties,
   });
-  if (tenantGate) return tenantGate;
+  if (propertyGate) return propertyGate;
 
   if (loading && !overview) {
     return (

@@ -20,6 +20,9 @@ function addDaysIso(ymd: string, days: number): string {
 /**
  * Single-shot tenant dashboard overview.
  * Permission-gated; uses parallel aggregate queries — never per-booking quote fetches.
+ *
+ * Optional `propertyId` narrows to one property after ACL check (Active Property Context).
+ * Membership scope still applies when `propertyId` is omitted.
  */
 export class GetTenantDashboardOverviewUseCase {
   constructor(
@@ -30,15 +33,37 @@ export class GetTenantDashboardOverviewUseCase {
   async execute(
     tenantId: string,
     actor: ActorContext,
+    opts?: { propertyId?: string },
   ): Promise<Result<TenantDashboardOverviewReadModel, Error>> {
     try {
-      const allowedPropertyIds = resolveOverviewPropertyScope(
+      const membershipScope = resolveOverviewPropertyScope(
         this.permissionChecker,
         actor,
         tenantId,
       );
-      if (allowedPropertyIds === undefined) {
+      if (membershipScope === undefined) {
         return Result.fail(new ForbiddenError());
+      }
+
+      let allowedPropertyIds = membershipScope;
+      if (opts?.propertyId) {
+        if (
+          !this.permissionChecker.canAccessProperty(
+            actor,
+            tenantId,
+            opts.propertyId,
+            "property:read",
+          )
+        ) {
+          return Result.fail(new ForbiddenError("Property access denied"));
+        }
+        if (
+          membershipScope !== null &&
+          !membershipScope.includes(opts.propertyId)
+        ) {
+          return Result.fail(new ForbiddenError("Property access denied"));
+        }
+        allowedPropertyIds = [opts.propertyId];
       }
 
       const today = todayUtcIso();

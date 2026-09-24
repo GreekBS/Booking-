@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { MoreHorizontal, Plus } from "lucide-react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { adminFetch, fetchAllProperties, flattenUnits, invalidatePropertiesCache } from "@/lib/admin/api";
 import type { FlatUnit, PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -52,13 +55,17 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function UnitsPage() {
-  const searchParams = useSearchParams();
-  const initialPropertyId = searchParams.get("propertyId") ?? "all";
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    property,
+    properties: activeProperties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [propertyFilter, setPropertyFilter] = useState(initialPropertyId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editUnit, setEditUnit] = useState<FlatUnit | null>(null);
   const [archiveUnit, setArchiveUnit] = useState<FlatUnit | null>(null);
@@ -92,14 +99,15 @@ export function UnitsPage() {
 
   const units = useMemo(() => {
     const all = flattenUnits(properties);
-    if (propertyFilter === "all") return all;
-    return all.filter((u) => u.propertyId === propertyFilter);
-  }, [properties, propertyFilter]);
+    if (!propertyId) return [];
+    return all.filter((u) => u.propertyId === propertyId);
+  }, [properties, propertyId]);
 
   function openCreate() {
+    if (!propertyId) return;
     setEditUnit(null);
     setForm({
-      propertyId: propertyFilter !== "all" ? propertyFilter : properties[0]?.id ?? "",
+      propertyId,
       name: "",
       maxGuests: 2,
       bedrooms: 1,
@@ -172,12 +180,16 @@ export function UnitsPage() {
     await load();
   }
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties: activeProperties,
   });
-  if (tenantGate) return tenantGate;
+  if (propertyGate) return propertyGate;
   if (loading && properties.length === 0) return <Skeleton className="h-96 w-full" />;
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
 
@@ -185,35 +197,29 @@ export function UnitsPage() {
     <div>
       <PageHeader
         title="Units"
-        description="Manage rooms and accommodation units"
+        description={
+          property
+            ? `Rooms for ${property.name}`
+            : "Manage rooms and accommodation units"
+        }
         actions={
-          <Button onClick={openCreate} disabled={properties.length === 0}>
+          <Button onClick={openCreate} disabled={!propertyId}>
             <Plus className="h-4 w-4" />
             Add unit
           </Button>
         }
       />
 
-      <div className="mb-4">
-        <Select value={propertyFilter} onValueChange={setPropertyFilter}>
-          <SelectTrigger className="w-full sm:w-[240px]">
-            <SelectValue placeholder="Filter by property" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All properties</SelectItem>
-            {properties.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {property ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Active property: <span className="font-medium text-foreground">{property.name}</span>
+        </p>
+      ) : null}
 
       {units.length === 0 ? (
         <EmptyState
           title="No units yet"
-          description="Add units to your properties to manage availability and pricing."
+          description="Add units to this property to manage availability and pricing."
           action={{ label: "Add unit", onClick: openCreate }}
         />
       ) : (
@@ -271,21 +277,12 @@ export function UnitsPage() {
             <DialogTitle>{editUnit ? "Edit unit" : "New unit"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            {!editUnit && (
+            {!editUnit && property ? (
               <div className="space-y-2">
                 <Label>Property</Label>
-                <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {properties.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-sm font-medium">{property.name}</p>
               </div>
-            )}
+            ) : null}
             <div className="space-y-2">
               <Label>Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Lock } from "lucide-react";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import {
   createOperatorBlock,
   fetchAllProperties,
@@ -87,10 +91,16 @@ export function AvailabilityPage() {
 function AvailabilityPageContent() {
   const { requestClose } = useWorkspace();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    property,
+    properties: activeProperties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [unitSearch, setUnitSearch] = useState("");
   const [rangeStart, setRangeStart] = useState(() => todayIso());
   const [rangeDays, setRangeDays] = useState(DEFAULT_RANGE_DAYS);
@@ -146,9 +156,10 @@ function AvailabilityPageContent() {
   const today = todayIso();
 
   const units = useMemo((): UnitMeta[] => {
+    if (!propertyId) return [];
     const list: UnitMeta[] = [];
     for (const p of properties) {
-      if (propertyFilter !== "all" && p.id !== propertyFilter) continue;
+      if (p.id !== propertyId) continue;
       for (const u of p.units) {
         list.push({
           unitId: u.id,
@@ -159,16 +170,17 @@ function AvailabilityPageContent() {
       }
     }
     return list;
-  }, [properties, propertyFilter]);
+  }, [properties, propertyId]);
 
   const { isCollapsed: isPropertyCollapsed, toggle: togglePropertyCollapse } =
     usePropertyCollapse(tenantId);
 
   const visibleUnits = useMemo((): UnitMeta[] => {
+    if (!propertyId) return [];
     const search = unitSearch.trim().toLowerCase();
     const list: UnitMeta[] = [];
     for (const p of properties) {
-      if (propertyFilter !== "all" && p.id !== propertyFilter) continue;
+      if (p.id !== propertyId) continue;
       if (isPropertyCollapsed(p.id)) continue;
       for (const u of p.units) {
         if (search && !u.name.toLowerCase().includes(search)) continue;
@@ -181,7 +193,7 @@ function AvailabilityPageContent() {
       }
     }
     return list;
-  }, [properties, propertyFilter, unitSearch, isPropertyCollapsed]);
+  }, [properties, propertyId, unitSearch, isPropertyCollapsed]);
 
   const loadCatalog = useCallback(async () => {
     if (!tenantId) return;
@@ -242,6 +254,11 @@ function AvailabilityPageContent() {
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  useEffect(() => {
+    setSelection(null);
+    setFocus(null);
+  }, [propertyId]);
 
   useEffect(() => {
     if (!tenantId || units.length === 0) return;
@@ -596,12 +613,16 @@ function AvailabilityPageContent() {
     units.forEach((u) => void loadUnitCalendar(u.unitId));
   }
 
-  const tenantGate = renderTenantGate({
-    loading: tenantLoading,
-    error: tenantError,
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties: activeProperties,
   });
-  if (tenantGate) return tenantGate;
+  if (propertyGate) return propertyGate;
 
   if (catalogLoading && properties.length === 0) {
     return <Skeleton className="h-[520px] w-full" />;
@@ -637,9 +658,7 @@ function AvailabilityPageContent() {
         />
 
         <AvailabilityToolbar
-          properties={properties}
-          propertyFilter={propertyFilter}
-          onPropertyFilterChange={setPropertyFilter}
+          activePropertyName={property?.name}
           unitSearch={unitSearch}
           onUnitSearchChange={setUnitSearch}
           rangeStart={rangeStart}
@@ -661,7 +680,7 @@ function AvailabilityPageContent() {
           <AvailabilityCalendarGrid
             gridRef={gridRef}
             properties={properties}
-            propertyFilter={propertyFilter}
+            propertyId={propertyId!}
             unitSearch={unitSearch}
             dates={dates}
             today={today}

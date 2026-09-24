@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import { adminFetch, fetchAllProperties } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { PropertyRecord } from "@/lib/admin/types";
@@ -70,6 +71,8 @@ const emptyAddress = {
 
 export function FiscalSettingsSection() {
   const { tenantId } = useTenant();
+  // Series/profiles are property-bound config; picker defaults to active property but can still switch.
+  const { propertyId: activePropertyId } = useActiveProperty();
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([]);
@@ -118,8 +121,16 @@ export function FiscalSettingsSection() {
     setBusinessProfiles(bizList.profiles ?? []);
     setCustomerProfiles(custList.profiles ?? []);
     setLocations(locList.locations ?? []);
-    if (!propertyId && props[0]) setPropertyId(props[0].id);
-  }, [tenantId, propertyId]);
+    if (!propertyId) {
+      const defaultId =
+        (activePropertyId && props.some((p) => p.id === activePropertyId)
+          ? activePropertyId
+          : null) ??
+        props[0]?.id ??
+        "";
+      if (defaultId) setPropertyId(defaultId);
+    }
+  }, [tenantId, propertyId, activePropertyId]);
 
   useEffect(() => {
     void load().catch((err) =>

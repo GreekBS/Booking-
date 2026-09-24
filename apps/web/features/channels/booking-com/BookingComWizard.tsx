@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import { fetchAllProperties, fetchRatePlan } from "@/lib/admin/api";
 import type { PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -59,6 +60,7 @@ function horizonDefaults() {
 export function BookingComWizard({ connectionId }: Props) {
   const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const { propertyId: activePropertyId } = useActiveProperty();
   const [view, setView] = useState<BookingComOperatorView | null>(null);
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,14 @@ export function BookingComWizard({ connectionId }: Props) {
 
   const selectedProperty = properties.find((p) => p.id === propertyId);
   const units = selectedProperty?.units ?? [];
+
+  // Default wizard property picker to global active property when empty (connection remains tenant-wide).
+  useEffect(() => {
+    if (propertyId) return;
+    if (!activePropertyId) return;
+    if (!properties.some((p) => p.id === activePropertyId)) return;
+    setPropertyId(activePropertyId);
+  }, [propertyId, activePropertyId, properties]);
 
   const catalogContext = useMemo(() => {
     const activeUnitIds = units.map((u) => u.id);

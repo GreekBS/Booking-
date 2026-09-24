@@ -16,14 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { PropertyRecord } from "@/lib/admin/types";
 import { CalendarLegend } from "./CalendarLegend";
 import type { OverlayToggles } from "../types";
 
 interface AvailabilityToolbarProps {
-  properties: PropertyRecord[];
-  propertyFilter: string;
-  onPropertyFilterChange: (value: string) => void;
   unitSearch: string;
   onUnitSearchChange: (value: string) => void;
   rangeStart: string;
@@ -35,6 +31,8 @@ interface AvailabilityToolbarProps {
   onToday: () => void;
   onShiftRange: (days: number) => void;
   onRefresh: () => void;
+  /** Optional read-only label for the active property (selection lives in header). */
+  activePropertyName?: string | null;
 }
 
 const RANGE_PRESETS = [
@@ -54,9 +52,6 @@ const OVERLAY_BUTTONS: Array<{ key: keyof OverlayToggles; label: string }> = [
 ];
 
 export function AvailabilityToolbar({
-  properties,
-  propertyFilter,
-  onPropertyFilterChange,
   unitSearch,
   onUnitSearchChange,
   rangeStart,
@@ -68,25 +63,18 @@ export function AvailabilityToolbar({
   onToday,
   onShiftRange,
   onRefresh,
+  activePropertyName,
 }: AvailabilityToolbarProps) {
   return (
     <StickyToolbar className="mb-3">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-1.5">
-            <Select value={propertyFilter} onValueChange={onPropertyFilterChange}>
-              <SelectTrigger className="h-8 w-[180px] text-xs">
-                <SelectValue placeholder="All properties" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All properties</SelectItem>
-                {properties.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {activePropertyName ? (
+              <span className="inline-flex h-8 max-w-[180px] items-center truncate rounded-md border bg-muted/40 px-2.5 text-xs font-medium">
+                {activePropertyName}
+              </span>
+            ) : null}
 
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

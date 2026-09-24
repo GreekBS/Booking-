@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import { fetchAllProperties } from "@/lib/admin/api";
 import type { PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -82,6 +83,7 @@ function Section({
 
 export function IcalChannelDetailPage({ connectionId }: Props) {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const { propertyId: activePropertyId } = useActiveProperty();
   const [connection, setConnection] = useState<OperatorChannelConnection | null>(null);
   const [health, setHealth] = useState<ChannelConnectionHealth | null>(null);
   const [mappings, setMappings] = useState<OperatorChannelMapping[]>([]);
@@ -105,6 +107,14 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
 
   const selectedProperty = properties.find((p) => p.id === propertyId);
   const units = selectedProperty?.units ?? [];
+
+  // Default mapping form to global active property when empty (keeps connection list tenant-wide).
+  useEffect(() => {
+    if (propertyId) return;
+    if (!activePropertyId) return;
+    if (!properties.some((p) => p.id === activePropertyId)) return;
+    setPropertyId(activePropertyId);
+  }, [propertyId, activePropertyId, properties]);
 
   const load = useCallback(async () => {
     if (!tenantId) return;

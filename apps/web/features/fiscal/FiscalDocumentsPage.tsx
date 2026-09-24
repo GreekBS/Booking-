@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { adminFetch } from "@/lib/admin/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,33 +27,52 @@ interface DocRow {
 }
 
 export function FiscalDocumentsPage() {
-  const { tenantId } = useTenant();
+  const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    properties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [rows, setRows] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !propertyId) return;
     setLoading(true);
     try {
-      const res = await adminFetch<{ documents: DocRow[] }>("/fiscal/documents", {
-        tenantId,
-      });
+      const res = await adminFetch<{ documents: DocRow[] }>(
+        `/fiscal/documents?propertyId=${encodeURIComponent(propertyId)}`,
+        { tenantId },
+      );
       setRows(res.documents ?? []);
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, propertyId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
+    tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties,
+  });
+  if (propertyGate) return propertyGate;
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Fiscal documents</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Locally issued documents. Not sent to AADE — pending fiscalization integration.
+          Locally issued documents for the active property. Not sent to AADE — pending
+          fiscalization integration.
         </p>
       </div>
       <Card>
