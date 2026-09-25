@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { AvailabilityRulesRecord, CalendarRecord, RatePlanRecord } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
 import type { CalendarDensity } from "../../lib/density";
-import { GRID_CANVAS_CLASS } from "../../lib/visual-theme";
+import { GRID_CANVAS_CLASS, PROPERTY_META_CLASS, PROPERTY_NAME_CLASS } from "../../lib/visual-theme";
 import type { MonthGridSection as MonthSection } from "../../lib/month-grid-model";
 import type { OverlayToggles } from "../../lib/overlay-types";
 import type { RackUnit } from "../../types";
@@ -86,24 +86,20 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
       <div
         ref={scrollRef}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0071c2]/30",
+          "min-h-0 flex-1 overflow-y-auto outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
           GRID_CANVAS_CLASS,
         )}
         tabIndex={0}
         aria-label="Availability month calendar. Click a day to inspect or drag to select a range."
       >
-        <div className="mx-auto w-full max-w-[1200px] px-4 py-4">
+        <div className="mx-auto w-full max-w-[1200px] px-3 py-4 sm:px-4">
           {emptyVariant ? (
             <TimelineGridEmptyState variant={emptyVariant} />
           ) : selectedUnit ? (
             <>
-              <div className="mb-4 border-b border-[#d1d5db] pb-3 dark:border-border">
-                <h1 className="text-[16px] font-semibold text-[#111827] dark:text-foreground">
-                  {selectedUnit.unitName}
-                </h1>
-                <p className="text-[12px] text-[#6b7280] dark:text-muted-foreground">
-                  {selectedUnit.propertyName}
-                </p>
+              <div className="mb-4 border-b border-border pb-3">
+                <h1 className={PROPERTY_NAME_CLASS}>{selectedUnit.unitName}</h1>
+                <p className={PROPERTY_META_CLASS}>{selectedUnit.propertyName}</p>
               </div>
 
               {sections.map((section) => (
@@ -124,8 +120,8 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
               ))}
 
               <div className="flex justify-center pb-6 pt-2">
-                <Button type="button" variant="outline" onClick={onLoadMore}>
-                  Δείτε περισσότερα
+                <Button type="button" variant="outline" size="sm" onClick={onLoadMore}>
+                  Load more months
                 </Button>
               </div>
             </>

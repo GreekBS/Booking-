@@ -33,7 +33,7 @@ export function WorkspaceHeader({ mode, onClose, showClose, className }: Workspa
   return (
     <div
       className={cn(
-        "flex h-11 shrink-0 items-center justify-between border-b border-[#d1d5db] px-4 dark:border-border",
+        "flex h-11 shrink-0 items-center justify-between border-b border-border bg-surface px-4",
         className,
       )}
     >

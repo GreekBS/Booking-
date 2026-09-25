@@ -18,6 +18,29 @@ export function startOfMonthIso(iso: string): string {
   return `${iso.slice(0, 7)}-01`;
 }
 
+/** Shift an YYYY-MM-01 (or any ISO date) by whole months (UTC). */
+export function shiftMonthIso(iso: string, deltaMonths: number): string {
+  const anchor = startOfMonthIso(iso);
+  const year = Number(anchor.slice(0, 4));
+  const monthIndex = Number(anchor.slice(5, 7)) - 1;
+  const shifted = new Date(Date.UTC(year, monthIndex + deltaMonths, 1));
+  const yy = shifted.getUTCFullYear();
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  return `${yy}-${mm}-01`;
+}
+
+/** Human period label for the ops toolbar (e.g. "September 2026"). */
+export function formatPeriodLabel(monthIso: string): string {
+  const anchor = startOfMonthIso(monthIso);
+  const year = Number(anchor.slice(0, 4));
+  const monthIndex = Number(anchor.slice(5, 7)) - 1;
+  return new Date(Date.UTC(year, monthIndex, 1)).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function monthLabel(year: number, monthIndex: number): string {
   const d = new Date(Date.UTC(year, monthIndex, 1));
   return d

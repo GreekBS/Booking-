@@ -14,33 +14,34 @@ export interface MonthGridDayCardStyleInput {
   isLoading?: boolean;
 }
 
+/** Occupancy surfaces — Talos ops tokens; each state remains visually distinct. */
 function occupancySurfaceClass(cellType: CellVisualType): string {
   switch (cellType) {
     case "booked":
-      return "border-[#005a9e] bg-[#0071c2] text-white";
+      return "border-ops-booking bg-ops-booking text-ops-booking-fg";
     case "held":
-      return "border-2 border-dashed border-[#b45309] bg-[#fffbeb] text-[#78350f]";
+      return "border-2 border-dashed border-ops-hold bg-ops-hold-subtle text-ops-hold-fg";
     case "manual":
-      return "border-[#b91c1c] bg-[#dc2626] text-white";
+      return "border-ops-blocked bg-ops-blocked text-ops-blocked-fg";
     case "maintenance":
-      return "border-[#c2410c] bg-[#ea580c] text-white";
+      return "border-ops-maintenance bg-ops-maintenance text-ops-maintenance-fg";
     case "cleaning":
-      return "border-[#6d28d9] bg-[#7c3aed] text-white";
+      return "border-ops-cleaning bg-ops-cleaning text-ops-cleaning-fg";
     case "owner":
-      return "border-[#475569] bg-[#64748b] text-white";
+      return "border-ops-owner bg-ops-owner text-ops-owner-fg";
     case "closed":
-      return "border-[#d1d5db] bg-[#f3f4f6] text-[#6b7280]";
+      return "border-border bg-ops-closed text-ops-closed-fg";
     default:
-      return "border-[#d1d5db] bg-white text-[#111827] dark:border-border dark:bg-background dark:text-foreground";
+      return "border-border bg-surface text-foreground";
   }
 }
 
 /**
- * Today on the month grid — neutral border + dot only.
- * Must not reuse selection tokens (#e8f2fc fill, #0071c2 inset ring).
+ * Today on the month grid — muted border + dot.
+ * Must not reuse selection tokens (primary ring / ops-selected fill).
  */
 const MONTH_GRID_TODAY_CLASS =
-  "border-[#9ca3af] before:pointer-events-none before:absolute before:right-2 before:top-2 before:size-1.5 before:rounded-full before:bg-[#6b7280] dark:border-[#6b7280] dark:before:bg-[#9ca3af]";
+  "border-ops-today-marker/70 before:pointer-events-none before:absolute before:right-2 before:top-2 before:size-1.5 before:rounded-full before:bg-ops-today-marker";
 
 const MONTH_GRID_DAY_PRICE_BASE_CLASS =
   "pointer-events-none absolute bottom-1.5 right-1.5 z-[1] max-w-[calc(100%-8px)] truncate text-right leading-none tabular-nums";
@@ -52,16 +53,16 @@ export function monthGridDayPriceClassName(
   return cn(
     MONTH_GRID_DAY_PRICE_BASE_CLASS,
     unavailable
-      ? "text-[10px] font-medium text-[#9ca3af] dark:text-muted-foreground"
+      ? "text-[10px] font-medium text-muted-foreground"
       : cellType === "held"
-        ? "text-[11px] font-semibold text-[#92400e]"
+        ? "text-[11px] font-semibold text-ops-hold-fg"
         : cellType === "booked" ||
             cellType === "manual" ||
             cellType === "maintenance" ||
             cellType === "cleaning" ||
             cellType === "owner"
           ? "text-[11px] font-semibold text-white/90"
-          : "text-[11px] font-semibold text-[#111827] dark:text-foreground",
+          : "text-[11px] font-semibold text-foreground",
   );
 }
 
@@ -81,35 +82,41 @@ export function monthGridDayCardClassName(input: MonthGridDayCardStyleInput): st
   const occupied = cellType !== "available" && cellType !== "closed";
 
   return cn(
-    "relative flex min-h-[var(--month-card-min-h)] flex-col rounded border p-2 text-left transition-colors duration-100",
-  // Keyboard DOM focus — dashed offset outline, not selection blue
-    "focus-visible:z-[2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#374151] dark:focus-visible:outline-[#9ca3af]",
+    "relative flex min-h-[var(--month-card-min-h)] flex-col rounded-md border p-2 text-left transition-colors duration-100",
+    // Keyboard DOM focus — dashed offset outline, not selection
+    "focus-visible:z-[2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/70",
     occupied
       ? occupancySurfaceClass(cellType)
       : availability === "closed"
-        ? "border-[#d1d5db] bg-[#f3f4f6] text-[#6b7280]"
+        ? "border-border bg-ops-closed text-ops-closed-fg"
         : occupancySurfaceClass("available"),
-    !occupied && isWeekend && !isPast && "bg-[#f9fafb] dark:bg-muted/15",
-    // Today (unselected, non-occupied): neutral marker — not selection blue
+    !occupied && isWeekend && !isPast && "bg-surface-subtle/80",
+    // Today (unselected, non-occupied): neutral marker — not selection
     isToday && !isSelected && !occupied && MONTH_GRID_TODAY_CLASS,
     isPast && !occupied && "opacity-75",
     isLoading && "animate-pulse",
-    !isPast && !occupied && "hover:border-[#93c5fd] hover:bg-[#f5f9ff]",
+    !isPast && !occupied && "hover:border-primary/40 hover:bg-primary-subtle/40",
     isSelected &&
       (isDragging
-        ? "z-[2] ring-2 ring-inset ring-[#0071c2] bg-[#dbeafe]"
-        : "z-[1] bg-[#e8f2fc] ring-2 ring-inset ring-[#0071c2]"),
-    // React focus (roving tabindex) — dashed ring, visually distinct from selection
-    isFocused && "z-[3] ring-2 ring-dashed ring-offset-2 ring-[#374151] dark:ring-[#9ca3af]",
+        ? "z-[2] bg-ops-selected ring-2 ring-inset ring-ops-selected-ring"
+        : "z-[1] bg-ops-selected ring-2 ring-inset ring-ops-selected-ring"),
+    // React focus (roving tabindex) — dashed outline, distinct from selection
+    isFocused && "z-[3] outline outline-2 outline-dashed outline-offset-2 outline-foreground/60",
   );
 }
 
 export function monthGridStatusTextClass(cellType: CellVisualType): string {
-  if (cellType === "booked" || cellType === "manual" || cellType === "maintenance" || cellType === "cleaning" || cellType === "owner") {
+  if (
+    cellType === "booked" ||
+    cellType === "manual" ||
+    cellType === "maintenance" ||
+    cellType === "cleaning" ||
+    cellType === "owner"
+  ) {
     return "text-[11px] font-medium leading-tight text-white/95";
   }
   if (cellType === "held") {
-    return "text-[11px] font-medium leading-tight text-[#92400e]";
+    return "text-[11px] font-medium leading-tight text-ops-hold-fg";
   }
-  return "text-[11px] font-medium leading-tight text-[#6b7280]";
+  return "text-[11px] font-medium leading-tight text-muted-foreground";
 }

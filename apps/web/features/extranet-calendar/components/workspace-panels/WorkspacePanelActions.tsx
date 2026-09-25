@@ -12,7 +12,7 @@ export function WorkspacePanelActions({
   return (
     <div
       className={cn(
-        "sticky bottom-0 -mx-4 mt-6 border-t border-[#d1d5db] bg-white px-4 py-3 dark:border-border dark:bg-background",
+        "sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface px-4 py-3",
         className,
       )}
     >

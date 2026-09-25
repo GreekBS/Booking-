@@ -67,7 +67,7 @@ export function WorkspaceShell({
 
       <aside
         className={cn(
-          "relative flex flex-col border-l border-[#d1d5db] bg-white dark:border-border dark:bg-background",
+          "relative flex flex-col border-l border-border bg-surface",
           isDocked
             ? "min-h-0 shrink-0 self-stretch"
             : cn(

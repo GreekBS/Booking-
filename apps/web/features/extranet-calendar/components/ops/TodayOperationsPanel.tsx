@@ -39,22 +39,22 @@ function Section({
 }) {
   return (
     <div className="min-w-0 flex-1">
-      <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
         {title}
         <span className="ml-1 font-normal tabular-nums">({items.length})</span>
       </h3>
       {items.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground/70">{emptyLabel}</p>
+        <p className="text-[11px] text-muted-foreground/80">{emptyLabel}</p>
       ) : (
         <ul className="max-h-24 space-y-0.5 overflow-y-auto pr-1">
           {items.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
-                className="w-full rounded px-1.5 py-1 text-left text-[11px] transition-colors hover:bg-muted/80 focus-visible:bg-muted/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                className="w-full rounded-md px-1.5 py-1 text-left text-[11px] transition-colors hover:bg-primary-subtle/60 focus-visible:bg-primary-subtle/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 onClick={() => onSelect(item)}
               >
-                <span className="block truncate font-medium">{item.label}</span>
+                <span className="block truncate font-medium text-foreground">{item.label}</span>
                 <span className="block truncate text-[10px] text-muted-foreground">
                   {item.unitName} · {item.detail}
                 </span>
@@ -101,7 +101,7 @@ export function TodayOperationsPanel({ groups, today }: TodayOperationsPanelProp
   }
 
   return (
-    <div className="shrink-0 border-t border-[#d1d5db] bg-white dark:border-border dark:bg-background">
+    <div className="shrink-0 border-t border-border bg-surface">
       <div className="flex items-center gap-2 px-3 py-1.5">
         <Button
           type="button"
@@ -116,7 +116,7 @@ export function TodayOperationsPanel({ groups, today }: TodayOperationsPanelProp
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
         </Button>
         <span className="hidden text-[10px] text-muted-foreground sm:inline">
-          Arrivals, departures, in-house, holds, and blocks from loaded calendar data
+          Day-level inventory operations from loaded calendar data
         </span>
       </div>
 
@@ -127,7 +127,7 @@ export function TodayOperationsPanel({ groups, today }: TodayOperationsPanelProp
         )}
       >
         <div className="overflow-hidden">
-          <div className="grid gap-3 border-t px-3 py-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 border-t border-border bg-surface-subtle/30 px-3 py-2 sm:grid-cols-2 lg:grid-cols-5">
             <Section
               title="Arrivals"
               items={snapshot.arrivals}

@@ -170,29 +170,39 @@ export function backgroundCellClassName(
   );
 }
 
-/** @deprecated Use backgroundCellClassName for grid cells; kept for legend compatibility. */
+/** @deprecated Prefer month-grid / timeline semantic helpers; kept for legend compatibility. */
 export function cellClassName(type: CellVisualType, isToday: boolean, isSelected: boolean): string {
   const base =
     "relative flex h-9 min-w-[36px] flex-col items-center justify-center border-r border-b text-[10px] transition-colors ";
-  const selected = isSelected ? "ring-2 ring-inset ring-primary z-[1] " : "";
+  const selected = isSelected ? "ring-2 ring-inset ring-ops-selected-ring z-[1] " : "";
   const today = isToday ? "font-bold " : "";
 
   switch (type) {
     case "booked":
-      return base + selected + today + "bg-blue-100 text-blue-950 dark:bg-blue-950 dark:text-blue-100";
+      return base + selected + today + "bg-ops-booking text-ops-booking-fg";
     case "held":
-      return base + selected + today + "bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100";
+      return (
+        base +
+        selected +
+        today +
+        "border-dashed border-ops-hold bg-ops-hold-subtle text-ops-hold-fg"
+      );
     case "manual":
-      return base + selected + today + "bg-red-100 text-red-950 dark:bg-red-950 dark:text-red-100";
+      return base + selected + today + "bg-ops-blocked text-ops-blocked-fg";
     case "maintenance":
-      return base + selected + today + "bg-orange-100 text-orange-950 dark:bg-orange-950 dark:text-orange-100";
+      return base + selected + today + "bg-ops-maintenance text-ops-maintenance-fg";
     case "cleaning":
-      return base + selected + today + "bg-violet-100 text-violet-950 dark:bg-violet-950 dark:text-violet-100";
+      return base + selected + today + "bg-ops-cleaning text-ops-cleaning-fg";
     case "owner":
-      return base + selected + today + "bg-slate-200 text-slate-900 dark:bg-slate-800 dark:text-slate-100";
+      return base + selected + today + "bg-ops-owner text-ops-owner-fg";
     case "closed":
-      return base + selected + today + "bg-muted/80 text-muted-foreground line-through decoration-muted-foreground/40";
+      return (
+        base +
+        selected +
+        today +
+        "bg-ops-closed text-ops-closed-fg line-through decoration-muted-foreground/40"
+      );
     default:
-      return base + selected + today + "bg-background hover:bg-muted/60";
+      return base + selected + today + "bg-surface hover:bg-primary-subtle/40";
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Search } from "lucide-react";
+import { EmptyState } from "@/components/admin/empty-state";
 
 type EmptyVariant =
   | "no-property-selected"
@@ -10,16 +10,17 @@ type EmptyVariant =
 
 const COPY: Record<EmptyVariant, { title: string; description: string }> = {
   "no-property-selected": {
-    title: "Select a property",
-    description: "Choose a property from the selector above to open its calendar workspace.",
+    title: "Select an Active Property",
+    description:
+      "Choose a property from the header Active Property control to open its calendar workspace.",
   },
   "no-unit-selected": {
-    title: "Select a room",
-    description: "Choose a room from the selector above to view its month calendar.",
+    title: "Select a unit",
+    description: "Choose a unit from the calendar toolbar to view its month calendar.",
   },
   "no-search-results": {
-    title: "No rooms match your search",
-    description: "Try a different room name or clear the search field.",
+    title: "No units match your search",
+    description: "Try a different unit name or clear the search field.",
   },
   "no-units-in-property": {
     title: "No units in this property",
@@ -29,13 +30,10 @@ const COPY: Record<EmptyVariant, { title: string; description: string }> = {
 
 export function TimelineGridEmptyState({ variant }: { variant: EmptyVariant }) {
   const { title, description } = COPY[variant];
-  const Icon = variant === "no-search-results" ? Search : Building2;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-      <Icon className="h-8 w-8 text-muted-foreground/50" />
-      <p className="text-sm font-medium">{title}</p>
-      <p className="max-w-sm text-xs text-muted-foreground">{description}</p>
+    <div className="flex justify-center px-4 py-10">
+      <EmptyState title={title} description={description} compact className="w-full max-w-md" />
     </div>
   );
 }

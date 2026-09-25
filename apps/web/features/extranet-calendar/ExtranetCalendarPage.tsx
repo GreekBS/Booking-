@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
   renderActivePropertyGate,
@@ -21,7 +21,12 @@ import {
 } from "./context/TimelineInteractionContext";
 import { CalendarOpsBar } from "./components/shell/CalendarOpsBar";
 import { ExtranetCalendarShell } from "./components/shell/ExtranetCalendarShell";
-import { buildMonthGridModel, startOfMonthIso } from "./lib/month-grid-model";
+import {
+  buildMonthGridModel,
+  formatPeriodLabel,
+  shiftMonthIso,
+  startOfMonthIso,
+} from "./lib/month-grid-model";
 import { todayIso } from "./lib/timeline-model";
 import { countCatalogUnits, useRackGroup } from "./lib/rack-model";
 import { useSelectedUnit } from "./hooks/useSelectedUnit";
@@ -34,7 +39,6 @@ function ExtranetCalendarContent() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId: selectedPropertyId,
-    setActiveProperty,
     properties: activeProperties,
     ready: propertyReady,
     error: propertyError,
@@ -47,8 +51,9 @@ function ExtranetCalendarContent() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [loadedMonthCount, setLoadedMonthCount] = useState(MONTHS_INITIAL);
-  const [anchorMonth] = useState(() => startOfMonthIso(todayIso()));
+  const [anchorMonth, setAnchorMonth] = useState(() => startOfMonthIso(todayIso()));
   const [density, setDensity] = useState<CalendarDensity>(DEFAULT_DENSITY);
+  const prevPropertyIdRef = useRef<string | null>(selectedPropertyId);
 
   const loadCatalog = useCallback(async () => {
     if (!tenantId) return;
@@ -68,6 +73,16 @@ function ExtranetCalendarContent() {
     void loadCatalog();
   }, [loadCatalog]);
 
+  // Active Property is authoritative (global header). Invalidate calendar chrome on switch.
+  useEffect(() => {
+    if (prevPropertyIdRef.current === selectedPropertyId) return;
+    prevPropertyIdRef.current = selectedPropertyId;
+    closeWorkspace();
+    clearSelection();
+    setLoadedMonthCount(MONTHS_INITIAL);
+    setAnchorMonth(startOfMonthIso(todayIso()));
+  }, [selectedPropertyId, closeWorkspace, clearSelection]);
+
   const propertyGroup = useRackGroup(properties, selectedPropertyId, "");
   const unitIds = useMemo(() => propertyGroup?.catalogUnitIds ?? [], [propertyGroup]);
   const units = useMemo(() => propertyGroup?.units ?? [], [propertyGroup]);
@@ -82,6 +97,15 @@ function ExtranetCalendarContent() {
     () => units.find((u) => u.unitId === selectedUnitId) ?? null,
     [units, selectedUnitId],
   );
+
+  const propertyName = useMemo(() => {
+    if (!selectedPropertyId) return null;
+    return (
+      activeProperties.find((p) => p.id === selectedPropertyId)?.name ??
+      properties.find((p) => p.id === selectedPropertyId)?.name ??
+      null
+    );
+  }, [activeProperties, properties, selectedPropertyId]);
 
   const monthGrid = useMemo(
     () => buildMonthGridModel(anchorMonth, loadedMonthCount),
@@ -103,17 +127,6 @@ function ExtranetCalendarContent() {
 
   const catalogHasProperties = properties.length > 0;
 
-  const handleSelectedPropertyChange = useCallback(
-    (propertyId: string) => {
-      if (propertyId === selectedPropertyId) return;
-      closeWorkspace();
-      clearSelection();
-      setLoadedMonthCount(MONTHS_INITIAL);
-      setActiveProperty(propertyId);
-    },
-    [selectedPropertyId, closeWorkspace, clearSelection, setActiveProperty],
-  );
-
   const handleSelectedUnitChange = useCallback(
     (unitId: string) => {
       if (unitId === selectedUnitId) return;
@@ -125,10 +138,28 @@ function ExtranetCalendarContent() {
   );
 
   function goToday() {
-    const el = document.querySelector(
-      `[data-calendar-cell="true"][data-date="${todayIso()}"]`,
-    ) as HTMLElement | null;
-    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    setAnchorMonth(startOfMonthIso(todayIso()));
+    setLoadedMonthCount(MONTHS_INITIAL);
+    requestAnimationFrame(() => {
+      const el = document.querySelector(
+        `[data-calendar-cell="true"][data-date="${todayIso()}"]`,
+      ) as HTMLElement | null;
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }
+
+  function goPrevPeriod() {
+    setAnchorMonth((current) => shiftMonthIso(current, -1));
+    setLoadedMonthCount(MONTHS_INITIAL);
+    clearSelection();
+    closeWorkspace();
+  }
+
+  function goNextPeriod() {
+    setAnchorMonth((current) => shiftMonthIso(current, 1));
+    setLoadedMonthCount(MONTHS_INITIAL);
+    clearSelection();
+    closeWorkspace();
   }
 
   function handleLoadMore() {
@@ -197,9 +228,8 @@ function ExtranetCalendarContent() {
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <CalendarOpsBar
-          properties={properties}
-          selectedPropertyId={selectedPropertyId}
-          onSelectedPropertyChange={handleSelectedPropertyChange}
+          propertyName={propertyName}
+          periodLabel={formatPeriodLabel(anchorMonth)}
           units={units}
           selectedUnitId={selectedUnitId}
           onSelectedUnitChange={handleSelectedUnitChange}
@@ -207,6 +237,8 @@ function ExtranetCalendarContent() {
           onDensityChange={setDensity}
           overlays={overlays}
           onOverlayToggle={toggleOverlay}
+          onPrevPeriod={goPrevPeriod}
+          onNextPeriod={goNextPeriod}
           onToday={goToday}
           onRefresh={handleRefresh}
           onOpenManualEdit={openDateWorkspace}
@@ -215,7 +247,7 @@ function ExtranetCalendarContent() {
         />
 
         {catalogError && (
-          <div className="shrink-0 border-b px-3 py-2">
+          <div className="shrink-0 border-b border-border px-3 py-2">
             <ErrorState message={catalogError} onRetry={() => void loadCatalog()} />
           </div>
         )}

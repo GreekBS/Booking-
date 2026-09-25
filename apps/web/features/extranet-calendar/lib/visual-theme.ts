@@ -1,81 +1,98 @@
 /**
- * Booking Extranet–inspired operational tokens.
- * Flat, low-decoration, hierarchy through size and contrast — not effects.
+ * Talos Operations Calendar visual tokens.
+ * Semantic classes mapped to Phase 1 design tokens — not Booking.com hex.
+ * Flat, low-decoration; hierarchy through contrast, not effects.
  */
 
 /** Canvas behind the day grid */
-export const GRID_CANVAS_CLASS = "bg-[#eceff3] dark:bg-muted/20";
+export const GRID_CANVAS_CLASS = "bg-background";
 
-/** Left navigation column (property band + unit rack + header corners) */
-export const RACK_PANEL_CLASS = "bg-[#f3f4f6] dark:bg-muted/30";
+/** Left navigation / rack panel (timeline legacy) */
+export const RACK_PANEL_CLASS = "bg-surface-subtle";
 
 /** Timeline day cells */
-export const CELL_SURFACE_CLASS = "bg-white dark:bg-background";
+export const CELL_SURFACE_CLASS = "bg-surface";
 
-/** Weekend column tint — subtle, flat */
-export const WEEKEND_COLUMN_CLASS = "bg-[#f7f8f8] dark:bg-muted/20";
+/** Weekend column tint — subtle */
+export const WEEKEND_COLUMN_CLASS = "bg-surface-subtle/70";
 
-/** Today column tint — flat wash, no gradient */
-export const TODAY_COLUMN_CLASS = "bg-[#e8f2fc] dark:bg-primary/10";
+/** Today column tint — subtle wash, not selection */
+export const TODAY_COLUMN_CLASS = "bg-primary-subtle/50";
 
 /** Today accent line */
-export const TODAY_ACCENT_CLASS = "bg-[#0071c2] dark:bg-primary";
+export const TODAY_ACCENT_CLASS = "bg-primary";
 
-/** Month section divider — obvious section boundary */
-export const MONTH_DIVIDER_CLASS = "border-l-2 border-[#c5cdd8] dark:border-border";
+/** Month section divider */
+export const MONTH_DIVIDER_CLASS = "border-l-2 border-border-strong";
 
 export const MONTH_SECTION_CLASS =
-  "flex items-center bg-white px-5 first:border-l-0 dark:bg-background";
+  "flex items-center bg-surface px-5 first:border-l-0";
 
 export const MONTH_LABEL_CLASS =
-  "text-[14px] font-bold uppercase tracking-[0.1em] text-[#1a1a1a] dark:text-foreground";
+  "text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground";
 
 export const DAY_HEADER_WEEKDAY_CLASS =
-  "text-[11px] font-medium uppercase text-[#6b7280] dark:text-muted-foreground";
+  "text-[10px] font-medium uppercase text-muted-foreground";
 
 export const DAY_HEADER_NUMBER_CLASS =
-  "text-[18px] font-semibold leading-none tabular-nums text-[#111827] dark:text-foreground";
+  "text-[18px] font-semibold leading-none tabular-nums text-foreground";
 
 /** Workspace property title */
 export const PROPERTY_NAME_CLASS =
-  "truncate text-[16px] font-semibold leading-tight text-[#111827] dark:text-foreground";
+  "truncate text-[16px] font-semibold leading-tight text-foreground";
 
-export const PROPERTY_META_CLASS = "text-[12px] text-[#6b7280] dark:text-muted-foreground";
+export const PROPERTY_META_CLASS = "text-[12px] text-muted-foreground";
 
 /** Room name in navigation panel */
 export const RACK_UNIT_NAME_CLASS =
-  "truncate text-[13px] font-medium leading-snug text-[#1f2937] dark:text-foreground";
+  "truncate text-[13px] font-medium leading-snug text-foreground";
 
-/** Flat operational chips — no shadow */
+/** Flat operational chips */
 export const CHIP_BASE_CLASS =
-  "inline-flex items-center rounded border border-[#d1d5db] bg-white px-2 py-0.5 text-[11px] font-medium tabular-nums text-[#374151] dark:border-border dark:bg-muted/40 dark:text-foreground";
+  "inline-flex items-center rounded-md border border-border bg-surface px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground";
 
-export const CHIP_BOOKING_CLASS = "border-[#93c5fd] bg-[#eff6ff] text-[#1d4ed8]";
-export const CHIP_HOLD_CLASS = "border-[#fcd34d] bg-[#fffbeb] text-[#92400e]";
-export const CHIP_MUTED_CLASS = "border-[#e5e7eb] bg-[#f9fafb] text-[#6b7280]";
+export const CHIP_BOOKING_CLASS =
+  "border-ops-booking/30 bg-primary-subtle text-ops-booking";
+export const CHIP_HOLD_CLASS =
+  "border-ops-hold/40 bg-ops-hold-subtle text-ops-hold-fg";
+export const CHIP_MUTED_CLASS =
+  "border-border bg-surface-subtle text-muted-foreground";
 
-/** Reservation bar — hero layer */
+/** Reservation bar — hero layer (timeline) */
 export const BAR_BOOKING_CLASS =
-  "border border-[#005a9e] bg-[#0071c2] text-white dark:border-[#1967d2] dark:bg-[#1967d2]";
+  "border border-ops-booking bg-ops-booking text-ops-booking-fg";
 
 export const BAR_HOLD_CLASS =
-  "border-2 border-dashed border-[#b45309] bg-[#fffbeb] text-[#78350f] dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-100";
+  "border-2 border-dashed border-ops-hold bg-ops-hold-subtle text-ops-hold-fg";
 
 export const BAR_OPERATOR_CLASSES = {
-  manual: "border border-[#b91c1c] bg-[#dc2626] text-white",
-  maintenance: "border border-[#c2410c] bg-[#ea580c] text-white",
-  cleaning: "border border-[#6d28d9] bg-[#7c3aed] text-white",
-  owner: "border border-[#475569] bg-[#64748b] text-white",
+  manual: "border border-ops-blocked bg-ops-blocked text-ops-blocked-fg",
+  maintenance:
+    "border border-ops-maintenance bg-ops-maintenance text-ops-maintenance-fg",
+  cleaning: "border border-ops-cleaning bg-ops-cleaning text-ops-cleaning-fg",
+  owner: "border border-ops-owner bg-ops-owner text-ops-owner-fg",
 } as const;
 
 export const BAR_TEXT_PRIMARY_CLASS = "truncate text-[13px] font-semibold leading-tight";
 export const BAR_TEXT_SECONDARY_CLASS = "truncate text-[11px] font-medium leading-tight opacity-90";
 
 export const PRICE_OVERLAY_CLASS =
-  "text-[12px] font-semibold tabular-nums text-[#111827] dark:text-foreground";
+  "text-[12px] font-semibold tabular-nums text-foreground";
 
 export const OVERLAY_META_CLASS =
-  "text-[10px] font-medium tabular-nums text-[#6b7280] dark:text-muted-foreground";
+  "text-[10px] font-medium tabular-nums text-muted-foreground";
+
+/** Compact legend swatch helpers */
+export const LEGEND_SWATCHES = [
+  { key: "available", label: "Available", className: "border border-border bg-surface" },
+  { key: "booked", label: "Booked", className: "bg-ops-booking" },
+  { key: "hold", label: "Hold", className: "border-2 border-dashed border-ops-hold bg-ops-hold-subtle" },
+  { key: "manual", label: "Blocked", className: "bg-ops-blocked" },
+  { key: "maintenance", label: "Maintenance", className: "bg-ops-maintenance" },
+  { key: "cleaning", label: "Cleaning", className: "bg-ops-cleaning" },
+  { key: "owner", label: "Owner", className: "bg-ops-owner" },
+  { key: "closed", label: "Closed", className: "bg-ops-closed" },
+] as const;
 
 export function formatMonthYearUppercase(label: string): string {
   return label.toUpperCase();

@@ -66,12 +66,27 @@
     --info-foreground: 205 50% 97%;
     --info-subtle: 205 45% 94%;
 
-    /* Operational inventory states (for later calendar adoption) */
+    /* Operational inventory states */
     --ops-booking: 153 43% 28%;
+    --ops-booking-fg: 40 30% 97%;
     --ops-hold: 38 78% 42%;
+    --ops-hold-fg: 38 60% 12%;
+    --ops-hold-subtle: 40 80% 93%;
     --ops-blocked: 0 55% 45%;
-    --ops-maintenance: 265 30% 45%;
+    --ops-blocked-fg: 0 0% 100%;
+    --ops-maintenance: 25 70% 42%;
+    --ops-maintenance-fg: 0 0% 100%;
+    --ops-cleaning: 265 35% 42%;
+    --ops-cleaning-fg: 0 0% 100%;
+    --ops-owner: 215 14% 42%;
+    --ops-owner-fg: 0 0% 100%;
     --ops-channel: 205 55% 38%;
+    --ops-channel-fg: 0 0% 100%;
+    --ops-closed: 40 8% 88%;
+    --ops-closed-fg: 150 6% 42%;
+    --ops-selected: 153 28% 90%;
+    --ops-selected-ring: 153 43% 28%;
+    --ops-today-marker: 150 6% 48%;
 
     /* Sidebar — deep forest operational nav */
     --sidebar-background: 153 43% 14%;
@@ -126,10 +141,25 @@
     --info-foreground: 205 50% 10%;
     --info-subtle: 205 35% 16%;
     --ops-booking: 153 40% 45%;
+    --ops-booking-fg: 150 20% 8%;
     --ops-hold: 38 70% 50%;
+    --ops-hold-fg: 38 60% 10%;
+    --ops-hold-subtle: 38 40% 16%;
     --ops-blocked: 0 55% 50%;
-    --ops-maintenance: 265 35% 55%;
+    --ops-blocked-fg: 0 0% 100%;
+    --ops-maintenance: 25 65% 48%;
+    --ops-maintenance-fg: 0 0% 100%;
+    --ops-cleaning: 265 35% 55%;
+    --ops-cleaning-fg: 0 0% 100%;
+    --ops-owner: 215 12% 55%;
+    --ops-owner-fg: 150 20% 8%;
     --ops-channel: 205 50% 50%;
+    --ops-channel-fg: 0 0% 100%;
+    --ops-closed: 150 8% 18%;
+    --ops-closed-fg: 150 6% 65%;
+    --ops-selected: 153 30% 18%;
+    --ops-selected-ring: 153 35% 50%;
+    --ops-today-marker: 150 8% 60%;
     --sidebar-background: 153 40% 8%;
     --sidebar-foreground: 40 15% 90%;
     --sidebar-primary: 40 25% 94%;

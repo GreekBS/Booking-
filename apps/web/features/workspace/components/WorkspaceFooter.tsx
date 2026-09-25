@@ -26,7 +26,7 @@ export function WorkspaceFooter({
   return (
     <div
       className={cn(
-        "sticky bottom-0 shrink-0 border-t border-[#d1d5db] bg-white px-4 py-3 dark:border-border dark:bg-background",
+        "sticky bottom-0 shrink-0 border-t border-border bg-surface px-4 py-3",
         className,
       )}
     >
