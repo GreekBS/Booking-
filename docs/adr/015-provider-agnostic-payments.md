@@ -20,3 +20,4 @@ Phase 2 prepares for payments without coupling domain logic to Stripe, Viva, or 
 - Use cases orchestrate payment intent creation after booking enters `payment_pending`
 - Domain tests use confirmation modes without invoking real gateway
 - **F4 (ADR-027):** Settlement truth lives on `payments` / allocations / refunds — **not** `payment_records`. Legacy `payment_records` remains the ADR-015 gateway intent ledger only; do not treat it as Folio paid balance.
+- **F4.1:** `Payment.propertyId` is canonical property ownership (Active Property). Unbooked deposits are property-scoped without requiring a Booking.

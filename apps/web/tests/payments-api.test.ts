@@ -42,6 +42,7 @@ describe("admin payment routes (F4)", () => {
         currency: "EUR",
         method: "CASH",
         collectionSource: "PROPERTY",
+        propertyId: "11111111-1111-4111-8111-111111111111",
         idempotencyKey: "k1",
       }),
     });
@@ -70,6 +71,7 @@ describe("admin payment routes (F4)", () => {
         currency: "EUR",
         method: "CASH",
         collectionSource: "PROPERTY",
+        propertyId: "11111111-1111-4111-8111-111111111111",
         bookingId: "11111111-1111-4111-8111-111111111111",
         idempotencyKey: "idem-1",
       }),
@@ -83,6 +85,7 @@ describe("admin payment routes (F4)", () => {
       expect.objectContaining({
         tenantId: "tenant-1",
         amount: "100.0000",
+        propertyId: "11111111-1111-4111-8111-111111111111",
         bookingId: "11111111-1111-4111-8111-111111111111",
         idempotencyKey: "idem-1",
       }),

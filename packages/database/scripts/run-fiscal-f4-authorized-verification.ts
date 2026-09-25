@@ -1,4 +1,4 @@
-/**
+﻿/**
  * F4 authorized Talos verification: payment idempotency, allocation/refund/reversal
  * concurrency, RLS under talos_runtime. Isolated tenants only.
  *
@@ -310,10 +310,11 @@ async function main() {
       });
     });
 
-    // A — Payment idempotency concurrency (distinct ids, same key)
+    // A â€” Payment idempotency concurrency (distinct ids, same key)
     const idemKey = `${RUN_ID}:pay:idem`;
     const makePayment = () =>
       Payment.create({
+        propertyId: propertyA,
         id: randomUUID(),
         tenantId: tenantA,
         currency: "EUR",
@@ -360,6 +361,7 @@ async function main() {
     let conflictRejected = false;
     try {
       const bad = Payment.create({
+        propertyId: propertyA,
         id: randomUUID(),
         tenantId: tenantA,
         currency: "EUR",
@@ -382,8 +384,9 @@ async function main() {
     }
     (report.results as ResultMap).conflictingIdempotency = { conflictRejected };
 
-    // B — Allocation race: payment 100, 3×60
+    // B â€” Allocation race: payment 100, 3Ã—60
     const racePay = Payment.create({
+      propertyId: propertyA,
       id: randomUUID(),
       tenantId: tenantA,
       currency: "EUR",
@@ -436,8 +439,9 @@ async function main() {
       overAllocationPossible: allocSum > 100 + 1e-9,
     };
 
-    // D — Refund race on a fresh payment 100, 3×60
+    // D â€” Refund race on a fresh payment 100, 3Ã—60
     const refundPay = Payment.create({
+      propertyId: propertyA,
       id: randomUUID(),
       tenantId: tenantA,
       currency: "EUR",
@@ -493,8 +497,9 @@ async function main() {
       overRefundPossible: refundSum > 100 + 1e-9,
     };
 
-    // E — Reversal race
+    // E â€” Reversal race
     const revPay = Payment.create({
+      propertyId: propertyA,
       id: randomUUID(),
       tenantId: tenantA,
       currency: "EUR",
@@ -561,7 +566,7 @@ async function main() {
       overReversalPossible: revSum > 80 + 1e-9,
     };
 
-    // F — RLS
+    // F â€” RLS
     const rls = await withTenantTransaction(tenantB, async (tx) => {
       const payments = await tx.payment.findMany({
         where: { tenantId: tenantA },
@@ -637,3 +642,4 @@ main().catch((e) => {
   console.error(e instanceof Error ? e.message : String(e));
   process.exit(1);
 });
+

@@ -32,6 +32,7 @@ import { PrismaOutboxRepository } from "../OutboxRepository";
 type PaymentRow = {
   id: string;
   tenantId: string;
+  propertyId: string;
   currency: string;
   amount: Prisma.Decimal;
   status: string;
@@ -51,6 +52,7 @@ function mapPayment(row: PaymentRow): Payment {
   return Payment.rehydrate({
     id: row.id,
     tenantId: row.tenantId,
+    propertyId: row.propertyId,
     currency: row.currency,
     amount: row.amount.toFixed(4),
     status: row.status as PaymentStatus,
@@ -72,6 +74,7 @@ function paymentCreateData(payment: Payment): Prisma.PaymentCreateInput {
   return {
     id: p.id,
     tenant: { connect: { id: p.tenantId } },
+    property: { connect: { id: p.propertyId } },
     currency: p.currency,
     amount: new Prisma.Decimal(p.amount),
     status: p.status,
@@ -154,6 +157,7 @@ function paymentMatchesIdempotency(existing: PaymentRow, payment: Payment): bool
     existing.currency === p.currency &&
     existing.method === p.method &&
     existing.collectionSource === p.collectionSource &&
+    existing.propertyId === p.propertyId &&
     (existing.bookingId ?? null) === (p.bookingId ?? null)
   );
 }
@@ -184,6 +188,7 @@ async function lockPaymentForUpdate(
     SELECT
       id,
       tenant_id AS "tenantId",
+      property_id AS "propertyId",
       currency,
       amount,
       status,
@@ -212,11 +217,13 @@ async function lockFoliosForUpdate(
   tx: Prisma.TransactionClient,
   tenantId: string,
   folioIds: string[],
-): Promise<Map<string, { currency: string }>> {
+): Promise<Map<string, { currency: string; bookingId: string }>> {
   if (folioIds.length === 0) return new Map();
   const sorted = [...new Set(folioIds)].sort();
-  const locked = await tx.$queryRaw<Array<{ id: string; currency: string }>>`
-    SELECT id, currency
+  const locked = await tx.$queryRaw<
+    Array<{ id: string; currency: string; booking_id: string }>
+  >`
+    SELECT id, currency, booking_id
     FROM folios
     WHERE tenant_id = ${tenantId}::uuid
       AND id IN (${Prisma.join(sorted.map((id) => Prisma.sql`${id}::uuid`))})
@@ -226,7 +233,33 @@ async function lockFoliosForUpdate(
   if (locked.length !== sorted.length) {
     throw new ValidationError("One or more folios not found for allocation lock");
   }
-  return new Map(locked.map((r) => [r.id, { currency: r.currency }]));
+  return new Map(
+    locked.map((r) => [
+      r.id,
+      { currency: r.currency, bookingId: r.booking_id },
+    ]),
+  );
+}
+
+async function assertFolioMatchesPaymentProperty(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  folioBookingId: string,
+  paymentPropertyId: string,
+): Promise<void> {
+  const booking = await tx.$queryRaw<Array<{ property_id: string }>>`
+    SELECT property_id
+    FROM bookings
+    WHERE tenant_id = ${tenantId}::uuid AND id = ${folioBookingId}::uuid
+    FOR UPDATE
+  `;
+  const row = booking[0];
+  if (!row) {
+    throw new ValidationError("Booking not found for folio allocation");
+  }
+  if (row.property_id !== paymentPropertyId) {
+    throw new ValidationError("Cannot allocate Payment across properties");
+  }
 }
 
 async function loadSettlementLines(
@@ -302,16 +335,7 @@ export class PrismaPaymentRepository implements IPaymentRepository {
         where: {
           tenantId,
           ...(opts?.bookingId ? { bookingId: opts.bookingId } : {}),
-          ...(opts?.propertyId
-            ? {
-                booking: {
-                  is: {
-                    tenantId,
-                    propertyId: opts.propertyId,
-                  },
-                },
-              }
-            : {}),
+          ...(opts?.propertyId ? { propertyId: opts.propertyId } : {}),
         },
         orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
         take: opts?.limit ?? 100,
@@ -348,6 +372,36 @@ export class PrismaPaymentSettlementRepository
           return mapPayment(existing);
         }
 
+        const paymentProps = command.payment.toProps();
+
+        // Property must belong to tenant.
+        const propertyOk = await tx.property.findFirst({
+          where: {
+            id: paymentProps.propertyId,
+            tenantId,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (!propertyOk) {
+          throw new ValidationError("Property not found for payment");
+        }
+
+        if (paymentProps.bookingId) {
+          const booking = await tx.booking.findFirst({
+            where: { id: paymentProps.bookingId, tenantId },
+            select: { propertyId: true },
+          });
+          if (!booking) {
+            throw new ValidationError("Booking not found for payment");
+          }
+          if (booking.propertyId !== paymentProps.propertyId) {
+            throw new ValidationError(
+              "Payment propertyId must match Booking.propertyId",
+            );
+          }
+        }
+
         await tx.payment.create({ data: paymentCreateData(command.payment) });
 
         if (command.initialAllocations?.length) {
@@ -371,6 +425,12 @@ export class PrismaPaymentSettlementRepository
             if (folio.currency !== ap.currency) {
               throw new ValidationError("Folio currency mismatch for allocation");
             }
+            await assertFolioMatchesPaymentProperty(
+              tx,
+              tenantId,
+              folio.bookingId,
+              paymentRow.propertyId,
+            );
             const availability = computePaymentAvailability({
               amount: paymentRow.amount.toFixed(4),
               currency: paymentRow.currency,
@@ -441,6 +501,12 @@ export class PrismaPaymentSettlementRepository
       if (folio.currency !== ap.currency) {
         throw new ValidationError("Folio currency mismatch for allocation");
       }
+      await assertFolioMatchesPaymentProperty(
+        tx,
+        tenantId,
+        folio.bookingId,
+        paymentRow.propertyId,
+      );
 
       const lines = await loadSettlementLines(tx, tenantId, ap.paymentId);
       const availability = computePaymentAvailability({

@@ -34,6 +34,7 @@ import type {
 export interface PaymentReadModel {
   id: string;
   tenantId: string;
+  propertyId: string;
   currency: string;
   amount: string;
   status: string;
@@ -53,6 +54,7 @@ function toPaymentReadModel(payment: Payment): PaymentReadModel {
   return {
     id: payment.id,
     tenantId: payment.tenantId,
+    propertyId: payment.propertyId,
     currency: payment.currency,
     amount: payment.amount,
     status: payment.status,
@@ -114,6 +116,8 @@ export class RecordManualPaymentUseCase {
     amount: string;
     method: import("../PaymentKinds").PaymentMethod;
     collectionSource: import("../PaymentKinds").CollectionSource;
+    /** Canonical property ownership — required. */
+    propertyId: string;
     bookingId?: string | null;
     payerName?: string | null;
     externalReference?: string | null;
@@ -125,10 +129,38 @@ export class RecordManualPaymentUseCase {
     try {
       assertCanMutatePayments(this.permissionChecker, input.actor, input.tenantId);
 
+      const propertyId = input.propertyId.trim();
+      if (!propertyId) {
+        return Result.fail(new ValidationError("propertyId required"));
+      }
+      if (
+        !this.permissionChecker.canAccessProperty(
+          input.actor,
+          input.tenantId,
+          propertyId,
+          "property:read",
+        )
+      ) {
+        return Result.fail(new ForbiddenError("Property access denied"));
+      }
+      if (
+        input.actor.propertyIds !== null &&
+        !input.actor.isSuperAdmin &&
+        input.actor.role !== "admin" &&
+        !input.actor.propertyIds.includes(propertyId)
+      ) {
+        return Result.fail(new ForbiddenError("Property access denied"));
+      }
+
       if (input.bookingId) {
         const booking = await this.bookingRepository.findById(input.bookingId, input.tenantId);
         if (!booking || booking.tenantId !== input.tenantId) {
           return Result.fail(new NotFoundError("Booking", input.bookingId));
+        }
+        if (booking.propertyId !== propertyId) {
+          return Result.fail(
+            new ValidationError("Payment propertyId must match Booking.propertyId"),
+          );
         }
         if (
           !assertCanAccessBookingProperty(
@@ -155,6 +187,7 @@ export class RecordManualPaymentUseCase {
           dup.currency !== currency ||
           dup.method !== input.method ||
           dup.collectionSource !== input.collectionSource ||
+          dup.propertyId !== propertyId ||
           (dup.bookingId ?? null) !== bookingId
         ) {
           return Result.fail(
@@ -168,6 +201,7 @@ export class RecordManualPaymentUseCase {
       const payment = Payment.create({
         id: this.idGenerator.generate(),
         tenantId: input.tenantId,
+        propertyId,
         currency: input.currency,
         amount: Money.create(input.amount, input.currency),
         status: "SUCCEEDED",
@@ -217,6 +251,7 @@ export class RecordManualPaymentUseCase {
               folioId: slice.folioId,
               amount: slice.amount,
               currency: payment.currency,
+              propertyId: payment.propertyId,
             }),
           );
           availability = computePaymentAvailability({
@@ -262,6 +297,16 @@ export class GetPaymentUseCase {
       const payment = await this.paymentRepository.findById(tenantId, paymentId);
       if (!payment || payment.tenantId !== tenantId) {
         return Result.fail(new NotFoundError("Payment", paymentId));
+      }
+      if (
+        !this.permissionChecker.canAccessProperty(
+          actor,
+          tenantId,
+          payment.propertyId,
+          "property:read",
+        )
+      ) {
+        return Result.fail(new ForbiddenError("Property access denied"));
       }
       return Result.ok(toPaymentReadModel(payment));
     } catch (error) {
@@ -322,6 +367,7 @@ export class ListPaymentsUseCase {
 export class AllocatePaymentUseCase {
   constructor(
     private readonly folioRepository: IFolioRepository,
+    private readonly bookingRepository: IBookingRepository,
     private readonly paymentSettlementRepository: IPaymentSettlementRepository,
     private readonly idGenerator: IIdGenerator,
     private readonly permissionChecker: PermissionChecker,
@@ -347,6 +393,17 @@ export class AllocatePaymentUseCase {
         return Result.fail(new NotFoundError("Payment", input.paymentId));
       }
 
+      if (
+        !this.permissionChecker.canAccessProperty(
+          input.actor,
+          input.tenantId,
+          view.payment.propertyId,
+          "property:read",
+        )
+      ) {
+        return Result.fail(new ForbiddenError("Property access denied"));
+      }
+
       view.payment.assertSettleableForAllocation();
 
       const folioBundle = await this.folioRepository.findById(input.tenantId, input.folioId);
@@ -355,6 +412,19 @@ export class AllocatePaymentUseCase {
       }
       if (folioBundle.folio.currency !== view.payment.currency) {
         return Result.fail(new ValidationError("Folio currency mismatch"));
+      }
+
+      const booking = await this.bookingRepository.findById(
+        folioBundle.folio.bookingId,
+        input.tenantId,
+      );
+      if (!booking || booking.tenantId !== input.tenantId) {
+        return Result.fail(new NotFoundError("Booking", folioBundle.folio.bookingId));
+      }
+      if (booking.propertyId !== view.payment.propertyId) {
+        return Result.fail(
+          new ValidationError("Cannot allocate Payment across properties"),
+        );
       }
 
       assertCanAllocatePayment(
@@ -380,6 +450,7 @@ export class AllocatePaymentUseCase {
           folioId: input.folioId,
           amount: input.amount,
           currency: view.payment.currency,
+          propertyId: view.payment.propertyId,
         }),
       ];
 

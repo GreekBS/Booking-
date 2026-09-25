@@ -9,6 +9,9 @@ import {
 import { adminFetch } from "@/lib/admin/api";
 import { formatMoney } from "@/lib/admin/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface PaymentRow {
   id: string;
@@ -17,21 +20,35 @@ interface PaymentRow {
   status: string;
   method: string;
   collectionSource: string;
+  propertyId: string;
   bookingId: string | null;
   payerName: string | null;
   receivedAt: string;
+}
+
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `pay-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 export function PaymentsPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
+    property,
     properties,
     ready: propertyReady,
     error: propertyError,
   } = useActiveProperty();
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("CASH");
+  const [collectionSource, setCollectionSource] = useState("PROPERTY");
+  const [recording, setRecording] = useState(false);
+  const [recordError, setRecordError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!tenantId || !propertyId) return;
@@ -51,6 +68,32 @@ export function PaymentsPage() {
     void load();
   }, [load]);
 
+  async function recordPayment() {
+    if (!tenantId || !propertyId || !payAmount.trim()) return;
+    setRecording(true);
+    setRecordError(null);
+    try {
+      await adminFetch("/payments", {
+        method: "POST",
+        tenantId,
+        body: JSON.stringify({
+          amount: payAmount.trim(),
+          currency: "EUR",
+          method: payMethod,
+          collectionSource,
+          propertyId,
+          idempotencyKey: newIdempotencyKey(),
+        }),
+      });
+      setPayAmount("");
+      await load();
+    } catch (err) {
+      setRecordError(err instanceof Error ? err.message : "Payment failed");
+    } finally {
+      setRecording(false);
+    }
+  }
+
   const propertyGate = renderActivePropertyGate({
     tenantLoading,
     tenantError,
@@ -67,9 +110,71 @@ export function PaymentsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Manual and recorded payments for the active property (F4 settlement).
+          Manual and recorded payments for {property?.name ?? "the active property"}{" "}
+          (booked and unbooked).
         </p>
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Record payment</CardTitle>
+          <CardDescription>
+            Creates a payment owned by the active property. Booking linkage is optional.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {recordError ? (
+            <p className="text-sm text-destructive">{recordError}</p>
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="workspace-pay-amount">Amount (EUR)</Label>
+              <Input
+                id="workspace-pay-amount"
+                inputMode="decimal"
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="workspace-pay-method">Method</Label>
+              <select
+                id="workspace-pay-method"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                value={payMethod}
+                onChange={(e) => setPayMethod(e.target.value)}
+              >
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+                <option value="BANK_TRANSFER">Bank transfer</option>
+                <option value="OTA">OTA</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="workspace-pay-source">Collected by</Label>
+              <select
+                id="workspace-pay-source"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                value={collectionSource}
+                onChange={(e) => setCollectionSource(e.target.value)}
+              >
+                <option value="PROPERTY">Property</option>
+                <option value="DIRECT">Direct</option>
+                <option value="OTA">OTA</option>
+                <option value="PAYMENT_GATEWAY">Payment gateway</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+          </div>
+          <Button
+            disabled={recording || !payAmount.trim()}
+            onClick={() => void recordPayment()}
+          >
+            {recording ? "Recording…" : "Record payment"}
+          </Button>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Payments</CardTitle>

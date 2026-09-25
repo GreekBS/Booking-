@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 import { Payment, isSettleable, assertCompatibleCurrency } from "../../src/billing/payments/Payment";
 import { PaymentAllocation } from "../../src/billing/payments/PaymentAllocation";
 import { PaymentAllocationReversal } from "../../src/billing/payments/PaymentAllocationReversal";
@@ -20,12 +20,14 @@ import { Money } from "../../src/commerce/shared/value-objects/Money";
 import { ValidationError } from "../../src/shared/errors/DomainError";
 
 const TENANT = "11111111-1111-4111-8111-111111111111";
+const PROPERTY = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PAYMENT_ID = "22222222-2222-4222-8222-222222222222";
 const SUCCEEDED_EVT = "33333333-3333-4333-8333-333333333333";
 
 describe("Payment aggregate (F4)", () => {
   it("requires positive amount and normalizes currency", () => {
     const p = Payment.create({
+      propertyId: PROPERTY,
       id: PAYMENT_ID,
       tenantId: TENANT,
       currency: "eur",
@@ -38,6 +40,7 @@ describe("Payment aggregate (F4)", () => {
     expect(p.status).toBe("PENDING");
     expect(() =>
       Payment.create({
+        propertyId: PROPERTY,
         id: "p2",
         tenantId: TENANT,
         currency: "EUR",
@@ -51,6 +54,7 @@ describe("Payment aggregate (F4)", () => {
 
   it("guards status transitions", () => {
     const p = Payment.create({
+      propertyId: PROPERTY,
       id: PAYMENT_ID,
       tenantId: TENANT,
       currency: "EUR",
@@ -76,6 +80,7 @@ describe("Payment aggregate (F4)", () => {
 
   it("only SUCCEEDED payments are settleable for allocation/refund", () => {
     const pending = Payment.create({
+      propertyId: PROPERTY,
       id: "p-pending",
       tenantId: TENANT,
       currency: "EUR",
@@ -256,3 +261,5 @@ describe("Refund aggregate (F4)", () => {
     expect(events.some((e) => e.eventType === "RefundSucceeded")).toBe(true);
   });
 });
+
+

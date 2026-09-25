@@ -156,6 +156,7 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
         currency,
         method: payMethod,
         collectionSource,
+        propertyId: booking.propertyId,
         bookingId: booking.id,
         idempotencyKey: newIdempotencyKey(),
       };

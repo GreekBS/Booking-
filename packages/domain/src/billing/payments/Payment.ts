@@ -11,6 +11,7 @@ import { PaymentRecorded, PaymentSucceeded } from "./events/PaymentEvents";
 export interface PaymentProps {
   id: string;
   tenantId: string;
+  propertyId: string;
   currency: string;
   amount: string;
   status: PaymentStatus;
@@ -46,6 +47,7 @@ export class Payment extends AggregateRoot<PaymentProps> {
   static create(input: {
     id: string;
     tenantId: string;
+    propertyId: string;
     currency: string;
     amount: Money;
     status?: PaymentStatus;
@@ -65,6 +67,10 @@ export class Payment extends AggregateRoot<PaymentProps> {
     if (!/^[A-Z]{3}$/.test(currency)) {
       throw new ValidationError(`Invalid currency: ${input.currency}`);
     }
+    const propertyId = input.propertyId.trim();
+    if (!propertyId) {
+      throw new ValidationError("propertyId required");
+    }
     const amount = Money.create(input.amount.amount, currency);
     if (toScaled(amount.amount) <= 0n) {
       throw new ValidationError("Payment amount must be positive");
@@ -79,6 +85,7 @@ export class Payment extends AggregateRoot<PaymentProps> {
     const payment = new Payment({
       id: input.id,
       tenantId: input.tenantId,
+      propertyId,
       currency,
       amount: amount.amount,
       status,
@@ -101,6 +108,7 @@ export class Payment extends AggregateRoot<PaymentProps> {
         status: payment.status,
         method: payment.method,
         collectionSource: payment.collectionSource,
+        propertyId: payment.propertyId,
         bookingId: payment.bookingId,
       }),
     );
@@ -111,6 +119,7 @@ export class Payment extends AggregateRoot<PaymentProps> {
         new PaymentSucceeded(payment.id, payment.tenantId, {
           amount: payment.amount,
           currency: payment.currency,
+          propertyId: payment.propertyId,
         }, deliveryId),
       );
     }
@@ -131,6 +140,10 @@ export class Payment extends AggregateRoot<PaymentProps> {
 
   get tenantId(): string {
     return this.props.tenantId;
+  }
+
+  get propertyId(): string {
+    return this.props.propertyId;
   }
 
   get currency(): string {

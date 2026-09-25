@@ -416,6 +416,7 @@ model Property {
   bookingHolds   BookingHold[]
   quotes         Quote[]
   bookings       Booking[]
+  payments       Payment[]
   businessFiscalProfiles BusinessFiscalProfile[]
   fiscalSeries           FiscalSeries[]
   fiscalDocuments        FiscalDocument[]
@@ -806,6 +807,8 @@ model PaymentRecord {
 model Payment {
   id                String                   @id @default(uuid()) @db.Uuid
   tenantId          String                   @map("tenant_id") @db.Uuid
+  /// Canonical property ownership (Active Property 1.1). Required; independent of booking.
+  propertyId        String                   @map("property_id") @db.Uuid
   currency          String                   @db.Char(3)
   amount            Decimal                  @db.Decimal(19, 4)
   status            PaymentLifecycleStatus
@@ -821,6 +824,7 @@ model Payment {
   updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant               Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property             Property                    @relation(fields: [propertyId], references: [id], onDelete: Restrict)
   booking              Booking?                    @relation(fields: [bookingId], references: [id], onDelete: Restrict)
   allocations          PaymentAllocation[]
   allocationReversals  PaymentAllocationReversal[]
@@ -829,6 +833,8 @@ model Payment {
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, receivedAt])
   @@index([tenantId, bookingId])
+  @@index([tenantId, propertyId])
+  @@index([tenantId, propertyId, receivedAt])
   @@map("payments")
 }
 

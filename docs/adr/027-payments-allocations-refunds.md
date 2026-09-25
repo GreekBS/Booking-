@@ -30,6 +30,15 @@ Operators and future gateways need a canonical ledger for money movement that is
 `DIRECT | PROPERTY | OTA | PAYMENT_GATEWAY | OTHER` records **who collected** cash.  
 OTA booking totals never auto-create Payments.
 
+### Property ownership (F4.1)
+
+`Payment.propertyId` is required and canonical.  
+Active Property is UX default only.  
+
+- Unbooked / unallocated payments are listed by `propertyId`.  
+- If `bookingId` is set: `Payment.propertyId` MUST equal `Booking.propertyId` (fail closed).  
+- Allocation to a Folio requires Folio/Booking property = Payment.propertyId.
+
 ### Settlement math
 
 - Folio **net settled** = Σ(allocations to folio) − Σ(reversals of those allocations)  
