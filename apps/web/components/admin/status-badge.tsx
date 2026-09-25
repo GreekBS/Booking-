@@ -35,6 +35,11 @@ const statusVariant: Record<string, BadgeVariant> = {
   // Fiscal
   ISSUED: "success",
   DRAFT: "secondary",
+  // Payments
+  PENDING: "warning",
+  SUCCEEDED: "success",
+  FAILED: "destructive",
+  CANCELLED: "outline",
   // Channels
   paused: "warning",
   error: "destructive",
@@ -52,12 +57,14 @@ const toneClass: Partial<Record<BadgeVariant, string>> = {
 
 interface StatusBadgeProps {
   status: string;
+  /** Optional human-readable label; domain `status` still drives the tone. */
+  label?: string;
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const variant = statusVariant[status] ?? "outline";
-  const label = status.replace(/_/g, " ");
+export function StatusBadge({ status, label, className }: StatusBadgeProps) {
+  const variant = statusVariant[status] ?? statusVariant[status.toLowerCase()] ?? "outline";
+  const display = label ?? status.replace(/_/g, " ");
   return (
     <Badge
       variant={variant === "info" ? "secondary" : variant}
@@ -67,7 +74,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         className,
       )}
     >
-      {label}
+      {display}
     </Badge>
   );
 }
