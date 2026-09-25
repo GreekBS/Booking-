@@ -1,5 +1,11 @@
 import { NextRequest } from "next/server";
-import { NotFoundError, ValidationError } from "@hcp/domain";
+import {
+  NotFoundError,
+  ValidationError,
+  filterMappingsVisibleToActor,
+  PermissionChecker,
+  assertActorCanAccessChannelProperty,
+} from "@hcp/domain";
 import {
   getChannelConnectionUseCase,
   upsertChannelProductMappingUseCase,
@@ -15,6 +21,8 @@ import { serializeProductMapping } from "@/lib/channels/booking-com-operator-vie
 import { z } from "zod";
 
 type RouteContext = { params: Promise<{ connectionId: string }> };
+
+const mappingVisibilityChecker = new PermissionChecker();
 
 const upsertSchema = z
   .object({
@@ -57,10 +65,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const tenantId = request.headers.get("x-tenant-id");
     const actor = await requireTenantContext(tenantId);
     assertOperatorApiEnabled();
+    const permissionActor = toPermissionActor(actor);
     await assertBookingComConnection(
       actor.tenantId,
       connectionId,
-      toPermissionActor(actor),
+      permissionActor,
     );
 
     const listed = await listChannelProductMappingsUseCase.execute({
@@ -69,8 +78,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     });
     if (listed.isFailure) return mapResultError(listed.getError());
 
+    const visible = filterMappingsVisibleToActor(
+      mappingVisibilityChecker,
+      permissionActor,
+      actor.tenantId,
+      listed.getValue().mappings,
+    );
+
     return apiSuccess({
-      mappings: listed.getValue().mappings.map(serializeProductMapping),
+      mappings: visible.map(serializeProductMapping),
       mappingConfigGeneration: listed.getValue().mappingConfigGeneration,
     });
   } catch (error) {
@@ -84,20 +100,29 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const tenantId = request.headers.get("x-tenant-id");
     const actor = await requireTenantContext(tenantId);
     assertOperatorApiEnabled();
+    const permissionActor = toPermissionActor(actor);
     await assertBookingComConnection(
       actor.tenantId,
       connectionId,
-      toPermissionActor(actor),
+      permissionActor,
     );
 
     const body = upsertSchema.parse(await request.json());
+    if (body.propertyId) {
+      assertActorCanAccessChannelProperty(
+        mappingVisibilityChecker,
+        permissionActor,
+        actor.tenantId,
+        body.propertyId,
+      );
+    }
+
     const result = await upsertChannelProductMappingUseCase.execute({
       tenantId: actor.tenantId,
       connectionId,
       ...body,
     });
     if (result.isFailure) return mapResultError(result.getError());
-
     return apiSuccess(result.getValue());
   } catch (error) {
     return apiError(error);

@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
-import { NotFoundError } from "@hcp/domain";
+import { NotFoundError, ValidationError } from "@hcp/domain";
 import {
   createChannelConnectionUseCase,
   putChannelConnectionCredentialsUseCase,
-  listChannelConnectionsUseCase,
+  getChannelConnectionUseCase,
 } from "@/lib/di/container";
 import {
   requireTenantContext,
@@ -20,6 +20,8 @@ const bodySchema = z
   .object({
     displayName: z.string().trim().min(1).max(255).optional(),
     resumeConnectionId: z.string().trim().min(1).max(255).optional(),
+    /** Active Property workspace affinity (AP 1.2). Required when creating. */
+    workspacePropertyId: z.string().uuid().optional(),
   })
   .strict();
 
@@ -42,19 +44,18 @@ export async function POST(request: NextRequest) {
     const audit = { actorId: actor.userId, ipAddress: getClientIp(request) };
 
     if (body.resumeConnectionId) {
-      const listed = await listChannelConnectionsUseCase.execute(
-        { tenantId: actor.tenantId },
+      const existingResult = await getChannelConnectionUseCase.execute(
+        {
+          tenantId: actor.tenantId,
+          connectionId: body.resumeConnectionId,
+        },
         permissionActor,
       );
-      if (listed.isFailure) return mapResultError(listed.getError());
-      const existing = listed
-        .getValue()
-        .find(
-          (c) =>
-            c.connectionId === body.resumeConnectionId &&
-            c.provider === "booking_com",
-        );
-      if (!existing) {
+      if (existingResult.isFailure) {
+        return mapResultError(existingResult.getError());
+      }
+      const existing = existingResult.getValue();
+      if (existing.provider !== "booking_com") {
         throw new NotFoundError("ChannelConnection", body.resumeConnectionId);
       }
       return apiSuccess({
@@ -64,11 +65,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const workspacePropertyId = body.workspacePropertyId?.trim() ?? "";
+    if (!workspacePropertyId) {
+      throw new ValidationError("workspacePropertyId is required");
+    }
+
     const created = await createChannelConnectionUseCase.execute(
       {
         tenantId: actor.tenantId,
         provider: "booking_com",
         displayName: body.displayName ?? "Booking.com",
+        workspacePropertyId,
       },
       permissionActor,
       audit,

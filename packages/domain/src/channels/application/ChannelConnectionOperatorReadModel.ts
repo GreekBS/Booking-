@@ -16,6 +16,8 @@ export interface ChannelConnectionOperatorReadModel {
   semanticMode: FeedSemanticMode;
   semanticConfigVersion: number;
   inventoryApplyEnabled: boolean;
+  /** Operator workspace affinity; null when unset (legacy / unassigned). */
+  workspacePropertyId: string | null;
   hasCredentialRef: boolean;
   hasWebhookVerificationRef: boolean;
   lastError: string | null;
@@ -35,6 +37,7 @@ export function toChannelConnectionOperatorReadModel(
     semanticMode: connection.semanticMode,
     semanticConfigVersion: connection.semanticConfigVersion,
     inventoryApplyEnabled: connection.inventoryApplyEnabled === true,
+    workspacePropertyId: connection.workspacePropertyId,
     hasCredentialRef: connection.credentialRef != null,
     hasWebhookVerificationRef: connection.webhookVerificationRef != null,
     lastError: connection.lastError,

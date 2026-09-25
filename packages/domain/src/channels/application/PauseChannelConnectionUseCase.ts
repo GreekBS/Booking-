@@ -4,6 +4,7 @@ import type { PermissionChecker, ActorContext } from "../../shared/services/Perm
 import type { ChannelConnectionStatus } from "../domain/ChannelConnectionStatus";
 import type { IChannelConnectionLifecycleUnitOfWork } from "../ports/IChannelConnectionLifecycleUnitOfWork";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
 import type { FeedSemanticMode } from "../types/FeedSemanticMode";
 import {
   buildRestrictedLifecycleAuditMetadata,
@@ -31,6 +32,7 @@ export class PauseChannelConnectionUseCase {
     private readonly connectionRepository: IChannelConnectionRepository,
     private readonly permissionChecker: PermissionChecker,
     private readonly unitOfWork: IChannelConnectionLifecycleUnitOfWork,
+    private readonly relevanceReader: IChannelConnectionPropertyRelevanceReader | null = null,
   ) {}
 
   async execute(
@@ -44,6 +46,7 @@ export class PauseChannelConnectionUseCase {
         actor,
         connectionRepository: this.connectionRepository,
         permissionChecker: this.permissionChecker,
+        relevanceReader: this.relevanceReader,
         allowedPriorStatuses: PAUSE_SOURCE_STATUSES,
         invalidStatusMessage: (status) => `Cannot pause connection in status: ${status}`,
         mutate: (connection, now) => connection.pause(now),

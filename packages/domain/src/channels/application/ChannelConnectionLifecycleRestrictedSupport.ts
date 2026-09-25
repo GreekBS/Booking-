@@ -9,8 +9,10 @@ import { PERMISSIONS } from "@hcp/permissions";
 import type { ChannelConnection } from "../domain/ChannelConnection";
 import type { ChannelConnectionStatus } from "../domain/ChannelConnectionStatus";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
 import type { FeedSemanticMode } from "../types/FeedSemanticMode";
 import { parseSemanticConfigVersion } from "../types/FeedSemanticMode";
+import { assertActorCanOperateChannelConnection } from "./ChannelConnectionPropertyAuthorization";
 
 export interface ChannelConnectionLifecycleRestrictedCommand {
   tenantId: string;
@@ -64,6 +66,7 @@ export async function prepareLifecycleRestrictedTransition(input: {
   actor: ActorContext;
   connectionRepository: IChannelConnectionRepository;
   permissionChecker: PermissionChecker;
+  relevanceReader?: IChannelConnectionPropertyRelevanceReader | null;
   allowedPriorStatuses: ReadonlySet<ChannelConnectionStatus>;
   invalidStatusMessage: (status: ChannelConnectionStatus) => string;
   mutate: (connection: ChannelConnection, now: Date) => void;
@@ -89,6 +92,19 @@ export async function prepareLifecycleRestrictedTransition(input: {
   const connection = await input.connectionRepository.findById(tenantId, connectionId);
   if (!connection) {
     throw new NotFoundError("ChannelConnection", connectionId);
+  }
+
+  if (input.relevanceReader) {
+    const relevantPropertyIds = await input.relevanceReader.resolveRelevantPropertyIds(
+      tenantId,
+      connectionId,
+    );
+    assertActorCanOperateChannelConnection(
+      input.permissionChecker,
+      input.actor,
+      tenantId,
+      relevantPropertyIds,
+    );
   }
 
   const priorStatus = connection.status;

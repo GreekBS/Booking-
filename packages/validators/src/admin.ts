@@ -95,6 +95,8 @@ export const createChannelConnectionSchema = z
   .object({
     provider: channelSourceSchema,
     displayName: z.string().trim().min(1).max(255),
+    /** Active Property workspace affinity (AP 1.2). */
+    workspacePropertyId: z.string().uuid(),
     connectionId: z.string().trim().min(1).max(255).optional(),
   })
   .strict();

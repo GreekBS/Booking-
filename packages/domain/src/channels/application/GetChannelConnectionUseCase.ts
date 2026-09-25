@@ -7,6 +7,8 @@ import {
 import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
 import { PERMISSIONS } from "@hcp/permissions";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
+import { assertActorCanReadChannelConnection } from "./ChannelConnectionPropertyAuthorization";
 import {
   toChannelConnectionOperatorReadModel,
   type ChannelConnectionOperatorReadModel,
@@ -20,6 +22,7 @@ export interface GetChannelConnectionCommand {
 export class GetChannelConnectionUseCase {
   constructor(
     private readonly connectionRepository: IChannelConnectionRepository,
+    private readonly relevanceReader: IChannelConnectionPropertyRelevanceReader,
     private readonly permissionChecker: PermissionChecker,
   ) {}
 
@@ -50,6 +53,17 @@ export class GetChannelConnectionUseCase {
       if (!connection) {
         return Result.fail(new NotFoundError("ChannelConnection", connectionId));
       }
+
+      const relevantPropertyIds = await this.relevanceReader.resolveRelevantPropertyIds(
+        tenantId,
+        connectionId,
+      );
+      assertActorCanReadChannelConnection(
+        this.permissionChecker,
+        actor,
+        tenantId,
+        relevantPropertyIds,
+      );
 
       return Result.ok(toChannelConnectionOperatorReadModel(connection));
     } catch (error) {

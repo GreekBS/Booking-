@@ -21,7 +21,11 @@ export async function fetchBookingComCapabilities(
 
 export async function beginBookingComSetup(
   tenantId: string,
-  body?: { displayName?: string; resumeConnectionId?: string },
+  body: {
+    displayName?: string;
+    resumeConnectionId?: string;
+    workspacePropertyId?: string;
+  },
 ): Promise<{
   connection: OperatorChannelConnection;
   partnerAccess: BookingComCapabilities;
@@ -30,7 +34,7 @@ export async function beginBookingComSetup(
   return adminFetch("/channels/booking-com/begin-setup", {
     method: "POST",
     tenantId,
-    body: JSON.stringify(body ?? {}),
+    body: JSON.stringify(body),
   });
 }
 

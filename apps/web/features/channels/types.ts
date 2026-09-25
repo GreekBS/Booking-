@@ -21,6 +21,7 @@ export interface OperatorChannelConnection {
   semanticMode: FeedSemanticMode;
   semanticConfigVersion: number;
   inventoryApplyEnabled: boolean;
+  workspacePropertyId: string | null;
   hasCredentialRef: boolean;
   hasWebhookVerificationRef: boolean;
   lastError: string | null;

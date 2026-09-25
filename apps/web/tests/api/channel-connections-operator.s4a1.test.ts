@@ -103,6 +103,8 @@ const readModel = {
   status: "draft",
   semanticMode: "mixed_or_unknown_feed",
   semanticConfigVersion: 1,
+  inventoryApplyEnabled: false,
+  workspacePropertyId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   hasCredentialRef: false,
   hasWebhookVerificationRef: false,
   lastError: null,
@@ -159,12 +161,27 @@ describe("channel-connections operator HTTP (CM-4b S4a-1)", () => {
   it("lists connections", async () => {
     listExecute.mockResolvedValue(Result.ok([readModel]));
     const response = await listGet(
-      jsonRequest("GET", "/api/admin/v1/channel-connections"),
+      jsonRequest("GET", "/api/admin/v1/channel-connections?propertyId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
     );
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.connections[0].createdAt).toBe("2026-07-01T00:00:00.000Z");
     expect(body.connections[0].hasCredentialRef).toBe(false);
+    expect(listExecute).toHaveBeenCalledWith(
+      {
+        tenantId: TENANT_ID,
+        propertyId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      expect.anything(),
+    );
+  });
+
+  it("requires propertyId for list", async () => {
+    const response = await listGet(
+      jsonRequest("GET", "/api/admin/v1/channel-connections"),
+    );
+    expect(response.status).toBe(400);
+    expect(listExecute).not.toHaveBeenCalled();
   });
 
   it("creates connection", async () => {
@@ -173,6 +190,7 @@ describe("channel-connections operator HTTP (CM-4b S4a-1)", () => {
       jsonRequest("POST", "/api/admin/v1/channel-connections", {
         provider: "manual",
         displayName: "Main",
+        workspacePropertyId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       }),
     );
     expect(response.status).toBe(201);
@@ -184,6 +202,7 @@ describe("channel-connections operator HTTP (CM-4b S4a-1)", () => {
       jsonRequest("POST", "/api/admin/v1/channel-connections", {
         provider: "manual",
         displayName: "Main",
+        workspacePropertyId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         tenantId: TENANT_ID,
       }),
     );

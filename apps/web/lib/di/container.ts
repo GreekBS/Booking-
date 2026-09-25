@@ -478,6 +478,8 @@ import {
 
   PrismaChannelConnectionRepository,
 
+  PrismaChannelConnectionPropertyRelevanceReader,
+
   PrismaChannelListingMappingRepository,
 
   PrismaExternalReservationLinkRepository,
@@ -1297,6 +1299,7 @@ export const listPaymentsUseCase = new ListPaymentsUseCase(
 
 export const allocatePaymentUseCase = new AllocatePaymentUseCase(
   folioRepository,
+  bookingRepository,
   paymentSettlementRepository,
   idGenerator,
   permissionChecker,
@@ -1603,9 +1606,12 @@ export const getChannelConnectionSemanticConfigurationUseCase =
 const channelCredentialVault = new PrismaChannelCredentialVault();
 const channelConnectionLifecycleUnitOfWork =
   new PrismaChannelConnectionLifecycleUnitOfWork();
+const channelConnectionPropertyRelevanceReader =
+  new PrismaChannelConnectionPropertyRelevanceReader();
 
 export const createChannelConnectionUseCase = new CreateChannelConnectionUseCase(
   channelConnectionRepository,
+  propertyRepository,
   permissionChecker,
   idGenerator,
   auditLogRepository,
@@ -1613,11 +1619,14 @@ export const createChannelConnectionUseCase = new CreateChannelConnectionUseCase
 
 export const listChannelConnectionsUseCase = new ListChannelConnectionsUseCase(
   channelConnectionRepository,
+  channelConnectionPropertyRelevanceReader,
+  propertyRepository,
   permissionChecker,
 );
 
 export const getChannelConnectionUseCase = new GetChannelConnectionUseCase(
   channelConnectionRepository,
+  channelConnectionPropertyRelevanceReader,
   permissionChecker,
 );
 
@@ -1682,6 +1691,7 @@ export const activateChannelConnectionUseCase = new ActivateChannelConnectionUse
   channelConnectionLifecycleUnitOfWork,
   icalCredentialRotationStore,
   bookingComActivationGate,
+  channelConnectionPropertyRelevanceReader,
 );
 
 export const resumeChannelConnectionUseCase = new ResumeChannelConnectionUseCase(
@@ -1690,12 +1700,14 @@ export const resumeChannelConnectionUseCase = new ResumeChannelConnectionUseCase
   permissionChecker,
   channelConnectionLifecycleUnitOfWork,
   icalCredentialRotationStore,
+  channelConnectionPropertyRelevanceReader,
 );
 
 export const pauseChannelConnectionUseCase = new PauseChannelConnectionUseCase(
   channelConnectionRepository,
   permissionChecker,
   channelConnectionLifecycleUnitOfWork,
+  channelConnectionPropertyRelevanceReader,
 );
 
 const channelImportedInventoryCleanupStore =
@@ -1707,6 +1719,7 @@ export const disconnectChannelConnectionUseCase =
     permissionChecker,
     channelConnectionLifecycleUnitOfWork,
     channelImportedInventoryCleanupStore,
+    channelConnectionPropertyRelevanceReader,
   );
 
 const prepareReservationUseCase = new PrepareReservationUseCase(

@@ -4,6 +4,7 @@ import type { PermissionChecker, ActorContext } from "../../shared/services/Perm
 import type { ChannelConnectionStatus } from "../domain/ChannelConnectionStatus";
 import type { IChannelConnectionLifecycleUnitOfWork } from "../ports/IChannelConnectionLifecycleUnitOfWork";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
 import type { IChannelProviderRegistry } from "../ports/providers/IChannelProviderRegistry";
 import {
   buildLifecycleAuditMetadata,
@@ -31,6 +32,7 @@ export class ResumeChannelConnectionUseCase {
     private readonly unitOfWork: IChannelConnectionLifecycleUnitOfWork,
     /** P1-S6c: refuses resume while a credential rotation is in flight. */
     private readonly rotationGate: ChannelConnectionRotationGate | null = null,
+    private readonly relevanceReader: IChannelConnectionPropertyRelevanceReader | null = null,
   ) {}
 
   async execute(
@@ -45,6 +47,7 @@ export class ResumeChannelConnectionUseCase {
         connectionRepository: this.connectionRepository,
         providerRegistry: this.providerRegistry,
         permissionChecker: this.permissionChecker,
+        relevanceReader: this.relevanceReader,
         allowedPriorStatuses: RESUME_SOURCE_STATUSES,
         invalidStatusMessage: (status) =>
           `Cannot resume connection in status: ${status}`,

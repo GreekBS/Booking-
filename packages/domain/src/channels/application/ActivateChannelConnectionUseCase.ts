@@ -4,6 +4,7 @@ import type { PermissionChecker, ActorContext } from "../../shared/services/Perm
 import type { ChannelConnectionStatus } from "../domain/ChannelConnectionStatus";
 import type { IChannelConnectionLifecycleUnitOfWork } from "../ports/IChannelConnectionLifecycleUnitOfWork";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
 import type { IChannelProviderRegistry } from "../ports/providers/IChannelProviderRegistry";
 import type { FeedSemanticMode } from "../types/FeedSemanticMode";
 import {
@@ -44,6 +45,7 @@ export class ActivateChannelConnectionUseCase {
     private readonly rotationGate: ChannelConnectionRotationGate | null = null,
     /** CM-4c-4: Booking.com mapping + initial-sync readiness. */
     private readonly bookingComActivationGate: BookingComActivationGate | null = null,
+    private readonly relevanceReader: IChannelConnectionPropertyRelevanceReader | null = null,
   ) {}
 
   async execute(
@@ -58,6 +60,7 @@ export class ActivateChannelConnectionUseCase {
         connectionRepository: this.connectionRepository,
         providerRegistry: this.providerRegistry,
         permissionChecker: this.permissionChecker,
+        relevanceReader: this.relevanceReader,
         allowedPriorStatuses: ACTIVATE_SOURCE_STATUSES,
         invalidStatusMessage: (status) =>
           `Cannot activate connection in status: ${status}`,

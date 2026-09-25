@@ -1,5 +1,10 @@
 import { NextRequest } from "next/server";
-import { NotFoundError, ValidationError } from "@hcp/domain";
+import {
+  NotFoundError,
+  ValidationError,
+  filterMappingsVisibleToActor,
+  PermissionChecker,
+} from "@hcp/domain";
 import { upsertChannelListingMappingSchema } from "@hcp/validators";
 import {
   channelListingMappingRepository,
@@ -13,6 +18,8 @@ import {
 } from "@/lib/tenant-context";
 import { apiError, apiSuccess, mapResultError } from "@/lib/api-error-handler";
 import { isChannelOperatorApiEnabled } from "@/lib/channels/operator-api";
+
+const mappingVisibilityChecker = new PermissionChecker();
 
 type RouteContext = { params: Promise<{ connectionId: string }> };
 
@@ -83,9 +90,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       actor.tenantId,
       connectionId,
     );
+    const permissionActor = toPermissionActor(actor);
+    const visible = filterMappingsVisibleToActor(
+      mappingVisibilityChecker,
+      permissionActor,
+      actor.tenantId,
+      mappings,
+    );
 
     return apiSuccess({
-      mappings: mappings.map(serializeMapping),
+      mappings: visible.map(serializeMapping),
     });
   } catch (error) {
     return apiError(error);

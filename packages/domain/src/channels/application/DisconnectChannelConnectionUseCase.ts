@@ -4,6 +4,7 @@ import type { PermissionChecker, ActorContext } from "../../shared/services/Perm
 import type { ChannelConnectionStatus } from "../domain/ChannelConnectionStatus";
 import type { IChannelConnectionLifecycleUnitOfWork } from "../ports/IChannelConnectionLifecycleUnitOfWork";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
 import type { IChannelImportedInventoryCleanupStore } from "../ports/IChannelImportedInventoryCleanupStore";
 import type { FeedSemanticMode } from "../types/FeedSemanticMode";
 import {
@@ -36,6 +37,7 @@ export class DisconnectChannelConnectionUseCase {
     private readonly permissionChecker: PermissionChecker,
     private readonly unitOfWork: IChannelConnectionLifecycleUnitOfWork,
     private readonly importedInventoryCleanup: IChannelImportedInventoryCleanupStore | null = null,
+    private readonly relevanceReader: IChannelConnectionPropertyRelevanceReader | null = null,
   ) {}
 
   async execute(
@@ -49,6 +51,7 @@ export class DisconnectChannelConnectionUseCase {
         actor,
         connectionRepository: this.connectionRepository,
         permissionChecker: this.permissionChecker,
+        relevanceReader: this.relevanceReader,
         allowedPriorStatuses: new Set(
           (["draft", "pending_auth", "active", "paused", "error"] as ChannelConnectionStatus[]).filter(
             (s) => !DISCONNECT_BLOCKED.has(s),

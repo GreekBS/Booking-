@@ -18,12 +18,17 @@ import {
   NotFoundError,
   PermissionChecker,
   ValidationError,
+  InMemoryChannelConnectionPropertyRelevanceReader,
+  type IPropertyRepository,
+  type Property,
 } from "../../src";
 
 const TENANT_A = "550e8400-e29b-41d4-a716-446655440900";
 const TENANT_B = "550e8400-e29b-41d4-a716-446655440901";
 const CONNECTION_ID = "550e8400-e29b-41d4-a716-446655440902";
 const ACTOR_ID = "550e8400-e29b-41d4-a716-446655440903";
+const PROPERTY_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const PROPERTY_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function adminActor() {
   return {
@@ -37,8 +42,17 @@ function managerActor() {
   return {
     userId: ACTOR_ID,
     role: "manager" as const,
-    propertyIds: ["prop-1"],
+    propertyIds: [PROPERTY_A],
   };
+}
+
+class StubPropertyRepository implements Pick<IPropertyRepository, "findById"> {
+  constructor(private readonly ids: Set<string>) {}
+  async findById(tenantId: string, propertyId: string): Promise<Property | null> {
+    void tenantId;
+    if (!this.ids.has(propertyId)) return null;
+    return { id: propertyId } as Property;
+  }
 }
 
 describe("CM-4b S4a-1 operator foundation use cases", () => {
@@ -47,15 +61,27 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
   const vault = new InMemoryChannelCredentialVault();
   const permissionChecker = new PermissionChecker();
   const uow = new InMemoryChannelConnectionLifecycleUnitOfWork(connections, audit);
+  const relevance = new InMemoryChannelConnectionPropertyRelevanceReader(connections);
+  const properties = new StubPropertyRepository(new Set([PROPERTY_A, PROPERTY_B]));
 
   const create = new CreateChannelConnectionUseCase(
     connections,
+    properties as IPropertyRepository,
     permissionChecker,
     { generate: () => CONNECTION_ID },
     audit,
   );
-  const list = new ListChannelConnectionsUseCase(connections, permissionChecker);
-  const get = new GetChannelConnectionUseCase(connections, permissionChecker);
+  const list = new ListChannelConnectionsUseCase(
+    connections,
+    relevance,
+    properties as IPropertyRepository,
+    permissionChecker,
+  );
+  const get = new GetChannelConnectionUseCase(
+    connections,
+    relevance,
+    permissionChecker,
+  );
   const updateMeta = new UpdateChannelConnectionMetadataUseCase(
     connections,
     permissionChecker,
@@ -92,6 +118,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
         tenantId: TENANT_A,
         provider: "booking_com",
         displayName: " Booking.com main ",
+        workspacePropertyId: PROPERTY_A,
       },
       adminActor(),
       { actorId: ACTOR_ID, ipAddress: null },
@@ -101,6 +128,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
     expect(value.status).toBe("draft");
     expect(value.provider).toBe("booking_com");
     expect(value.displayName).toBe("Booking.com main");
+    expect(value.workspacePropertyId).toBe(PROPERTY_A);
     expect(value.hasCredentialRef).toBe(false);
     expect(value.semanticMode).toBe("mixed_or_unknown_feed");
     expect(value.semanticConfigVersion).toBe(1);
@@ -108,7 +136,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
 
   it("lists and gets only within tenant", async () => {
     await create.execute(
-      { tenantId: TENANT_A, provider: "manual", displayName: "A" },
+      { tenantId: TENANT_A, provider: "manual", displayName: "A" , workspacePropertyId: PROPERTY_A },
       adminActor(),
       { actorId: ACTOR_ID, ipAddress: null },
     );
@@ -120,7 +148,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
     });
     await connections.create(other);
 
-    const listed = await list.execute({ tenantId: TENANT_A }, adminActor());
+    const listed = await list.execute({ tenantId: TENANT_A, propertyId: PROPERTY_A }, adminActor());
     expect(listed.getValue()).toHaveLength(1);
     expect(listed.getValue()[0]?.tenantId).toBe(TENANT_A);
 
@@ -134,7 +162,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
 
   it("updates displayName only (metadata boundary)", async () => {
     await create.execute(
-      { tenantId: TENANT_A, provider: "airbnb", displayName: "Old" },
+      { tenantId: TENANT_A, provider: "airbnb", displayName: "Old" , workspacePropertyId: PROPERTY_A },
       adminActor(),
       { actorId: ACTOR_ID, ipAddress: null },
     );
@@ -157,7 +185,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
 
   it("attaches credentials without exposing secrets in read model or audit", async () => {
     await create.execute(
-      { tenantId: TENANT_A, provider: "manual", displayName: "Creds" },
+      { tenantId: TENANT_A, provider: "manual", displayName: "Creds" , workspacePropertyId: PROPERTY_A },
       adminActor(),
       { actorId: ACTOR_ID, ipAddress: null },
     );
@@ -207,7 +235,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
 
   it("stores webhook verification as opaque ref only", async () => {
     await create.execute(
-      { tenantId: TENANT_A, provider: "manual", displayName: "Hook" },
+      { tenantId: TENANT_A, provider: "manual", displayName: "Hook" , workspacePropertyId: PROPERTY_A },
       adminActor(),
       { actorId: ACTOR_ID, ipAddress: null },
     );
@@ -319,7 +347,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
 
   it("rejects missing manage permission", async () => {
     const result = await create.execute(
-      { tenantId: TENANT_A, provider: "manual", displayName: "X" },
+      { tenantId: TENANT_A, provider: "manual", displayName: "X" , workspacePropertyId: PROPERTY_A },
       managerActor(),
       { actorId: ACTOR_ID, ipAddress: null },
     );
@@ -332,6 +360,7 @@ describe("CM-4b S4a-1 operator foundation use cases", () => {
         tenantId: TENANT_A,
         provider: "not_a_provider" as "manual",
         displayName: "X",
+        workspacePropertyId: PROPERTY_A,
       },
       adminActor(),
       { actorId: ACTOR_ID, ipAddress: null },

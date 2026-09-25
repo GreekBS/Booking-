@@ -19,6 +19,7 @@ import type {
   IcalMappingMutationKind,
   IIcalChannelMappingLifecycleStore,
 } from "../ports/IIcalChannelMappingLifecycleStore";
+import { assertActorCanAccessChannelProperty } from "./ChannelConnectionPropertyAuthorization";
 
 export interface UpsertChannelListingMappingCommand {
   tenantId: string;
@@ -96,6 +97,13 @@ export class UpsertChannelListingMappingUseCase {
       ) {
         return Result.fail(new ForbiddenError());
       }
+
+      assertActorCanAccessChannelProperty(
+        this.permissionChecker,
+        actor,
+        tenantId,
+        command.propertyId,
+      );
 
       const expectedSemanticConfigVersion = requirePositiveInt(
         command.expectedSemanticConfigVersion,

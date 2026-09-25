@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
 import { PageHeader } from "@/components/admin/page-header";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
@@ -57,6 +61,13 @@ function statusVariant(
 export function ChannelsPage() {
   const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId,
+    property,
+    properties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
   const [connections, setConnections] = useState<OperatorChannelConnection[]>([]);
   const [partner, setPartner] = useState<BookingComCapabilities | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,12 +79,12 @@ export function ChannelsPage() {
   const [startingBooking, setStartingBooking] = useState(false);
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !propertyId) return;
     setLoading(true);
     setError(null);
     try {
       const [list, caps] = await Promise.all([
-        listChannelConnections(tenantId),
+        listChannelConnections(tenantId, propertyId),
         fetchBookingComCapabilities(tenantId).catch(() => null),
       ]);
       setConnections(list);
@@ -83,7 +94,7 @@ export function ChannelsPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, propertyId]);
 
   useEffect(() => {
     void load();
@@ -99,11 +110,15 @@ export function ChannelsPage() {
   );
 
   async function createIcal() {
-    if (!tenantId || !displayName.trim()) return;
+    if (!tenantId || !propertyId || !displayName.trim()) return;
     setCreating(true);
     setCreateError(null);
     try {
-      const created = await createIcalConnection(tenantId, displayName.trim());
+      const created = await createIcalConnection(
+        tenantId,
+        displayName.trim(),
+        propertyId,
+      );
       setDialogOpen(false);
       setDisplayName("");
       window.location.href = `/dashboard/channels/${created.connectionId}`;
@@ -115,11 +130,12 @@ export function ChannelsPage() {
   }
 
   async function startBookingCom() {
-    if (!tenantId) return;
+    if (!tenantId || !propertyId) return;
     setStartingBooking(true);
     try {
       const result = await beginBookingComSetup(tenantId, {
         displayName: "Booking.com",
+        workspacePropertyId: propertyId,
       });
       router.push(`/dashboard/channels/${result.connection.connectionId}/setup`);
     } catch (err) {
@@ -135,14 +151,28 @@ export function ChannelsPage() {
     tenantId,
   });
   if (tenantGate) return tenantGate;
+
+  const propertyGate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
+    tenantId,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties,
+  });
+  if (propertyGate) return propertyGate;
+
   if (loading) return <Skeleton className="h-96 w-full" />;
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+
+  const propertyLabel = property?.name ?? "this property";
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Channels"
-        description="Connect distribution channels. Booking.com and iCal are available according to your environment; Airbnb and Expedia are listed for future use only."
+        description={`Channel connections for ${propertyLabel}. Switch Active Property to manage another property's channels.`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
@@ -184,7 +214,7 @@ export function ChannelsPage() {
 
       <section aria-labelledby="connections-heading" className="space-y-3">
         <h2 id="connections-heading" className="text-sm font-semibold tracking-wide text-muted-foreground">
-          All connections
+          Connections for {propertyLabel}
         </h2>
         {connections.length === 0 ? (
           <EmptyState

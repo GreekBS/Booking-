@@ -96,6 +96,7 @@ export { PrismaStorefrontCatalogAdapter } from "./adapters/StorefrontCatalogAdap
 export { TimezoneService } from "./adapters/TimezoneService";
 
 export { PrismaChannelConnectionRepository } from "./repositories/channels/ChannelConnectionRepository";
+export { PrismaChannelConnectionPropertyRelevanceReader } from "./repositories/channels/ChannelConnectionPropertyRelevanceReader";
 export {
   PrismaChannelConnectionLifecycleUnitOfWork,
   type ChannelConnectionLifecycleTransactionOptions,

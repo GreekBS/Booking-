@@ -16,9 +16,10 @@ export { AdminApiError, newCommandId };
 
 export async function listChannelConnections(
   tenantId: string,
+  propertyId: string,
 ): Promise<OperatorChannelConnection[]> {
   const res = await adminFetch<{ connections: OperatorChannelConnection[] }>(
-    "/channel-connections",
+    `/channel-connections?propertyId=${encodeURIComponent(propertyId)}`,
     { tenantId },
   );
   return res.connections ?? [];
@@ -36,11 +37,16 @@ export async function getChannelConnection(
 export async function createIcalConnection(
   tenantId: string,
   displayName: string,
+  workspacePropertyId: string,
 ): Promise<OperatorChannelConnection> {
   return adminFetch<OperatorChannelConnection>("/channel-connections", {
     method: "POST",
     tenantId,
-    body: JSON.stringify({ provider: "ical", displayName }),
+    body: JSON.stringify({
+      provider: "ical",
+      displayName,
+      workspacePropertyId,
+    }),
   });
 }
 

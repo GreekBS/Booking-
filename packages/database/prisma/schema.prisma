@@ -417,6 +417,7 @@ model Property {
   quotes         Quote[]
   bookings       Booking[]
   payments       Payment[]
+  channelConnections ChannelConnection[]
   businessFiscalProfiles BusinessFiscalProfile[]
   fiscalSeries           FiscalSeries[]
   fiscalDocuments        FiscalDocument[]
@@ -1235,14 +1236,20 @@ model ChannelConnection {
   /// P1-S7c: connection-scoped inventory mutation fence. Default OFF.
   inventoryApplyEnabled Boolean @default(false) @map("inventory_apply_enabled")
 
+  /// AP 1.2: operator workspace affinity for unmapped drafts. Not exclusive ownership.
+  workspacePropertyId String? @map("workspace_property_id") @db.Uuid
+
   createdAt DateTime @map("created_at") @db.Timestamptz
   updatedAt DateTime @map("updated_at") @db.Timestamptz
+
+  workspaceProperty Property? @relation(fields: [workspacePropertyId], references: [id], onDelete: SetNull)
 
   pollCursor ChannelPollCursor?
   inventoryReconciliations ChannelInventoryReconciliation[]
 
   @@id([tenantId, id])
   @@index([tenantId, status])
+  @@index([tenantId, workspacePropertyId])
   @@map("channel_connections")
 }
 

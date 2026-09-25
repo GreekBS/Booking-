@@ -19,6 +19,22 @@ import {
 import { CredentialReference } from "./value-objects/CredentialReference";
 import { WebhookVerificationReference } from "./value-objects/WebhookVerificationReference";
 
+function normalizeOptionalWorkspacePropertyId(
+  value: string | null | undefined,
+): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  if (trimmed.length > 255) {
+    throw new ValidationError("workspacePropertyId must be at most 255 characters");
+  }
+  return trimmed;
+}
+
 export interface ChannelConnectionProps {
   id: string;
   tenantId: string;
@@ -32,6 +48,13 @@ export interface ChannelConnectionProps {
   semanticConfigVersion: number;
   /** P1-S7c: connection-scoped inventory mutation fence. Default false. */
   inventoryApplyEnabled: boolean;
+  /**
+   * Operator workspace affinity for Active Property (AP 1.2).
+   * NOT exclusive ownership — multi-property mappings remain valid.
+   * Used for property relevance only while the connection has no
+   * property-bearing non-archived mappings.
+   */
+  workspacePropertyId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +76,8 @@ export interface CreateChannelConnectionDraftProps {
   tenantId: string;
   provider: ChannelSource;
   displayName: string;
+  /** Active Property affinity at create time (optional in aggregate; required by operator create use case). */
+  workspacePropertyId?: string | null;
   now?: Date;
   semanticMode?: FeedSemanticMode;
 }
@@ -122,6 +147,10 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
     return this.props.inventoryApplyEnabled;
   }
 
+  get workspacePropertyId(): string | null {
+    return this.props.workspacePropertyId;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -141,6 +170,10 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
       throw new ValidationError(`Invalid feed semantic mode: ${String(semanticMode)}`);
     }
 
+    const workspacePropertyId = normalizeOptionalWorkspacePropertyId(
+      props.workspacePropertyId,
+    );
+
     const now = props.now ?? new Date();
     return new ChannelConnection({
       id: props.id,
@@ -154,6 +187,7 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
       semanticMode,
       semanticConfigVersion: INITIAL_SEMANTIC_CONFIG_VERSION,
       inventoryApplyEnabled: false,
+      workspacePropertyId,
       createdAt: now,
       updatedAt: now,
     });
@@ -165,8 +199,9 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
    * inventoryApplyEnabled defaults false when omitted (pre-S7c fixtures).
    */
   static reconstitute(
-    props: Omit<ChannelConnectionProps, "inventoryApplyEnabled"> & {
+    props: Omit<ChannelConnectionProps, "inventoryApplyEnabled" | "workspacePropertyId"> & {
       inventoryApplyEnabled?: boolean;
+      workspacePropertyId?: string | null;
     },
   ): ChannelConnection {
     if (!isFeedSemanticMode(props.semanticMode)) {
@@ -178,6 +213,7 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
       semanticMode: props.semanticMode,
       semanticConfigVersion,
       inventoryApplyEnabled: props.inventoryApplyEnabled === true,
+      workspacePropertyId: normalizeOptionalWorkspacePropertyId(props.workspacePropertyId),
       createdAt: new Date(props.createdAt),
       updatedAt: new Date(props.updatedAt),
     });
@@ -208,6 +244,7 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
       semanticMode,
       semanticConfigVersion,
       inventoryApplyEnabled: props.inventoryApplyEnabled === true,
+      workspacePropertyId: props.workspacePropertyId ?? null,
     });
   }
 
@@ -224,6 +261,7 @@ export class ChannelConnection extends AggregateRoot<ChannelConnectionProps> {
       semanticMode: this.props.semanticMode,
       semanticConfigVersion: this.props.semanticConfigVersion,
       inventoryApplyEnabled: this.props.inventoryApplyEnabled === true,
+      workspacePropertyId: this.props.workspacePropertyId,
       createdAt: new Date(this.props.createdAt),
       updatedAt: new Date(this.props.updatedAt),
     };

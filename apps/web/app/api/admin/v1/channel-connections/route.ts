@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { NotFoundError } from "@hcp/domain";
+import { NotFoundError, ValidationError } from "@hcp/domain";
 import { createChannelConnectionSchema } from "@hcp/validators";
 import {
   createChannelConnectionUseCase,
@@ -26,8 +26,13 @@ export async function GET(request: NextRequest) {
     const actor = await requireTenantContext(tenantId);
     assertOperatorApiEnabled();
 
+    const propertyId = request.nextUrl.searchParams.get("propertyId")?.trim() ?? "";
+    if (!propertyId) {
+      throw new ValidationError("propertyId is required");
+    }
+
     const result = await listChannelConnectionsUseCase.execute(
-      { tenantId: actor.tenantId },
+      { tenantId: actor.tenantId, propertyId },
       toPermissionActor(actor),
     );
 
@@ -56,6 +61,7 @@ export async function POST(request: NextRequest) {
         tenantId: actor.tenantId,
         provider: body.provider,
         displayName: body.displayName,
+        workspacePropertyId: body.workspacePropertyId,
         connectionId: body.connectionId,
       },
       toPermissionActor(actor),

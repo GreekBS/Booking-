@@ -13,6 +13,7 @@ export function serializeOperatorConnection(
     semanticMode: value.semanticMode,
     semanticConfigVersion: value.semanticConfigVersion,
     inventoryApplyEnabled: value.inventoryApplyEnabled,
+    workspacePropertyId: value.workspacePropertyId,
     hasCredentialRef: value.hasCredentialRef,
     hasWebhookVerificationRef: value.hasWebhookVerificationRef,
     lastError: value.lastError,

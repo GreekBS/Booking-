@@ -62,6 +62,7 @@ function toDomain(record: PrismaChannelConnection): ChannelConnection {
     semanticMode: parseFeedSemanticMode(record.semanticMode),
     semanticConfigVersion: parseSemanticConfigVersion(record.semanticConfigVersion),
     inventoryApplyEnabled: record.inventoryApplyEnabled === true,
+    workspacePropertyId: record.workspacePropertyId ?? null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
@@ -89,6 +90,7 @@ export class PrismaChannelConnectionRepository implements IChannelConnectionRepo
             semanticMode: DEFAULT_FEED_SEMANTIC_MODE,
             semanticConfigVersion: INITIAL_SEMANTIC_CONFIG_VERSION,
             inventoryApplyEnabled: false,
+            workspacePropertyId: props.workspacePropertyId,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,
           },

@@ -10,11 +10,13 @@ import type { ChannelConnection } from "../domain/ChannelConnection";
 import type { ChannelConnectionStatus } from "../domain/ChannelConnectionStatus";
 import { ChannelProviderRegistrationError } from "../errors/ChannelProviderRegistrationError";
 import type { IChannelConnectionRepository } from "../ports/IChannelConnectionRepository";
+import type { IChannelConnectionPropertyRelevanceReader } from "../ports/IChannelConnectionPropertyRelevanceReader";
 import type { IIcalCredentialRotationStore } from "../ports/IIcalCredentialRotationStore";
 import type { IChannelProviderRegistry } from "../ports/providers/IChannelProviderRegistry";
 import type { FeedSemanticMode } from "../types/FeedSemanticMode";
 import { parseSemanticConfigVersion } from "../types/FeedSemanticMode";
 import { resolveAllowedFeedSemanticModes } from "../types/FeedSemanticModePolicy";
+import { assertActorCanOperateChannelConnection } from "./ChannelConnectionPropertyAuthorization";
 
 export interface ChannelConnectionLifecycleCommandBase {
   tenantId: string;
@@ -79,6 +81,7 @@ export async function prepareLifecycleActivation(input: {
   connectionRepository: IChannelConnectionRepository;
   providerRegistry: IChannelProviderRegistry;
   permissionChecker: PermissionChecker;
+  relevanceReader?: IChannelConnectionPropertyRelevanceReader | null;
   allowedPriorStatuses: ReadonlySet<ChannelConnectionStatus>;
   invalidStatusMessage: (status: ChannelConnectionStatus) => string;
   mutate: (connection: ChannelConnection, now: Date) => void;
@@ -105,6 +108,19 @@ export async function prepareLifecycleActivation(input: {
   const connection = await input.connectionRepository.findById(tenantId, connectionId);
   if (!connection) {
     throw new NotFoundError("ChannelConnection", connectionId);
+  }
+
+  if (input.relevanceReader) {
+    const relevantPropertyIds = await input.relevanceReader.resolveRelevantPropertyIds(
+      tenantId,
+      connectionId,
+    );
+    assertActorCanOperateChannelConnection(
+      input.permissionChecker,
+      input.actor,
+      tenantId,
+      relevantPropertyIds,
+    );
   }
 
   if (input.rotationGate) {
