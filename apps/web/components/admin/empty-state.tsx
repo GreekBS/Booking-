@@ -1,25 +1,46 @@
 import { Inbox } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   title: string;
   description: string;
-  action?: { label: string; onClick: () => void; href?: string };
+  action?: { label: string; onClick?: () => void; href?: string };
+  className?: string;
+  compact?: boolean;
 }
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  className,
+  compact = false,
+}: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-16 text-center">
-      <div className="mb-4 rounded-full bg-muted p-3">
-        <Inbox className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-medium">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
-      {action && (
-        <Button className="mt-4" onClick={action.onClick} asChild={Boolean(action.href)}>
-          {action.href ? <a href={action.href}>{action.label}</a> : action.label}
-        </Button>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface-subtle/50 text-center",
+        compact ? "px-4 py-8" : "px-6 py-12",
+        className,
       )}
+    >
+      <div className="mb-3 rounded-full bg-muted p-2.5">
+        <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden />
+      </div>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 max-w-sm text-xs text-muted-foreground sm:text-sm">{description}</p>
+      {action ? (
+        <Button
+          size="sm"
+          className="mt-4"
+          onClick={action.onClick}
+          asChild={Boolean(action.href)}
+        >
+          {action.href ? <Link href={action.href}>{action.label}</Link> : action.label}
+        </Button>
+      ) : null}
     </div>
   );
 }

@@ -91,6 +91,7 @@ export interface DashboardOverviewRecentBooking {
   status: string;
   totalAmount: string;
   currency: string;
+  unitName: string | null;
 }
 
 export interface DashboardOverviewRecord {
@@ -99,10 +100,15 @@ export interface DashboardOverviewRecord {
   bookingCount: number;
   arrivalsNext7Days: number;
   departuresNext7Days: number;
+  arrivalsToday: number;
+  departuresToday: number;
+  inHouseToday: number;
   activeHoldCount: number;
   revenue: { total: string; currency: string } | null;
   occupancyPct: number;
   recentBookings: DashboardOverviewRecentBooking[];
+  todayArrivals: DashboardOverviewRecentBooking[];
+  todayDepartures: DashboardOverviewRecentBooking[];
 }
 
 export interface AmenityRecord {

@@ -16,10 +16,15 @@ function emptyOverview(
     bookingCount: 0,
     arrivalsNext7Days: 0,
     departuresNext7Days: 0,
+    arrivalsToday: 0,
+    departuresToday: 0,
+    inHouseToday: 0,
     activeHoldCount: 0,
     revenue: null,
     occupancyPct: 0,
     recentBookings: [],
+    todayArrivals: [],
+    todayDepartures: [],
     ...overrides,
   };
 }
@@ -58,6 +63,7 @@ describe("GetTenantDashboardOverviewUseCase", () => {
           status: "confirmed",
           totalAmount: "200.0000",
           currency: "EUR",
+          unitName: "Suite A",
         },
       ],
     });

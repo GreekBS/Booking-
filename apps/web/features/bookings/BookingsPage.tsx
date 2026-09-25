@@ -2,13 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus, RefreshCw, Search } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
   renderActivePropertyGate,
   useActiveProperty,
 } from "@/hooks/use-active-property";
-import { fetchPropertyUnitCatalog, flattenCatalogUnits, searchBookings } from "@/lib/admin/api";
+import {
+  fetchBookingDetail,
+  fetchPropertyUnitCatalog,
+  flattenCatalogUnits,
+  searchBookings,
+} from "@/lib/admin/api";
 import type { BookingRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import type { SortDirection } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
@@ -53,6 +59,9 @@ export function BookingsPage() {
 
 function BookingsPageContent() {
   const { requestClose } = useWorkspace();
+  const searchParams = useSearchParams();
+  const deepLinkBookingId = searchParams.get("bookingId");
+  const deepLinkHandled = useRef<string | null>(null);
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
@@ -179,6 +188,27 @@ function BookingsPageContent() {
   useEffect(() => {
     void loadBookings();
   }, [loadBookings]);
+
+  /** Open booking workspace from dashboard deep-link (?bookingId=). */
+  useEffect(() => {
+    if (!tenantId || !deepLinkBookingId) return;
+    if (deepLinkHandled.current === deepLinkBookingId) return;
+    let cancelled = false;
+    async function openDeepLink() {
+      try {
+        const booking = await fetchBookingDetail(tenantId!, deepLinkBookingId!);
+        if (cancelled) return;
+        deepLinkHandled.current = deepLinkBookingId;
+        setSelected(booking);
+      } catch {
+        /* list remains usable if deep-link fails */
+      }
+    }
+    void openDeepLink();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, deepLinkBookingId]);
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const workspaceUnitOptions = useMemo(

@@ -34,18 +34,18 @@ describe("Performance Batch 3 — runtime bottleneck fixes", () => {
     const source = readFileSync(join(root, "lib", "admin", "api.ts"), "utf8");
     expect(source).toMatch(/overviewInflight/);
     expect(source).toMatch(/export async function fetchDashboardOverview/);
-    expect(source).toMatch(/overviewInflight\.get\(tenantId\)/);
-    expect(source).toMatch(/overviewInflight\.delete\(tenantId\)/);
+    expect(source).toMatch(/overviewInflight\.get\(cacheKey\)/);
+    expect(source).toMatch(/overviewInflight\.delete\(cacheKey\)/);
   });
 
-  it("DashboardOverview loads overview once per tenantId (single fetch effect)", () => {
+  it("DashboardOverview loads overview once per tenantId+propertyId (single fetch effect)", () => {
     const source = readFileSync(
       join(root, "features", "dashboard", "DashboardOverview.tsx"),
       "utf8",
     );
     const fetchCalls = source.match(/fetchDashboardOverview/g) ?? [];
     expect(fetchCalls.length).toBe(2); // import + one call site
-    expect(source).toMatch(/}, \[tenantId\]\);/);
+    expect(source).toMatch(/\[tenantId, propertyId\]/);
   });
 
   it("Availability uses slim catalog + batch hooks (not full properties)", () => {

@@ -40,10 +40,15 @@ describe("GET /api/admin/v1/dashboard/overview", () => {
       bookingCount: 3,
       arrivalsNext7Days: 0,
       departuresNext7Days: 0,
+      arrivalsToday: 0,
+      departuresToday: 0,
+      inHouseToday: 0,
       activeHoldCount: 1,
       revenue: { total: "100.0000", currency: "EUR" },
       occupancyPct: 10,
       recentBookings: [],
+      todayArrivals: [],
+      todayDepartures: [],
     };
     execute.mockResolvedValue(Result.ok(overview));
 
