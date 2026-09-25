@@ -16,6 +16,7 @@ import { useBookingStayDraft } from "./hooks/useBookingStayDraft";
 import { useBookingStayPreview } from "./hooks/useBookingStayPreview";
 import { useBookingStaySave } from "./hooks/useBookingStaySave";
 import { BookingGuestSection } from "./sections/BookingGuestSection";
+import { BookingBillingFiscalSection } from "./sections/BookingBillingFiscalSection";
 import { BookingNotesSection } from "./sections/BookingNotesSection";
 import { BookingPaymentsSection } from "./sections/BookingPaymentsSection";
 import { BookingPricingSection } from "./sections/BookingPricingSection";
@@ -223,6 +224,8 @@ export function BookingWorkspaceView({
         />
         <WorkspaceSectionDivider />
         <BookingGuestSection {...sectionProps} />
+        <WorkspaceSectionDivider />
+        <BookingBillingFiscalSection {...sectionProps} />
         <WorkspaceSectionDivider />
         <BookingPricingSection {...pricingProps} />
         <WorkspaceSectionDivider />

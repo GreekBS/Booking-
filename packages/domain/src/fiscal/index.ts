@@ -11,6 +11,7 @@ export * from "./documents/FiscalDocumentLine";
 export * from "./documents/FiscalSeries";
 export * from "./documents/FiscalAllocation";
 export * from "./documents/FiscalDocument";
+export * from "./documents/fiscalDocumentDownloadFilename";
 export * from "./documents/events/FiscalDocumentEvents";
 export * from "./mapping/GreekFiscalDocumentMapper";
 export * from "./ports/IFiscalDocumentRepositories";

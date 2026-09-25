@@ -690,6 +690,25 @@ export class GetFiscalDocumentUseCase {
       assertTenantRead(this.permissionChecker, actor, tenantId);
       const found = await this.documentRepository.findById(tenantId, documentId);
       if (!found) throw new NotFoundError("FiscalDocument", documentId);
+      const propertyId = found.document.propertyId;
+      if (
+        !this.permissionChecker.canAccessProperty(
+          actor,
+          tenantId,
+          propertyId,
+          "property:read",
+        )
+      ) {
+        return Result.fail(new ForbiddenError("Property access denied"));
+      }
+      if (
+        actor.propertyIds !== null &&
+        !actor.isSuperAdmin &&
+        actor.role !== "admin" &&
+        !actor.propertyIds.includes(propertyId)
+      ) {
+        return Result.fail(new ForbiddenError("Property access denied"));
+      }
       const greekMapping = greekFiscalDocumentMapper.map(
         found.document.documentKind,
       );

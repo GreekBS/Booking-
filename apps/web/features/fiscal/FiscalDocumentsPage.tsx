@@ -102,7 +102,7 @@ export function FiscalDocumentsPage() {
                     <th className="py-2 pr-3">VAT</th>
                     <th className="py-2 pr-3">Total</th>
                     <th className="py-2 pr-3">Status</th>
-                    <th className="py-2"> </th>
+                    <th className="py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -127,11 +127,40 @@ export function FiscalDocumentsPage() {
                       </td>
                       <td className="py-2 pr-3">{r.localStatusLabel}</td>
                       <td className="py-2">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/dashboard/fiscal-documents/${r.document.id}`}>
-                            Open
-                          </Link>
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/dashboard/fiscal-documents/${r.document.id}`}>
+                              Open
+                            </Link>
+                          </Button>
+                          {r.document.status === "ISSUED" && tenantId && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                void (async () => {
+                                  const res = await fetch(
+                                    `/api/admin/v1/fiscal/documents/${r.document.id}/download`,
+                                    { headers: { "x-tenant-id": tenantId } },
+                                  );
+                                  if (!res.ok) return;
+                                  const blob = await res.blob();
+                                  const cd = res.headers.get("content-disposition") ?? "";
+                                  const match = /filename="([^"]+)"/.exec(cd);
+                                  const filename = match?.[1] ?? "fiscal-document.pdf";
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = filename;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                })();
+                              }}
+                            >
+                              Download
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

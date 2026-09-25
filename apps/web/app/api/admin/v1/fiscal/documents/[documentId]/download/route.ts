@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { ValidationError, buildFiscalDocumentDownloadFilename } from "@hcp/domain";
 import { getFiscalDocumentUseCase } from "@/lib/di/container";
 import {
   requireTenantContext,
@@ -7,10 +8,13 @@ import {
 import { apiError, mapResultError } from "@/lib/api-error-handler";
 import {
   buildFiscalDocumentRenderModel,
-  renderFiscalDocumentHtml,
+  renderFiscalDocumentPdf,
 } from "@/lib/fiscal/fiscal-document-render";
 
-/** Printable HTML built exclusively from FiscalDocument snapshot. */
+/**
+ * Download issued FiscalDocument as a real PDF built from the immutable snapshot.
+ * Drafts are rejected — use print preview for drafts.
+ */
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ documentId: string }> },
@@ -26,6 +30,10 @@ export async function GET(
     );
     if (result.isFailure) return mapResultError(result.getError());
     const value = result.getValue();
+    if (value.document.status !== "ISSUED") {
+      throw new ValidationError("Only issued fiscal documents can be downloaded");
+    }
+
     const model = buildFiscalDocumentRenderModel({
       document: value.document,
       lines: value.lines,
@@ -33,11 +41,24 @@ export async function GET(
       localStatusLabel: value.localStatusLabel,
       greekMapping: value.greekMapping,
     });
-    const html = renderFiscalDocumentHtml(model);
 
-    return new Response(html, {
+    const filename = buildFiscalDocumentDownloadFilename({
+      documentKind: model.documentKind,
+      seriesCode: model.seriesCode,
+      sequentialNumber: model.sequentialNumber,
+      documentId: model.documentId,
+      extension: "pdf",
+    });
+
+    const pdf = await renderFiscalDocumentPdf(model);
+
+    return new Response(new Uint8Array(pdf), {
       status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `attachment; filename="${filename}"`,
+        "cache-control": "no-store",
+      },
     });
   } catch (error) {
     return apiError(error);

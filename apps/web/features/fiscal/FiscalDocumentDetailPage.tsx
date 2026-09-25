@@ -115,26 +115,59 @@ export function FiscalDocumentDetailPage() {
             </Button>
           )}
           {d.status === "ISSUED" && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                void (async () => {
-                  if (!tenantId) return;
-                  const res = await fetch(
-                    `/api/admin/v1/fiscal/documents/${d.id}/print`,
-                    { headers: { "x-tenant-id": tenantId } },
-                  );
-                  const html = await res.text();
-                  const w = window.open("", "_blank");
-                  if (w) {
-                    w.document.write(html);
-                    w.document.close();
-                  }
-                })();
-              }}
-            >
-              Print view
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void (async () => {
+                    if (!tenantId) return;
+                    const res = await fetch(
+                      `/api/admin/v1/fiscal/documents/${d.id}/print`,
+                      { headers: { "x-tenant-id": tenantId } },
+                    );
+                    const html = await res.text();
+                    const w = window.open("", "_blank");
+                    if (w) {
+                      w.document.write(html);
+                      w.document.close();
+                    }
+                  })();
+                }}
+              >
+                Print view
+              </Button>
+              <Button
+                onClick={() => {
+                  void (async () => {
+                    if (!tenantId) return;
+                    try {
+                      const res = await fetch(
+                        `/api/admin/v1/fiscal/documents/${d.id}/download`,
+                        { headers: { "x-tenant-id": tenantId } },
+                      );
+                      if (!res.ok) {
+                        toastError("Download failed");
+                        return;
+                      }
+                      const blob = await res.blob();
+                      const cd = res.headers.get("content-disposition") ?? "";
+                      const match = /filename="([^"]+)"/.exec(cd);
+                      const filename = match?.[1] ?? "fiscal-document.pdf";
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = filename;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (e) {
+                      toastError(e instanceof Error ? e.message : "Download failed");
+                    }
+                  })();
+                }}
+              >
+                Download PDF
+              </Button>
+            </>
           )}
         </div>
       </div>
