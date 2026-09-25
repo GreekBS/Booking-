@@ -60,5 +60,5 @@ export function WorkspaceDetailRow({
 }
 
 export function WorkspaceSectionDivider() {
-  return <div className="border-t border-[#d1d5db] dark:border-border" />;
+  return <div className="border-t border-border" />;
 }

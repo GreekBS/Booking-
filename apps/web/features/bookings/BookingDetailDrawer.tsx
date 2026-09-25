@@ -21,6 +21,10 @@ interface BookingDetailDrawerProps {
   requestClose: (proceed: () => void) => boolean;
 }
 
+/**
+ * Wide reservation workspace Sheet for the Bookings list host.
+ * Calendar continues to host BookingWorkspaceView via WorkspaceShell.
+ */
 export function BookingDetailDrawer({
   booking,
   unitLabel,
@@ -43,13 +47,16 @@ export function BookingDetailDrawer({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="flex w-full flex-col overflow-hidden p-0 sm:max-w-xl">
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col overflow-hidden border-border bg-surface p-0 sm:max-w-[min(900px,92vw)] [&>button]:hidden"
+      >
         <SheetHeader className="sr-only">
-          <SheetTitle>Booking details</SheetTitle>
+          <SheetTitle>Reservation workspace</SheetTitle>
           <SheetDescription>Reservation information and actions</SheetDescription>
         </SheetHeader>
 
-        {open && (
+        {open ? (
           <BookingWorkspaceView
             bookingId={booking.id}
             active={open}
@@ -60,7 +67,7 @@ export function BookingDetailDrawer({
             fillHeight
             showWorkspaceFooter
           />
-        )}
+        ) : null}
       </SheetContent>
     </Sheet>
   );

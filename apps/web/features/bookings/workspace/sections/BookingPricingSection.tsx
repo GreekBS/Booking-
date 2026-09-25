@@ -8,21 +8,27 @@ import {
 } from "@/features/workspace/components/WorkspaceSection";
 import type { BookingPricingSectionProps } from "../types";
 
+/**
+ * Commercial reservation pricing from Quote — not Folio settlement truth.
+ */
 export function BookingPricingSection({
   quote,
   discountTotal,
   proposedPreview,
 }: BookingPricingSectionProps) {
   return (
-    <WorkspaceSection title="Pricing">
+    <WorkspaceSection title="Reservation pricing">
+      <p className="text-[11px] text-muted-foreground">
+        Quote / commercial stay price. Folio settlement is shown separately below.
+      </p>
       {quote ? (
         <>
-          {proposedPreview && (
+          {proposedPreview ? (
             <p className="mb-2 text-xs text-muted-foreground">
-              Proposed total:{" "}
+              Proposed total after stay change:{" "}
               {formatMoney(proposedPreview.totalAmount, proposedPreview.currency)}
             </p>
-          )}
+          ) : null}
           <WorkspaceDetailList>
             <WorkspaceDetailRow
               label="Nightly total"
@@ -33,31 +39,31 @@ export function BookingPricingSection({
               value={formatMoney(quote.feesAmount, quote.currency)}
             />
             <WorkspaceDetailRow
-              label="Taxes"
+              label="Taxes (quote)"
               value={formatMoney(quote.taxesAmount, quote.currency)}
             />
-            {discountTotal !== null && (
+            {discountTotal !== null ? (
               <WorkspaceDetailRow
                 label="Discounts"
                 value={`−${formatMoney(String(discountTotal), quote.currency)}`}
               />
-            )}
+            ) : null}
             <WorkspaceDetailRow
-              label="Grand total"
+              label="Reservation total"
               value={formatMoney(quote.totalAmount, quote.currency)}
               bold
             />
           </WorkspaceDetailList>
-          {quote.lineItems.length > 0 && (
-            <div className="overflow-hidden rounded-md border">
-              <div className="border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+          {quote.lineItems.length > 0 ? (
+            <div className="overflow-hidden rounded-md border border-border">
+              <div className="border-b border-border bg-surface-subtle px-3 py-2 text-xs font-medium text-muted-foreground">
                 Nightly breakdown
               </div>
               <div className="max-h-40 overflow-y-auto">
                 {quote.lineItems.map((line) => (
                   <div
                     key={line.date}
-                    className="flex justify-between border-b px-3 py-1.5 text-xs last:border-0"
+                    className="flex justify-between border-b border-border/60 px-3 py-1.5 text-xs last:border-0"
                   >
                     <span className="text-muted-foreground">{line.date}</span>
                     <span className="tabular-nums">
@@ -67,7 +73,7 @@ export function BookingPricingSection({
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </>
       ) : (
         <p className="text-sm text-muted-foreground">Quote unavailable</p>

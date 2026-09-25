@@ -7,6 +7,22 @@ import { adminFetch } from "@/lib/admin/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StatusBadge } from "@/components/admin/status-badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   WorkspaceDetailList,
   WorkspaceDetailRow,
@@ -76,7 +92,17 @@ function newIdempotencyKey(): string {
   return `pay-${Date.now()}`;
 }
 
-export function BookingPaymentsSection({ booking }: BookingSectionProps) {
+export interface BookingPaymentsSectionProps extends BookingSectionProps {
+  /** When false, skip loading (tab lazy-load). Default true for calendar host. */
+  active?: boolean;
+  onOutstandingChange?: (label: string | null) => void;
+}
+
+export function BookingPaymentsSection({
+  booking,
+  active = true,
+  onOutstandingChange,
+}: BookingPaymentsSectionProps) {
   const { tenantId } = useTenant();
   const [folios, setFolios] = useState<FolioDto[]>([]);
   const [payments, setPayments] = useState<PaymentDto[]>([]);
@@ -89,9 +115,9 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
   const [payMethod, setPayMethod] = useState<"CASH" | "CARD" | "BANK_TRANSFER">(
     "CASH",
   );
-  const [collectionSource, setCollectionSource] = useState<
-    "PROPERTY" | "DIRECT"
-  >("PROPERTY");
+  const [collectionSource, setCollectionSource] = useState<"PROPERTY" | "DIRECT">(
+    "PROPERTY",
+  );
   const [allocatePrimary, setAllocatePrimary] = useState(true);
 
   const primaryFolio = useMemo(
@@ -100,7 +126,7 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
   );
 
   const load = useCallback(async () => {
-    if (!booking?.id || !tenantId) return;
+    if (!booking?.id || !tenantId || !active) return;
     setLoading(true);
     setError(null);
     try {
@@ -122,11 +148,25 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [booking?.id, tenantId]);
+  }, [booking?.id, tenantId, active]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!onOutstandingChange) return;
+    if (!primaryFolio) {
+      onOutstandingChange(null);
+      return;
+    }
+    onOutstandingChange(
+      formatMoney(
+        primaryFolio.balance.outstandingBalance,
+        primaryFolio.balance.currency,
+      ),
+    );
+  }, [primaryFolio, onOutstandingChange]);
 
   async function evaluateTaxes(folioId: string) {
     if (!tenantId) return;
@@ -179,47 +219,52 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
     }
   }
 
+  if (!active) return null;
+
   return (
-    <>
+    <div className="space-y-6">
       <WorkspaceSection title="Payments">
-        {loading && (
+        {loading ? (
           <p className="text-sm text-muted-foreground">Loading payments…</p>
-        )}
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        {!loading && payments.length === 0 && (
+        ) : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {!loading && payments.length === 0 ? (
           <p className="text-sm text-muted-foreground">No payments recorded.</p>
-        )}
-        {payments.length > 0 && (
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Received</th>
-                  <th className="px-3 py-2 font-medium">Method</th>
-                  <th className="px-3 py-2 text-right font-medium">Amount</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+        ) : null}
+        {payments.length > 0 ? (
+          <div className="overflow-x-auto rounded-md border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="h-9 text-xs">Received</TableHead>
+                  <TableHead className="h-9 text-xs">Method</TableHead>
+                  <TableHead className="h-9 text-right text-xs">Amount</TableHead>
+                  <TableHead className="h-9 text-xs">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {payments.map((p) => (
-                  <tr key={p.id} className="border-t">
-                    <td className="px-3 py-2">
+                  <TableRow key={p.id}>
+                    <TableCell className="py-2 text-xs">
                       {new Date(p.receivedAt).toLocaleString()}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="py-2 text-xs text-muted-foreground">
                       {p.method} · {p.collectionSource}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="py-2 text-right text-xs tabular-nums">
                       {formatMoney(p.amount, p.currency)}
-                    </td>
-                    <td className="px-3 py-2">{p.status}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <StatusBadge status={p.status.toLowerCase()} />
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        )}
-        <div className="mt-4 space-y-3 rounded-md border p-3">
+        ) : null}
+
+        <div className="mt-3 space-y-3 rounded-md border border-border bg-surface-subtle/40 p-3">
           <p className="text-sm font-medium">Record payment</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
@@ -234,37 +279,42 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
             </div>
             <div className="space-y-1">
               <Label htmlFor="pay-method">Method</Label>
-              <select
-                id="pay-method"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              <Select
                 value={payMethod}
-                onChange={(e) =>
-                  setPayMethod(e.target.value as typeof payMethod)
-                }
+                onValueChange={(v) => setPayMethod(v as typeof payMethod)}
               >
-                <option value="CASH">Cash</option>
-                <option value="CARD">Card</option>
-                <option value="BANK_TRANSFER">Bank transfer</option>
-              </select>
+                <SelectTrigger id="pay-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Cash</SelectItem>
+                  <SelectItem value="CARD">Card</SelectItem>
+                  <SelectItem value="BANK_TRANSFER">Bank transfer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label htmlFor="pay-source">Collection source</Label>
-              <select
-                id="pay-source"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              <Select
                 value={collectionSource}
-                onChange={(e) =>
-                  setCollectionSource(e.target.value as typeof collectionSource)
+                onValueChange={(v) =>
+                  setCollectionSource(v as typeof collectionSource)
                 }
               >
-                <option value="PROPERTY">Property</option>
-                <option value="DIRECT">Direct</option>
-              </select>
+                <SelectTrigger id="pay-source">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PROPERTY">Property</SelectItem>
+                  <SelectItem value="DIRECT">Direct</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-end gap-2 pb-1">
               <input
                 id="pay-allocate"
                 type="checkbox"
+                className="h-4 w-4 rounded border-border"
                 checked={allocatePrimary}
                 disabled={!primaryFolio}
                 onChange={(e) => setAllocatePrimary(e.target.checked)}
@@ -284,13 +334,17 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
         </div>
       </WorkspaceSection>
 
-      <WorkspaceSection title="Folio">
-        {loading && (
+      <WorkspaceSection title="Folio / Account">
+        <p className="text-[11px] text-muted-foreground">
+          Settlement truth — charges, VAT, levies, payments, and outstanding balance.
+          Climate Resilience Fee is a levy, not VAT.
+        </p>
+        {loading ? (
           <p className="text-sm text-muted-foreground">Loading folio…</p>
-        )}
-        {!loading && !error && folios.length === 0 && (
+        ) : null}
+        {!loading && !error && folios.length === 0 ? (
           <p className="text-sm text-muted-foreground">No folio yet.</p>
-        )}
+        ) : null}
         {!loading &&
           folios.map((folio) => {
             const net = folio.balance.chargesSubtotal;
@@ -318,39 +372,37 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
                     Evaluate taxes
                   </Button>
                 </div>
-                <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">Description</th>
-                        <th className="px-3 py-2 font-medium">Type</th>
-                        <th className="px-3 py-2 text-right font-medium">
-                          Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="h-9 text-xs">Description</TableHead>
+                        <TableHead className="h-9 text-xs">Type</TableHead>
+                        <TableHead className="h-9 text-right text-xs">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {folio.lines.map((line) => (
-                        <tr key={line.id} className="border-t">
-                          <td className="px-3 py-2">
-                            <div>{line.description}</div>
+                        <TableRow key={line.id}>
+                          <TableCell className="py-2">
+                            <div className="text-sm">{line.description}</div>
                             <div className="text-[10px] text-muted-foreground">
                               {line.sourceType}
                               {line.taxSnapshot
                                 ? ` · ${line.taxSnapshot.taxType}`
                                 : ""}
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="py-2 text-xs text-muted-foreground">
                             {line.lineType}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          </TableCell>
+                          <TableCell className="py-2 text-right text-sm tabular-nums">
                             {formatMoney(line.amount, line.currency)}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
                 <WorkspaceDetailList>
                   <WorkspaceDetailRow
@@ -371,12 +423,13 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
                       folio.balance.folioTotal,
                       folio.balance.currency,
                     )}
+                    bold
                   />
                   <WorkspaceDetailRow
                     label="Paid (net settled)"
                     value={formatMoney(netSettled, folio.balance.currency)}
                   />
-                  {folio.balance.allocatedPaidAmount && (
+                  {folio.balance.allocatedPaidAmount ? (
                     <WorkspaceDetailRow
                       label="Allocated (gross)"
                       value={formatMoney(
@@ -384,9 +437,9 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
                         folio.balance.currency,
                       )}
                     />
-                  )}
+                  ) : null}
                   <WorkspaceDetailRow
-                    label="Refunded (allocation reversals)"
+                    label="Refunded"
                     value={formatMoney(refunded, folio.balance.currency)}
                   />
                   <WorkspaceDetailRow
@@ -395,35 +448,41 @@ export function BookingPaymentsSection({ booking }: BookingSectionProps) {
                       folio.balance.outstandingBalance,
                       folio.balance.currency,
                     )}
+                    bold
                   />
                   <WorkspaceDetailRow
                     label="Overpayment"
                     value={formatMoney(overpay, folio.balance.currency)}
                   />
                 </WorkspaceDetailList>
-                <FolioFiscalIssuePanel
-                  folioId={folio.id}
-                  propertyId={booking.propertyId}
-                  lines={folio.lines.map((l) => ({
-                    id: l.id,
-                    description: l.description,
-                    amount: l.amount,
-                    currency: l.currency,
-                    lineType: l.lineType,
-                    taxSnapshot: l.taxSnapshot
-                      ? { taxType: l.taxSnapshot.taxType }
-                      : null,
-                  }))}
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Tax lines are append-only snapshots. Climate fee uses a separate
-                  Special Element document. Issuance is local only — pending
-                  fiscalization integration (no AADE/MARK).
-                </p>
+
+                <div className="rounded-md border border-border p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Fiscal documents
+                  </p>
+                  <FolioFiscalIssuePanel
+                    folioId={folio.id}
+                    propertyId={booking.propertyId}
+                    lines={folio.lines.map((l) => ({
+                      id: l.id,
+                      description: l.description,
+                      amount: l.amount,
+                      currency: l.currency,
+                      lineType: l.lineType,
+                      taxSnapshot: l.taxSnapshot
+                        ? { taxType: l.taxSnapshot.taxType }
+                        : null,
+                    }))}
+                  />
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Local issuance only — not sent to AADE. Issued documents keep
+                    immutable customer/issuer snapshots.
+                  </p>
+                </div>
               </div>
             );
           })}
       </WorkspaceSection>
-    </>
+    </div>
   );
 }

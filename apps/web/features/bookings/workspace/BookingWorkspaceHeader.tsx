@@ -16,6 +16,9 @@ interface BookingWorkspaceHeaderProps {
   onConfirm: () => void;
   onCancel: () => void;
   onClose?: () => void;
+  /** Compact summary for reservation pricing (quote total) when available. */
+  reservationTotalLabel?: string | null;
+  outstandingLabel?: string | null;
 }
 
 export function BookingWorkspaceHeader({
@@ -26,52 +29,65 @@ export function BookingWorkspaceHeader({
   onConfirm,
   onCancel,
   onClose,
+  reservationTotalLabel,
+  outstandingLabel,
 }: BookingWorkspaceHeaderProps) {
   const nights = nightsBetween(booking.checkIn, booking.checkOut);
 
   return (
-    <header className="shrink-0 border-b border-[#d1d5db] bg-white px-4 py-4 dark:border-border dark:bg-background">
-      <div className="flex items-start justify-between gap-2">
+    <header className="shrink-0 border-b border-border bg-surface px-4 py-3 sm:px-5 sm:py-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-muted-foreground">
-              {formatBookingDisplayId(booking.id)}
-            </span>
+            <h2 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              {booking.guest.name}
+            </h2>
             <StatusBadge status={booking.status} />
           </div>
 
-          <h2 className="mt-2 text-lg font-semibold leading-tight">{booking.guest.name}</h2>
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+            {formatBookingDisplayId(booking.id)}
+          </p>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            {propertyLabel ?? booking.propertyId.slice(0, 8)}
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            <span className="text-foreground/80">
+              {propertyLabel ?? "Property"}
+            </span>
             {" · "}
-            {unitLabel ?? booking.unitId.slice(0, 8)}
+            <span className="text-foreground/80">{unitLabel ?? "Unit"}</span>
           </p>
         </div>
-        {onClose && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onClose}>
+        {onClose ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={onClose}
+            aria-label="Close reservation"
+          >
             <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
           </Button>
-        )}
+        ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        <span>
-          <span className="text-muted-foreground">Arrival </span>
-          <span className="font-medium">{booking.checkIn}</span>
-        </span>
-        <span>
-          <span className="text-muted-foreground">Departure </span>
-          <span className="font-medium">{booking.checkOut}</span>
-        </span>
-        <span>
-          <span className="text-muted-foreground">Nights </span>
-          <span className="font-medium">{nights}</span>
-        </span>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+        <MetaChip label="Arrival" value={booking.checkIn} />
+        <MetaChip label="Departure" value={booking.checkOut} />
+        <MetaChip label="Nights" value={String(nights)} />
+        <MetaChip label="Guests" value={String(booking.guestCount)} />
+        {reservationTotalLabel ? (
+          <MetaChip label="Reservation total" value={reservationTotalLabel} />
+        ) : null}
       </div>
 
-      <div className="mt-4">
+      {outstandingLabel ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Folio outstanding:{" "}
+          <span className="font-semibold text-foreground">{outstandingLabel}</span>
+        </p>
+      ) : null}
+
+      <div className="mt-3">
         <BookingQuickActions
           booking={booking}
           actionLoading={actionLoading}
@@ -80,5 +96,16 @@ export function BookingWorkspaceHeader({
         />
       </div>
     </header>
+  );
+}
+
+function MetaChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border/70 bg-surface-subtle/50 px-2.5 py-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-sm font-medium tabular-nums text-foreground">{value}</p>
+    </div>
   );
 }

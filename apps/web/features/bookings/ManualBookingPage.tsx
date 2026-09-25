@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import {
   adminFetch,
   createManualBooking,
@@ -12,9 +13,10 @@ import {
 } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { CatalogPropertyRecord, QuoteRecord, BookingRecord } from "@/lib/admin/types";
+import { formatMoney } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const STEPS = [
   "Property & unit",
@@ -39,6 +42,11 @@ const STEPS = [
 export function ManualBookingPage() {
   const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    propertyId: activePropertyId,
+    property: activeProperty,
+    ready: propertyReady,
+  } = useActiveProperty();
   const [step, setStep] = useState(0);
   const [properties, setProperties] = useState<CatalogPropertyRecord[]>([]);
   const [units, setUnits] = useState<
@@ -47,6 +55,7 @@ export function ManualBookingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const [propertyId, setPropertyId] = useState("");
   const [unitId, setUnitId] = useState("");
@@ -79,6 +88,15 @@ export function ManualBookingPage() {
     }
     void load();
   }, [tenantId]);
+
+  // Default to Active Property once catalog + property context are ready.
+  useEffect(() => {
+    if (defaultsApplied || !propertyReady || properties.length === 0) return;
+    if (activePropertyId && properties.some((p) => p.id === activePropertyId)) {
+      setPropertyId(activePropertyId);
+    }
+    setDefaultsApplied(true);
+  }, [activePropertyId, defaultsApplied, properties, propertyReady]);
 
   async function checkAvailability() {
     if (!tenantId || !unitId) return;
@@ -129,20 +147,20 @@ export function ManualBookingPage() {
     if (!tenantId) return;
     setSubmitting(true);
     try {
-      const result = await createManualBooking(tenantId, {
+      const result = (await createManualBooking(tenantId, {
         unitId,
         checkIn,
         checkOut,
         guestCount,
         guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
         confirm,
-      }) as { booking: BookingRecord };
+      })) as { booking: BookingRecord };
       setBooking(result.booking);
       toastSuccess(confirm ? "Booking confirmed" : "Booking created");
       if (confirm) {
         setStep(5);
       } else {
-        router.push("/dashboard/bookings");
+        router.push(`/dashboard/bookings?bookingId=${encodeURIComponent(result.booking.id)}`);
       }
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Booking failed");
@@ -157,69 +175,100 @@ export function ManualBookingPage() {
     tenantId,
   });
   if (tenantGate) return tenantGate;
-  if (loading) return <Skeleton className="h-96 w-full" />;
+  if (loading || !propertyReady) return <Skeleton className="h-96 w-full" />;
   if (error) return <ErrorState message={error} />;
 
+  const selectedPropertyName =
+    properties.find((p) => p.id === propertyId)?.name ?? activeProperty?.name;
+
   return (
-    <div>
+    <div className="mx-auto max-w-2xl space-y-5">
       <PageHeader
-        title="Manual booking"
-        description="Create a reservation without payment"
+        title="New booking"
+        description={
+          selectedPropertyName
+            ? `Manual reservation · ${selectedPropertyName}`
+            : "Create a reservation without payment"
+        }
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/bookings">Back to bookings</Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/bookings">Back</Link>
           </Button>
         }
       />
 
-      <div className="mb-6 flex flex-wrap gap-2">
+      <ol className="flex flex-wrap gap-1.5" aria-label="Booking steps">
         {STEPS.map((label, index) => (
-          <span
-            key={label}
-            className={`rounded-full px-3 py-1 text-xs ${
-              index === step
-                ? "bg-primary text-primary-foreground"
-                : index < step
-                  ? "bg-muted text-muted-foreground"
-                  : "border text-muted-foreground"
-            }`}
-          >
-            {index + 1}. {label}
-          </span>
+          <li key={label}>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium",
+                index === step
+                  ? "bg-primary text-primary-foreground"
+                  : index < step
+                    ? "bg-primary-subtle text-primary"
+                    : "border border-border text-muted-foreground",
+              )}
+            >
+              {index + 1}. {label}
+            </span>
+          </li>
         ))}
-      </div>
+      </ol>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{STEPS[step]}</CardTitle>
-          <CardDescription>Step {step + 1} of {STEPS.length}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 max-w-lg">
+      <Surface variant="panel" padding="md">
+        <SurfaceHeader
+          title={STEPS[step]!}
+          description={`Step ${step + 1} of ${STEPS.length}`}
+        />
+        <div className="space-y-4">
           {step === 0 && (
             <>
               <div className="space-y-2">
                 <Label>Property</Label>
-                <Select value={propertyId} onValueChange={(v) => { setPropertyId(v); setUnitId(""); }}>
-                  <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
+                <Select
+                  value={propertyId}
+                  onValueChange={(v) => {
+                    setPropertyId(v);
+                    setUnitId("");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select property" />
+                  </SelectTrigger>
                   <SelectContent>
                     {properties.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                        {p.id === activePropertyId ? " (active)" : ""}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {activePropertyId ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Defaults to Active Property. You may select another authorized property.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label>Unit</Label>
                 <Select value={unitId} onValueChange={setUnitId} disabled={!propertyId}>
-                  <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
                   <SelectContent>
                     {filteredUnits.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button disabled={!unitId} onClick={() => setStep(1)}>Continue</Button>
+              <Button disabled={!unitId} onClick={() => setStep(1)}>
+                Continue
+              </Button>
             </>
           )}
 
@@ -227,24 +276,42 @@ export function ManualBookingPage() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Check-in</Label>
-                  <Input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+                  <Label htmlFor="mb-check-in">Check-in</Label>
+                  <Input
+                    id="mb-check-in"
+                    type="date"
+                    value={checkIn}
+                    onChange={(e) => setCheckIn(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>Check-out</Label>
-                  <Input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+                  <Label htmlFor="mb-check-out">Check-out</Label>
+                  <Input
+                    id="mb-check-out"
+                    type="date"
+                    value={checkOut}
+                    onChange={(e) => setCheckOut(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Guests</Label>
+                <Label htmlFor="mb-guests">Guests</Label>
                 <Input
+                  id="mb-guests"
                   type="number"
                   min={1}
                   value={guestCount}
                   onChange={(e) => setGuestCount(Number.parseInt(e.target.value, 10) || 1)}
                 />
               </div>
-              <Button disabled={!checkIn || !checkOut} onClick={() => setStep(2)}>Continue</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(0)}>
+                  Back
+                </Button>
+                <Button disabled={!checkIn || !checkOut} onClick={() => setStep(2)}>
+                  Continue
+                </Button>
+              </div>
             </>
           )}
 
@@ -253,52 +320,83 @@ export function ManualBookingPage() {
               <p className="text-sm text-muted-foreground">
                 Check availability for {checkIn} → {checkOut}, {guestCount} guest(s)
               </p>
-              {availabilityOk === false && (
+              {availabilityOk === false ? (
                 <p className="text-sm text-destructive">Not available for selected dates.</p>
-              )}
-              <Button disabled={submitting} onClick={() => void checkAvailability()}>
-                {submitting ? "Checking..." : "Check availability"}
-              </Button>
+              ) : null}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(1)}>
+                  Back
+                </Button>
+                <Button disabled={submitting} onClick={() => void checkAvailability()}>
+                  {submitting ? "Checking…" : "Check availability"}
+                </Button>
+              </div>
             </>
           )}
 
           {step === 3 && (
             <>
-              <p className="text-sm text-green-600">Dates are available.</p>
-              <Button disabled={submitting} onClick={() => void generateQuote()}>
-                {submitting ? "Generating..." : "Generate quote"}
-              </Button>
+              <p className="text-sm text-success">Dates are available.</p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(2)}>
+                  Back
+                </Button>
+                <Button disabled={submitting} onClick={() => void generateQuote()}>
+                  {submitting ? "Generating…" : "Generate quote"}
+                </Button>
+              </div>
             </>
           )}
 
           {step === 4 && quote && (
             <>
-              <p className="text-sm">Total: {quote.totalAmount} {quote.currency}</p>
-              <div className="space-y-2">
-                <Label>Guest name</Label>
-                <Input value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
+              <div className="rounded-md border border-border bg-surface-subtle/50 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Reservation total · </span>
+                <span className="font-semibold tabular-nums">
+                  {formatMoney(quote.totalAmount, quote.currency)}
+                </span>
               </div>
               <div className="space-y-2">
-                <Label>Guest email</Label>
-                <Input type="email" value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
+                <Label htmlFor="mb-guest-name">Guest name</Label>
+                <Input
+                  id="mb-guest-name"
+                  value={guest.name}
+                  onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
-                <Label>Phone (optional)</Label>
-                <Input value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} />
+                <Label htmlFor="mb-guest-email">Guest email</Label>
+                <Input
+                  id="mb-guest-email"
+                  type="email"
+                  value={guest.email}
+                  onChange={(e) => setGuest({ ...guest, email: e.target.value })}
+                />
               </div>
-              <div className="flex gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="mb-guest-phone">Phone (optional)</Label>
+                <Input
+                  id="mb-guest-phone"
+                  value={guest.phone}
+                  onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setStep(3)}>
+                  Back
+                </Button>
                 <Button
                   disabled={submitting || !guest.name || !guest.email}
                   onClick={() => void createBooking(false)}
                 >
-                  Create pending booking
+                  Create pending
                 </Button>
                 <Button
                   variant="secondary"
                   disabled={submitting || !guest.name || !guest.email}
                   onClick={() => void createBooking(true)}
                 >
-                  Create & confirm
+                  Create &amp; confirm
                 </Button>
               </div>
             </>
@@ -306,14 +404,19 @@ export function ManualBookingPage() {
 
           {step === 5 && booking && (
             <>
-              <p className="text-sm">Booking {booking.id} is {booking.status}.</p>
+              <p className="text-sm">
+                Booking <span className="font-mono text-xs">{booking.id.slice(0, 8)}</span> is{" "}
+                <strong>{booking.status}</strong>.
+              </p>
               <Button asChild>
-                <Link href="/dashboard/bookings">View bookings</Link>
+                <Link href={`/dashboard/bookings?bookingId=${encodeURIComponent(booking.id)}`}>
+                  Open reservation
+                </Link>
               </Button>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Surface>
     </div>
   );
 }

@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WorkspaceSectionDivider } from "@/features/workspace/components/WorkspaceSection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspaceFooter } from "@/features/workspace/components/WorkspaceFooter";
 import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import type { WorkspaceSessionStatus } from "@/features/workspace/lib/workspace-types";
 import { useWorkspaceEditorSession } from "@/features/workspace/hooks/useWorkspaceEditorSession";
 import type { BookingRecord } from "@/lib/admin/types";
+import { formatMoney } from "@/lib/admin/utils";
 import { BookingWorkspaceHeader } from "./BookingWorkspaceHeader";
 import { useBookingActions } from "./hooks/useBookingActions";
 import { useBookingWorkspaceData } from "./hooks/useBookingWorkspaceData";
@@ -61,6 +62,13 @@ export function BookingWorkspaceView({
 }: BookingWorkspaceViewProps) {
   const { requestClose, confirmSave, discardEdits } = useWorkspace();
   const [saveError, setSaveError] = useState(false);
+  const [tab, setTab] = useState("overview");
+  const [outstandingLabel, setOutstandingLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTab("overview");
+    setOutstandingLabel(null);
+  }, [bookingId]);
 
   const { booking, quote, discountTotal, loading, error, setBooking, setQuote, refresh } =
     useBookingWorkspaceData({
@@ -150,14 +158,19 @@ export function BookingWorkspaceView({
     return unitOptions.filter((u) => u.propertyId === booking.propertyId);
   }, [booking, unitOptions]);
 
+  const reservationTotalLabel = quote
+    ? formatMoney(quote.totalAmount, quote.currency)
+    : null;
+
   if (!active) return null;
 
   if (loading && !booking) {
     return (
-      <div className={fillHeight ? "flex min-h-0 flex-1 flex-col" : "space-y-4 p-4"}>
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-3 p-4" : "space-y-3 p-4"}>
+        <Skeleton className="h-28 w-full rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-md" />
+        <Skeleton className="h-40 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-lg" />
       </div>
     );
   }
@@ -209,40 +222,96 @@ export function BookingWorkspaceView({
         onConfirm={() => setConfirmOpen(true)}
         onCancel={() => setCancelOpen(true)}
         onClose={handleRequestClose}
+        reservationTotalLabel={reservationTotalLabel}
+        outstandingLabel={outstandingLabel}
       />
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 text-sm">
-        <BookingStaySection
-          draft={draft}
-          readOnly={stayReadOnly}
-          unitOptions={propertyUnits}
-          unitLabel={labels.unitLabel}
-          preview={preview}
-          previewLoading={previewLoading}
-          previewError={previewError}
-          onDraftChange={updateDraft}
-        />
-        <WorkspaceSectionDivider />
-        <BookingGuestSection {...sectionProps} />
-        <WorkspaceSectionDivider />
-        <BookingBillingFiscalSection {...sectionProps} />
-        <WorkspaceSectionDivider />
-        <BookingPricingSection {...pricingProps} />
-        <WorkspaceSectionDivider />
-        <BookingPaymentsSection {...sectionProps} />
-        <WorkspaceSectionDivider />
-        <BookingNotesSection />
-        <WorkspaceSectionDivider />
-        <BookingTimelineSection {...sectionProps} />
-      </div>
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div className="shrink-0 border-b border-border bg-surface px-3 pt-2 sm:px-4">
+          <TabsList className="h-9 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
+            <TabsTrigger
+              value="overview"
+              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="financials"
+              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              Financials
+            </TabsTrigger>
+            <TabsTrigger
+              value="guest"
+              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              Guest &amp; Billing
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              Activity
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      {showWorkspaceFooter && !stayReadOnly && (
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 text-sm sm:px-5">
+          <TabsContent value="overview" className="mt-0 space-y-5 focus-visible:outline-none">
+            <BookingStaySection
+              draft={draft}
+              readOnly={stayReadOnly}
+              unitOptions={propertyUnits}
+              unitLabel={labels.unitLabel}
+              preview={preview}
+              previewLoading={previewLoading}
+              previewError={previewError}
+              onDraftChange={updateDraft}
+            />
+            <BookingGuestSection {...sectionProps} />
+            <BookingPricingSection {...pricingProps} />
+          </TabsContent>
+
+          <TabsContent
+            value="financials"
+            forceMount
+            className={
+              tab === "financials"
+                ? "mt-0 space-y-5 focus-visible:outline-none"
+                : "mt-0 hidden"
+            }
+          >
+            <BookingPricingSection {...pricingProps} />
+            <BookingPaymentsSection
+              {...sectionProps}
+              active
+              onOutstandingChange={setOutstandingLabel}
+            />
+          </TabsContent>
+
+          <TabsContent value="guest" className="mt-0 space-y-5 focus-visible:outline-none">
+            <BookingGuestSection {...sectionProps} />
+            <BookingBillingFiscalSection {...sectionProps} />
+          </TabsContent>
+
+          <TabsContent value="activity" className="mt-0 space-y-5 focus-visible:outline-none">
+            <BookingTimelineSection {...sectionProps} />
+            <BookingNotesSection />
+          </TabsContent>
+        </div>
+      </Tabs>
+
+      {showWorkspaceFooter && !stayReadOnly ? (
         <WorkspaceFooter
           sessionStatus={sessionStatus}
           onSave={() => void confirmSave()}
           onCancel={discardEdits}
         />
-      )}
+      ) : null}
 
       <ConfirmDialog
         open={confirmOpen}

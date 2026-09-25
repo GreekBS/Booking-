@@ -179,10 +179,10 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
   }
 
   return (
-    <WorkspaceSection title="Billing / Fiscal Details">
+    <WorkspaceSection title="Billing / Fiscal identity">
       <p className="mb-3 text-xs text-muted-foreground">
-        Customer identity used for invoices and receipts. Separate from stay guest
-        contact. Issued documents keep a frozen snapshot.
+        Tenant customer billing profile for invoicing — separate from guest stay
+        contact. Issued fiscal documents keep immutable snapshots.
       </p>
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>

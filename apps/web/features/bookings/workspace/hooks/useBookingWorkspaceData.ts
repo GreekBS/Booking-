@@ -72,6 +72,10 @@ export function useBookingWorkspaceData({
       return;
     }
 
+    // Clear previous reservation immediately to avoid stale flash on switch.
+    setBooking(null);
+    setQuote(null);
+    setError(null);
     void load();
   }, [active, tenantId, load]);
 

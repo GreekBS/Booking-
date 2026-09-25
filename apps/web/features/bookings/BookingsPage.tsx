@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus, RefreshCw, Search } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Plus,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
   renderActivePropertyGate,
@@ -17,8 +25,9 @@ import {
 } from "@/lib/admin/api";
 import type { BookingRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import type { SortDirection } from "@/lib/admin/utils";
+import { nightsBetween } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
-import { StickyToolbar } from "@/components/admin/sticky-toolbar";
+import { Surface } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -28,6 +37,7 @@ import { UnsavedChangesDialog } from "@/features/workspace/components/UnsavedCha
 import { WorkspaceProvider, useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -59,12 +69,15 @@ export function BookingsPage() {
 
 function BookingsPageContent() {
   const { requestClose } = useWorkspace();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const deepLinkBookingId = searchParams.get("bookingId");
   const deepLinkHandled = useRef<string | null>(null);
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
+    property,
     properties: activeProperties,
     ready: propertyReady,
     error: propertyError,
@@ -189,10 +202,36 @@ function BookingsPageContent() {
     void loadBookings();
   }, [loadBookings]);
 
-  /** Open booking workspace from dashboard deep-link (?bookingId=). */
+  function syncBookingUrl(bookingId: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (bookingId) params.set("bookingId", bookingId);
+    else params.delete("bookingId");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  function openBooking(booking: BookingRecord) {
+    requestClose(() => {
+      setSelected(booking);
+      deepLinkHandled.current = booking.id;
+      syncBookingUrl(booking.id);
+    });
+  }
+
+  function closeBooking() {
+    requestClose(() => {
+      setSelected(null);
+      deepLinkHandled.current = null;
+      syncBookingUrl(null);
+    });
+  }
+
+  /** Open booking workspace from deep-link (?bookingId=). */
   useEffect(() => {
     if (!tenantId || !deepLinkBookingId) return;
-    if (deepLinkHandled.current === deepLinkBookingId) return;
+    if (deepLinkHandled.current === deepLinkBookingId && selected?.id === deepLinkBookingId) {
+      return;
+    }
     let cancelled = false;
     async function openDeepLink() {
       try {
@@ -201,14 +240,14 @@ function BookingsPageContent() {
         deepLinkHandled.current = deepLinkBookingId;
         setSelected(booking);
       } catch {
-        /* list remains usable if deep-link fails */
+        /* list remains usable if deep-link fails (ACL / not found) */
       }
     }
     void openDeepLink();
     return () => {
       cancelled = true;
     };
-  }, [tenantId, deepLinkBookingId]);
+  }, [tenantId, deepLinkBookingId, selected?.id]);
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const workspaceUnitOptions = useMemo(
@@ -230,6 +269,27 @@ function BookingsPageContent() {
   );
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const filtersActive =
+    Boolean(debouncedSearch) ||
+    statusFilter !== "all" ||
+    unitFilter !== "all" ||
+    Boolean(arrivalFrom) ||
+    Boolean(arrivalTo) ||
+    Boolean(departureFrom) ||
+    Boolean(departureTo);
+
+  function clearFilters() {
+    setSearch("");
+    setDebouncedSearch("");
+    setStatusFilter("all");
+    setUnitFilter("all");
+    setArrivalFrom("");
+    setArrivalTo("");
+    setDepartureFrom("");
+    setDepartureTo("");
+    setPage(1);
+  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -263,27 +323,35 @@ function BookingsPageContent() {
   if (error && !initialized) return <ErrorState message={error} onRetry={() => void loadBookings()} />;
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title="Bookings"
-        description="Reservation center — search, filter, and manage stays"
+        description={
+          property
+            ? `${total} reservation${total === 1 ? "" : "s"} · ${property.name}`
+            : "Reservation center"
+        }
         actions={
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href="/dashboard/bookings/new">
               <Plus className="h-4 w-4" />
-              Manual booking
+              New booking
             </Link>
           </Button>
         }
       />
 
-      <StickyToolbar>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative min-w-0 flex-1">
+      <Surface variant="panel" padding="sm" className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          <div className="relative min-w-0 flex-1">
+            <Label htmlFor="booking-search" className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+              Search
+            </Label>
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search guest, email, booking ID..."
+                id="booking-search"
+                placeholder="Guest, email, booking ID…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -292,6 +360,14 @@ function BookingsPageContent() {
                 className="pl-9"
               />
             </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {filtersActive ? (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-3.5 w-3.5" />
+                Clear filters
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               size="sm"
@@ -302,8 +378,11 @@ function BookingsPageContent() {
               Refresh
             </Button>
           </div>
+        </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</Label>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
               <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
@@ -315,6 +394,9 @@ function BookingsPageContent() {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Unit</Label>
             <Select value={unitFilter} onValueChange={(v) => { setUnitFilter(v); setPage(1); }}>
               <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
               <SelectContent>
@@ -324,83 +406,146 @@ function BookingsPageContent() {
                 ))}
               </SelectContent>
             </Select>
-            <Input type="date" value={arrivalFrom} onChange={(e) => { setArrivalFrom(e.target.value); setPage(1); }} aria-label="Arrival from" />
-            <Input type="date" value={arrivalTo} onChange={(e) => { setArrivalTo(e.target.value); setPage(1); }} aria-label="Arrival to" />
-            <Input type="date" value={departureFrom} onChange={(e) => { setDepartureFrom(e.target.value); setPage(1); }} aria-label="Departure from" />
-            <Input type="date" value={departureTo} onChange={(e) => { setDepartureTo(e.target.value); setPage(1); }} aria-label="Departure to" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="arrival-from" className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Arrival from
+            </Label>
+            <Input id="arrival-from" type="date" value={arrivalFrom} onChange={(e) => { setArrivalFrom(e.target.value); setPage(1); }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="arrival-to" className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Arrival to
+            </Label>
+            <Input id="arrival-to" type="date" value={arrivalTo} onChange={(e) => { setArrivalTo(e.target.value); setPage(1); }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="departure-from" className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Departure from
+            </Label>
+            <Input id="departure-from" type="date" value={departureFrom} onChange={(e) => { setDepartureFrom(e.target.value); setPage(1); }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="departure-to" className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Departure to
+            </Label>
+            <Input id="departure-to" type="date" value={departureTo} onChange={(e) => { setDepartureTo(e.target.value); setPage(1); }} />
           </div>
         </div>
-      </StickyToolbar>
+      </Surface>
 
-      {error && initialized && (
-        <div className="mb-4">
-          <ErrorState message={error} onRetry={() => void loadBookings()} />
-        </div>
-      )}
+      {error && initialized ? (
+        <ErrorState message={error} onRetry={() => void loadBookings()} />
+      ) : null}
 
       {bookings.length === 0 && !loading ? (
-        <EmptyState title="No bookings match" description="Adjust filters or wait for storefront reservations." />
+        <EmptyState
+          title="No bookings match"
+          description="Adjust filters or create a manual reservation."
+          action={{ label: "New booking", href: "/dashboard/bookings/new" }}
+        />
       ) : (
-        <div className={`rounded-md border bg-card ${loading && initialized ? "opacity-60" : ""}`}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="cursor-pointer" onClick={() => toggleSort("guest")}>
-                  Guest <SortIcon column="guest" />
-                </TableHead>
-                <TableHead>Property / Unit</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => toggleSort("checkIn")}>
-                  Arrival <SortIcon column="checkIn" />
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => toggleSort("checkOut")}>
-                  Departure <SortIcon column="checkOut" />
-                </TableHead>
-                <TableHead>Guests</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => toggleSort("status")}>
-                  Status <SortIcon column="status" />
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bookings.map((booking) => {
-                const unit = unitMap.get(booking.unitId);
-                const property = propertyMap.get(booking.propertyId);
-                return (
-                  <TableRow
-                    key={booking.id}
+        <Surface variant="panel" padding="none" className={loading && initialized ? "opacity-60" : ""}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead
                     className="cursor-pointer"
-                    onClick={() => requestClose(() => setSelected(booking))}
+                    onClick={() => toggleSort("guest")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") toggleSort("guest");
+                    }}
+                    tabIndex={0}
                   >
-                    <TableCell>
-                      <div className="font-medium">{booking.guest.name}</div>
-                      <div className="text-xs text-muted-foreground">{booking.guest.email}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{property?.name ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">{unit?.name ?? "—"}</div>
-                    </TableCell>
-                    <TableCell>{booking.checkIn}</TableCell>
-                    <TableCell>{booking.checkOut}</TableCell>
-                    <TableCell>{booking.guestCount}</TableCell>
-                    <TableCell><StatusBadge status={booking.status} /></TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          <div className="border-t p-4">
+                    Guest <SortIcon column="guest" />
+                  </TableHead>
+                  <TableHead>Stay / Unit</TableHead>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => toggleSort("checkIn")}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") toggleSort("checkIn");
+                    }}
+                  >
+                    Arrival <SortIcon column="checkIn" />
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => toggleSort("checkOut")}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") toggleSort("checkOut");
+                    }}
+                  >
+                    Departure <SortIcon column="checkOut" />
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">Nights</TableHead>
+                  <TableHead className="hidden sm:table-cell">Guests</TableHead>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => toggleSort("status")}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") toggleSort("status");
+                    }}
+                  >
+                    Status <SortIcon column="status" />
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bookings.map((booking) => {
+                  const unit = unitMap.get(booking.unitId);
+                  const propertyName = propertyMap.get(booking.propertyId)?.name;
+                  const nights = nightsBetween(booking.checkIn, booking.checkOut);
+                  return (
+                    <TableRow
+                      key={booking.id}
+                      className="cursor-pointer"
+                      tabIndex={0}
+                      aria-label={`Open reservation for ${booking.guest.name}`}
+                      onClick={() => openBooking(booking)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openBooking(booking);
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <div className="font-medium text-foreground">{booking.guest.name}</div>
+                        <div className="text-xs text-muted-foreground">{booking.guest.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{unit?.name ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">{propertyName ?? "—"}</div>
+                      </TableCell>
+                      <TableCell className="tabular-nums text-sm">{booking.checkIn}</TableCell>
+                      <TableCell className="tabular-nums text-sm">{booking.checkOut}</TableCell>
+                      <TableCell className="hidden tabular-nums md:table-cell">{nights}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{booking.guestCount}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={booking.status} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="border-t border-border px-4 py-3">
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
-        </div>
+        </Surface>
       )}
 
       <BookingDetailDrawer
         booking={selected}
         open={Boolean(selected)}
         onOpenChange={(open) => {
-          if (!open) {
-            requestClose(() => setSelected(null));
-          }
+          if (!open) closeBooking();
         }}
         requestClose={requestClose}
         unitLabel={selected ? unitMap.get(selected.unitId)?.name : undefined}
