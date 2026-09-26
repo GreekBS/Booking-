@@ -9,6 +9,7 @@ import {
   PermissionChecker,
   PrepareReservationUseCase,
   ReservationOrchestrator,
+  ResolveOrCreateGuest,
 } from "@hcp/domain";
 import {
   PrismaChannelConnectionRepository,
@@ -18,6 +19,7 @@ import {
   PrismaCalendarBlockRepository,
   PrismaCatalogQueryAdapter,
   PrismaExternalReservationLinkRepository,
+  PrismaGuestRepository,
   PrismaHoldRepository,
   PrismaOutboxRepository,
   PrismaQuoteRepository,
@@ -81,6 +83,7 @@ runIntegration("ImportChannelReservationCommand integration", () => {
     prepareReservationUseCase,
     importPersistence,
     idGenerator,
+    new ResolveOrCreateGuest(new PrismaGuestRepository(), idGenerator, permissionChecker),
   );
 
   function buildCommand(mappingVersion = 1) {
@@ -159,6 +162,7 @@ runIntegration("ImportChannelReservationCommand integration", () => {
     }
 
     expect(value.booking.status).toBe("confirmed");
+    expect(value.booking.guestId).toBeTruthy();
     expect(value.link.bookingId).toBe(value.booking.id);
     expect(value.link.mappingVersionAtImport).toBe(1);
 

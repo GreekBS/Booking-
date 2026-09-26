@@ -4,6 +4,7 @@ import { ConflictError, ValidationError } from "../../shared/errors/DomainError"
 import { createChannelImportActor } from "../../commerce/application/channelImportActor";
 import type { PrepareReservationUseCase } from "../../commerce/application/PrepareReservationUseCase";
 import { mutationOriginChannel } from "../../shared/types/MutationOrigin";
+import { ResolveOrCreateGuest } from "../../guests";
 import { ExternalReservationLink } from "../domain/ExternalReservationLink";
 import { ChannelImportKey } from "../domain/value-objects/ChannelImportKey";
 import type { IChannelListingMappingRepository } from "../ports/IChannelListingMappingRepository";
@@ -30,6 +31,15 @@ function isLinkDuplicateConflict(error: unknown): boolean {
   return error instanceof ConflictError && error.message === LINK_DUPLICATE_MESSAGE;
 }
 
+/**
+ * CM-3b-3: channel CREATE import.
+ *
+ * Guest CRM resolution runs inside the same tenant TX as commitImport
+ * (after normalized reservation prep). Transport/inbox layers stay CRM-unaware.
+ *
+ * Duplicate external reservation (early link or unique race) returns without
+ * creating a new Guest. MODIFY/CANCEL paths never call this use case for Guest.
+ */
 export class ImportChannelReservationCommandUseCase {
   constructor(
     private readonly linkRepository: IExternalReservationLinkRepository,
@@ -37,6 +47,7 @@ export class ImportChannelReservationCommandUseCase {
     private readonly prepareReservationUseCase: PrepareReservationUseCase,
     private readonly importPersistence: IChannelReservationImportPersistencePort,
     private readonly idGenerator: IIdGenerator,
+    private readonly resolveOrCreateGuest: ResolveOrCreateGuest,
   ) {}
 
   async execute(
@@ -78,13 +89,14 @@ export class ImportChannelReservationCommandUseCase {
         externalReservationId,
       });
 
+      const actor = createChannelImportActor(tenantId);
       const prepared = await this.prepareReservationUseCase.prepare(
         {
           reservation: normalizedCommand,
           profile: {
             confirmImmediately: true,
             idempotencyKey: importKey.value,
-            actor: createChannelImportActor(tenantId),
+            actor,
             writeAudit: false,
           },
         },
@@ -118,7 +130,24 @@ export class ImportChannelReservationCommandUseCase {
       });
 
       try {
-        await this.importPersistence.commitImport({ hold, quote, booking, link });
+        await this.importPersistence.runInTenantTransaction(tenantId, async () => {
+          const resolved = await this.resolveOrCreateGuest.executeForBookingCreate(
+            {
+              tenantId,
+              contact: {
+                displayName: normalizedCommand.guest.name,
+                email: normalizedCommand.guest.email,
+                phone: normalizedCommand.guest.phone,
+              },
+            },
+            actor,
+          );
+          if (resolved.isFailure) {
+            throw resolved.getError();
+          }
+          booking.linkGuest(resolved.getValue().guest.id);
+          await this.importPersistence.commitImport({ hold, quote, booking, link });
+        });
       } catch (error) {
         if (isLinkDuplicateConflict(error)) {
           const racedLink = await this.linkRepository.findByExternalReservation(

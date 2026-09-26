@@ -115,17 +115,39 @@ describe("PrepareReservationUseCase", () => {
 
 describe("CreateReservationUseCase", () => {
   const saveImportReservation = vi.fn();
+  const runInTenantTransaction = vi.fn(async (_tenantId: string, fn: () => Promise<unknown>) =>
+    fn(),
+  );
   const prepareReservation = vi.fn();
   const auditLogRepository = { append: vi.fn() };
+  const resolveOrCreateGuest = {
+    executeForBookingCreate: vi.fn().mockResolvedValue({
+      isFailure: false,
+      getValue: () => ({
+        guest: { id: "guest-channel-1" },
+        outcome: "CREATED",
+        createdDueToAmbiguity: false,
+      }),
+    }),
+  };
 
   const useCase = new CreateReservationUseCase(
     { prepare: prepareReservation } as never,
-    { saveImportReservation } as never,
+    { saveImportReservation, runInTenantTransaction } as never,
     auditLogRepository as never,
+    resolveOrCreateGuest as never,
   );
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resolveOrCreateGuest.executeForBookingCreate.mockResolvedValue({
+      isFailure: false,
+      getValue: () => ({
+        guest: { id: "guest-channel-1" },
+        outcome: "CREATED",
+        createdDueToAmbiguity: false,
+      }),
+    });
     const now = new Date();
     const hold = createHoldForUnit(UNIT_ID, villaProperty.id, "2026-08-01", "2026-08-05", {
       holdId: "hold-generated",
@@ -161,7 +183,10 @@ describe("CreateReservationUseCase", () => {
 
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().status).toBe("confirmed");
+    expect(result.getValue().guestId).toBe("guest-channel-1");
     expect(prepareReservation).toHaveBeenCalledOnce();
+    expect(runInTenantTransaction).toHaveBeenCalledOnce();
+    expect(resolveOrCreateGuest.executeForBookingCreate).toHaveBeenCalledOnce();
     expect(saveImportReservation).toHaveBeenCalledOnce();
     expect(auditLogRepository.append).not.toHaveBeenCalled();
   });
@@ -224,6 +249,7 @@ describe("CreateReservationUseCase", () => {
 
     expect(result.isFailure).toBe(true);
     expect(saveImportReservation).not.toHaveBeenCalled();
+    expect(resolveOrCreateGuest.executeForBookingCreate).not.toHaveBeenCalled();
   });
 });
 

@@ -136,6 +136,7 @@ import {
   PreviewStayPricingUseCase,
   ResolveOrCreateGuest,
   GetGuestUseCase,
+  LinkBookingToGuestUseCase,
 
   GetQuoteUseCase,
 
@@ -1089,20 +1090,38 @@ export const createQuoteUseCase = new CreateQuoteUseCase(
 
 
 
-export const createBookingUseCase = new CreateBookingUseCase(
-
-  holdRepository,
-
-  quoteRepository,
-
-  commerceFlowRepository,
-
+export const previewStayPricingUseCase = new PreviewStayPricingUseCase(
+  catalogQueryAdapter,
+  reservationOrchestrator,
   permissionChecker,
+);
 
-  auditLogRepository,
-
+export const resolveOrCreateGuest = new ResolveOrCreateGuest(
+  guestRepository,
   idGenerator,
+  permissionChecker,
+);
 
+export const getGuestUseCase = new GetGuestUseCase(
+  guestRepository,
+  permissionChecker,
+);
+
+export const linkBookingToGuestUseCase = new LinkBookingToGuestUseCase(
+  bookingRepository,
+  guestRepository,
+  permissionChecker,
+);
+
+export const createBookingUseCase = new CreateBookingUseCase(
+  holdRepository,
+  quoteRepository,
+  commerceFlowRepository,
+  permissionChecker,
+  auditLogRepository,
+  idGenerator,
+  resolveOrCreateGuest,
+  guestRepository,
 );
 
 
@@ -1229,27 +1248,6 @@ export const getRatePlanUseCase = new GetRatePlanUseCase(
 
   permissionChecker,
 
-);
-
-export const previewStayPricingUseCase = new PreviewStayPricingUseCase(
-
-  catalogQueryAdapter,
-
-  reservationOrchestrator,
-
-  permissionChecker,
-
-);
-
-export const resolveOrCreateGuest = new ResolveOrCreateGuest(
-  guestRepository,
-  idGenerator,
-  permissionChecker,
-);
-
-export const getGuestUseCase = new GetGuestUseCase(
-  guestRepository,
-  permissionChecker,
 );
 
 
@@ -1770,6 +1768,7 @@ const importChannelReservationCommandUseCase = new ImportChannelReservationComma
   prepareReservationUseCase,
   channelImportPersistence,
   idGenerator,
+  resolveOrCreateGuest,
 );
 
 const importChannelReservationModifyDryRunUseCase =

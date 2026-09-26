@@ -20,6 +20,13 @@ export class PrismaChannelReservationImportPersistence
 {
   constructor(private readonly outboxRepository: PrismaOutboxRepository) {}
 
+  async runInTenantTransaction<T>(
+    tenantId: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    return withTenantTransaction(tenantId, async () => fn());
+  }
+
   async commitImport(params: ChannelReservationImportCommit): Promise<void> {
     const { hold, quote, booking, link } = params;
     const holdEvents = hold.pullDomainEvents();

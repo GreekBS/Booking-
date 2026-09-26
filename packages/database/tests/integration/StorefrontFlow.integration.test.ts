@@ -7,6 +7,7 @@ import {
   GetPublicPropertyBySlugUseCase,
   PermissionChecker,
   ReservationOrchestrator,
+  ResolveOrCreateGuest,
   createStorefrontActor,
 } from "@hcp/domain";
 import { PrismaPublishableKeyRepository } from "../../src/repositories/storefront/PublishableKeyRepository";
@@ -17,6 +18,7 @@ import { PrismaCalendarBlockRepository } from "../../src/repositories/commerce/C
 import { PrismaRatePlanRepository } from "../../src/repositories/commerce/RatePlanRepository";
 import { PrismaAvailabilityRulesRepository } from "../../src/repositories/commerce/AvailabilityRulesRepository";
 import { PrismaCommerceFlowRepository } from "../../src/repositories/commerce/CommerceFlowRepository";
+import { PrismaGuestRepository } from "../../src/repositories/guests/GuestRepository";
 import { PrismaCatalogQueryAdapter } from "../../src/adapters/CatalogQueryAdapter";
 import { PrismaStorefrontCatalogAdapter } from "../../src/adapters/StorefrontCatalogAdapter";
 import { TimezoneService } from "../../src/adapters/TimezoneService";
@@ -94,6 +96,8 @@ runIntegration("Storefront public flow integration", () => {
     permissionChecker,
     auditLogRepository,
     idGenerator,
+    new ResolveOrCreateGuest(new PrismaGuestRepository(), idGenerator, permissionChecker),
+    new PrismaGuestRepository(),
   );
 
   beforeEach(async () => {

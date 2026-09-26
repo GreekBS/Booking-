@@ -311,6 +311,7 @@ export function serializeBooking(booking: {
   stayPeriod: { checkIn: { value: string }; checkOut: { value: string } };
   guestCount: { value: number };
   guest: { name: string; email: string; phone: string | null };
+  guestId?: string | null;
   status: string;
   confirmationMode: string;
 }) {
@@ -326,6 +327,7 @@ export function serializeBooking(booking: {
     checkOut: booking.stayPeriod.checkOut.value,
     guestCount: booking.guestCount.value,
     guest: booking.guest,
+    guestId: booking.guestId ?? null,
     status: booking.status,
     confirmationMode: booking.confirmationMode,
   };

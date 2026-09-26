@@ -30,6 +30,8 @@ export interface BookingProps {
   checkOut: string;
   guestCount: number;
   guest: GuestDetailsProps;
+  /** CRM Guest identity (nullable until linked). */
+  guestId: string | null;
   status: BookingStatus;
   confirmationMode: ConfirmationMode;
   createdAt: Date;
@@ -45,6 +47,8 @@ export interface CreateBookingProps {
   quote: Quote;
   guest: GuestDetailsProps;
   confirmationMode: ConfirmationMode;
+  /** CRM Guest id — set by booking create flows after ResolveOrCreateGuest. */
+  guestId?: string | null;
   now?: Date;
   mutationOrigin?: MutationOrigin | null;
 }
@@ -90,6 +94,10 @@ export class Booking extends AggregateRoot<BookingProps> {
     return { ...this.props.guest };
   }
 
+  get guestId(): string | null {
+    return this.props.guestId;
+  }
+
   get status(): BookingStatus {
     return this.props.status;
   }
@@ -124,6 +132,7 @@ export class Booking extends AggregateRoot<BookingProps> {
       checkOut: hold.stayPeriod.checkOut.value,
       guestCount: hold.guestCount.value,
       guest: { ...props.guest },
+      guestId: props.guestId ?? null,
       status,
       confirmationMode: props.confirmationMode,
       createdAt: now,
@@ -154,12 +163,29 @@ export class Booking extends AggregateRoot<BookingProps> {
   static reconstitute(props: BookingProps): Booking {
     return new Booking({
       ...props,
+      guestId: props.guestId ?? null,
       createdAt: new Date(props.createdAt),
       updatedAt: new Date(props.updatedAt),
       confirmedAt: props.confirmedAt ? new Date(props.confirmedAt) : null,
       cancelledAt: props.cancelledAt ? new Date(props.cancelledAt) : null,
       completedAt: props.completedAt ? new Date(props.completedAt) : null,
     });
+  }
+
+  /**
+   * Link CRM Guest before first persistence. Does not alter reservation contact snapshot.
+   * Idempotent when the same guestId is assigned again.
+   */
+  linkGuest(guestId: string): void {
+    const id = guestId.trim();
+    if (!id) {
+      throw new ValidationError("guestId required");
+    }
+    if (this.props.guestId && this.props.guestId !== id) {
+      throw new ConflictError("Booking already linked to a different Guest");
+    }
+    this.props.guestId = id;
+    this.props.updatedAt = new Date();
   }
 
   requestPayment(at: Date = new Date()): void {

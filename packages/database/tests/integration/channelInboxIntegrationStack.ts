@@ -11,6 +11,7 @@ import {
   ReceiveChannelEventUseCase,
   ReplayChannelInboxItemUseCase,
   ReservationOrchestrator,
+  ResolveOrCreateGuest,
   JobHandlerRegistry,
 } from "@hcp/domain";
 import { createFakeChannelProviderRegistration } from "../../../domain/src/channels/simulation/FakeChannelProviderBundle";
@@ -27,6 +28,7 @@ import {
   PrismaCalendarBlockRepository,
   PrismaCatalogQueryAdapter,
   PrismaExternalReservationLinkRepository,
+  PrismaGuestRepository,
   PrismaHoldRepository,
   PrismaJobScheduler,
   PrismaOutboxRepository,
@@ -94,6 +96,7 @@ export function buildChannelInboxIntegrationStack() {
     prepareReservationUseCase,
     importPersistence,
     idGenerator,
+    new ResolveOrCreateGuest(new PrismaGuestRepository(), idGenerator, new PermissionChecker()),
   );
 
   const processInboxUseCase = new ProcessChannelInboxItemUseCase(

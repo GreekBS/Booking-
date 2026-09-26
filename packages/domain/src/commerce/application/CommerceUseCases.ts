@@ -37,6 +37,10 @@ import {
   mutationOriginOperator,
 } from "../../shared/types/MutationOrigin";
 import { UnitExternalSyncRequiredEvent } from "../../channels/application/UnitExternalSyncRequiredEvent";
+import {
+  ResolveOrCreateGuest,
+  type IGuestRepository,
+} from "../../guests";
 
 const DEFAULT_RULES: UnitAvailabilityRulesProps = {
   minNights: 1,
@@ -429,6 +433,11 @@ export interface CreateBookingCommand {
   quoteId: string;
   guest: { name: string; email: string; phone: string | null };
   confirmationMode?: ConfirmationMode;
+  /**
+   * Explicit operator-selected Guest (admin/operator only).
+   * Public/storefront clients must not supply this.
+   */
+  guestId?: string | null;
 }
 
 export class CreateBookingUseCase {
@@ -439,6 +448,8 @@ export class CreateBookingUseCase {
     private readonly permissionChecker: PermissionChecker,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly idGenerator: IIdGenerator,
+    private readonly resolveOrCreateGuest: ResolveOrCreateGuest,
+    private readonly guestRepository: IGuestRepository,
   ) {}
 
   async execute(
@@ -457,6 +468,11 @@ export class CreateBookingUseCase {
         return Result.fail(new ForbiddenError());
       }
 
+      const isStorefront = actor.userId.startsWith("storefront:");
+      if (isStorefront && command.guestId) {
+        return Result.fail(new ForbiddenError());
+      }
+
       const quote = await this.quoteRepository.findById(command.quoteId, command.tenantId);
       if (!quote) {
         return Result.fail(new ValidationError("Quote not found"));
@@ -467,27 +483,40 @@ export class CreateBookingUseCase {
         return Result.fail(new ValidationError("Hold not found"));
       }
 
-      const booking = Booking.create({
-        id: this.idGenerator.generate(),
-        hold,
-        quote,
-        guest: command.guest,
-        confirmationMode: command.confirmationMode ?? "manual",
-        mutationOrigin: actor.userId.startsWith("storefront:")
-          ? mutationOriginDirect()
-          : mutationOriginOperator(),
-      });
+      const booking = await this.commerceFlowRepository.runInTenantTransaction(
+        command.tenantId,
+        async () => {
+          const guestId = await this.resolveGuestIdForCreate(command, actor);
 
-      await this.commerceFlowRepository.saveHoldAndBooking(hold, booking);
+          const created = Booking.create({
+            id: this.idGenerator.generate(),
+            hold,
+            quote,
+            guest: command.guest,
+            guestId,
+            confirmationMode: command.confirmationMode ?? "manual",
+            mutationOrigin: isStorefront
+              ? mutationOriginDirect()
+              : mutationOriginOperator(),
+          });
 
-      if (!actor.userId.startsWith("storefront:")) {
+          await this.commerceFlowRepository.saveHoldAndBooking(hold, created);
+          return created;
+        },
+      );
+
+      if (!isStorefront) {
         await this.auditLogRepository.append({
           tenantId: command.tenantId,
           actorId: actor.userId,
           action: "booking.created",
           resourceType: "Booking",
           resourceId: booking.id,
-          metadata: { quoteId: quote.id, holdId: hold.id },
+          metadata: {
+            quoteId: booking.quoteId,
+            holdId: booking.holdId,
+            guestId: booking.guestId,
+          },
           ipAddress: audit?.ipAddress ?? null,
         });
       }
@@ -496,6 +525,36 @@ export class CreateBookingUseCase {
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
+  }
+
+  private async resolveGuestIdForCreate(
+    command: CreateBookingCommand,
+    actor: ActorContext,
+  ): Promise<string> {
+    const explicitId = command.guestId?.trim() || null;
+    if (explicitId) {
+      const guest = await this.guestRepository.findById(command.tenantId, explicitId);
+      if (!guest || !guest.isActive) {
+        throw new ValidationError("Selected Guest not found or not usable");
+      }
+      return guest.id;
+    }
+
+    const resolved = await this.resolveOrCreateGuest.executeForBookingCreate(
+      {
+        tenantId: command.tenantId,
+        contact: {
+          displayName: command.guest.name,
+          email: command.guest.email,
+          phone: command.guest.phone,
+        },
+      },
+      actor,
+    );
+    if (resolved.isFailure) {
+      throw resolved.getError();
+    }
+    return resolved.getValue().guest.id;
   }
 }
 

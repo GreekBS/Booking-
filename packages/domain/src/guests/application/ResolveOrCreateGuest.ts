@@ -60,70 +60,98 @@ export class ResolveOrCreateGuest {
     actor: ActorContext,
   ): Promise<Result<ResolveOrCreateGuestResult, Error>> {
     try {
-      const canCreate = this.permissionChecker.hasPermission(
-        actor,
-        PERMISSIONS.GUEST_CREATE_TENANT,
-        command.tenantId,
-      );
-      const canUpdate = this.permissionChecker.hasPermission(
-        actor,
-        PERMISSIONS.GUEST_UPDATE_TENANT,
-        command.tenantId,
-      );
-      // Resolve may match existing (read+link) or create — require create for CRM-1
-      // system/backfill actors use admin/SA with GUEST_CREATE_TENANT.
-      if (!canCreate && !canUpdate) {
+      if (!this.canAdministerGuests(actor, command.tenantId)) {
         return Result.fail(new ForbiddenError());
       }
+      return Result.ok(await this.resolveCore(command));
+    } catch (error) {
+      return Result.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
 
+  /**
+   * CRM-2: Guest resolve/create authorized by booking-create capability.
+   * Does not grant Managers tenant-wide Guest CRM administration —
+   * only the living identity link required to complete a reservation.
+   */
+  async executeForBookingCreate(
+    command: ResolveOrCreateGuestCommand,
+    actor: ActorContext,
+  ): Promise<Result<ResolveOrCreateGuestResult, Error>> {
+    try {
+      const canBook = this.permissionChecker.hasPermission(
+        actor,
+        PERMISSIONS.BOOKING_CREATE_TENANT,
+        command.tenantId,
+      );
+      if (!canBook && !this.canAdministerGuests(actor, command.tenantId)) {
+        return Result.fail(new ForbiddenError());
+      }
+      return Result.ok(await this.resolveCore(command));
+    } catch (error) {
+      return Result.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  private canAdministerGuests(actor: ActorContext, tenantId: string): boolean {
+    return (
+      this.permissionChecker.hasPermission(
+        actor,
+        PERMISSIONS.GUEST_CREATE_TENANT,
+        tenantId,
+      ) ||
+      this.permissionChecker.hasPermission(
+        actor,
+        PERMISSIONS.GUEST_UPDATE_TENANT,
+        tenantId,
+      )
+    );
+  }
+
+  private async resolveCore(
+    command: ResolveOrCreateGuestCommand,
+  ): Promise<ResolveOrCreateGuestResult> {
       const displayName = command.contact.displayName?.trim() ?? "";
       if (!displayName) {
-        return Result.fail(new ValidationError("Guest displayName required"));
+        throw new ValidationError("Guest displayName required");
       }
 
       const emailNormalized = normalizeEmail(command.contact.email);
       const phoneNormalized = normalizePhone(command.contact.phone);
 
       if (isUsableEmailNormalized(emailNormalized)) {
-        return Result.ok(
-          await this.guests.withIdentityLock(
-            command.tenantId,
-            "email",
-            emailNormalized!,
-            () =>
-              this.resolveLocked(
-                command,
-                displayName,
-                emailNormalized,
-                phoneNormalized,
-                "email",
-              ),
-          ),
+        return this.guests.withIdentityLock(
+          command.tenantId,
+          "email",
+          emailNormalized!,
+          () =>
+            this.resolveLocked(
+              command,
+              displayName,
+              emailNormalized,
+              phoneNormalized,
+              "email",
+            ),
         );
       }
 
       if (isUsablePhoneNormalized(phoneNormalized)) {
-        return Result.ok(
-          await this.guests.withIdentityLock(
-            command.tenantId,
-            "phone",
-            phoneNormalized!,
-            () =>
-              this.resolveLocked(
-                command,
-                displayName,
-                emailNormalized,
-                phoneNormalized,
-                "phone",
-              ),
-          ),
+        return this.guests.withIdentityLock(
+          command.tenantId,
+          "phone",
+          phoneNormalized!,
+          () =>
+            this.resolveLocked(
+              command,
+              displayName,
+              emailNormalized,
+              phoneNormalized,
+              "phone",
+            ),
         );
       }
 
-      return Result.ok(await this.createNew(command, displayName, false));
-    } catch (error) {
-      return Result.fail(error instanceof Error ? error : new Error(String(error)));
-    }
+      return this.createNew(command, displayName, false);
   }
 
   private async resolveLocked(

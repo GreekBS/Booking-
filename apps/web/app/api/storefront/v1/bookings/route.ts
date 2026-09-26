@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { storefrontCreateBookingSchema } from "@hcp/validators";
-import { createStorefrontActor } from "@hcp/domain";
+import { createStorefrontActor, ForbiddenError } from "@hcp/domain";
 import {
   bookingRepository,
   createBookingUseCase,
@@ -26,7 +26,11 @@ export async function POST(request: NextRequest) {
     checkStorefrontRateLimit(request, ctx.publishableKeyId);
     const idempotencyKey = requireIdempotencyKey(request);
 
-    const body = storefrontCreateBookingSchema.parse(await request.json());
+    const raw = await request.json();
+    if (raw && typeof raw === "object" && "guestId" in raw) {
+      return storefrontError(new ForbiddenError());
+    }
+    const body = storefrontCreateBookingSchema.parse(raw);
     const actor = createStorefrontActor(ctx.tenantId);
 
     const existingResourceId = await storefrontIdempotencyRepository.findResourceId(

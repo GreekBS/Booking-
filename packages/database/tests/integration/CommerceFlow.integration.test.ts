@@ -6,6 +6,7 @@ import {
   ExpireHoldsUseCase,
   PermissionChecker,
   ReservationOrchestrator,
+  ResolveOrCreateGuest,
 } from "@hcp/domain";
 import { PrismaHoldRepository } from "../../src/repositories/commerce/HoldRepository";
 import { PrismaQuoteRepository } from "../../src/repositories/commerce/QuoteRepository";
@@ -14,6 +15,7 @@ import { PrismaCalendarBlockRepository } from "../../src/repositories/commerce/C
 import { PrismaRatePlanRepository } from "../../src/repositories/commerce/RatePlanRepository";
 import { PrismaAvailabilityRulesRepository } from "../../src/repositories/commerce/AvailabilityRulesRepository";
 import { PrismaCommerceFlowRepository } from "../../src/repositories/commerce/CommerceFlowRepository";
+import { PrismaGuestRepository } from "../../src/repositories/guests/GuestRepository";
 import { PrismaCatalogQueryAdapter } from "../../src/adapters/CatalogQueryAdapter";
 import { TimezoneService } from "../../src/adapters/TimezoneService";
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
@@ -42,6 +44,7 @@ runIntegration("Commerce flow integration", () => {
   const permissionChecker = new PermissionChecker();
   const auditLogRepository = new PrismaAuditLogRepository();
   const idGenerator = new UuidIdGenerator();
+  const guestRepository = new PrismaGuestRepository();
 
   const adminActor = {
     userId: "550e8400-e29b-41d4-a716-446655442099",
@@ -79,6 +82,12 @@ runIntegration("Commerce flow integration", () => {
     idGenerator,
   );
 
+  const resolveOrCreateGuest = new ResolveOrCreateGuest(
+    guestRepository,
+    idGenerator,
+    permissionChecker,
+  );
+
   const createBookingUseCase = new CreateBookingUseCase(
     holdRepository,
     quoteRepository,
@@ -86,6 +95,8 @@ runIntegration("Commerce flow integration", () => {
     permissionChecker,
     auditLogRepository,
     idGenerator,
+    resolveOrCreateGuest,
+    guestRepository,
   );
 
   const expireHoldsUseCase = new ExpireHoldsUseCase(holdRepository);
@@ -138,6 +149,7 @@ runIntegration("Commerce flow integration", () => {
 
     expect(bookingResult.isSuccess).toBe(true);
     const booking = bookingResult.getValue();
+    expect(booking.guestId).toBeTruthy();
 
     const loadedHold = await holdRepository.findById(hold.id, tenantId);
     expect(loadedHold?.status).toBe("converted");

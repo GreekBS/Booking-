@@ -11,5 +11,7 @@ export interface ChannelReservationImportCommit {
 }
 
 export interface IChannelReservationImportPersistencePort {
+  /** Run fn inside the tenant write transaction (ALS). Nested commits join this TX. */
+  runInTenantTransaction<T>(tenantId: string, fn: () => Promise<T>): Promise<T>;
   commitImport(params: ChannelReservationImportCommit): Promise<void>;
 }

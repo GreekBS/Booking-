@@ -93,16 +93,32 @@ describe("ImportChannelReservationCommandUseCase", () => {
   let mappingRepository: InMemoryChannelListingMappingRepository;
   let linkRepository: InMemoryExternalReservationLinkRepository;
   let prepareReservationUseCase: { prepare: ReturnType<typeof vi.fn> };
-  let importPersistence: { commitImport: ReturnType<typeof vi.fn> };
+  let importPersistence: {
+    commitImport: ReturnType<typeof vi.fn>;
+    runInTenantTransaction: ReturnType<typeof vi.fn>;
+  };
   let idGenerator: { generate: ReturnType<typeof vi.fn> };
+  let resolveOrCreateGuest: { executeForBookingCreate: ReturnType<typeof vi.fn> };
   let useCase: ImportChannelReservationCommandUseCase;
 
   beforeEach(async () => {
     mappingRepository = new InMemoryChannelListingMappingRepository();
     linkRepository = new InMemoryExternalReservationLinkRepository();
     prepareReservationUseCase = { prepare: vi.fn() };
-    importPersistence = { commitImport: vi.fn().mockResolvedValue(undefined) };
+    importPersistence = {
+      commitImport: vi.fn().mockResolvedValue(undefined),
+      runInTenantTransaction: vi.fn(async (_tenantId: string, fn: () => Promise<unknown>) => fn()),
+    };
     idGenerator = { generate: vi.fn().mockReturnValue(LINK_ID) };
+    resolveOrCreateGuest = {
+      executeForBookingCreate: vi.fn().mockResolvedValue(
+        Result.ok({
+          guest: { id: "guest-import-1" },
+          outcome: "CREATED",
+          createdDueToAmbiguity: false,
+        }),
+      ),
+    };
 
     await seedActiveMapping(mappingRepository, {
       id: MAPPING_ID,
@@ -118,8 +134,9 @@ describe("ImportChannelReservationCommandUseCase", () => {
       linkRepository,
       mappingRepository,
       prepareReservationUseCase as never,
-      importPersistence,
+      importPersistence as never,
       idGenerator,
+      resolveOrCreateGuest as never,
     );
   });
 
@@ -136,8 +153,11 @@ describe("ImportChannelReservationCommandUseCase", () => {
       throw new Error("Expected created outcome");
     }
     expect(value.booking.id).toBe(BOOKING_ID);
+    expect(value.booking.guestId).toBe("guest-import-1");
     expect(value.link.bookingId).toBe(BOOKING_ID);
     expect(value.link.externalReservationId).toBe(EXTERNAL_RESERVATION_ID);
+    expect(importPersistence.runInTenantTransaction).toHaveBeenCalledOnce();
+    expect(resolveOrCreateGuest.executeForBookingCreate).toHaveBeenCalledOnce();
     expect(importPersistence.commitImport).toHaveBeenCalledOnce();
     expect(prepareReservationUseCase.prepare).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -182,6 +202,7 @@ describe("ImportChannelReservationCommandUseCase", () => {
     expect(value.link.id).toBe(LINK_ID);
     expect(prepareReservationUseCase.prepare).not.toHaveBeenCalled();
     expect(importPersistence.commitImport).not.toHaveBeenCalled();
+    expect(resolveOrCreateGuest.executeForBookingCreate).not.toHaveBeenCalled();
   });
 
   it("fails when mapping version changed since dry-run", async () => {

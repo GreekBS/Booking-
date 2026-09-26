@@ -97,6 +97,8 @@ export const createBookingSchema = z.object({
     phone: z.string().max(50).nullable().optional(),
   }),
   confirmationMode: z.enum(["manual", "payment_required"]).optional(),
+  /** Explicit operator-selected Guest (admin). Storefront must not send this. */
+  guestId: z.string().uuid().nullable().optional(),
 });
 
 export const changeBookingStaySchema = z.object({

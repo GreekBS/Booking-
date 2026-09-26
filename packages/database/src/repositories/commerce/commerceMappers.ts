@@ -119,6 +119,7 @@ export function bookingToDomain(record: PrismaBooking): Booking {
       email: record.guestEmail,
       phone: record.guestPhone,
     },
+    guestId: record.guestId ?? null,
     status: record.status as BookingStatus,
     confirmationMode: record.confirmationMode as ConfirmationMode,
     createdAt: record.createdAt,

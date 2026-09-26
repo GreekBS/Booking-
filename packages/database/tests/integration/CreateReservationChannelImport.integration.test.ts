@@ -6,12 +6,14 @@ import {
   PermissionChecker,
   PrepareReservationUseCase,
   ReservationOrchestrator,
+  ResolveOrCreateGuest,
 } from "@hcp/domain";
 import { PrismaBookingRepository } from "../../src/repositories/commerce/BookingRepository";
 import { PrismaCalendarBlockRepository } from "../../src/repositories/commerce/CalendarBlockRepository";
 import { PrismaRatePlanRepository } from "../../src/repositories/commerce/RatePlanRepository";
 import { PrismaAvailabilityRulesRepository } from "../../src/repositories/commerce/AvailabilityRulesRepository";
 import { PrismaCommerceFlowRepository } from "../../src/repositories/commerce/CommerceFlowRepository";
+import { PrismaGuestRepository } from "../../src/repositories/guests/GuestRepository";
 import { PrismaCatalogQueryAdapter } from "../../src/adapters/CatalogQueryAdapter";
 import { TimezoneService } from "../../src/adapters/TimezoneService";
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
@@ -70,6 +72,7 @@ runIntegration("CreateReservation channel import integration", () => {
     prepareReservationUseCase,
     commerceFlowRepository,
     auditLogRepository,
+    new ResolveOrCreateGuest(new PrismaGuestRepository(), idGenerator, permissionChecker),
   );
 
   const importNormalizedReservationPort = new ImportNormalizedReservationAdapter(

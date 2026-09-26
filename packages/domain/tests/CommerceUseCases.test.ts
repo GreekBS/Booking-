@@ -196,6 +196,22 @@ describe("CommerceUseCases", () => {
   describe("CreateBookingUseCase", () => {
     const saveHoldAndBooking = vi.fn();
     const append = vi.fn();
+    const runInTenantTransaction = vi.fn(async (_tenantId: string, fn: () => Promise<unknown>) =>
+      fn(),
+    );
+    const resolveGuest = {
+      executeForBookingCreate: vi.fn().mockResolvedValue({
+        isFailure: false,
+        getValue: () => ({
+          guest: { id: "guest-1" },
+          outcome: "CREATED",
+          createdDueToAmbiguity: false,
+        }),
+      }),
+    };
+    const guestRepository = {
+      findById: vi.fn(),
+    };
 
     const now = new Date();
     const hold = Hold.create({
@@ -233,18 +249,22 @@ describe("CommerceUseCases", () => {
     const useCase = new CreateBookingUseCase(
       { findById: vi.fn().mockResolvedValue(hold) } as never,
       { findById: vi.fn().mockResolvedValue(quote) } as never,
-      { saveHoldAndBooking } as never,
+      { saveHoldAndBooking, runInTenantTransaction } as never,
       permissionChecker,
       { append } as never,
       { generate: vi.fn().mockReturnValue("booking-1") } as never,
+      resolveGuest as never,
+      guestRepository as never,
     );
 
     beforeEach(() => {
       saveHoldAndBooking.mockReset();
       append.mockReset();
+      runInTenantTransaction.mockClear();
+      resolveGuest.executeForBookingCreate.mockClear();
     });
 
-    it("creates booking transactionally", async () => {
+    it("creates booking transactionally with Guest link", async () => {
       const result = await useCase.execute(
         {
           tenantId: "tenant-1",
@@ -255,9 +275,32 @@ describe("CommerceUseCases", () => {
       );
 
       expect(result.isSuccess).toBe(true);
+      expect(runInTenantTransaction).toHaveBeenCalledOnce();
+      expect(resolveGuest.executeForBookingCreate).toHaveBeenCalledOnce();
       expect(saveHoldAndBooking).toHaveBeenCalledOnce();
       expect(append).toHaveBeenCalledOnce();
       expect(result.getValue()).toBeInstanceOf(Booking);
+      expect(result.getValue().guestId).toBe("guest-1");
+    });
+
+    it("rejects storefront-supplied guestId", async () => {
+      const result = await useCase.execute(
+        {
+          tenantId: "tenant-1",
+          quoteId: "quote-1",
+          guest: { name: "Guest", email: "guest@test.com", phone: null },
+          guestId: "guest-hijack",
+        },
+        {
+          userId: "storefront:tenant-1",
+          role: "admin",
+          propertyIds: null,
+          isSuperAdmin: false,
+        },
+      );
+
+      expect(result.isFailure).toBe(true);
+      expect(saveHoldAndBooking).not.toHaveBeenCalled();
     });
   });
 

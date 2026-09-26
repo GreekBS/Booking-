@@ -7,6 +7,7 @@ import {
   CreateQuoteUseCase,
   PermissionChecker,
   ReservationOrchestrator,
+  ResolveOrCreateGuest,
 } from "@hcp/domain";
 import { PrismaHoldRepository } from "../../src/repositories/commerce/HoldRepository";
 import { PrismaQuoteRepository } from "../../src/repositories/commerce/QuoteRepository";
@@ -15,6 +16,7 @@ import { PrismaCalendarBlockRepository } from "../../src/repositories/commerce/C
 import { PrismaRatePlanRepository } from "../../src/repositories/commerce/RatePlanRepository";
 import { PrismaAvailabilityRulesRepository } from "../../src/repositories/commerce/AvailabilityRulesRepository";
 import { PrismaCommerceFlowRepository } from "../../src/repositories/commerce/CommerceFlowRepository";
+import { PrismaGuestRepository } from "../../src/repositories/guests/GuestRepository";
 import { PrismaCatalogQueryAdapter } from "../../src/adapters/CatalogQueryAdapter";
 import { TimezoneService } from "../../src/adapters/TimezoneService";
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
@@ -88,6 +90,8 @@ runIntegration("Booking stay change integration", () => {
     permissionChecker,
     auditLogRepository,
     idGenerator,
+    new ResolveOrCreateGuest(new PrismaGuestRepository(), idGenerator, permissionChecker),
+    new PrismaGuestRepository(),
   );
 
   const confirmBookingUseCase = new ConfirmBookingUseCase(

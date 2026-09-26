@@ -4,12 +4,14 @@ import { Result } from "../../shared/kernel/Result";
 import type { ICommerceFlowRepository } from "../ports/CommercePorts";
 import type { CreateReservationCommand } from "../reservation/types";
 import { PrepareReservationUseCase } from "./PrepareReservationUseCase";
+import { ResolveOrCreateGuest } from "../../guests";
 
 export class CreateReservationUseCase {
   constructor(
     private readonly prepareReservationUseCase: PrepareReservationUseCase,
     private readonly commerceFlowRepository: ICommerceFlowRepository,
     private readonly auditLogRepository: IAuditLogRepository,
+    private readonly resolveOrCreateGuest: ResolveOrCreateGuest,
   ) {}
 
   async execute(
@@ -25,7 +27,27 @@ export class CreateReservationUseCase {
       const { hold, quote, booking } = prepared.getValue();
       const { reservation, profile } = command;
 
-      await this.commerceFlowRepository.saveImportReservation(hold, quote, booking);
+      await this.commerceFlowRepository.runInTenantTransaction(
+        reservation.tenantId,
+        async () => {
+          const resolved = await this.resolveOrCreateGuest.executeForBookingCreate(
+            {
+              tenantId: reservation.tenantId,
+              contact: {
+                displayName: reservation.guest.name,
+                email: reservation.guest.email,
+                phone: reservation.guest.phone,
+              },
+            },
+            profile.actor,
+          );
+          if (resolved.isFailure) {
+            throw resolved.getError();
+          }
+          booking.linkGuest(resolved.getValue().guest.id);
+          await this.commerceFlowRepository.saveImportReservation(hold, quote, booking);
+        },
+      );
 
       if (profile.writeAudit) {
         await this.auditLogRepository.append({
@@ -37,6 +59,7 @@ export class CreateReservationUseCase {
           metadata: {
             quoteId: quote.id,
             holdId: hold.id,
+            guestId: booking.guestId,
             source: reservation.source,
             externalReference: reservation.externalReference ?? null,
           },

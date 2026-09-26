@@ -11,6 +11,13 @@ import { persistBookingTx, persistHoldTx, persistQuoteTx } from "./commercePersi
 export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
   constructor(private readonly outboxRepository: PrismaOutboxRepository) {}
 
+  async runInTenantTransaction<T>(
+    tenantId: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    return withTenantTransaction(tenantId, async () => fn());
+  }
+
   async saveHoldAndBooking(hold: Hold, booking: Booking): Promise<void> {
     const holdEvents = hold.pullDomainEvents();
     const bookingEvents = booking.pullDomainEvents();

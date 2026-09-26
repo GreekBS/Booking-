@@ -89,6 +89,7 @@ export async function persistBookingTx(tx: TransactionClient, booking: Booking):
         guestEmail: booking.guest.email,
         guestPhone: booking.guest.phone,
         guestCount: booking.guestCount.value,
+        guestId: booking.guestId,
         checkIn: toDateColumn(checkIn),
         checkOut: toDateColumn(checkOut),
         status: booking.status as BookingStatus,
@@ -114,6 +115,8 @@ export async function persistBookingTx(tx: TransactionClient, booking: Booking):
         guestName: booking.guest.name,
         guestEmail: booking.guest.email,
         guestPhone: booking.guest.phone,
+        // Preserve existing guestId unless booking carries a new link
+        ...(booking.guestId != null ? { guestId: booking.guestId } : {}),
         ...(booking.status === "confirmed" && !existing.confirmedAt
           ? { confirmedAt: new Date() }
           : {}),

@@ -182,6 +182,8 @@ export interface IAvailabilityRulesRepository {
 }
 
 export interface ICommerceFlowRepository {
+  /** Run fn inside the tenant write transaction (ALS). Nested commerce saves join this TX. */
+  runInTenantTransaction<T>(tenantId: string, fn: () => Promise<T>): Promise<T>;
   saveHoldAndBooking(hold: Hold, booking: Booking): Promise<void>;
   saveImportReservation(hold: Hold, quote: Quote, booking: Booking): Promise<void>;
   saveStayChange(quote: Quote, booking: Booking): Promise<void>;
