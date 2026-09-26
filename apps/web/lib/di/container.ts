@@ -134,6 +134,8 @@ import {
 
   GetRatePlanUseCase,
   PreviewStayPricingUseCase,
+  ResolveOrCreateGuest,
+  GetGuestUseCase,
 
   GetQuoteUseCase,
 
@@ -444,6 +446,8 @@ import {
   PrismaBusinessFiscalProfileRepository,
 
   PrismaCustomerBillingProfileRepository,
+
+  PrismaGuestRepository,
 
   PrismaFiscalSeriesRepository,
 
@@ -958,6 +962,8 @@ const businessFiscalProfileRepository = new PrismaBusinessFiscalProfileRepositor
 
 const customerBillingProfileRepository = new PrismaCustomerBillingProfileRepository();
 
+const guestRepository = new PrismaGuestRepository();
+
 const fiscalSeriesRepository = new PrismaFiscalSeriesRepository();
 
 const fiscalDocumentRepository = new PrismaFiscalDocumentRepository();
@@ -1233,6 +1239,17 @@ export const previewStayPricingUseCase = new PreviewStayPricingUseCase(
 
   permissionChecker,
 
+);
+
+export const resolveOrCreateGuest = new ResolveOrCreateGuest(
+  guestRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const getGuestUseCase = new GetGuestUseCase(
+  guestRepository,
+  permissionChecker,
 );
 
 

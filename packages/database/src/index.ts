@@ -72,6 +72,7 @@ export {
   PrismaCustomerBillingProfileRepository,
   seedGreekStatutoryTaxRules,
 } from "./repositories/fiscal/FiscalRepositories";
+export { PrismaGuestRepository } from "./repositories/guests/GuestRepository";
 export {
   PrismaFiscalSeriesRepository,
   PrismaFiscalDocumentRepository,

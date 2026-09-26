@@ -46,6 +46,13 @@ export const PERMISSIONS = {
   BOOKING_UPDATE_TENANT: "booking:update:tenant",
   BOOKING_CANCEL_TENANT: "booking:cancel:tenant",
 
+  /** Tenant-wide Guest CRM read (Admin / Super Admin Open). */
+  GUEST_READ_TENANT: "guest:read:tenant",
+  /** Manager: Guest identity only when authorized Property activity exists. */
+  GUEST_READ_ASSIGNED: "guest:read:assigned",
+  GUEST_CREATE_TENANT: "guest:create:tenant",
+  GUEST_UPDATE_TENANT: "guest:update:tenant",
+
   /** Manage channel connections and non-elevated feed semantic modes. */
   CHANNELS_CONNECTION_MANAGE: "channels:connection:manage:tenant",
   /** Elevated: declare reservation_feed semantic mode (not Booking import enablement). */
@@ -84,6 +91,9 @@ export const ROLE_PERMISSIONS: Record<TenantRole, readonly Permission[]> = {
     PERMISSIONS.BOOKING_CREATE_TENANT,
     PERMISSIONS.BOOKING_UPDATE_TENANT,
     PERMISSIONS.BOOKING_CANCEL_TENANT,
+    PERMISSIONS.GUEST_READ_TENANT,
+    PERMISSIONS.GUEST_CREATE_TENANT,
+    PERMISSIONS.GUEST_UPDATE_TENANT,
     PERMISSIONS.CHANNELS_CONNECTION_MANAGE,
     PERMISSIONS.CHANNELS_CONNECTION_DECLARE_RESERVATION_FEED,
   ],
@@ -92,6 +102,7 @@ export const ROLE_PERMISSIONS: Record<TenantRole, readonly Permission[]> = {
     PERMISSIONS.PROPERTY_UPDATE_ASSIGNED,
     PERMISSIONS.AVAILABILITY_READ_ASSIGNED,
     PERMISSIONS.BOOKING_READ_ASSIGNED,
+    PERMISSIONS.GUEST_READ_ASSIGNED,
   ],
 };
 
@@ -127,6 +138,9 @@ export const SUPER_ADMIN_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.BOOKING_CREATE_TENANT,
   PERMISSIONS.BOOKING_UPDATE_TENANT,
   PERMISSIONS.BOOKING_CANCEL_TENANT,
+  PERMISSIONS.GUEST_READ_TENANT,
+  PERMISSIONS.GUEST_CREATE_TENANT,
+  PERMISSIONS.GUEST_UPDATE_TENANT,
   PERMISSIONS.CHANNELS_CONNECTION_MANAGE,
   PERMISSIONS.CHANNELS_CONNECTION_DECLARE_RESERVATION_FEED,
 ];

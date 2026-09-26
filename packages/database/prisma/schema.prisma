@@ -281,6 +281,7 @@ model Tenant {
   taxRules                     TaxRule[]
   businessFiscalProfiles       BusinessFiscalProfile[]
   customerBillingProfiles      CustomerBillingProfile[]
+  guests                       Guest[]
   fiscalSeries                 FiscalSeries[]
   fiscalDocuments              FiscalDocument[]
   fiscalDocumentLines          FiscalDocumentLine[]
@@ -757,6 +758,8 @@ model Booking {
   guestEmail         String           @map("guest_email") @db.VarChar(255)
   guestPhone         String?          @map("guest_phone") @db.VarChar(50)
   guestCount         Int              @map("guest_count")
+  /// CRM Guest identity (tenant-owned). Nullable until linked; snapshots remain authoritative for stay contact.
+  guestId            String?          @map("guest_id") @db.Uuid
   checkIn            DateTime         @map("check_in") @db.Date
   checkOut           DateTime         @map("check_out") @db.Date
   status             BookingStatus    @default(pending)
@@ -774,12 +777,14 @@ model Booking {
   unit           Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   quote          Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  guest          Guest?          @relation(fields: [guestId], references: [id], onDelete: Restrict)
   paymentRecords PaymentRecord[]
   payments       Payment[]
   folios         Folio[]
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, guestId])
   @@map("bookings")
 }
 
@@ -1094,6 +1099,37 @@ model CustomerBillingProfile {
 
   @@index([tenantId])
   @@map("customer_billing_profiles")
+}
+
+/// CRM-1: Tenant-owned Guest identity (independent of Booking contact snapshots).
+model Guest {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  displayName        String    @map("display_name") @db.VarChar(255)
+  firstName          String?   @map("first_name") @db.VarChar(128)
+  lastName           String?   @map("last_name") @db.VarChar(128)
+  email              String?   @db.VarChar(255)
+  emailNormalized    String?   @map("email_normalized") @db.VarChar(255)
+  phone              String?   @db.VarChar(50)
+  phoneNormalized    String?   @map("phone_normalized") @db.VarChar(32)
+  country            String?   @db.Char(2)
+  preferredLanguage  String?   @map("preferred_language") @db.VarChar(16)
+  archivedAt         DateTime? @map("archived_at") @db.Timestamptz
+  mergedIntoGuestId  String?   @map("merged_into_guest_id") @db.Uuid
+  anonymizedAt       DateTime? @map("anonymized_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mergedIntoGuest Guest?  @relation("GuestMerge", fields: [mergedIntoGuestId], references: [id], onDelete: Restrict)
+  mergedFrom      Guest[] @relation("GuestMerge")
+  bookings        Booking[]
+
+  @@index([tenantId, emailNormalized])
+  @@index([tenantId, phoneNormalized])
+  @@index([tenantId, displayName])
+  @@index([tenantId, archivedAt])
+  @@map("guests")
 }
 
 /// F3: Fiscal document series — next_sequence advanced only inside issue transaction.

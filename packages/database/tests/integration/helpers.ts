@@ -25,6 +25,7 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.businessFiscalProfile.deleteMany();
   await prisma.taxRule.deleteMany({ where: { tenantId: { not: null } } });
   await prisma.booking.deleteMany();
+  await prisma.guest.deleteMany();
   await prisma.quote.deleteMany();
   await prisma.bookingHold.deleteMany();
   await prisma.unitCalendarBlock.deleteMany();
@@ -69,10 +70,10 @@ export async function verifyRlsPoliciesActive(): Promise<boolean> {
         'booking_holds', 'quotes', 'bookings', 'payment_records',
         'tenant_publishable_keys', 'storefront_idempotency_records',
         'channel_semantic_transition_commands', 'channel_poll_cursors',
-        'folios', 'folio_lines'
+        'folios', 'folio_lines', 'guests'
       )
   `;
-  return rows.length === 20 && rows.every((row) => row.rowsecurity === true);
+  return rows.length === 21 && rows.every((row) => row.rowsecurity === true);
 }
 
 export { prisma, setTenantContext, clearTenantContext };
