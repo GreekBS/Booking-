@@ -60,9 +60,10 @@ describe("tenant channel operator UI fitness", () => {
       "utf8",
     );
     expect(detail).toContain(
-      "Talos uses this calendar feed to block externally reserved dates",
+      "blocks externally reserved dates. Does not create Talos bookings",
     );
-    expect(detail).toContain("opaque");
+    expect(detail).toContain("stores it securely");
+    expect(detail).toContain("Advanced diagnostics");
     expect(detail).not.toMatch(/connection\.feedUrl/);
     expect(detail).not.toMatch(/health\.feedUrl/);
     expect(detail).not.toMatch(/storedFeedUrl/);

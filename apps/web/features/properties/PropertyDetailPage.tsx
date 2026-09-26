@@ -6,6 +6,7 @@ import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { adminFetch, invalidatePropertiesCache } from "@/lib/admin/api";
 import type { AmenityRecord, PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -146,12 +146,12 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
   if (!property) return <ErrorState message="Property not found" />;
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title={property.name}
-        description={`/${property.slug}`}
+        description={`/${property.slug} · property detail`}
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <StatusBadge status={property.status} />
             <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
               Archive
@@ -160,8 +160,12 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         }
       />
 
-      {message && <p className="mb-4 text-sm text-emerald-600">{message}</p>}
-      {error && <div className="mb-4"><ErrorState message={error} /></div>}
+      {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
+      {error ? (
+        <div>
+          <ErrorState message={error} />
+        </div>
+      ) : null}
 
       <Tabs defaultValue="general">
         <TabsList className="mb-4 flex-wrap">
@@ -174,9 +178,12 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         </TabsList>
 
         <TabsContent value="general">
-          <Card>
-            <CardHeader><CardTitle>General information</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+          <Surface variant="panel" padding="md">
+            <SurfaceHeader
+              title="General information"
+              description="Name, type, timezone, and public description."
+            />
+            <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Name</Label>
@@ -185,7 +192,9 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="villa">Villa</SelectItem>
                       <SelectItem value="apartment">Apartment</SelectItem>
@@ -196,7 +205,10 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 </div>
                 <div className="space-y-2">
                   <Label>Timezone</Label>
-                  <Input value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} />
+                  <Input
+                    value={form.timezone}
+                    onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
@@ -220,19 +232,25 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               >
                 {saving ? "Saving..." : "Save general"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </Surface>
         </TabsContent>
 
         <TabsContent value="units">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Units</CardTitle>
-              <Button size="sm" asChild>
-                <Link href={`/dashboard/units?propertyId=${propertyId}`}>Manage units</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
+          <Surface variant="panel" padding="none">
+            <div className="border-b border-border px-4 py-3">
+              <SurfaceHeader
+                className="mb-0"
+                title="Units"
+                description="Rooms for this property. Manage capacity and status from Units."
+                action={
+                  <Button size="sm" asChild>
+                    <Link href={`/dashboard/units?propertyId=${propertyId}`}>Manage units</Link>
+                  </Button>
+                }
+              />
+            </div>
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -248,24 +266,32 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                       <TableCell>{unit.name}</TableCell>
                       <TableCell>{unit.maxGuests}</TableCell>
                       <TableCell>{unit.bedrooms}</TableCell>
-                      <TableCell><StatusBadge status={unit.status} /></TableCell>
+                      <TableCell>
+                        <StatusBadge status={unit.status} />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+            </div>
+          </Surface>
         </TabsContent>
 
         <TabsContent value="amenities">
-          <Card>
-            <CardHeader><CardTitle>Amenities</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+          <Surface variant="panel" padding="md">
+            <SurfaceHeader
+              title="Amenities"
+              description="Features shown on the listing. Save after changing selection."
+            />
+            <div className="space-y-4">
               <div className="grid gap-2 sm:grid-cols-2">
                 {amenities.map((amenity) => {
                   const checked = form.amenityIds.includes(amenity.id);
                   return (
-                    <label key={amenity.id} className="flex items-center gap-2 rounded-md border p-3">
+                    <label
+                      key={amenity.id}
+                      className="flex items-center gap-2 rounded-md border border-border bg-surface-subtle p-3"
+                    >
                       <input
                         type="checkbox"
                         checked={checked}
@@ -283,29 +309,41 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                   );
                 })}
               </div>
-              {amenities.length === 0 && (
+              {amenities.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No amenities yet. <Link href="/dashboard/amenities" className="underline">Create amenities</Link>
+                  No amenities yet.{" "}
+                  <Link href="/dashboard/amenities" className="underline">
+                    Create amenities
+                  </Link>
                 </p>
-              )}
+              ) : null}
               <Button disabled={saving} onClick={() => void save({ amenityIds: form.amenityIds })}>
                 Save amenities
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </Surface>
         </TabsContent>
 
         <TabsContent value="policies">
-          <Card>
-            <CardHeader><CardTitle>Policies</CardTitle></CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Surface variant="panel" padding="md">
+            <SurfaceHeader
+              title="Policies"
+              description="Check-in/out times and cancellation stance for guests."
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Check-in time</Label>
-                <Input value={form.checkInTime} onChange={(e) => setForm({ ...form, checkInTime: e.target.value })} />
+                <Input
+                  value={form.checkInTime}
+                  onChange={(e) => setForm({ ...form, checkInTime: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Check-out time</Label>
-                <Input value={form.checkOutTime} onChange={(e) => setForm({ ...form, checkOutTime: e.target.value })} />
+                <Input
+                  value={form.checkOutTime}
+                  onChange={(e) => setForm({ ...form, checkOutTime: e.target.value })}
+                />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Cancellation policy</Label>
@@ -313,7 +351,9 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                   value={form.cancellationPolicyType}
                   onValueChange={(v) => setForm({ ...form, cancellationPolicyType: v })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="flexible">Flexible</SelectItem>
                     <SelectItem value="moderate">Moderate</SelectItem>
@@ -335,17 +375,23 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               >
                 Save policies
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </Surface>
         </TabsContent>
 
         <TabsContent value="location">
-          <Card>
-            <CardHeader><CardTitle>Location</CardTitle></CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Surface variant="panel" padding="md">
+            <SurfaceHeader
+              title="Location"
+              description="Address fields used on the listing and guest communications."
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label>Address</Label>
-                <Input value={form.addressLine} onChange={(e) => setForm({ ...form, addressLine: e.target.value })} />
+                <Input
+                  value={form.addressLine}
+                  onChange={(e) => setForm({ ...form, addressLine: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>City</Label>
@@ -353,15 +399,25 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               </div>
               <div className="space-y-2">
                 <Label>Region</Label>
-                <Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
+                <Input
+                  value={form.region}
+                  onChange={(e) => setForm({ ...form, region: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Postal code</Label>
-                <Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
+                <Input
+                  value={form.postalCode}
+                  onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Country (ISO)</Label>
-                <Input maxLength={2} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+                <Input
+                  maxLength={2}
+                  value={form.country}
+                  onChange={(e) => setForm({ ...form, country: e.target.value })}
+                />
               </div>
               <Button
                 disabled={saving}
@@ -379,21 +435,23 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               >
                 Save location
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </Surface>
         </TabsContent>
 
         <TabsContent value="status">
-          <Card>
-            <CardHeader><CardTitle>Publication status</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Active properties are visible on the storefront. Draft properties are admin-only.
-              </p>
+          <Surface variant="panel" padding="md">
+            <SurfaceHeader
+              title="Publication status"
+              description="Active properties are visible on the storefront. Draft properties are admin-only."
+            />
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                  <SelectTrigger className="max-w-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
@@ -408,8 +466,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               <Button disabled={saving} onClick={() => void save({ status: form.status })}>
                 {saving ? "Saving..." : "Update status"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </Surface>
         </TabsContent>
       </Tabs>
 

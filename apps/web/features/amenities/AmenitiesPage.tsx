@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { adminFetch } from "@/lib/admin/api";
 import type { AmenityRecord } from "@/lib/admin/types";
+import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { Button } from "@/components/ui/button";
@@ -34,16 +37,19 @@ export function AmenitiesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", icon: "", category: "" });
 
   async function load() {
     if (!tenantId) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await adminFetch<{ data: AmenityRecord[] }>("/amenities", { tenantId });
       setAmenities(res.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load amenities");
+      setAmenities([]);
     } finally {
       setLoading(false);
     }
@@ -54,19 +60,27 @@ export function AmenitiesPage() {
   }, [tenantId]);
 
   async function create() {
-    if (!tenantId) return;
-    await adminFetch("/amenities", {
-      method: "POST",
-      tenantId,
-      body: JSON.stringify({
-        name: form.name,
-        icon: form.icon || null,
-        category: form.category || null,
-      }),
-    });
-    setDialogOpen(false);
-    setForm({ name: "", icon: "", category: "" });
-    await load();
+    if (!tenantId || !form.name.trim()) return;
+    setCreating(true);
+    try {
+      await adminFetch("/amenities", {
+        method: "POST",
+        tenantId,
+        body: JSON.stringify({
+          name: form.name.trim(),
+          icon: form.icon.trim() || null,
+          category: form.category.trim() || null,
+        }),
+      });
+      setDialogOpen(false);
+      setForm({ name: "", icon: "", category: "" });
+      toastSuccess("Amenity created");
+      await load();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Failed to create amenity");
+    } finally {
+      setCreating(false);
+    }
   }
 
   const tenantGate = renderTenantGate({
@@ -75,14 +89,23 @@ export function AmenitiesPage() {
     tenantId,
   });
   if (tenantGate) return tenantGate;
-  if (loading) return <Skeleton className="h-96 w-full" />;
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
     <div>
       <PageHeader
         title="Amenities"
-        description="Property features and tags — assign to properties from property details"
+        description="Tenant-wide catalog of amenity definitions. Assign amenities to a property from Property detail — this page does not use Active Property."
+        meta={
+          <span className="text-xs text-muted-foreground">
+            Assign on{" "}
+            <Link
+              href="/dashboard/properties"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              Properties
+            </Link>
+          </span>
+        }
         actions={
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -91,34 +114,72 @@ export function AmenitiesPage() {
         }
       />
 
-      {amenities.length === 0 ? (
-        <EmptyState
-          title="No amenities"
-          description="Create amenities and assign them to properties."
-          action={{ label: "Add amenity", onClick: () => setDialogOpen(true) }}
-        />
-      ) : (
-        <div className="rounded-md border">
+      <Surface padding="none">
+        <div className="border-b border-border px-4 py-3">
+          <SurfaceHeader
+            className="mb-0"
+            title="Amenity catalog"
+            description="Shared definitions for the tenant. Property assignment happens on each property’s detail page."
+          />
+        </div>
+
+        {error ? (
+          <div className="p-4">
+            <ErrorState message={error} onRetry={() => void load()} />
+          </div>
+        ) : loading ? (
+          <div className="space-y-2 p-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : amenities.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              compact
+              title="No amenities yet"
+              description="Create catalog entries here, then assign them on a property’s detail page."
+              action={{
+                label: "Add amenity",
+                onClick: () => setDialogOpen(true),
+              }}
+            />
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              Or open{" "}
+              <Link
+                href="/dashboard/properties"
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                Properties
+              </Link>{" "}
+              to assign amenities after they exist.
+            </p>
+          </div>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Icon</TableHead>
+                <TableHead className="hidden sm:table-cell">Icon</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {amenities.map((amenity) => (
                 <TableRow key={amenity.id}>
                   <TableCell className="font-medium">{amenity.name}</TableCell>
-                  <TableCell>{amenity.category ?? "—"}</TableCell>
-                  <TableCell>{amenity.icon ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {amenity.category ?? "—"}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
+                    {amenity.icon ?? "—"}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
+        )}
+      </Surface>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -127,21 +188,42 @@ export function AmenitiesPage() {
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Label htmlFor="amenity-name">Name</Label>
+              <Input
+                id="amenity-name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Category</Label>
-              <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+              <Label htmlFor="amenity-category">Category</Label>
+              <Input
+                id="amenity-category"
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                placeholder="Optional"
+              />
             </div>
             <div className="space-y-2">
-              <Label>Icon</Label>
-              <Input value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} />
+              <Label htmlFor="amenity-icon">Icon</Label>
+              <Input
+                id="amenity-icon"
+                value={form.icon}
+                onChange={(e) => setForm({ ...form, icon: e.target.value })}
+                placeholder="Optional key or name"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => void create()}>Create</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={creating || !form.name.trim()}
+              onClick={() => void create()}
+            >
+              {creating ? "Creating…" : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/admin/status-badge";
+import { Surface } from "@/components/admin/surface";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { OperatorChannelConnection } from "../types";
 import type { BookingComCapabilities, BookingComOperatorPhase } from "./types";
 
@@ -19,6 +19,14 @@ const PHASE_LABEL: Record<BookingComOperatorPhase, string> = {
   degraded: "Needs attention",
   disconnected: "Disconnected",
 };
+
+function phaseStatusKey(phase: BookingComOperatorPhase): string {
+  if (phase === "connected") return "active";
+  if (phase === "paused") return "paused";
+  if (phase === "degraded" || phase === "disconnected") return "error";
+  if (phase === "awaiting_access" || phase === "setup_required") return "pending_auth";
+  return "draft";
+}
 
 function phaseFromConnection(
   connection: OperatorChannelConnection | null,
@@ -59,54 +67,35 @@ export function BookingComProviderCard({
     : "/dashboard/channels/booking-com/setup";
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">Booking.com</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reservations in · availability, rates &amp; restrictions out
-            </p>
-          </div>
-          <Badge
-            variant={
-              phase === "connected"
-                ? "default"
-                : phase === "degraded" || phase === "disconnected"
-                  ? "destructive"
-                  : "secondary"
-            }
-          >
-            {PHASE_LABEL[phase]}
-          </Badge>
+    <Surface className="flex flex-col">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold">Booking.com</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Reservations in · availability, rates &amp; restrictions out
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="mt-auto space-y-3">
+        <StatusBadge status={phaseStatusKey(phase)} label={PHASE_LABEL[phase]} />
+      </div>
+      <div className="mt-4 flex flex-1 flex-col space-y-3">
         {partner ? (
           <p
-            className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+            className="rounded-md border border-border bg-surface-subtle px-3 py-2 text-xs text-muted-foreground"
             role="status"
           >
             {partner.operatorMessage}
           </p>
         ) : null}
         {connection ? (
-          <dl className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-            <div>
-              <dt className="sr-only">Connection</dt>
-              <dd className="truncate font-medium text-foreground">{connection.displayName}</dd>
-            </div>
-            <div>
-              <dt className="inline text-muted-foreground">Status: </dt>
-              <dd className="inline capitalize">{connection.status.replace(/_/g, " ")}</dd>
-            </div>
-          </dl>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{connection.displayName}</span>
+          </p>
         ) : (
           <p className="text-sm text-muted-foreground">
             Connect your Booking.com hotel to sync reservations and availability.
           </p>
         )}
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-auto flex flex-wrap gap-2 pt-1">
           {connection ? (
             <Button asChild>
               <Link href={href}>
@@ -124,8 +113,8 @@ export function BookingComProviderCard({
             <Link href="/dashboard/channels/help/booking-com">Help guide</Link>
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Surface>
   );
 }
 
@@ -137,16 +126,12 @@ export function ComingSoonProviderCard({
   description: string;
 }) {
   return (
-    <Card className="opacity-80">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-lg">{name}</CardTitle>
-          <Badge variant="outline">Coming later</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
+    <Surface variant="subtle" className="opacity-90">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-base font-semibold">{name}</h3>
+        <StatusBadge status="draft" label="Coming soon" />
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    </Surface>
   );
 }

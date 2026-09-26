@@ -9,11 +9,11 @@ import { fetchAllProperties, fetchRatePlan } from "@/lib/admin/api";
 import type { PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
+import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -246,17 +246,17 @@ export function BookingComWizard({ connectionId }: Props) {
         </p>
       ) : null}
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
-          <CardTitle className="text-base">
-            Step {stepIndex + 1}: {step.title}
-          </CardTitle>
-          <ContextualHelpLink
-            anchor={step.helpAnchor}
-            label="Help for this step"
-          />
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Surface>
+        <SurfaceHeader
+          title={`Step ${stepIndex + 1}: ${step.title}`}
+          action={
+            <ContextualHelpLink
+              anchor={step.helpAnchor}
+              label="Help for this step"
+            />
+          }
+        />
+        <div className="space-y-4">
           {step.id === "before" ? (
             <BeforeStep />
           ) : null}
@@ -269,8 +269,8 @@ export function BookingComWizard({ connectionId }: Props) {
                 <div className="space-y-2">
                   <Label htmlFor="talos-property">Talos property</Label>
                   <Select value={propertyId} onValueChange={setPropertyId}>
-                    <SelectTrigger id="talos-property">
-                      <SelectValue placeholder="Select property" />
+                    <SelectTrigger id="talos-property" aria-label="Mapping property">
+                      <SelectValue placeholder="Select property to map" />
                     </SelectTrigger>
                     <SelectContent>
                       {properties.map((p) => (
@@ -385,9 +385,10 @@ export function BookingComWizard({ connectionId }: Props) {
                       <div>
                         <p className="font-medium">{unit.name}</p>
                         <p className="font-mono text-[11px] text-muted-foreground">{unit.id}</p>
-                        <Badge variant="outline" className="mt-1">
-                          {roomDrafts[unit.id] ? "Mapped" : "Not mapped"}
-                        </Badge>
+                        <StatusBadge
+                          status={roomDrafts[unit.id] ? "active" : "draft"}
+                          label={roomDrafts[unit.id] ? "Mapped" : "Not mapped"}
+                        />
                       </div>
                       <span className="hidden text-center text-muted-foreground sm:block" aria-hidden>
                         ↔
@@ -642,9 +643,10 @@ export function BookingComWizard({ connectionId }: Props) {
               </Button>
               {validation ? (
                 <div className="space-y-2">
-                  <Badge variant={validation.ok ? "default" : "destructive"}>
-                    {validation.ok ? "Ready" : "Blocked"}
-                  </Badge>
+                  <StatusBadge
+                    status={validation.ok ? "active" : "error"}
+                    label={validation.ok ? "Ready" : "Blocked"}
+                  />
                   {validation.blocking.map((issue) => (
                     <p
                       key={`b-${issue.code}-${issue.mappingId ?? ""}`}
@@ -876,8 +878,8 @@ export function BookingComWizard({ connectionId }: Props) {
               ) : null}
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </Surface>
 
       <div className="flex flex-wrap justify-between gap-2">
         <Button

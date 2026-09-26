@@ -7,6 +7,7 @@ import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { fetchAllProperties } from "@/lib/admin/api";
 import type { PaginatedProperties, PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -102,10 +103,10 @@ export function PropertiesPage() {
   if (error) return <ErrorState message={error} />;
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title="Properties"
-        description="Manage your accommodation listings"
+        description="Tenant-wide listings — search, open details, or jump to units. Not scoped to Active Property."
         actions={
           <Button asChild>
             <Link href="/dashboard/properties/new">
@@ -116,28 +117,34 @@ export function PropertiesPage() {
         }
       />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or slug..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+      <Surface variant="panel" padding="md">
+        <SurfaceHeader
+          title="Find properties"
+          description="Filter by name, slug, or publication status."
+        />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or slug..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[160px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      </Surface>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -146,60 +153,79 @@ export function PropertiesPage() {
           action={{ label: "Add property", href: "/dashboard/properties/new", onClick: () => {} }}
         />
       ) : (
-        <div className={`rounded-md border bg-card ${loading && data !== null ? "opacity-60" : ""}`}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Units</TableHead>
-                <TableHead className="w-[50px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((property: PropertyRecord) => (
-                <TableRow key={property.id}>
-                  <TableCell>
-                    <Link
-                      href={`/dashboard/properties/${property.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {property.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{property.slug}</TableCell>
-                  <TableCell className="capitalize">{property.type}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={property.status} />
-                  </TableCell>
-                  <TableCell>{property.units.length}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/properties/${property.id}`}>View details</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/units?propertyId=${property.id}`}>Manage units</Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        <Surface
+          variant="panel"
+          padding="none"
+          className={loading && data !== null ? "opacity-60" : ""}
+        >
+          <div className="border-b border-border px-4 py-3">
+            <SurfaceHeader
+              className="mb-0"
+              title="All properties"
+              description={
+                data
+                  ? `${data.meta.total} total · page ${page} of ${totalPages}`
+                  : undefined
+              }
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Slug</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Units</TableHead>
+                  <TableHead className="w-[50px]" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="p-4">
+              </TableHeader>
+              <TableBody>
+                {filtered.map((property: PropertyRecord) => (
+                  <TableRow key={property.id}>
+                    <TableCell>
+                      <Link
+                        href={`/dashboard/properties/${property.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {property.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{property.slug}</TableCell>
+                    <TableCell className="capitalize">{property.type}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={property.status} />
+                    </TableCell>
+                    <TableCell>{property.units.length}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/properties/${property.id}`}>View details</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/units?propertyId=${property.id}`}>
+                              Manage units
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="border-t border-border p-4">
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
-        </div>
+        </Surface>
       )}
     </div>
   );

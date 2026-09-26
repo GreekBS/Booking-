@@ -6,9 +6,9 @@ import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { fetchAllProperties } from "@/lib/admin/api";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
+import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { channelStatusLabel } from "@/lib/admin/operator-labels";
 import {
   disconnectChannelConnection,
   pauseChannelConnection,
@@ -34,6 +35,20 @@ import { ContextualHelpLink } from "./ContextualHelpLink";
 import type { BookingComOperatorView } from "./types";
 
 type Props = { connectionId: string };
+
+const RECONCILE_OUTCOME_LABEL: Record<string, string> = {
+  MAPPING_DRIFT: "Mapping needs review",
+  PROVIDER_UNAVAILABLE: "Booking.com unavailable",
+  REMOTE_DRIFT: "Availability differences found",
+  LOCAL_AHEAD: "Local inventory ahead",
+  MISSING_RESERVATION: "Reservation needs review",
+  OK: "In sync",
+  HEALTHY: "Healthy",
+};
+
+function reconcileOutcomeLabel(outcome: string): string {
+  return RECONCILE_OUTCOME_LABEL[outcome] ?? outcome.replace(/_/g, " ").toLowerCase();
+}
 
 function friendlyIssue(connection: BookingComOperatorView): string[] {
   const messages: string[] = [];
@@ -65,7 +80,7 @@ function friendlyIssue(connection: BookingComOperatorView): string[] {
     }
   }
   if (messages.length === 0 && connection.phase === "connected") {
-    messages.push("Connection looks healthy.");
+    messages.push("No open issues reported.");
   }
   return [...new Set(messages)];
 }
@@ -142,7 +157,17 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
     <div className="space-y-5">
       <PageHeader
         title={view.connection.displayName}
-        description="Booking.com operational dashboard"
+        description="Booking.com — reservations in, availability and rates out."
+        meta={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              status={view.connection.status}
+              label={view.phaseLabel || channelStatusLabel(view.connection.status)}
+            />
+            <span className="text-xs text-muted-foreground">Booking.com</span>
+            <ContextualHelpLink anchor="health" label="Health guide" />
+          </div>
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
@@ -155,13 +180,10 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge>{view.phaseLabel}</Badge>
-        <span className="text-sm text-muted-foreground">Booking.com</span>
-        <ContextualHelpLink anchor="health" label="Health guide" />
-      </div>
-
-      <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" role="status">
+      <p
+        className="rounded-md border border-border bg-surface-subtle/50 px-3 py-2 text-sm text-muted-foreground"
+        role="status"
+      >
         {view.partnerAccess.operatorMessage}
       </p>
 
@@ -171,66 +193,52 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
         </p>
       ) : null}
       {actionMessage ? (
-        <p className="text-sm text-emerald-800" role="status">
+        <p className="text-sm text-success" role="status">
           {actionMessage}
         </p>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Connection</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+        <Surface>
+          <SurfaceHeader title="Connection" />
+          <div className="space-y-1 text-sm">
             <p>
               Status:{" "}
               <span className="capitalize">
-                {view.connection.status.replace(/_/g, " ")}
+                {channelStatusLabel(view.connection.status)}
               </span>
             </p>
             <p>Hotel ID: {view.setup?.hotelId ?? "—"}</p>
             <p>Property mapped: {view.counts.propertyMapped ? "Yes" : "No"}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Mappings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+          </div>
+        </Surface>
+        <Surface>
+          <SurfaceHeader title="Property / listing mapping" />
+          <div className="space-y-1 text-sm">
             <p>Rooms mapped: {view.counts.roomsMapped}</p>
             <p>Rate plans mapped: {view.counts.ratesMapped}</p>
-            <p>Roomrates mapped: {view.counts.roomratesMapped}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Reservations</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <p>
-              Health follows Booking.com → Talos receive path. Live retrieval requires partner
-              access.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Availability &amp; rates</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <p>
-              Outbound ARI uses the durable push pipeline. Failures retry automatically where
-              safe.
-            </p>
-          </CardContent>
-        </Card>
+            <p>Room–rate links: {view.counts.roomratesMapped}</p>
+          </div>
+        </Surface>
+        <Surface>
+          <SurfaceHeader title="Reservations" />
+          <p className="text-sm text-muted-foreground">
+            Health follows the Booking.com → Talos receive path. Live retrieval requires
+            partner access.
+          </p>
+        </Surface>
+        <Surface>
+          <SurfaceHeader title="Inventory synchronization" />
+          <p className="text-sm text-muted-foreground">
+            Availability and rates use the durable outbound pipeline. Failures retry
+            automatically where safe.
+          </p>
+        </Surface>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Issues requiring attention</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      <Surface>
+        <SurfaceHeader title="Status" description="Issues requiring attention" />
+        <div className="space-y-2">
           {issues.map((msg) => (
             <p key={msg} className="text-sm">
               {msg}
@@ -238,57 +246,37 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
           ))}
           {view.reconciliation[0] ? (
             <p className="text-xs text-muted-foreground">
-              Last reconciliation: {view.reconciliation[0].scope} /{" "}
-              {view.reconciliation[0].outcome} @{" "}
+              Last check: {reconcileOutcomeLabel(view.reconciliation[0].outcome)} ·{" "}
               {new Date(view.reconciliation[0].completedAt).toLocaleString()}
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">No reconciliation runs yet.</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Surface>
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          disabled={busy}
-          onClick={() =>
-            void (async () => {
-              setBusy(true);
-              setActionError(null);
-              try {
-                const result = await reconcileBookingComConnection(
-                  tenantId!,
-                  connectionId,
-                  { from, to, ...catalog },
-                );
-                if (!result.available) {
-                  setActionMessage(result.message ?? view.partnerAccess.operatorMessage);
-                } else {
-                  setActionMessage("Reconciliation completed.");
-                  await load();
-                }
-              } catch (err) {
-                setActionError(formatBookingComApiError(err));
-              } finally {
-                setBusy(false);
-              }
-            })()
-          }
-        >
-          Reconcile
-        </Button>
-        {view.connection.status === "active" ? (
+      <Surface>
+        <SurfaceHeader title="Actions" />
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
             disabled={busy}
             onClick={() =>
               void (async () => {
                 setBusy(true);
+                setActionError(null);
                 try {
-                  await pauseChannelConnection(tenantId!, connectionId, version);
-                  setActionMessage("Connection paused.");
-                  await load();
+                  const result = await reconcileBookingComConnection(
+                    tenantId!,
+                    connectionId,
+                    { from, to, ...catalog },
+                  );
+                  if (!result.available) {
+                    setActionMessage(result.message ?? view.partnerAccess.operatorMessage);
+                  } else {
+                    setActionMessage("Reconciliation completed.");
+                    await load();
+                  }
                 } catch (err) {
                   setActionError(formatBookingComApiError(err));
                 } finally {
@@ -297,41 +285,63 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
               })()
             }
           >
-            Pause
+            Reconcile
           </Button>
-        ) : null}
-        {view.connection.status === "paused" ? (
+          {view.connection.status === "active" ? (
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                void (async () => {
+                  setBusy(true);
+                  try {
+                    await pauseChannelConnection(tenantId!, connectionId, version);
+                    setActionMessage("Connection paused.");
+                    await load();
+                  } catch (err) {
+                    setActionError(formatBookingComApiError(err));
+                  } finally {
+                    setBusy(false);
+                  }
+                })()
+              }
+            >
+              Pause
+            </Button>
+          ) : null}
+          {view.connection.status === "paused" ? (
+            <Button
+              disabled={busy}
+              onClick={() =>
+                void (async () => {
+                  setBusy(true);
+                  try {
+                    await resumeChannelConnection(tenantId!, connectionId, version);
+                    setActionMessage("Connection resumed.");
+                    await load();
+                  } catch (err) {
+                    setActionError(formatBookingComApiError(err));
+                  } finally {
+                    setBusy(false);
+                  }
+                })()
+              }
+            >
+              Resume
+            </Button>
+          ) : null}
           <Button
-            disabled={busy}
-            onClick={() =>
-              void (async () => {
-                setBusy(true);
-                try {
-                  await resumeChannelConnection(tenantId!, connectionId, version);
-                  setActionMessage("Connection resumed.");
-                  await load();
-                } catch (err) {
-                  setActionError(formatBookingComApiError(err));
-                } finally {
-                  setBusy(false);
-                }
-              })()
-            }
+            variant="destructive"
+            disabled={busy || view.connection.status === "disconnected"}
+            onClick={() => setConfirmDisconnect(true)}
           >
-            Resume
+            Disconnect
           </Button>
-        ) : null}
-        <Button
-          variant="destructive"
-          disabled={busy || view.connection.status === "disconnected"}
-          onClick={() => setConfirmDisconnect(true)}
-        >
-          Disconnect
-        </Button>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/channels/help/booking-com">Help Center</Link>
-        </Button>
-      </div>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/channels/help/booking-com">Help</Link>
+          </Button>
+        </div>
+      </Surface>
 
       <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
         <AlertDialogContent>

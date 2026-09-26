@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
@@ -10,6 +11,7 @@ import {
 import { adminFetch, fetchAllProperties, flattenUnits, invalidatePropertiesCache } from "@/lib/admin/api";
 import type { FlatUnit, PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
@@ -55,6 +57,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function UnitsPage() {
+  const searchParams = useSearchParams();
+  const queryPropertyId = searchParams.get("propertyId");
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
@@ -62,7 +66,9 @@ export function UnitsPage() {
     properties: activeProperties,
     ready: propertyReady,
     error: propertyError,
+    setActiveProperty,
   } = useActiveProperty();
+  const syncedQueryRef = useRef<string | null>(null);
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +84,27 @@ export function UnitsPage() {
     bathrooms: 1,
     status: "active",
   });
+
+  // Prefer Active Property as source of truth. If ?propertyId= is present and
+  // accessible, sync once via setActiveProperty so the rest of the operator UI matches.
+  useEffect(() => {
+    if (!propertyReady || !queryPropertyId) return;
+    if (syncedQueryRef.current === queryPropertyId) return;
+    if (queryPropertyId === propertyId) {
+      syncedQueryRef.current = queryPropertyId;
+      return;
+    }
+    if (activeProperties.some((p) => p.id === queryPropertyId)) {
+      setActiveProperty(queryPropertyId);
+      syncedQueryRef.current = queryPropertyId;
+    }
+  }, [
+    propertyReady,
+    queryPropertyId,
+    propertyId,
+    activeProperties,
+    setActiveProperty,
+  ]);
 
   async function load() {
     if (!tenantId) return;
@@ -194,12 +221,12 @@ export function UnitsPage() {
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title="Units"
         description={
           property
-            ? `Rooms for ${property.name}`
+            ? `Rooms for ${property.name} (Active Property)`
             : "Manage rooms and accommodation units"
         }
         actions={
@@ -210,12 +237,6 @@ export function UnitsPage() {
         }
       />
 
-      {property ? (
-        <p className="mb-4 text-sm text-muted-foreground">
-          Active property: <span className="font-medium text-foreground">{property.name}</span>
-        </p>
-      ) : null}
-
       {units.length === 0 ? (
         <EmptyState
           title="No units yet"
@@ -223,52 +244,71 @@ export function UnitsPage() {
           action={{ label: "Add unit", onClick: openCreate }}
         />
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Unit</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Bed / Bath</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {units.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell className="font-medium">
-                    <button type="button" className="hover:underline" onClick={() => setDetailUnit(unit)}>
-                      {unit.name}
-                    </button>
-                  </TableCell>
-                  <TableCell>{unit.propertyName}</TableCell>
-                  <TableCell>{unit.maxGuests} guests</TableCell>
-                  <TableCell>
-                    {unit.bedrooms} / {unit.bathrooms}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={unit.status} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(unit)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setArchiveUnit(unit)}>Archive</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        <Surface variant="panel" padding="none">
+          <div className="border-b border-border px-4 py-3">
+            <SurfaceHeader
+              className="mb-0"
+              title="Unit roster"
+              description={
+                property
+                  ? `${units.length} unit${units.length === 1 ? "" : "s"} · ${property.name}`
+                  : undefined
+              }
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Property</TableHead>
+                  <TableHead>Capacity</TableHead>
+                  <TableHead>Bed / Bath</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {units.map((unit) => (
+                  <TableRow key={unit.id}>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="hover:underline"
+                        onClick={() => setDetailUnit(unit)}
+                      >
+                        {unit.name}
+                      </button>
+                    </TableCell>
+                    <TableCell>{unit.propertyName}</TableCell>
+                    <TableCell>{unit.maxGuests} guests</TableCell>
+                    <TableCell>
+                      {unit.bedrooms} / {unit.bathrooms}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={unit.status} />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(unit)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setArchiveUnit(unit)}>
+                            Archive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Surface>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -285,37 +325,59 @@ export function UnitsPage() {
             ) : null}
             <div className="space-y-2">
               <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label>Max guests</Label>
-                <Input type="number" min={1} value={form.maxGuests} onChange={(e) => setForm({ ...form, maxGuests: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.maxGuests}
+                  onChange={(e) => setForm({ ...form, maxGuests: Number(e.target.value) })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Bedrooms</Label>
-                <Input type="number" min={0} value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.bedrooms}
+                  onChange={(e) => setForm({ ...form, bedrooms: Number(e.target.value) })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Bathrooms</Label>
-                <Input type="number" min={0} value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.bathrooms}
+                  onChange={(e) => setForm({ ...form, bathrooms: Number(e.target.value) })}
+                />
               </div>
             </div>
-            {editUnit && (
+            {editUnit ? (
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            ) : null}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => void saveUnit()}>Save</Button>
           </DialogFooter>
         </DialogContent>
@@ -323,25 +385,55 @@ export function UnitsPage() {
 
       <Sheet open={Boolean(detailUnit)} onOpenChange={(open) => !open && setDetailUnit(null)}>
         <SheetContent>
-          {detailUnit && (
+          {detailUnit ? (
             <>
               <SheetHeader>
                 <SheetTitle>{detailUnit.name}</SheetTitle>
               </SheetHeader>
               <dl className="mt-6 space-y-3 text-sm">
-                <div className="flex justify-between"><dt className="text-muted-foreground">Property</dt><dd>{detailUnit.propertyName}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Slug</dt><dd className="font-mono text-xs">{detailUnit.slug}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Capacity</dt><dd>{detailUnit.maxGuests} guests</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Bedrooms</dt><dd>{detailUnit.bedrooms}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Bathrooms</dt><dd>{detailUnit.bathrooms}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Status</dt><dd><StatusBadge status={detailUnit.status} /></dd></div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Property</dt>
+                  <dd>{detailUnit.propertyName}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Slug</dt>
+                  <dd className="font-mono text-xs">{detailUnit.slug}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Capacity</dt>
+                  <dd>{detailUnit.maxGuests} guests</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Bedrooms</dt>
+                  <dd>{detailUnit.bedrooms}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Bathrooms</dt>
+                  <dd>{detailUnit.bathrooms}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Status</dt>
+                  <dd>
+                    <StatusBadge status={detailUnit.status} />
+                  </dd>
+                </div>
               </dl>
               <div className="mt-6 flex gap-2">
-                <Button size="sm" onClick={() => { openEdit(detailUnit); setDetailUnit(null); }}>Edit</Button>
-                <Button size="sm" variant="destructive" onClick={() => setArchiveUnit(detailUnit)}>Archive</Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    openEdit(detailUnit);
+                    setDetailUnit(null);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setArchiveUnit(detailUnit)}>
+                  Archive
+                </Button>
               </div>
             </>
-          )}
+          ) : null}
         </SheetContent>
       </Sheet>
 
@@ -352,7 +444,9 @@ export function UnitsPage() {
         description={`Archive "${archiveUnit?.name}"? It will no longer accept bookings.`}
         confirmLabel="Archive"
         destructive
-        onConfirm={() => { if (archiveUnit) void archiveUnitAction(archiveUnit); }}
+        onConfirm={() => {
+          if (archiveUnit) void archiveUnitAction(archiveUnit);
+        }}
       />
     </div>
   );

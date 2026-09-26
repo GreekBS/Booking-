@@ -7,6 +7,7 @@ import { adminFetch, fetchPropertyUnitCatalog } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { MemberRecord, PendingInvitationRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -43,6 +44,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function formatRole(role: string): string {
+  if (!role) return "—";
+  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+}
 
 export function MembersPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
@@ -179,10 +185,10 @@ export function MembersPage() {
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title="Members"
-        description="Team access, roles, and property scoping for managers"
+        description="Tenant-wide team access, roles, and property scoping for managers"
         actions={
           <Button onClick={() => setInviteOpen(true)}>
             <UserPlus className="h-4 w-4" />
@@ -198,70 +204,87 @@ export function MembersPage() {
           action={{ label: "Invite member", onClick: () => setInviteOpen(true) }}
         />
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Properties</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.user?.name ?? "—"}</TableCell>
-                  <TableCell>{member.user?.email ?? "—"}</TableCell>
-                  <TableCell className="capitalize">{member.role}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                    {member.role === "manager" ? propertyLabel(member.propertyIds) : "All"}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={member.status} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setEditMember(member);
-                            setEditForm({
-                              role: member.role,
-                              propertyIds: member.propertyIds ?? [],
-                            });
-                          }}
-                        >
-                          Edit role & properties
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled
-                          title="Resend is only for pending invitations"
-                        >
-                          Resend invite
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setRevokeTarget(member)}>Revoke</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        <Surface variant="panel" padding="none">
+          <div className="border-b border-border px-4 py-3">
+            <SurfaceHeader
+              className="mb-0"
+              title="Team members"
+              description={`${members.length} member${members.length === 1 ? "" : "s"} with access to this tenant`}
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Properties</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>{member.user?.name ?? "—"}</TableCell>
+                    <TableCell>{member.user?.email ?? "—"}</TableCell>
+                    <TableCell>{formatRole(member.role)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                      {member.role === "manager" ? propertyLabel(member.propertyIds) : "All"}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={member.status} />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditMember(member);
+                              setEditForm({
+                                role: member.role,
+                                propertyIds: member.propertyIds ?? [],
+                              });
+                            }}
+                          >
+                            Edit role & properties
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled
+                            title="Resend is only for pending invitations"
+                          >
+                            Resend invite
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setRevokeTarget(member)}>
+                            Revoke
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Surface>
       )}
 
-      {pendingInvitations.length > 0 && (
-        <div className="mt-8 space-y-3">
-          <h2 className="text-lg font-semibold">Pending invitations</h2>
-          <div className="rounded-md border">
+      {pendingInvitations.length > 0 ? (
+        <Surface variant="panel" padding="none">
+          <div className="border-b border-border px-4 py-3">
+            <SurfaceHeader
+              className="mb-0"
+              title="Pending invitations"
+              description="Invites that have not been accepted yet"
+            />
+          </div>
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -275,7 +298,7 @@ export function MembersPage() {
                 {pendingInvitations.map((invitation) => (
                   <TableRow key={invitation.id}>
                     <TableCell>{invitation.email}</TableCell>
-                    <TableCell className="capitalize">{invitation.role}</TableCell>
+                    <TableCell>{formatRole(invitation.role)}</TableCell>
                     <TableCell>{new Date(invitation.expiresAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Button
@@ -292,8 +315,8 @@ export function MembersPage() {
               </TableBody>
             </Table>
           </div>
-        </div>
-      )}
+        </Surface>
+      ) : null}
 
       <MemberFormDialog
         open={inviteOpen}
@@ -325,7 +348,13 @@ export function MembersPage() {
         propertyIds={editForm.propertyIds}
         properties={properties}
         loading={actionLoading}
-        onRoleChange={(role) => setEditForm({ ...editForm, role, propertyIds: role === "admin" ? [] : editForm.propertyIds })}
+        onRoleChange={(role) =>
+          setEditForm({
+            ...editForm,
+            role,
+            propertyIds: role === "admin" ? [] : editForm.propertyIds,
+          })
+        }
         onPropertyToggle={(id, checked) =>
           setEditForm({
             ...editForm,
@@ -385,26 +414,32 @@ function MemberFormDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4">
-          {onEmailChange && (
+          {onEmailChange ? (
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input type="email" value={email ?? ""} onChange={(e) => onEmailChange(e.target.value)} />
+              <Input
+                type="email"
+                value={email ?? ""}
+                onChange={(e) => onEmailChange(e.target.value)}
+              />
             </div>
-          )}
+          ) : null}
           <div className="space-y-2">
             <Label>Role</Label>
             <Select value={role} onValueChange={onRoleChange}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {role === "manager" && (
+          {role === "manager" ? (
             <div className="space-y-2">
               <Label>Assigned properties</Label>
-              <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+              <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-border p-3">
                 {properties.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 text-sm">
                     <input
@@ -417,10 +452,12 @@ function MemberFormDialog({
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button disabled={loading} onClick={onSubmit}>
             {loading ? "Saving..." : "Save"}
           </Button>

@@ -10,12 +10,13 @@ import {
   useActiveProperty,
 } from "@/hooks/use-active-property";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
+import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -33,6 +34,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  channelProviderLabel,
+  channelStatusLabel,
+} from "@/lib/admin/operator-labels";
+import {
   createIcalConnection,
   formatChannelApiError,
   listChannelConnections,
@@ -49,13 +54,14 @@ import {
 } from "./booking-com/booking-com-api";
 import type { BookingComCapabilities } from "./booking-com/types";
 
-function statusVariant(
-  status: string,
-): "default" | "secondary" | "destructive" | "outline" {
-  if (status === "active") return "default";
-  if (status === "error" || status === "disconnected") return "destructive";
-  if (status === "paused" || status === "pending_auth") return "secondary";
-  return "outline";
+function connectionHref(c: OperatorChannelConnection): string {
+  if (
+    c.provider === "booking_com" &&
+    (c.status === "draft" || c.status === "pending_auth")
+  ) {
+    return `/dashboard/channels/${c.connectionId}/setup`;
+  }
+  return `/dashboard/channels/${c.connectionId}`;
 }
 
 export function ChannelsPage() {
@@ -169,26 +175,43 @@ export function ChannelsPage() {
   const propertyLabel = property?.name ?? "this property";
 
   return (
-    <div className="space-y-8">
+    <div>
       <PageHeader
         title="Channels"
-        description={`Channel connections for ${propertyLabel}. Switch Active Property to manage another property's channels.`}
+        description="Distribution workspace — connect OTAs and calendar feeds for the active property."
+        meta={
+          <span className="text-xs text-muted-foreground">
+            Active property ·{" "}
+            <span className="font-medium text-foreground">{propertyLabel}</span>
+          </span>
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href="/dashboard/channels/help">Help Center</Link>
+              <Link href="/dashboard/channels/help">Help</Link>
             </Button>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4" />
-              Add iCal connection
+              Add iCal
             </Button>
           </div>
         }
       />
 
-      <section aria-labelledby="providers-heading" className="space-y-3">
-        <h2 id="providers-heading" className="text-sm font-semibold tracking-wide text-muted-foreground">
-          Providers
+      <Surface variant="subtle" className="mb-5" padding="sm">
+        <p className="text-xs text-muted-foreground">
+          Connections are tenant-scoped; this list shows relevance for the Active Property
+          via mappings and workspace drafts. Switch Active Property in the header to focus
+          another property.
+        </p>
+      </Surface>
+
+      <section aria-labelledby="providers-heading" className="mb-6 space-y-3">
+        <h2
+          id="providers-heading"
+          className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+        >
+          Available integrations
         </h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <BookingComProviderCard
@@ -197,82 +220,108 @@ export function ChannelsPage() {
             onStart={() => void startBookingCom()}
             starting={startingBooking}
           />
+          <IcalProviderCard
+            count={icalConnections.length}
+            onAdd={() => setDialogOpen(true)}
+          />
           <ComingSoonProviderCard
             name="Airbnb"
-            description="Airbnb Connectivity is not implemented yet. This card is informational only."
+            description="Airbnb Connectivity is not implemented yet. Informational only."
           />
           <ComingSoonProviderCard
             name="Expedia"
-            description="Expedia Partner Solutions is not implemented yet. This card is informational only."
-          />
-          <CardIcalSummary
-            count={icalConnections.length}
-            onAdd={() => setDialogOpen(true)}
+            description="Expedia Partner Solutions is not implemented yet. Informational only."
           />
         </div>
       </section>
 
-      <section aria-labelledby="connections-heading" className="space-y-3">
-        <h2 id="connections-heading" className="text-sm font-semibold tracking-wide text-muted-foreground">
-          Connections for {propertyLabel}
-        </h2>
-        {connections.length === 0 ? (
-          <EmptyState
-            title="No channel connections"
-            description="Connect Booking.com or add an iCal feed to get started."
-            action={{ label: "Add iCal connection", onClick: () => setDialogOpen(true) }}
+      <Surface padding="none">
+        <div className="border-b border-border px-4 py-3">
+          <SurfaceHeader
+            className="mb-0"
+            title="Connected channels"
+            description={`Connections relevant to ${propertyLabel}`}
           />
-        ) : (
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Health</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {connections.map((c) => (
-                  <TableRow key={c.connectionId}>
-                    <TableCell>
-                      <Link
-                        href={
-                          c.provider === "booking_com" &&
-                          (c.status === "draft" || c.status === "pending_auth")
-                            ? `/dashboard/channels/${c.connectionId}/setup`
-                            : `/dashboard/channels/${c.connectionId}`
-                        }
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {c.displayName}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {c.provider === "booking_com" ? "Booking.com" : c.provider}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(c.status)} className="capitalize">
-                        {c.status.replace(/_/g, " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
-                      {c.lastError ? (
-                        <span className="text-destructive">{c.lastError}</span>
-                      ) : c.hasCredentialRef ? (
-                        "Credential present"
-                      ) : (
-                        "No credential"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        </div>
+        {connections.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              compact
+              title="No channel connections"
+              description="Connect Booking.com or add an iCal feed to sync blocked dates and reservations."
+              action={{ label: "Add iCal", onClick: () => setDialogOpen(true) }}
+            />
           </div>
+        ) : (
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Connection</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">Notes</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {connections.map((c) => (
+                    <TableRow key={c.connectionId}>
+                      <TableCell className="font-medium">{c.displayName}</TableCell>
+                      <TableCell className="text-xs">
+                        {channelProviderLabel(c.provider)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          status={c.status}
+                          label={channelStatusLabel(c.status)}
+                        />
+                      </TableCell>
+                      <TableCell className="hidden max-w-[240px] truncate text-xs text-muted-foreground lg:table-cell">
+                        {c.lastError ? (
+                          <span className="text-destructive">{c.lastError}</span>
+                        ) : c.hasCredentialRef ? (
+                          "Feed connected"
+                        ) : (
+                          "Setup incomplete"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={connectionHref(c)}>
+                            {c.status === "draft" || c.status === "pending_auth"
+                              ? "Continue setup"
+                              : "Open"}
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <ul className="divide-y divide-border md:hidden">
+              {connections.map((c) => (
+                <li key={c.connectionId} className="flex items-start justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{c.displayName}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {channelProviderLabel(c.provider)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <StatusBadge status={c.status} label={channelStatusLabel(c.status)} />
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={connectionHref(c)}>Open</Link>
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
-      </section>
+      </Surface>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -312,23 +361,20 @@ export function ChannelsPage() {
   );
 }
 
-function CardIcalSummary({
-  count,
-  onAdd,
-}: {
-  count: number;
-  onAdd: () => void;
-}) {
+function IcalProviderCard({ count, onAdd }: { count: number; onAdd: () => void }) {
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
+    <Surface className="flex flex-col">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold">iCal</h3>
+          <h3 className="text-base font-semibold">iCal</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Import external blocked dates. Does not create Talos bookings.
           </p>
         </div>
-        <Badge variant="secondary">{count} connected</Badge>
+        <StatusBadge
+          status={count > 0 ? "active" : "draft"}
+          label={count > 0 ? `${count} connected` : "Available"}
+        />
       </div>
       <div className="mt-4">
         <Button onClick={onAdd}>
@@ -336,6 +382,6 @@ function CardIcalSummary({
           Add iCal connection
         </Button>
       </div>
-    </div>
+    </Surface>
   );
 }

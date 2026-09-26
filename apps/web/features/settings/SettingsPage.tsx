@@ -19,8 +19,8 @@ import type {
   TenantSettingsRecord,
 } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { ErrorState } from "@/components/admin/error-state";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FiscalSettingsSection } from "./FiscalSettingsSection";
+
+type SettingsSection =
+  | "organization"
+  | "regional"
+  | "commerce"
+  | "fiscal"
+  | "storefront-keys";
+
+const SECTION_TRIGGER_CLASS =
+  "rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none";
 
 export function SettingsPage() {
   const { profile, tenantId, tenantName, loading: tenantLoading, error: tenantError } = useTenant();
   const membership = profile?.memberships.find((m) => m.tenantId === tenantId);
 
+  const [section, setSection] = useState<SettingsSection>("organization");
   const [tenantSettings, setTenantSettings] = useState<TenantSettingsRecord | null>(null);
   const [commerceSettings, setCommerceSettings] = useState<CommerceSettingsRecord | null>(null);
   const [keys, setKeys] = useState<PublishableKeyRecord[]>([]);
@@ -167,168 +179,232 @@ export function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Settings" description="Tenant configuration, commerce, and storefront keys" />
+      <PageHeader
+        title="Settings"
+        description="Organization, regional, commerce, fiscal, and storefront configuration"
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Tenant profile</CardTitle>
-            <CardDescription>Read-only session context</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tenant name</Label>
-              <Input value={tenantName} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label>Slug</Label>
-              <Input value={membership?.tenantSlug ?? ""} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label>Your role</Label>
-              <Input value={membership?.role ?? ""} readOnly className="capitalize" />
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs
+        value={section}
+        onValueChange={(value) => setSection(value as SettingsSection)}
+        className="space-y-5"
+      >
+        <div className="border-b border-border">
+          <TabsList className="h-9 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
+            <TabsTrigger value="organization" className={SECTION_TRIGGER_CLASS}>
+              Organization
+            </TabsTrigger>
+            <TabsTrigger value="regional" className={SECTION_TRIGGER_CLASS}>
+              Regional
+            </TabsTrigger>
+            <TabsTrigger value="commerce" className={SECTION_TRIGGER_CLASS}>
+              Commerce
+            </TabsTrigger>
+            <TabsTrigger value="fiscal" className={SECTION_TRIGGER_CLASS}>
+              Fiscal
+            </TabsTrigger>
+            <TabsTrigger value="storefront-keys" className={SECTION_TRIGGER_CLASS}>
+              Storefront keys
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Regional settings</CardTitle>
-            <CardDescription>Timezone, locale, currency, and display formats</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Timezone</Label>
-              <Input
-                value={tenantSettings.timezone}
-                onChange={(e) => setTenantSettings({ ...tenantSettings, timezone: e.target.value })}
-              />
+        <TabsContent value="organization" className="mt-0 focus-visible:outline-none">
+          <Surface>
+            <SurfaceHeader
+              title="Tenant profile"
+              description="Read-only session context for the active organization"
+            />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>Tenant name</Label>
+                <Input value={tenantName} readOnly />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Slug</Label>
+                <Input value={membership?.tenantSlug ?? ""} readOnly />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Your role</Label>
+                <Input value={membership?.role ?? ""} readOnly className="capitalize" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Default locale</Label>
-              <Input
-                value={tenantSettings.defaultLocale}
-                onChange={(e) => setTenantSettings({ ...tenantSettings, defaultLocale: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Default currency</Label>
-              <Input
-                value={tenantSettings.defaultCurrency}
-                onChange={(e) => setTenantSettings({ ...tenantSettings, defaultCurrency: e.target.value.toUpperCase() })}
-                maxLength={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Date format</Label>
-              <Select
-                value={tenantSettings.dateFormat}
-                onValueChange={(value) =>
-                  setTenantSettings({ ...tenantSettings, dateFormat: value })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Time format</Label>
-              <Select
-                value={tenantSettings.timeFormat}
-                onValueChange={(value) =>
-                  setTenantSettings({ ...tenantSettings, timeFormat: value })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">24-hour</SelectItem>
-                  <SelectItem value="12h">12-hour</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button disabled={saving} onClick={() => void saveTenantSettings()}>
-              Save regional settings
-            </Button>
-          </CardContent>
-        </Card>
+          </Surface>
+        </TabsContent>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Commerce settings</CardTitle>
-            <CardDescription>Hold TTL, confirmation mode, and commerce currency</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Hold TTL (seconds)</Label>
-              <Input
-                type="number"
-                value={commerceSettings.defaultHoldTtlSeconds}
-                onChange={(e) =>
-                  setCommerceSettings({
-                    ...commerceSettings,
-                    defaultHoldTtlSeconds: Number.parseInt(e.target.value, 10) || 900,
-                  })
-                }
-              />
+        <TabsContent value="regional" className="mt-0 focus-visible:outline-none">
+          <Surface>
+            <SurfaceHeader
+              title="Regional settings"
+              description="Timezone, locale, currency, and display formats"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Timezone</Label>
+                <Input
+                  value={tenantSettings.timezone}
+                  onChange={(e) =>
+                    setTenantSettings({ ...tenantSettings, timezone: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Default locale</Label>
+                <Input
+                  value={tenantSettings.defaultLocale}
+                  onChange={(e) =>
+                    setTenantSettings({ ...tenantSettings, defaultLocale: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Default currency</Label>
+                <Input
+                  value={tenantSettings.defaultCurrency}
+                  onChange={(e) =>
+                    setTenantSettings({
+                      ...tenantSettings,
+                      defaultCurrency: e.target.value.toUpperCase(),
+                    })
+                  }
+                  maxLength={3}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Date format</Label>
+                <Select
+                  value={tenantSettings.dateFormat}
+                  onValueChange={(value) =>
+                    setTenantSettings({ ...tenantSettings, dateFormat: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Time format</Label>
+                <Select
+                  value={tenantSettings.timeFormat}
+                  onValueChange={(value) =>
+                    setTenantSettings({ ...tenantSettings, timeFormat: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24-hour</SelectItem>
+                    <SelectItem value="12h">12-hour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <Button disabled={saving} onClick={() => void saveTenantSettings()}>
+                  Save regional settings
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Confirmation mode</Label>
-              <Select
-                value={commerceSettings.confirmationMode}
-                onValueChange={(value) =>
-                  setCommerceSettings({ ...commerceSettings, confirmationMode: value })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="payment_required">Payment required</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Commerce currency</Label>
-              <Input
-                value={commerceSettings.defaultCurrency}
-                onChange={(e) =>
-                  setCommerceSettings({
-                    ...commerceSettings,
-                    defaultCurrency: e.target.value.toUpperCase(),
-                  })
-                }
-                maxLength={3}
-              />
-            </div>
-            <div className="sm:col-span-3">
-              <Button disabled={saving} onClick={() => void saveCommerceSettings()}>
-                Save commerce settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </Surface>
+        </TabsContent>
 
-        <FiscalSettingsSection />
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Storefront publishable keys</CardTitle>
-            <CardDescription>Only publishable keys are shown — secret keys are never stored or returned</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={saving} onClick={() => void createKey("test")}>
-                Create test key
-              </Button>
-              <Button variant="outline" disabled={saving} onClick={() => void createKey("live")}>
-                Create live key
-              </Button>
+        <TabsContent value="commerce" className="mt-0 focus-visible:outline-none">
+          <Surface>
+            <SurfaceHeader
+              title="Commerce settings"
+              description="Hold TTL, confirmation mode, and commerce currency"
+            />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>Hold TTL (seconds)</Label>
+                <Input
+                  type="number"
+                  value={commerceSettings.defaultHoldTtlSeconds}
+                  onChange={(e) =>
+                    setCommerceSettings({
+                      ...commerceSettings,
+                      defaultHoldTtlSeconds: Number.parseInt(e.target.value, 10) || 900,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Confirmation mode</Label>
+                <Select
+                  value={commerceSettings.confirmationMode}
+                  onValueChange={(value) =>
+                    setCommerceSettings({ ...commerceSettings, confirmationMode: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="payment_required">Payment required</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Commerce currency</Label>
+                <Input
+                  value={commerceSettings.defaultCurrency}
+                  onChange={(e) =>
+                    setCommerceSettings({
+                      ...commerceSettings,
+                      defaultCurrency: e.target.value.toUpperCase(),
+                    })
+                  }
+                  maxLength={3}
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <Button disabled={saving} onClick={() => void saveCommerceSettings()}>
+                  Save commerce settings
+                </Button>
+              </div>
             </div>
+          </Surface>
+        </TabsContent>
+
+        <TabsContent value="fiscal" className="mt-0 space-y-5 focus-visible:outline-none">
+          <FiscalSettingsSection />
+        </TabsContent>
+
+        <TabsContent value="storefront-keys" className="mt-0 focus-visible:outline-none">
+          <Surface>
+            <SurfaceHeader
+              title="Storefront publishable keys"
+              description="Only publishable keys are shown — secret keys are never stored or returned"
+              action={
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => void createKey("test")}
+                  >
+                    Create test key
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => void createKey("live")}
+                  >
+                    Create live key
+                  </Button>
+                </div>
+              }
+            />
             {newKeyValue && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
                 <p className="font-medium">New key (copy now):</p>
                 <code className="mt-1 block break-all font-mono">{newKeyValue}</code>
               </div>
@@ -336,19 +412,21 @@ export function SettingsPage() {
             {keys.length === 0 ? (
               <p className="text-sm text-muted-foreground">No publishable keys yet.</p>
             ) : (
-              keys.map((key) => (
-                <KeyRow
-                  key={key.id}
-                  keyRecord={key}
-                  saving={saving}
-                  onRevoke={() => void revokeKey(key.id)}
-                  onSaveDomains={(text) => void saveKeyDomains(key, text)}
-                />
-              ))
+              <div className="space-y-3">
+                {keys.map((key) => (
+                  <KeyRow
+                    key={key.id}
+                    keyRecord={key}
+                    saving={saving}
+                    onRevoke={() => void revokeKey(key.id)}
+                    onSaveDomains={(text) => void saveKeyDomains(key, text)}
+                  />
+                ))}
+              </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </Surface>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -367,7 +445,7 @@ function KeyRow({
   const [domains, setDomains] = useState(keyRecord.allowedDomains.join(", "));
 
   return (
-    <div className="rounded-md border p-4 space-y-3">
+    <Surface variant="subtle" padding="sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="font-mono text-sm">{keyRecord.keyPrefix}…</p>
@@ -382,7 +460,7 @@ function KeyRow({
         )}
       </div>
       {keyRecord.isActive && (
-        <div className="space-y-2">
+        <div className="mt-3 space-y-2">
           <Label>Allowed domains (comma-separated, * or *.example.com)</Label>
           <Input value={domains} onChange={(e) => setDomains(e.target.value)} />
           <Button size="sm" variant="outline" disabled={saving} onClick={() => onSaveDomains(domains)}>
@@ -390,6 +468,6 @@ function KeyRow({
           </Button>
         </div>
       )}
-    </div>
+    </Surface>
   );
 }

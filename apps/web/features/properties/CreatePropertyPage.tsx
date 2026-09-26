@@ -5,6 +5,7 @@ import { useState } from "react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { adminFetch, invalidatePropertiesCache } from "@/lib/admin/api";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { ErrorState } from "@/components/admin/error-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 
 export function CreatePropertyPage() {
   const router = useRouter();
@@ -56,12 +56,21 @@ export function CreatePropertyPage() {
   if (tenantGate) return tenantGate;
 
   return (
-    <div>
-      <PageHeader title="New property" description="Create a new accommodation listing" />
-      <Card className="max-w-xl">
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <ErrorState message={error} />}
+    <div className="space-y-4">
+      <PageHeader
+        title="New property"
+        description="Create a listing for this tenant. A default unit is created with the guest capacity below."
+      />
+
+      <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-4">
+        {error ? <ErrorState message={error} /> : null}
+
+        <Surface variant="panel" padding="md">
+          <SurfaceHeader
+            title="Listing basics"
+            description="Name and type shown across the operator UI and storefront."
+          />
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -80,22 +89,30 @@ export function CreatePropertyPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="maxGuests">Max guests (default unit)</Label>
-              <Input
-                id="maxGuests"
-                type="number"
-                min={1}
-                value={maxGuests}
-                onChange={(e) => setMaxGuests(Number(e.target.value))}
-              />
-            </div>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create property"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </Surface>
+
+        <Surface variant="panel" padding="md">
+          <SurfaceHeader
+            title="Default unit"
+            description="Initial room capacity. You can add more units after creation."
+          />
+          <div className="space-y-2">
+            <Label htmlFor="maxGuests">Max guests</Label>
+            <Input
+              id="maxGuests"
+              type="number"
+              min={1}
+              value={maxGuests}
+              onChange={(e) => setMaxGuests(Number(e.target.value))}
+            />
+          </div>
+        </Surface>
+
+        <Button type="submit" disabled={loading}>
+          {loading ? "Creating..." : "Create property"}
+        </Button>
+      </form>
     </div>
   );
 }

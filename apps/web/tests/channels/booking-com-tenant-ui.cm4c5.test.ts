@@ -212,7 +212,7 @@ describe("CM-4c-5 Booking.com tenant UI fitness", () => {
       join(ROOT, "features", "channels", "booking-com", "BookingComProviderCard.tsx"),
       "utf8",
     );
-    expect(providerCard).toMatch(/Coming later/);
+    expect(providerCard).toMatch(/Coming soon/);
   });
 
   it("iCal detail remains available and Booking.com dashboard is separate", () => {

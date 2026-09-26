@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
 import { useActiveProperty } from "@/hooks/use-active-property";
 import { adminFetch, fetchAllProperties } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { PropertyRecord } from "@/lib/admin/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -71,8 +71,9 @@ const emptyAddress = {
 
 export function FiscalSettingsSection() {
   const { tenantId } = useTenant();
-  // Series/profiles are property-bound config; picker defaults to active property but can still switch.
+  // Fiscal profiles are property-bound; default to Active Property, allow switching profile context.
   const { propertyId: activePropertyId } = useActiveProperty();
+  const previousActivePropertyId = useRef<string | null | undefined>(undefined);
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([]);
@@ -121,22 +122,35 @@ export function FiscalSettingsSection() {
     setBusinessProfiles(bizList.profiles ?? []);
     setCustomerProfiles(custList.profiles ?? []);
     setLocations(locList.locations ?? []);
-    if (!propertyId) {
-      const defaultId =
-        (activePropertyId && props.some((p) => p.id === activePropertyId)
-          ? activePropertyId
-          : null) ??
-        props[0]?.id ??
-        "";
-      if (defaultId) setPropertyId(defaultId);
-    }
-  }, [tenantId, propertyId, activePropertyId]);
+  }, [tenantId]);
 
   useEffect(() => {
     void load().catch((err) =>
       toastError(err instanceof Error ? err.message : "Failed to load fiscal profiles"),
     );
   }, [load]);
+
+  // Prefer Active Property as the fiscal profile context when available.
+  // Follow workspace Active Property changes; keep a manual profile switch until then.
+  useEffect(() => {
+    if (properties.length === 0) return;
+    const preferred =
+      (activePropertyId && properties.some((p) => p.id === activePropertyId)
+        ? activePropertyId
+        : null) ??
+      properties[0]?.id ??
+      "";
+    if (!preferred) return;
+
+    const activeChanged = previousActivePropertyId.current !== activePropertyId;
+    previousActivePropertyId.current = activePropertyId;
+
+    setPropertyId((current) => {
+      if (!current) return preferred;
+      if (activeChanged && preferred === activePropertyId) return preferred;
+      return current;
+    });
+  }, [activePropertyId, properties]);
 
   useEffect(() => {
     const existing = businessProfiles.find((p) => p.propertyId === propertyId);
@@ -215,20 +229,21 @@ export function FiscalSettingsSection() {
     }
   }
 
+  const selectedLocation = locations.find(
+    (l) => l.locationId === biz.establishmentLocationId,
+  );
+  const locationEligible = Boolean(selectedLocation?.eligibleForReducedVat);
+
   return (
     <>
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Business fiscal profile</CardTitle>
-          <CardDescription>
-            Configure establishment location. VAT jurisdiction is derived from the
-            verified statutory catalog (AADE E.2113/2025) — operators cannot
-            self-declare GR-ISLAND-REDUCED. No invoices or myDATA yet.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Property / establishment</Label>
+      <Surface>
+        <SurfaceHeader
+          title="Business fiscal profile"
+          description="Configure establishment location. VAT jurisdiction is derived from the verified statutory catalog (AADE E.2113/2025) — operators cannot self-declare GR-ISLAND-REDUCED. No invoices or myDATA yet."
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Fiscal profile property</Label>
             <Select value={propertyId} onValueChange={setPropertyId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select property" />
@@ -237,33 +252,38 @@ export function FiscalSettingsSection() {
                 {properties.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
+                    {p.id === activePropertyId ? " (active)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Defaults to the workspace Active Property. Switch only to edit another
+              property&apos;s fiscal profile — this does not change Active Property.
+            </p>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Legal name</Label>
             <Input
               value={biz.legalName}
               onChange={(e) => setBiz({ ...biz, legalName: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Trade name</Label>
             <Input
               value={biz.tradeName}
               onChange={(e) => setBiz({ ...biz, tradeName: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>AFM / VAT</Label>
             <Input
               value={biz.vatNumber}
               onChange={(e) => setBiz({ ...biz, vatNumber: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Establishment location</Label>
             <Select
               value={biz.establishmentLocationId}
@@ -294,7 +314,7 @@ export function FiscalSettingsSection() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Derived VAT jurisdiction (read-only)</Label>
             <Input value={biz.fiscalJurisdiction} readOnly />
             <p className="text-[11px] text-muted-foreground">
@@ -308,10 +328,7 @@ export function FiscalSettingsSection() {
               <input
                 type="checkbox"
                 checked={biz.establishmentInEligibleArea}
-                disabled={
-                  !locations.find((l) => l.locationId === biz.establishmentLocationId)
-                    ?.eligibleForReducedVat
-                }
+                disabled={!locationEligible}
                 onChange={(e) =>
                   setBiz({
                     ...biz,
@@ -325,10 +342,7 @@ export function FiscalSettingsSection() {
               <input
                 type="checkbox"
                 checked={biz.servicePhysicallyExecutedInEligibleArea}
-                disabled={
-                  !locations.find((l) => l.locationId === biz.establishmentLocationId)
-                    ?.eligibleForReducedVat
-                }
+                disabled={!locationEligible}
                 onChange={(e) =>
                   setBiz({
                     ...biz,
@@ -339,7 +353,7 @@ export function FiscalSettingsSection() {
               Accommodation service is physically executed in the eligible area
             </label>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Accommodation type</Label>
             <Select
               value={biz.accommodationType}
@@ -361,7 +375,7 @@ export function FiscalSettingsSection() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Property classification</Label>
             <Select
               value={biz.propertyClassification}
@@ -392,7 +406,7 @@ export function FiscalSettingsSection() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Address line 1</Label>
             <Input
               value={biz.address.line1}
@@ -401,7 +415,7 @@ export function FiscalSettingsSection() {
               }
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>City</Label>
             <Input
               value={biz.address.city}
@@ -410,7 +424,7 @@ export function FiscalSettingsSection() {
               }
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Postal code</Label>
             <Input
               value={biz.address.postalCode}
@@ -427,19 +441,16 @@ export function FiscalSettingsSection() {
               Save business fiscal profile
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Surface>
 
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Customer billing profiles</CardTitle>
-          <CardDescription>
-            Invoice recipient may differ from Booking guest. Individuals are not required
-            to have an AFM.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+      <Surface>
+        <SurfaceHeader
+          title="Customer billing profiles"
+          description="Invoice recipient may differ from Booking guest. Individuals are not required to have an AFM."
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <Label>Type</Label>
             <Select
               value={customer.type}
@@ -456,28 +467,28 @@ export function FiscalSettingsSection() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Legal name</Label>
             <Input
               value={customer.legalName}
               onChange={(e) => setCustomer({ ...customer, legalName: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>AFM / VAT (optional for individuals)</Label>
             <Input
               value={customer.vatNumber}
               onChange={(e) => setCustomer({ ...customer, vatNumber: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Email</Label>
             <Input
               value={customer.email}
               onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Address line 1</Label>
             <Input
               value={customer.address.line1}
@@ -489,7 +500,7 @@ export function FiscalSettingsSection() {
               }
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>City</Label>
             <Input
               value={customer.address.city}
@@ -501,7 +512,7 @@ export function FiscalSettingsSection() {
               }
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Postal code</Label>
             <Input
               value={customer.address.postalCode}
@@ -528,8 +539,8 @@ export function FiscalSettingsSection() {
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Surface>
     </>
   );
 }

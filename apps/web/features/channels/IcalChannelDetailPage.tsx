@@ -7,13 +7,17 @@ import { useActiveProperty } from "@/hooks/use-active-property";
 import { fetchAllProperties } from "@/lib/admin/api";
 import type { PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { ErrorState } from "@/components/admin/error-state";
+import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  channelProviderLabel,
+  channelStatusLabel,
+} from "@/lib/admin/operator-labels";
 import {
   Select,
   SelectContent,
@@ -60,24 +64,19 @@ type Props = { connectionId: string };
 type ConfirmKind = "disconnect" | "deactivate_inventory" | null;
 
 function Section({
-  step,
   title,
+  description,
   children,
 }: {
-  step: number;
   title: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          <span className="mr-2 text-muted-foreground">{step}.</span>
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
-    </Card>
+    <Surface>
+      <SurfaceHeader title={title} description={description} />
+      <div className="space-y-3">{children}</div>
+    </Surface>
   );
 }
 
@@ -201,32 +200,30 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
     <div className="space-y-5">
       <PageHeader
         title={connection.displayName}
-        description="Connection ΓåÆ Feed ΓåÆ Semantic ΓåÆ Activation ΓåÆ Mapping ΓåÆ Inventory Apply ΓåÆ Poll / Health"
+        description="iCal feed — blocks externally reserved dates. Does not create Talos bookings."
+        meta={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              status={connection.status}
+              label={channelStatusLabel(connection.status)}
+            />
+            <span className="text-xs text-muted-foreground">
+              {channelProviderLabel(connection.provider)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Feed: {connection.hasCredentialRef ? "connected" : "not set"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Inventory sync: {connection.inventoryApplyEnabled ? "on" : "off"}
+            </span>
+          </div>
+        }
         actions={
           <Button variant="outline" asChild>
             <Link href="/dashboard/channels">Back to channels</Link>
           </Button>
         }
       />
-
-      <p className="rounded-md border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-        Talos uses this calendar feed to block externally reserved dates. iCal does not
-        create Talos bookings.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge className="capitalize">{connection.status.replace(/_/g, " ")}</Badge>
-        <span className="text-muted-foreground">{connection.provider}</span>
-        <span className="font-mono text-xs text-muted-foreground">
-          v{connection.semanticConfigVersion}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          Inventory apply: {connection.inventoryApplyEnabled ? "enabled" : "disabled"}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          Credential: {connection.hasCredentialRef ? "present (opaque)" : "none"}
-        </span>
-      </div>
 
       {connection.lastError ? (
         <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -240,33 +237,12 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
         </p>
       ) : null}
       {actionMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+        <p className="rounded-md border border-success/30 bg-success-subtle px-3 py-2 text-sm text-success">
           {actionMessage}
         </p>
       ) : null}
 
-      <Section step={1} title="Connection">
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Connection ID</dt>
-            <dd className="font-mono text-xs">{connection.connectionId}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Semantic mode</dt>
-            <dd>{connection.semanticMode}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Updated</dt>
-            <dd>{new Date(connection.updatedAt).toLocaleString()}</dd>
-          </div>
-        </dl>
-      </Section>
-
-      <Section step={2} title="Feed">
-        <p className="text-sm text-muted-foreground">
-          Enter the HTTPS iCal feed URL. After save, Talos stores it in the credential
-          vault and never displays the stored URL again.
-        </p>
+      <Section title="Feed" description="Paste the HTTPS calendar URL. After save, Talos stores it securely and never shows the URL again.">
         <div className="space-y-2">
           <Label htmlFor="feed-url">iCal feed URL</Label>
           <Input
@@ -275,7 +251,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
             autoComplete="off"
             value={feedUrl}
             onChange={(e) => setFeedUrl(e.target.value)}
-            placeholder="https://ΓÇª"
+            placeholder="https://…"
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -285,7 +261,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await putIcalFeedCredentials(tenantId!, connectionId, feedUrl.trim());
-                  setActionMessage("Feed credential saved (opaque reference only).");
+                  setActionMessage("Feed saved securely.");
                 })
               }
             >
@@ -305,7 +281,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     version,
                   );
                   setActionMessage(
-                    "Feed rotated. Connection is paused ΓÇö resume when ready, then poll.",
+                    "Feed rotated. Connection is paused — resume when ready, then refresh.",
                   );
                 })
               }
@@ -316,12 +292,12 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
         </div>
       </Section>
 
-      <Section step={3} title="Semantic mode">
-        <p className="text-sm text-muted-foreground">
-          Pilot mode must be <code className="text-xs">availability_block_feed</code>.
-        </p>
+      <Section
+        title="Mode"
+        description="This pilot uses availability-block mode (blocks dates only)."
+      >
         {connection.semanticMode === "availability_block_feed" ? (
-          <p className="text-sm text-emerald-800">Already set to availability_block_feed.</p>
+          <p className="text-sm text-success">Availability-block mode is active.</p>
         ) : (
           <Button
             disabled={busy || connection.status === "disconnected"}
@@ -333,16 +309,16 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                   version,
                   connection.semanticMode,
                 );
-                setActionMessage("Semantic mode set to availability_block_feed.");
+                setActionMessage("Availability-block mode enabled.");
               })
             }
           >
-            Set availability_block_feed
+            Enable availability-block mode
           </Button>
         )}
       </Section>
 
-      <Section step={4} title="Activation">
+      <Section title="Connection status" description="Activate after the feed is saved.">
         <div className="flex flex-wrap gap-2">
           {canActivate ? (
             <Button
@@ -390,16 +366,15 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
         ) : null}
         {connection.status === "draft" ? (
           <p className="text-xs text-muted-foreground">
-            Save credentials first to move into pending auth, then activate.
+            Save the feed first, then activate the connection.
           </p>
         ) : null}
       </Section>
 
-      <Section step={5} title="Mapping">
-        <p className="text-sm text-muted-foreground">
-          Map the feed to one property unit. Mapping requires an active or paused
-          connection. Unit reassignment requires pause first.
-        </p>
+      <Section
+        title="Mapped unit"
+        description="Map this feed to one unit. Mapping requires an active or paused connection."
+      >
         {!canMap ? (
           <p className="text-sm text-amber-800">Activate the connection before mapping.</p>
         ) : (
@@ -414,22 +389,26 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     setUnitId("");
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Mapping property">
                     <SelectValue placeholder="Select property" />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
+                        {p.id === activePropertyId ? " (Active)" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Defaults to Active Property. Change only when mapping a different property.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Unit</Label>
                 <Select value={unitId} onValueChange={setUnitId}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Mapped unit">
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
@@ -453,8 +432,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
             </div>
             {activeMapping ? (
               <p className="text-xs text-muted-foreground">
-                Current mapping: {activeMapping.propertyId} / {activeMapping.unitId} (
-                {activeMapping.status})
+                Current mapping status: {activeMapping.status.replace(/_/g, " ")}
               </p>
             ) : null}
             <Button
@@ -469,7 +447,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     unitId,
                     expectedSemanticConfigVersion: version,
                   });
-                  setActionMessage("Listing mapping saved.");
+                  setActionMessage("Unit mapping saved.");
                 })
               }
             >
@@ -479,11 +457,10 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
         )}
       </Section>
 
-      <Section step={6} title="Inventory apply">
-        <p className="text-sm text-muted-foreground">
-          Enables writing imported blocks as channel_import inventory for this connection.
-          Global env flag CHANNELS_INVENTORY_APPLY_ENABLED must also be on.
-        </p>
+      <Section
+        title="Inventory synchronization"
+        description="When enabled, imported blocked dates write as channel inventory for this connection."
+      >
         <div className="flex flex-wrap gap-2">
           {!connection.inventoryApplyEnabled ? (
             <Button
@@ -491,11 +468,11 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await enableInventoryApply(tenantId!, connectionId, version);
-                  setActionMessage("Inventory apply enabled for this connection.");
+                  setActionMessage("Inventory synchronization enabled.");
                 })
               }
             >
-              Enable inventory apply
+              Enable inventory sync
             </Button>
           ) : (
             <Button
@@ -504,107 +481,111 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await disableInventoryApply(tenantId!, connectionId, version);
-                  setActionMessage("Inventory apply disabled for this connection.");
+                  setActionMessage("Inventory synchronization disabled.");
                 })
               }
             >
-              Disable inventory apply
+              Disable inventory sync
             </Button>
           )}
         </div>
       </Section>
 
-      <Section step={7} title="Poll / Health">
+      <Section title="Refresh & status" description="Pull the latest feed and review connection health.">
         <Button
           disabled={busy || connection.status !== "active"}
           onClick={() =>
             void runAction(async () => {
               const queued = await enqueueManualPoll(tenantId!, connectionId);
               setActionMessage(
-                `Poll queued (job ${queued.jobId}, status ${queued.jobStatus}).`,
+                `Refresh queued (${queued.jobStatus}).`,
               );
             })
           }
         >
-          Trigger manual poll
+          Refresh feed now
         </Button>
         {connection.status !== "active" ? (
           <p className="text-xs text-muted-foreground">
-            Manual poll requires an active connection and CHANNELS_POLLING_ENABLED.
+            Manual refresh requires an active connection.
           </p>
         ) : null}
 
         {health ? (
-          <dl className="mt-3 grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Pilot eligible</dt>
-              <dd>{health.pilotEligible ? "Yes" : "No"}</dd>
+          <div className="mt-3 space-y-2 rounded-md border border-border bg-surface-subtle/40 p-3 text-sm">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <p>
+                <span className="text-muted-foreground">Needs attention: </span>
+                {health.needsAttention ? "Yes" : "No"}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Mapped units: </span>
+                {health.activeMappingCount}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Imported blocks: </span>
+                {health.activeChannelImportCount}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Inventory sync effective: </span>
+                {health.inventoryApplyEffective ? "Yes" : "No"}
+              </p>
             </div>
-            <div>
-              <dt className="text-muted-foreground">Needs attention</dt>
-              <dd>{health.needsAttention ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Active mappings</dt>
-              <dd>{health.activeMappingCount}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Active channel_import blocks</dt>
-              <dd>{health.activeChannelImportCount}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Inventory apply effective</dt>
-              <dd>{health.inventoryApplyEffective ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Cursor updated</dt>
-              <dd>
-                {health.cursorUpdatedAt
-                  ? new Date(health.cursorUpdatedAt).toLocaleString()
-                  : "ΓÇö"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Latest poll job</dt>
-              <dd>
-                {health.latestPollJob
-                  ? `${health.latestPollJob.status}${
-                      health.latestPollJob.completedAt
-                        ? ` @ ${new Date(health.latestPollJob.completedAt).toLocaleString()}`
-                        : ""
-                    }`
-                  : "ΓÇö"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Attention reasons</dt>
-              <dd className="text-xs">
-                {health.attentionReasons.length
-                  ? health.attentionReasons.join(", ")
-                  : "ΓÇö"}
-              </dd>
-            </div>
-            {!health.pilotEligible && health.pilotEligibilityReasons.length > 0 ? (
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Pilot eligibility blockers</dt>
-                <dd className="text-xs">{health.pilotEligibilityReasons.join(", ")}</dd>
-              </div>
+            {health.attentionReasons.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {health.attentionReasons.join(" · ")}
+              </p>
             ) : null}
-          </dl>
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-medium text-foreground">
+                Advanced diagnostics
+              </summary>
+              <dl className="mt-2 grid gap-1 sm:grid-cols-2">
+                <div>
+                  <dt>Last activity</dt>
+                  <dd>
+                    {health.cursorUpdatedAt
+                      ? new Date(health.cursorUpdatedAt).toLocaleString()
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Latest poll</dt>
+                  <dd>
+                    {health.latestPollJob
+                      ? `${health.latestPollJob.status}${
+                          health.latestPollJob.completedAt
+                            ? ` · ${new Date(health.latestPollJob.completedAt).toLocaleString()}`
+                            : ""
+                        }`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Pilot eligible</dt>
+                  <dd>{health.pilotEligible ? "Yes" : "No"}</dd>
+                </div>
+                {!health.pilotEligible && health.pilotEligibilityReasons.length > 0 ? (
+                  <div className="sm:col-span-2">
+                    <dt>Eligibility notes</dt>
+                    <dd>{health.pilotEligibilityReasons.join(", ")}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </details>
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">Health unavailable.</p>
         )}
         <Button variant="outline" size="sm" disabled={busy} onClick={() => void load()}>
-          Refresh
+          Refresh status
         </Button>
       </Section>
 
-      <Section step={8} title="Safe teardown">
-        <p className="text-sm text-muted-foreground">
-          Disconnect releases connection-owned channel_import blocks. Inventory
-          deactivate pauses (if active) and releases imported inventory without
-          changing disconnect semantics.
-        </p>
+      <Section
+        title="Disconnect"
+        description="Releases imported calendar blocks for this connection. Hold and booking inventory is not released."
+      >
         <div className="flex flex-wrap gap-2">
           <Button
             variant="destructive"
@@ -618,7 +599,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
             disabled={busy || connection.status === "disconnected"}
             onClick={() => setConfirmKind("deactivate_inventory")}
           >
-            Deactivate imported inventory
+            Clear imported blocks
           </Button>
         </div>
       </Section>
@@ -634,12 +615,12 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
             <AlertDialogTitle>
               {confirmKind === "disconnect"
                 ? "Disconnect this connection?"
-                : "Deactivate imported inventory?"}
+                : "Clear imported blocks?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmKind === "disconnect"
-                ? "This disconnects the connection and releases all connection-owned channel_import blocks. Hold/Booking inventory is not released."
-                : "This releases all active channel_import blocks for the connection and pauses if currently active. Hold/Booking inventory is not released."}
+                ? "This disconnects the feed and releases imported calendar blocks. Guest bookings and holds are not affected."
+                : "This releases imported calendar blocks and pauses if currently active. Guest bookings and holds are not affected."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -652,7 +633,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     setActionMessage("Connection disconnected.");
                   } else if (confirmKind === "deactivate_inventory") {
                     await deactivateConnectionInventory(tenantId!, connectionId, version);
-                    setActionMessage("Imported inventory deactivated.");
+                    setActionMessage("Imported blocks cleared.");
                   }
                   setConfirmKind(null);
                 })
