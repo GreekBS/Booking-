@@ -44,11 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-
-function formatRole(role: string): string {
-  if (!role) return "—";
-  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-}
+import { memberRoleLabel } from "@/lib/admin/operator-labels";
 
 export function MembersPage() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
@@ -229,7 +225,7 @@ export function MembersPage() {
                   <TableRow key={member.id}>
                     <TableCell>{member.user?.name ?? "—"}</TableCell>
                     <TableCell>{member.user?.email ?? "—"}</TableCell>
-                    <TableCell>{formatRole(member.role)}</TableCell>
+                    <TableCell>{memberRoleLabel(member.role)}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                       {member.role === "manager" ? propertyLabel(member.propertyIds) : "All"}
                     </TableCell>
@@ -298,7 +294,7 @@ export function MembersPage() {
                 {pendingInvitations.map((invitation) => (
                   <TableRow key={invitation.id}>
                     <TableCell>{invitation.email}</TableCell>
-                    <TableCell>{formatRole(invitation.role)}</TableCell>
+                    <TableCell>{memberRoleLabel(invitation.role)}</TableCell>
                     <TableCell>{new Date(invitation.expiresAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Button

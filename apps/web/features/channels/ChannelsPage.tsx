@@ -186,7 +186,7 @@ export function ChannelsPage() {
           </span>
         }
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex max-w-full flex-wrap gap-2">
             <Button variant="outline" asChild>
               <Link href="/dashboard/channels/help">Help</Link>
             </Button>
@@ -199,10 +199,10 @@ export function ChannelsPage() {
       />
 
       <Surface variant="subtle" className="mb-5" padding="sm">
-        <p className="text-xs text-muted-foreground">
-          Connections are tenant-scoped; this list shows relevance for the Active Property
-          via mappings and workspace drafts. Switch Active Property in the header to focus
-          another property.
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Connections are tenant-scoped; this list shows relevance for the Active Property via
+          mappings and workspace drafts. Switch Active Property in the header to focus another
+          property.
         </p>
       </Surface>
 

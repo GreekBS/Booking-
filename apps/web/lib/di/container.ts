@@ -133,6 +133,7 @@ import {
   GetAvailabilityRulesUseCase,
 
   GetRatePlanUseCase,
+  PreviewStayPricingUseCase,
 
   GetQuoteUseCase,
 
@@ -1219,6 +1220,16 @@ export const getRatePlanUseCase = new GetRatePlanUseCase(
   catalogQueryAdapter,
 
   ratePlanRepository,
+
+  permissionChecker,
+
+);
+
+export const previewStayPricingUseCase = new PreviewStayPricingUseCase(
+
+  catalogQueryAdapter,
+
+  reservationOrchestrator,
 
   permissionChecker,
 

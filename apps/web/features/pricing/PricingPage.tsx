@@ -12,8 +12,9 @@ import {
   fetchPropertyUnitCatalog,
   flattenCatalogUnits,
   previewQuoteForStay,
+  type StayPricingPreview,
 } from "@/lib/admin/api";
-import type { QuoteRecord, RatePlanRecord } from "@/lib/admin/types";
+import type { RatePlanRecord } from "@/lib/admin/types";
 import {
   formatMoney,
   formatRatePlanForDisplay,
@@ -64,11 +65,12 @@ export function PricingPage() {
   >([]);
   const [unitId, setUnitId] = useState("");
   const [plan, setPlan] = useState<RatePlanRecord>(defaultRatePlan);
+  const [planPersisted, setPlanPersisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [preview, setPreview] = useState<QuoteRecord | null>(null);
+  const [preview, setPreview] = useState<StayPricingPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewForm, setPreviewForm] = useState({
     checkIn: "",
@@ -128,6 +130,7 @@ export function PricingPage() {
         const data = await adminFetch<RatePlanRecord | null>(`/units/${unitId}/rate-plan`, {
           tenantId: tenantId!,
         });
+        setPlanPersisted(data != null);
         setPlan(formatRatePlanForDisplay(data ?? defaultRatePlan));
         setFieldErrors({});
       } catch (err) {
@@ -161,6 +164,7 @@ export function PricingPage() {
         body: JSON.stringify(payload),
       });
       setPlan(formatRatePlanForDisplay(saved));
+      setPlanPersisted(true);
       toastSuccess("Rate plan saved");
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Failed to save";
@@ -301,6 +305,12 @@ export function PricingPage() {
                 title="Base rate"
                 description="Default nightly amount when no seasonal rate applies."
               />
+              {!planPersisted ? (
+                <p className="mb-3 rounded-md border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-950">
+                  No saved rate plan yet for this unit. Values below are a draft default until you
+                  save — the calendar will show nightly rates only after save.
+                </p>
+              ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="pricing-base-amount">Nightly amount</Label>
@@ -649,12 +659,11 @@ export function PricingPage() {
           <div className="space-y-5 xl:sticky xl:top-4 xl:self-start">
             <Surface variant="attention">
               <SurfaceHeader
-                title="Quote preview"
-                description="Creates a temporary Hold, then builds a Quote from the saved rate plan. This is an inventory-mutating preview, not a read-only estimate."
+                title="Price preview"
+                description="Read-only estimate from the saved rate plan. Does not create a Hold, Quote, or inventory block."
               />
               <p className="mb-3 text-xs text-muted-foreground">
-                Unsaved editor changes are not used — save the rate plan first. The Hold remains
-                until it expires or is released elsewhere.
+                Unsaved editor changes are not used — save the rate plan first.
               </p>
               <div className="space-y-3">
                 <div className="space-y-1.5">
@@ -699,7 +708,7 @@ export function PricingPage() {
                   onClick={() => void runPreview()}
                   disabled={previewLoading || !unitId}
                 >
-                  {previewLoading ? "Creating hold & quote…" : "Preview (creates Hold)"}
+                  {previewLoading ? "Calculating…" : "Preview price"}
                 </Button>
               </div>
               {preview ? (

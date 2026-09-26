@@ -34,18 +34,19 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
     expect(page).not.toContain("{u.propertyName} — {u.name}");
   });
 
-  it("Pricing quote preview remains Hold-creating and is labeled honestly", () => {
+  it("Pricing quote preview is read-only and does not create Hold", () => {
     const page = read("features/pricing/PricingPage.tsx");
     expect(page).toContain("previewQuoteForStay");
-    expect(page).toContain("Creates a temporary Hold");
-    expect(page).toContain("Preview (creates Hold)");
-    expect(page).toContain("Creating hold & quote");
-    expect(page).toContain("inventory-mutating preview");
-    expect(page).not.toContain("read-only calculator");
+    expect(page).toContain("Read-only estimate");
+    expect(page).toContain("Does not create a Hold");
+    expect(page).toContain("Preview price");
+    expect(page).not.toContain("Preview (creates Hold)");
+    expect(page).not.toContain("Creates a temporary Hold");
+    expect(page).not.toContain("inventory-mutating preview");
 
     const api = read("lib/admin/api.ts");
-    expect(api).toMatch(/previewQuoteForStay[\s\S]*?\/holds/);
-    expect(api).toMatch(/previewQuoteForStay[\s\S]*?\/quotes/);
+    expect(api).toMatch(/previewQuoteForStay[\s\S]*?\/pricing\/preview/);
+    expect(api).not.toMatch(/previewQuoteForStay[\s\S]*?\/holds/);
   });
 
   it("Pricing still loads rate plan per unit (no batch rewrite)", () => {

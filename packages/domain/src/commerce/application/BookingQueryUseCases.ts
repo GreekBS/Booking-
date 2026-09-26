@@ -15,6 +15,16 @@ import {
   canAccessCommerceProperty,
 } from "./commerceAccess";
 
+/**
+ * Returns:
+ * - `null` — tenant-wide reader (repo still honors filters.propertyId when set)
+ * - `string[]` — assigned reader scoped to these properties
+ * - `undefined` — deny (Forbidden)
+ *
+ * `undefined` must ONLY mean deny. Do not overload it to mean
+ * "allowed and narrowed by filters.propertyId" — that broke Active Property
+ * scoping for BOOKING_READ_TENANT (Super Admin Open / Tenant Admin).
+ */
 function resolveAllowedPropertyIds(
   permissionChecker: PermissionChecker,
   actor: ActorContext,
@@ -22,7 +32,7 @@ function resolveAllowedPropertyIds(
   propertyId?: string,
 ): string[] | null | undefined {
   if (permissionChecker.hasPermission(actor, PERMISSIONS.BOOKING_READ_TENANT, tenantId)) {
-    return propertyId ? undefined : null;
+    return null;
   }
 
   if (!permissionChecker.hasPermission(actor, PERMISSIONS.BOOKING_READ_ASSIGNED, tenantId)) {
@@ -33,7 +43,7 @@ function resolveAllowedPropertyIds(
     return undefined;
   }
 
-  return propertyId ? undefined : actor.propertyIds;
+  return actor.propertyIds;
 }
 
 export class SearchBookingsUseCase {

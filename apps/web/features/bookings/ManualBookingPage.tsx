@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { useActiveProperty } from "@/hooks/use-active-property";
 import {
   adminFetch,
+  createBookingFromQuote,
   createManualBooking,
   fetchPropertyUnitCatalog,
   flattenCatalogUnits,
+  previewQuoteForStay,
+  type StayPricingPreview,
 } from "@/lib/admin/api";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { CatalogPropertyRecord, QuoteRecord, BookingRecord } from "@/lib/admin/types";
@@ -41,6 +44,8 @@ const STEPS = [
 
 export function ManualBookingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const quoteIdFromUrl = searchParams.get("quoteId");
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId: activePropertyId,
@@ -63,7 +68,10 @@ export function ManualBookingPage() {
   const [checkOut, setCheckOut] = useState("");
   const [guestCount, setGuestCount] = useState(2);
   const [availabilityOk, setAvailabilityOk] = useState<boolean | null>(null);
-  const [quote, setQuote] = useState<QuoteRecord | null>(null);
+  /** Read-only pricing preview (no Hold). */
+  const [pricePreview, setPricePreview] = useState<StayPricingPreview | null>(null);
+  /** Existing commercial Quote from Hold conversion (?quoteId=). */
+  const [commercialQuote, setCommercialQuote] = useState<QuoteRecord | null>(null);
   const [booking, setBooking] = useState<BookingRecord | null>(null);
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
 
@@ -71,6 +79,8 @@ export function ManualBookingPage() {
     () => units.filter((u) => !propertyId || u.propertyId === propertyId),
     [units, propertyId],
   );
+
+  const displayTotal = commercialQuote ?? pricePreview;
 
   useEffect(() => {
     if (!tenantId) return;
@@ -89,14 +99,42 @@ export function ManualBookingPage() {
     void load();
   }, [tenantId]);
 
-  // Default to Active Property once catalog + property context are ready.
   useEffect(() => {
-    if (defaultsApplied || !propertyReady || properties.length === 0) return;
-    if (activePropertyId && properties.some((p) => p.id === activePropertyId)) {
+    if (defaultsApplied || !activePropertyId || properties.length === 0) return;
+    if (properties.some((p) => p.id === activePropertyId)) {
       setPropertyId(activePropertyId);
     }
     setDefaultsApplied(true);
-  }, [activePropertyId, defaultsApplied, properties, propertyReady]);
+  }, [defaultsApplied, activePropertyId, properties]);
+
+  // Hold → booking: consume existing quoteId from URL.
+  useEffect(() => {
+    if (!tenantId || !quoteIdFromUrl) return;
+    let cancelled = false;
+    async function loadQuote() {
+      setLoading(true);
+      setError(null);
+      try {
+        const q = await adminFetch<QuoteRecord>(`/quotes/${quoteIdFromUrl}`, {
+          tenantId: tenantId!,
+        });
+        if (cancelled) return;
+        setCommercialQuote(q);
+        setPricePreview(null);
+        setStep(4);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load quote");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void loadQuote();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, quoteIdFromUrl]);
 
   async function checkAvailability() {
     if (!tenantId || !unitId) return;
@@ -120,21 +158,20 @@ export function ManualBookingPage() {
     }
   }
 
+  /** Read-only price estimate — does not create Hold/Quote/inventory. */
   async function generateQuote() {
     if (!tenantId || !unitId) return;
     setSubmitting(true);
     try {
-      const hold = await adminFetch<{ id: string }>("/holds", {
-        method: "POST",
+      const preview = await previewQuoteForStay(
         tenantId,
-        body: JSON.stringify({ unitId, checkIn, checkOut, guestCount }),
-      });
-      const q = await adminFetch<QuoteRecord>("/quotes", {
-        method: "POST",
-        tenantId,
-        body: JSON.stringify({ holdId: hold.id }),
-      });
-      setQuote(q);
+        unitId,
+        checkIn,
+        checkOut,
+        guestCount,
+      );
+      setPricePreview(preview);
+      setCommercialQuote(null);
       setStep(4);
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Quote failed");
@@ -147,20 +184,41 @@ export function ManualBookingPage() {
     if (!tenantId) return;
     setSubmitting(true);
     try {
-      const result = (await createManualBooking(tenantId, {
-        unitId,
-        checkIn,
-        checkOut,
-        guestCount,
-        guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
-        confirm,
-      })) as { booking: BookingRecord };
-      setBooking(result.booking);
+      let created: BookingRecord;
+
+      if (commercialQuote) {
+        // Consume the Hold-backed Quote (Hold → Booking path).
+        created = (await createBookingFromQuote(tenantId, {
+          quoteId: commercialQuote.id,
+          guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
+          confirmationMode: "manual",
+        })) as BookingRecord;
+
+        if (confirm) {
+          created = (await adminFetch<BookingRecord>(
+            `/bookings/${created.id}/confirm`,
+            { method: "POST", tenantId },
+          )) as BookingRecord;
+        }
+      } else {
+        // Single Hold+Quote+Booking via manual pipeline (no orphan preview Hold).
+        const result = (await createManualBooking(tenantId, {
+          unitId,
+          checkIn,
+          checkOut,
+          guestCount,
+          guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
+          confirm,
+        })) as { booking: BookingRecord };
+        created = result.booking;
+      }
+
+      setBooking(created);
       toastSuccess(confirm ? "Booking confirmed" : "Booking created");
       if (confirm) {
         setStep(5);
       } else {
-        router.push(`/dashboard/bookings?bookingId=${encodeURIComponent(result.booking.id)}`);
+        router.push(`/dashboard/bookings?bookingId=${encodeURIComponent(created.id)}`);
       }
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Booking failed");
@@ -180,15 +238,18 @@ export function ManualBookingPage() {
 
   const selectedPropertyName =
     properties.find((p) => p.id === propertyId)?.name ?? activeProperty?.name;
+  const convertingHold = Boolean(commercialQuote);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <PageHeader
         title="New booking"
         description={
-          selectedPropertyName
-            ? `Manual reservation · ${selectedPropertyName}`
-            : "Create a reservation without payment"
+          convertingHold
+            ? "Complete guest details to convert the existing hold"
+            : selectedPropertyName
+              ? `Manual reservation · ${selectedPropertyName}`
+              : "Create a reservation without payment"
         }
         actions={
           <Button variant="outline" size="sm" asChild>
@@ -197,35 +258,41 @@ export function ManualBookingPage() {
         }
       />
 
-      <ol className="flex flex-wrap gap-1.5" aria-label="Booking steps">
-        {STEPS.map((label, index) => (
-          <li key={label}>
-            <span
-              className={cn(
-                "inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium",
-                index === step
-                  ? "bg-primary text-primary-foreground"
-                  : index < step
-                    ? "bg-primary-subtle text-primary"
-                    : "border border-border text-muted-foreground",
-              )}
-            >
-              {index + 1}. {label}
-            </span>
-          </li>
-        ))}
-      </ol>
+      {!convertingHold ? (
+        <ol className="flex flex-wrap gap-1.5" aria-label="Booking steps">
+          {STEPS.map((label, index) => (
+            <li key={label}>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium",
+                  index === step
+                    ? "bg-primary text-primary-foreground"
+                    : index < step
+                      ? "bg-primary-subtle text-primary"
+                      : "border border-border text-muted-foreground",
+                )}
+              >
+                {index + 1}. {label}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
 
       <Surface variant="panel" padding="md">
         <SurfaceHeader
-          title={STEPS[step]!}
-          description={`Step ${step + 1} of ${STEPS.length}`}
+          title={convertingHold ? "Guest & confirm" : STEPS[step]!}
+          description={
+            convertingHold
+              ? "Booking will consume the hold-backed quote"
+              : `Step ${step + 1} of ${STEPS.length}`
+          }
         />
         <div className="space-y-4">
-          {step === 0 && (
+          {step === 0 && !convertingHold && (
             <>
               <div className="space-y-2">
-                <Label>Property</Label>
+                <Label htmlFor="mb-property">Property</Label>
                 <Select
                   value={propertyId}
                   onValueChange={(v) => {
@@ -233,7 +300,7 @@ export function ManualBookingPage() {
                     setUnitId("");
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="mb-property" aria-label="Select property">
                     <SelectValue placeholder="Select property" />
                   </SelectTrigger>
                   <SelectContent>
@@ -252,9 +319,9 @@ export function ManualBookingPage() {
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label>Unit</Label>
+                <Label htmlFor="mb-unit">Unit</Label>
                 <Select value={unitId} onValueChange={setUnitId} disabled={!propertyId}>
-                  <SelectTrigger>
+                  <SelectTrigger id="mb-unit" aria-label="Select unit">
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
@@ -272,7 +339,7 @@ export function ManualBookingPage() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 1 && !convertingHold && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -315,7 +382,7 @@ export function ManualBookingPage() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 2 && !convertingHold && (
             <>
               <p className="text-sm text-muted-foreground">
                 Check availability for {checkIn} → {checkOut}, {guestCount} guest(s)
@@ -334,27 +401,38 @@ export function ManualBookingPage() {
             </>
           )}
 
-          {step === 3 && (
+          {step === 3 && !convertingHold && (
             <>
               <p className="text-sm text-success">Dates are available.</p>
+              <p className="text-xs text-muted-foreground">
+                Price preview is read-only. Inventory Hold is created only when you create the
+                booking.
+              </p>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)}>
                   Back
                 </Button>
                 <Button disabled={submitting} onClick={() => void generateQuote()}>
-                  {submitting ? "Generating…" : "Generate quote"}
+                  {submitting ? "Calculating…" : "Preview price"}
                 </Button>
               </div>
             </>
           )}
 
-          {step === 4 && quote && (
+          {step === 4 && displayTotal && (
             <>
               <div className="rounded-md border border-border bg-surface-subtle/50 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">Reservation total · </span>
-                <span className="font-semibold tabular-nums">
-                  {formatMoney(quote.totalAmount, quote.currency)}
+                <span className="text-muted-foreground">
+                  {commercialQuote ? "Quoted total · " : "Estimated total · "}
                 </span>
+                <span className="font-semibold tabular-nums">
+                  {formatMoney(displayTotal.totalAmount, displayTotal.currency)}
+                </span>
+                {!commercialQuote ? (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Estimate only — final quote is created with the booking.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mb-guest-name">Guest name</Label>
@@ -382,9 +460,11 @@ export function ManualBookingPage() {
                 />
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setStep(3)}>
-                  Back
-                </Button>
+                {!convertingHold ? (
+                  <Button variant="outline" onClick={() => setStep(3)}>
+                    Back
+                  </Button>
+                ) : null}
                 <Button
                   disabled={submitting || !guest.name || !guest.email}
                   onClick={() => void createBooking(false)}

@@ -106,10 +106,12 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
     if (!tenantId || !data) return;
     setActionLoading(true);
     try {
-      await createQuoteFromHold(tenantId, data.id);
+      const quote = await createQuoteFromHold(tenantId, data.id);
       toastSuccess("Quote created — continue in New Booking");
       closeWorkspace();
-      router.push("/dashboard/bookings/new");
+      router.push(
+        `/dashboard/bookings/new?quoteId=${encodeURIComponent(quote.id)}`,
+      );
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Failed to create quote");
     } finally {

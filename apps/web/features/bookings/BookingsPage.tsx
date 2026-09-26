@@ -382,9 +382,16 @@ function BookingsPageContent() {
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</Label>
+            <Label
+              htmlFor="booking-status-filter"
+              className="text-[11px] uppercase tracking-wide text-muted-foreground"
+            >
+              Status
+            </Label>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger id="booking-status-filter" aria-label="Filter by status">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
@@ -396,9 +403,16 @@ function BookingsPageContent() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Unit</Label>
+            <Label
+              htmlFor="booking-unit-filter"
+              className="text-[11px] uppercase tracking-wide text-muted-foreground"
+            >
+              Unit
+            </Label>
             <Select value={unitFilter} onValueChange={(v) => { setUnitFilter(v); setPage(1); }}>
-              <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
+              <SelectTrigger id="booking-unit-filter" aria-label="Filter by unit">
+                <SelectValue placeholder="Unit" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All units</SelectItem>
                 {filteredUnits.map((u) => (

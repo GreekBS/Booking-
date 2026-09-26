@@ -106,6 +106,18 @@ export const changeBookingStaySchema = z.object({
   guestCount: z.number().int().min(1).max(50),
 });
 
+export const previewStayPricingSchema = z
+  .object({
+    unitId: z.string().uuid(),
+    checkIn: localDateSchema,
+    checkOut: localDateSchema,
+    guestCount: z.number().int().min(1).max(50).optional(),
+  })
+  .refine((value) => value.checkIn < value.checkOut, {
+    message: "checkIn must be before checkOut",
+    path: ["checkOut"],
+  });
+
 export const cancelBookingSchema = z.object({
   reason: z.string().max(500).optional(),
 });

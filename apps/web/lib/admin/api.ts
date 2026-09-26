@@ -766,21 +766,47 @@ export async function createQuoteFromHold(
   });
 }
 
+export type StayPricingPreview = {
+  currency: string;
+  subtotalAmount: string;
+  losDiscountAmount: string;
+  totalAmount: string;
+  quotedAt: string;
+  lineItems: Array<{
+    date: string;
+    baseAmount: string;
+    adjustedAmount: string;
+    currency: string;
+  }>;
+  inventoryMutating: false;
+};
+
+/** Read-only pricing preview — does not create Hold, Quote, or inventory. */
 export async function previewQuoteForStay(
   tenantId: string,
   unitId: string,
   checkIn: string,
   checkOut: string,
   guestCount: number,
-): Promise<import("./types").QuoteRecord> {
-  const hold = await adminFetch<{ id: string }>("/holds", {
+): Promise<StayPricingPreview> {
+  return adminFetch("/pricing/preview", {
     method: "POST",
     tenantId,
     body: JSON.stringify({ unitId, checkIn, checkOut, guestCount }),
   });
-  return adminFetch("/quotes", {
+}
+
+export async function createBookingFromQuote(
+  tenantId: string,
+  body: {
+    quoteId: string;
+    guest: { name: string; email: string; phone?: string | null };
+    confirmationMode?: "manual" | "payment_required";
+  },
+) {
+  return adminFetch("/bookings", {
     method: "POST",
     tenantId,
-    body: JSON.stringify({ holdId: hold.id }),
+    body: JSON.stringify(body),
   });
 }
