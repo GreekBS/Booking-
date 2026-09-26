@@ -5,6 +5,7 @@ import type { Unit } from "../domain/Unit";
 import type { IPropertyRepository } from "../ports/ICatalogRepositories";
 import type { IIdGenerator } from "../../shared/ports/IIdGenerator";
 import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
+import type { IUnitHousekeepingStatusRepository } from "../../operations/ports/IUnitHousekeepingStatusRepository";
 
 export interface AddUnitCommand {
   tenantId: string;
@@ -21,6 +22,7 @@ export class AddUnitUseCase {
     private readonly propertyRepository: IPropertyRepository,
     private readonly permissionChecker: PermissionChecker,
     private readonly idGenerator: IIdGenerator,
+    private readonly housekeepingStatuses?: IUnitHousekeepingStatusRepository,
   ) {}
 
   async execute(
@@ -61,6 +63,15 @@ export class AddUnitUseCase {
       });
 
       await this.propertyRepository.save(property);
+
+      if (this.housekeepingStatuses) {
+        await this.housekeepingStatuses.ensureInitialized({
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          unitId: unit.id,
+        });
+      }
+
       return Result.ok(unit);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));

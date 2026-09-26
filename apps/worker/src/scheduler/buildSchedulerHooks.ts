@@ -6,6 +6,7 @@ import type { EnqueueJobUseCase, ScheduleIcalPollsUseCase } from "@hcp/domain";
 import type { WorkerSchedulerConfig } from "../config";
 import { createIcalPollSchedulerHook } from "./icalPollScheduler";
 import { createHoldExpirySchedulerHook } from "./holdExpiryScheduler";
+import { createHousekeepingTurnoverSchedulerHook } from "./housekeepingTurnoverScheduler";
 import { createProviderRetrievalSchedulerHook } from "./providerRetrievalHook";
 import type {
   ProviderRetrievalSchedulerPort,
@@ -34,6 +35,12 @@ export function buildSchedulerHooks(
       intervalMs: config.holdExpirySchedulerIntervalMs,
       enqueueJob: deps.enqueueJobUseCase,
       limit: config.holdExpiryJobLimit,
+    }),
+    createHousekeepingTurnoverSchedulerHook({
+      enabled: config.housekeepingTurnoverSchedulerEnabled,
+      intervalMs: config.housekeepingTurnoverSchedulerIntervalMs,
+      enqueueJob: deps.enqueueJobUseCase,
+      limit: config.housekeepingTurnoverJobLimit,
     }),
   ];
 

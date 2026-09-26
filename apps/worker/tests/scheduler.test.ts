@@ -275,7 +275,7 @@ describe("worker scheduler batch", () => {
     ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
   });
 
-  it("buildSchedulerHooks wires iCal + hold expiry from config", () => {
+  it("buildSchedulerHooks wires iCal + hold expiry + housekeeping turnover from config", () => {
     const hooks = buildSchedulerHooks(
       {
         icalSchedulerEnabled: true,
@@ -283,6 +283,9 @@ describe("worker scheduler batch", () => {
         holdExpirySchedulerEnabled: false,
         holdExpirySchedulerIntervalMs: 60_000,
         holdExpiryJobLimit: 50,
+        housekeepingTurnoverSchedulerEnabled: false,
+        housekeepingTurnoverSchedulerIntervalMs: 300_000,
+        housekeepingTurnoverJobLimit: 200,
         providerRetrievalSchedulerEnabled: false,
         providerRetrievalSchedulerIntervalMs: 30_000,
       },
@@ -294,9 +297,11 @@ describe("worker scheduler batch", () => {
     expect(hooks.map((h) => h.name)).toEqual([
       ICAL_POLL_SCHEDULER_HOOK_NAME,
       HOLD_EXPIRY_SCHEDULER_HOOK_NAME,
+      "housekeeping_turnover_scheduler",
     ]);
     expect(hooks[0]?.enabled).toBe(true);
     expect(hooks[1]?.enabled).toBe(false);
+    expect(hooks[2]?.enabled).toBe(false);
   });
 
   it("prevents overlapping in-process scheduler executions", async () => {

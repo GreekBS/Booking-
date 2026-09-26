@@ -285,6 +285,8 @@ model Tenant {
   guestNotes                   GuestNote[]
   guestTags                    GuestTag[]
   guestTagAssignments          GuestTagAssignment[]
+  tasks                        Task[]
+  unitHousekeepingStatuses     UnitHousekeepingStatus[]
   fiscalSeries                 FiscalSeries[]
   fiscalDocuments              FiscalDocument[]
   fiscalDocumentLines          FiscalDocumentLine[]
@@ -310,6 +312,9 @@ model User {
   auditLogs   AuditLog[]
   guestNotes  GuestNote[]
   guestTagAssignments GuestTagAssignment[]
+  assignedTasks Task[] @relation("TaskAssignee")
+  createdTasks  Task[] @relation("TaskCreator")
+  housekeepingUpdates UnitHousekeepingStatus[] @relation("HousekeepingUpdater")
 
   @@map("users")
 }
@@ -428,6 +433,8 @@ model Property {
   fiscalSeries           FiscalSeries[]
   fiscalDocuments        FiscalDocument[]
   guestNotes             GuestNote[]
+  tasks                  Task[]
+  unitHousekeepingStatuses UnitHousekeepingStatus[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -456,6 +463,8 @@ model Unit {
   bookingHolds     BookingHold[]
   quotes           Quote[]
   bookings         Booking[]
+  tasks            Task[]
+  housekeepingStatus UnitHousekeepingStatus?
 
   @@unique([propertyId, slug])
   @@index([tenantId, propertyId])
@@ -787,6 +796,7 @@ model Booking {
   paymentRecords PaymentRecord[]
   payments       Payment[]
   folios         Folio[]
+  tasks          Task[]
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -1132,6 +1142,7 @@ model Guest {
   bookings        Booking[]
   notes           GuestNote[]
   tagAssignments  GuestTagAssignment[]
+  tasks           Task[]
 
   @@index([tenantId, emailNormalized])
   @@index([tenantId, phoneNormalized])
@@ -1195,6 +1206,68 @@ model GuestTagAssignment {
   @@index([tenantId, guestId])
   @@index([tenantId, tagId])
   @@map("guest_tag_assignments")
+}
+
+/// HT-1: Operational work item (housekeeping, maintenance, etc.). Not inventory.
+model Task {
+  id               String    @id @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  propertyId       String    @map("property_id") @db.Uuid
+  unitId           String?   @map("unit_id") @db.Uuid
+  bookingId        String?   @map("booking_id") @db.Uuid
+  guestId          String?   @map("guest_id") @db.Uuid
+  category         String    @db.VarChar(32)
+  title            String    @db.VarChar(255)
+  description      String?   @db.Text
+  status           String    @db.VarChar(32)
+  priority         String    @default("NORMAL") @db.VarChar(16)
+  assignedToUserId String?   @map("assigned_to_user_id") @db.Uuid
+  dueAt            DateTime? @map("due_at") @db.Timestamptz
+  startedAt        DateTime? @map("started_at") @db.Timestamptz
+  completedAt      DateTime? @map("completed_at") @db.Timestamptz
+  completionNote   String?   @map("completion_note") @db.Text
+  source           String    @default("MANUAL") @db.VarChar(16)
+  sourceKey        String?   @map("source_key") @db.VarChar(128)
+  version          Int       @default(1)
+  createdByUserId  String?   @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit       Unit?     @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  booking    Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  guest      Guest?    @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  assignee   User?     @relation("TaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdBy  User?     @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, propertyId, status])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, assignedToUserId])
+  @@index([tenantId, bookingId])
+  @@index([tenantId, unitId])
+  @@index([tenantId, category, status])
+  @@map("tasks")
+}
+
+/// HT-1: Per-unit operational housekeeping readiness (CLEAN|DIRTY). Not inventory.
+model UnitHousekeepingStatus {
+  unitId          String   @id @map("unit_id") @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  propertyId      String   @map("property_id") @db.Uuid
+  status          String   @default("CLEAN") @db.VarChar(16)
+  source          String   @default("INIT") @db.VarChar(32)
+  updatedByUserId String?  @map("updated_by_user_id") @db.Uuid
+  updatedAt       DateTime @map("updated_at") @db.Timestamptz
+  version         Int      @default(1)
+
+  unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  updatedBy  User?    @relation("HousekeepingUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, propertyId, status])
+  @@map("unit_housekeeping_statuses")
 }
 
 /// F3: Fiscal document series — next_sequence advanced only inside issue transaction.

@@ -111,6 +111,8 @@ export * from "./fiscal/index";
 
 export * from "./guests/index";
 
+export * from "./operations/index";
+
 export * from "./catalog/domain/Property";
 
 export * from "./catalog/domain/Unit";

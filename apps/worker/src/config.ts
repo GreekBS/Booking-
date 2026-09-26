@@ -25,6 +25,10 @@ export type WorkerSchedulerConfig = {
    */
   holdExpirySchedulerIntervalMs: number;
   holdExpiryJobLimit: number;
+  /** Housekeeping turnover reconcile — off by default until Production activation. */
+  housekeepingTurnoverSchedulerEnabled: boolean;
+  housekeepingTurnoverSchedulerIntervalMs: number;
+  housekeepingTurnoverJobLimit: number;
   /** Future OTA retrieval — off until a provider port is wired + explicitly enabled. */
   providerRetrievalSchedulerEnabled: boolean;
   providerRetrievalSchedulerIntervalMs: number;
@@ -56,6 +60,10 @@ const MIN_ICAL_SCHEDULER_INTERVAL_MS = 60_000;
 /** 60s — prompt hold release without busy-looping. */
 export const DEFAULT_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 60_000;
 const MIN_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 10_000;
+
+/** 5 minutes — turnover reconcile for property-local departures. */
+export const DEFAULT_HOUSEKEEPING_TURNOVER_SCHEDULER_INTERVAL_MS = 5 * 60 * 1000;
+const MIN_HOUSEKEEPING_TURNOVER_SCHEDULER_INTERVAL_MS = 60_000;
 
 /** Official Booking.com guidance: poll ~once per 20 seconds. */
 export const DEFAULT_PROVIDER_RETRIEVAL_SCHEDULER_INTERVAL_MS = 20_000;
@@ -167,6 +175,24 @@ export function loadWorkerSchedulerConfig(
     ),
     holdExpiryJobLimit: clampMin(
       parseIntEnv(env, "WORKER_HOLD_EXPIRY_JOB_LIMIT", 100),
+      1,
+    ),
+    // Default off — activate explicitly; HT-2 ships code only (no Production worker activation).
+    housekeepingTurnoverSchedulerEnabled: parseBoolEnv(
+      env,
+      "WORKER_HOUSEKEEPING_TURNOVER_SCHEDULER_ENABLED",
+      false,
+    ),
+    housekeepingTurnoverSchedulerIntervalMs: clampMin(
+      parseIntEnv(
+        env,
+        "WORKER_HOUSEKEEPING_TURNOVER_SCHEDULER_INTERVAL_MS",
+        DEFAULT_HOUSEKEEPING_TURNOVER_SCHEDULER_INTERVAL_MS,
+      ),
+      MIN_HOUSEKEEPING_TURNOVER_SCHEDULER_INTERVAL_MS,
+    ),
+    housekeepingTurnoverJobLimit: clampMin(
+      parseIntEnv(env, "WORKER_HOUSEKEEPING_TURNOVER_JOB_LIMIT", 200),
       1,
     ),
     providerRetrievalSchedulerEnabled: parseBoolEnv(

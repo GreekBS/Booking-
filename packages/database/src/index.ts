@@ -75,6 +75,9 @@ export {
 export { PrismaGuestRepository } from "./repositories/guests/GuestRepository";
 export { PrismaGuestNoteRepository } from "./repositories/guests/GuestNoteRepository";
 export { PrismaGuestTagRepository } from "./repositories/guests/GuestTagRepository";
+export { PrismaTaskRepository } from "./repositories/operations/TaskRepository";
+export { PrismaUnitHousekeepingStatusRepository } from "./repositories/operations/UnitHousekeepingStatusRepository";
+export { PrismaHousekeepingTurnoverStore } from "./repositories/operations/HousekeepingTurnoverStore";
 export {
   PrismaFiscalSeriesRepository,
   PrismaFiscalDocumentRepository,

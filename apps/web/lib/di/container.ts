@@ -142,6 +142,22 @@ import {
   SearchGuestsForBookingUseCase,
   GetGuestForBookingSelectionUseCase,
   CreateGuestUseCase,
+  CreateTaskUseCase,
+  GetTaskUseCase,
+  ListTasksUseCase,
+  StartTaskUseCase,
+  UnstartTaskUseCase,
+  CompleteTaskUseCase,
+  CancelTaskUseCase,
+  ReopenTaskUseCase,
+  AssignTaskUseCase,
+  MarkUnitDirtyUseCase,
+  MarkUnitCleanUseCase,
+  GetUnitHousekeepingStatusUseCase,
+  ReconcileBookingTurnoverUseCase,
+  GenerateHousekeepingTurnoverUseCase,
+  GenerateHousekeepingTurnoverJobHandler,
+  HousekeepingBookingOutboxHandler,
   UpdateGuestUseCase,
   ListGuestNotesUseCase,
   AddGuestNoteUseCase,
@@ -464,6 +480,9 @@ import {
   PrismaGuestRepository,
   PrismaGuestNoteRepository,
   PrismaGuestTagRepository,
+  PrismaTaskRepository,
+  PrismaUnitHousekeepingStatusRepository,
+  PrismaHousekeepingTurnoverStore,
 
   PrismaFiscalSeriesRepository,
 
@@ -580,6 +599,11 @@ const tenantRepository = new PrismaTenantRepository(outboxRepository);
 
 const propertyRepository = new PrismaPropertyRepository(outboxRepository);
 
+const taskRepository = new PrismaTaskRepository();
+const unitHousekeepingStatusRepository = new PrismaUnitHousekeepingStatusRepository();
+const housekeepingTurnoverStore = new PrismaHousekeepingTurnoverStore();
+
+
 const userRepository = new PrismaUserRepository();
 
 /** Exported for request-time authoritative platformRole hydration (Phase F.1). */
@@ -657,6 +681,8 @@ export const createPropertyUseCase = new CreatePropertyUseCase(
 
   idGenerator,
 
+  unitHousekeepingStatusRepository,
+
 );
 
 export const updatePropertyUseCase = new UpdatePropertyUseCase(
@@ -708,6 +734,8 @@ export const addUnitUseCase = new AddUnitUseCase(
   permissionChecker,
 
   idGenerator,
+
+  unitHousekeepingStatusRepository,
 
 );
 
@@ -1203,6 +1231,78 @@ export const linkBookingToGuestUseCase = new LinkBookingToGuestUseCase(
   permissionChecker,
 );
 
+export const createTaskUseCase = new CreateTaskUseCase(
+  taskRepository,
+  propertyRepository,
+  membershipRepository,
+  idGenerator,
+  permissionChecker,
+  auditLogRepository,
+);
+export const getTaskUseCase = new GetTaskUseCase(taskRepository, permissionChecker);
+export const listTasksUseCase = new ListTasksUseCase(taskRepository, permissionChecker);
+export const startTaskUseCase = new StartTaskUseCase(
+  taskRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const unstartTaskUseCase = new UnstartTaskUseCase(
+  taskRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const completeTaskUseCase = new CompleteTaskUseCase(
+  housekeepingTurnoverStore,
+  taskRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const cancelTaskUseCase = new CancelTaskUseCase(
+  taskRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const reopenTaskUseCase = new ReopenTaskUseCase(
+  housekeepingTurnoverStore,
+  taskRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const assignTaskUseCase = new AssignTaskUseCase(
+  taskRepository,
+  membershipRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const markUnitDirtyUseCase = new MarkUnitDirtyUseCase(
+  unitHousekeepingStatusRepository,
+  propertyRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const markUnitCleanUseCase = new MarkUnitCleanUseCase(
+  unitHousekeepingStatusRepository,
+  propertyRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const getUnitHousekeepingStatusUseCase = new GetUnitHousekeepingStatusUseCase(
+  unitHousekeepingStatusRepository,
+  propertyRepository,
+  permissionChecker,
+);
+export const reconcileBookingTurnoverUseCase = new ReconcileBookingTurnoverUseCase(
+  housekeepingTurnoverStore,
+  timezoneService,
+  auditLogRepository,
+);
+export const generateHousekeepingTurnoverUseCase = new GenerateHousekeepingTurnoverUseCase(
+  housekeepingTurnoverStore,
+  reconcileBookingTurnoverUseCase,
+  timezoneService,
+);
+
+
 export const createBookingUseCase = new CreateBookingUseCase(
   holdRepository,
   quoteRepository,
@@ -1624,6 +1724,9 @@ export const jobScheduler = new PrismaJobScheduler(backgroundJobRepository);
 const jobHandlerRegistry = new JobHandlerRegistry();
 jobHandlerRegistry.register(new LoggingJobHandler());
 jobHandlerRegistry.register(new ExpireHoldsJobHandler(expireHoldsUseCase));
+jobHandlerRegistry.register(
+  new GenerateHousekeepingTurnoverJobHandler(generateHousekeepingTurnoverUseCase),
+);
 
 export const enqueueJobUseCase = new EnqueueJobUseCase(jobScheduler);
 
@@ -2134,6 +2237,9 @@ export const propagateChannelUnitSyncUseCase = new PropagateChannelUnitSyncUseCa
 
 outboxHandlerRegistry.register(
   new ChannelUnitSyncOutboxHandler(propagateChannelUnitSyncUseCase),
+);
+outboxHandlerRegistry.register(
+  new HousekeepingBookingOutboxHandler(reconcileBookingTurnoverUseCase),
 );
 outboxHandlerRegistry.register(new LoggingHandler());
 
