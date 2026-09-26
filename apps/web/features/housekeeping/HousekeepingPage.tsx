@@ -138,13 +138,17 @@ function HousekeepingPageContent() {
     error: propertyError,
   } = useActiveProperty();
 
-  const view = (searchParams.get("view") === "all" ? "all" : "today") as
+  const viewParam = searchParams.get("view");
+  const view = (viewParam === "all" || viewParam === "tasks" ? "all" : "today") as
     | "today"
     | "all";
   const filterStatus = searchParams.get("status") ?? "";
   const filterCategory = searchParams.get("category") ?? "";
   const filterAssignee = searchParams.get("assignee") ?? "";
   const filterPriority = searchParams.get("priority") ?? "";
+  const filterBookingId = searchParams.get("bookingId") ?? "";
+  const createPresetUnitId = searchParams.get("unitId") ?? "";
+  const openCreate = searchParams.get("create") === "1";
   const deepTaskId = searchParams.get("taskId");
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
 
@@ -186,6 +190,19 @@ function HousekeepingPageContent() {
     [pathname, router, searchParams],
   );
 
+  useEffect(() => {
+    if (openCreate) setCreateOpen(true);
+  }, [openCreate, filterBookingId, createPresetUnitId]);
+
+  // Deep-link with bookingId forces All Tasks (server-filtered)
+  useEffect(() => {
+    if (filterBookingId && view !== "all") {
+      syncParams({ view: "all", page: "1" });
+    }
+  }, [filterBookingId, view, syncParams]);
+
+  const effectiveView = filterBookingId ? "all" : view;
+
   const refresh = useCallback(async () => {
     if (!tenantId || !propertyId) return;
     setLoading(true);
@@ -202,7 +219,7 @@ function HousekeepingPageContent() {
           ?.units.map((u) => ({ id: u.id, name: u.name })) ?? [];
       setUnits(propUnits);
 
-      if (view === "today") {
+      if (effectiveView === "today") {
         const today = await fetchHousekeepingToday(tenantId, propertyId);
         setBoard(today);
         setTasks([]);
@@ -218,6 +235,7 @@ function HousekeepingPageContent() {
           category: filterCategory || undefined,
           assignedToUserId: assignedToMe ?? assignedExplicit,
           priority: filterPriority || undefined,
+          bookingId: filterBookingId || undefined,
           page,
           limit: PAGE_SIZE,
         });
@@ -235,11 +253,12 @@ function HousekeepingPageContent() {
   }, [
     tenantId,
     propertyId,
-    view,
+    effectiveView,
     filterStatus,
     filterCategory,
     filterAssignee,
     filterPriority,
+    filterBookingId,
     page,
     currentUserId,
   ]);
@@ -330,15 +349,15 @@ function HousekeepingPageContent() {
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant={view === "today" ? "default" : "outline"}
+              variant={effectiveView === "today" ? "default" : "outline"}
               size="sm"
-              onClick={() => syncParams({ view: "today", page: null })}
+              onClick={() => syncParams({ view: "today", page: null, bookingId: null })}
             >
               Today
             </Button>
             <Button
               type="button"
-              variant={view === "all" ? "default" : "outline"}
+              variant={effectiveView === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => syncParams({ view: "all", page: "1" })}
             >
@@ -369,7 +388,7 @@ function HousekeepingPageContent() {
         </div>
       ) : null}
 
-      {view === "today" && board ? (
+      {effectiveView === "today" && board ? (
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {(
@@ -505,8 +524,30 @@ function HousekeepingPageContent() {
         </>
       ) : null}
 
-      {view === "all" ? (
+      {effectiveView === "all" ? (
         <Surface padding="none">
+          {filterBookingId ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-subtle/50 px-4 py-2 text-xs">
+              <p>
+                Filtered to booking{" "}
+                <Link
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                  href={`/dashboard/bookings?bookingId=${encodeURIComponent(filterBookingId)}`}
+                >
+                  {filterBookingId.slice(0, 8)}…
+                </Link>
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => syncParams({ bookingId: null })}
+              >
+                Clear booking filter
+              </Button>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:flex-wrap sm:items-end">
             <FilterSelect
               label="Status"
@@ -665,20 +706,33 @@ function HousekeepingPageContent() {
 
       <CreateTaskSheet
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(o) => {
+          setCreateOpen(o);
+          if (!o && openCreate) {
+            syncParams({ create: null });
+          }
+        }}
         units={units}
         assignees={eligibleAssignees}
         busy={busyKey === "create"}
+        initialUnitId={createPresetUnitId || null}
+        initialBookingId={filterBookingId || null}
         onSubmit={(body) =>
           void runMutation("create", async () => {
             const created = await createTask(tenantId!, {
               propertyId: propertyId!,
               ...body,
+              bookingId: filterBookingId || body.bookingId || null,
             });
             setCreateOpen(false);
             setDetailTask(created);
             setDetailOpen(true);
-            syncParams({ taskId: created.id, view: "all" });
+            syncParams({
+              taskId: created.id,
+              view: "all",
+              create: null,
+              bookingId: filterBookingId || null,
+            });
           })
         }
       />
@@ -886,6 +940,8 @@ function CreateTaskSheet({
   units,
   assignees,
   busy,
+  initialUnitId,
+  initialBookingId,
   onSubmit,
 }: {
   open: boolean;
@@ -893,11 +949,14 @@ function CreateTaskSheet({
   units: Array<{ id: string; name: string }>;
   assignees: MemberRecord[];
   busy: boolean;
+  initialUnitId?: string | null;
+  initialBookingId?: string | null;
   onSubmit: (body: {
     category: TaskCategory;
     title: string;
     description?: string | null;
     unitId?: string | null;
+    bookingId?: string | null;
     assignedToUserId?: string | null;
     dueAt?: string | null;
     priority?: TaskPriority;
@@ -916,11 +975,11 @@ function CreateTaskSheet({
     setCategory("HOUSEKEEPING");
     setTitle("");
     setDescription("");
-    setUnitId("none");
+    setUnitId(initialUnitId && units.some((u) => u.id === initialUnitId) ? initialUnitId : "none");
     setAssignee("none");
     setPriority("NORMAL");
     setDueAt("");
-  }, [open]);
+  }, [open, initialUnitId, units]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -929,6 +988,9 @@ function CreateTaskSheet({
           <SheetTitle>Create task</SheetTitle>
           <SheetDescription>
             Property is taken from Active Property. Defaults to Open / Normal.
+            {initialBookingId
+              ? " Linked to the current booking."
+              : ""}
           </SheetDescription>
         </SheetHeader>
         <form
@@ -941,6 +1003,7 @@ function CreateTaskSheet({
               title: title.trim(),
               description: description.trim() || null,
               unitId: unitId === "none" ? null : unitId,
+              bookingId: initialBookingId ?? null,
               assignedToUserId: assignee === "none" ? null : assignee,
               priority,
               dueAt: dueAt ? new Date(dueAt).toISOString() : null,

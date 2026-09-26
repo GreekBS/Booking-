@@ -1,6 +1,6 @@
-# ADR-029: Housekeeping & Tasks (HT-1 / HT-2 / HT-3)
+# ADR-029: Housekeeping & Tasks (HT-1 / HT-2 / HT-3 / HT-4)
 
-Status: Accepted  
+Status: Accepted — **Housekeeping & Tasks V1 COMPLETE**  
 Date: 2026-09-26
 
 ## Context
@@ -39,8 +39,9 @@ Housekeeping NEVER mutates calendar blocks, availability, holds, quotes, or book
 
 - Trigger: scheduled `checkOut` vs **Property.timezone** local today (authoritative; default `Europe/Athens`).
 - Window: `[today - 7 days, today]` property-local; coarse UTC candidate query then TZ filter.
-- Job: `generate_housekeeping_turnover` (worker scheduler hook, **disabled by default**).
+- Job: `generate_housekeeping_turnover` (worker scheduler hook, **disabled by default / NOT ACTIVATED in Production**).
 - Outbox: `HousekeepingBookingOutboxHandler` on `BookingConfirmed|Cancelled|StayChanged|UnitChanged`.
+- Commerce mutations (`ChangeBookingStay`, cancel, confirm) emit outbox → reconciliation (idempotent).
 
 ### Stable source identity
 
@@ -80,10 +81,18 @@ Route: `/dashboard/housekeeping` (single module; no `/dashboard/tasks`).
 - **409/CAS**: UI refreshes and surfaces conflict message; no silent retry.
 - **Mobile**: card list, large Start/Complete (~390px); desktop table for All Tasks.
 
-### HT-4 boundaries
+### HT-4 Dashboard + Booking integration
 
-Dashboard chips, Booking workspace task strip, Calendar HK markers — deferred.
+- **Dashboard**: compact Housekeeping signals (Dirty / In progress / Overdue / Ready) reuse `GET .../housekeeping/today` with Active Property; Attention links + Quick action. No duplicate KPI wall; no client-side Today recalculation.
+- **Booking Workspace**: compact Operational tasks section filtered by authoritative `Task.bookingId`; open/in-progress counts; View in Housekeeping / View all / Create task deep-links. Mutations remain in Housekeeping.
+- **Deep-links**: Booking → `/dashboard/housekeeping?view=all&bookingId=` (server filter); Housekeeping → `/dashboard/bookings?bookingId=`.
+- **Manager privacy**: Today/list/bookingId filters cannot leak other-property work.
+- **Calendar markers**: still deferred.
+
+### V1 deferred scope
+
+Housekeeper role, READY DB status, inspection workflow, BLOCKED, comments/attachments, recurring tasks, notifications, inventory auto-block, check-in/checkout product workflow, workforce scheduling/payroll/shifts, analytics, separate `/dashboard/tasks`, Calendar HK markers.
 
 ## Consequences
 
-Operators get durable tasks and room readiness without coupling to channels or inventing checkout events. Worker Production activation remains a separate explicit step.
+Operators get durable tasks and room readiness without coupling to channels or inventing checkout events. Worker / housekeeping scheduler Production activation remains a separate explicit step. Current Housekeeping & Tasks V1 architecture is complete for the PMS roadmap.

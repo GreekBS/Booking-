@@ -19,6 +19,7 @@ import { useBookingStaySave } from "./hooks/useBookingStaySave";
 import { BookingGuestSection } from "./sections/BookingGuestSection";
 import { BookingBillingFiscalSection } from "./sections/BookingBillingFiscalSection";
 import { BookingNotesSection } from "./sections/BookingNotesSection";
+import { BookingOperationsTasksSection } from "./sections/BookingOperationsTasksSection";
 import { BookingPaymentsSection } from "./sections/BookingPaymentsSection";
 import { BookingPricingSection } from "./sections/BookingPricingSection";
 import { BookingStaySection } from "./sections/BookingStaySection";
@@ -271,6 +272,12 @@ export function BookingWorkspaceView({
               previewLoading={previewLoading}
               previewError={previewError}
               onDraftChange={updateDraft}
+            />
+            <BookingOperationsTasksSection
+              bookingId={currentBooking.id}
+              propertyId={currentBooking.propertyId}
+              unitId={currentBooking.unitId}
+              active={active}
             />
             <BookingGuestSection {...sectionProps} />
             <BookingPricingSection {...pricingProps} />

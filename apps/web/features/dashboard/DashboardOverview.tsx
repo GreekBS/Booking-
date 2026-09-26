@@ -15,16 +15,19 @@ import {
   Percent,
   DollarSign,
   ArrowRight,
+  ClipboardList,
+  Sparkles,
 } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
   renderActivePropertyGate,
   useActiveProperty,
 } from "@/hooks/use-active-property";
-import { fetchDashboardOverview } from "@/lib/admin/api";
+import { fetchDashboardOverview, fetchHousekeepingToday } from "@/lib/admin/api";
 import type {
   DashboardOverviewRecentBooking,
   DashboardOverviewRecord,
+  HousekeepingTodayBoard,
 } from "@/lib/admin/types";
 import { formatMoney } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
@@ -71,6 +74,9 @@ export function DashboardOverview() {
     error: propertyError,
   } = useActiveProperty();
   const [overview, setOverview] = useState<DashboardOverviewRecord | null>(null);
+  const [housekeeping, setHousekeeping] = useState<HousekeepingTodayBoard | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,11 +85,16 @@ export function DashboardOverview() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchDashboardOverview(tenantId, propertyId);
+      const [data, hk] = await Promise.all([
+        fetchDashboardOverview(tenantId, propertyId),
+        fetchHousekeepingToday(tenantId, propertyId).catch(() => null),
+      ]);
       setOverview(data);
+      setHousekeeping(hk);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
       setOverview(null);
+      setHousekeeping(null);
     } finally {
       setLoading(false);
     }
@@ -93,6 +104,7 @@ export function DashboardOverview() {
     if (!tenantLoading && !tenantId) {
       setLoading(false);
       setOverview(null);
+      setHousekeeping(null);
     }
   }, [tenantLoading, tenantId]);
 
@@ -132,7 +144,7 @@ export function DashboardOverview() {
       }
     : null;
 
-  const attentionItems = buildAttention(overview);
+  const attentionItems = buildAttention(overview, housekeeping);
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -140,7 +152,7 @@ export function DashboardOverview() {
         title="Operations"
         description={
           property
-            ? `${property.name} · ${todayLabel}`
+            ? `${property.name} · ${housekeeping?.localToday ? formatOpsDate(housekeeping.localToday) : todayLabel}`
             : `${tenantName} · ${todayLabel}`
         }
         actions={
@@ -186,7 +198,11 @@ export function DashboardOverview() {
       <Surface variant="panel" padding="md">
         <SurfaceHeader
           title="Today"
-          description="What needs attention at this property"
+          description={
+            housekeeping
+              ? `What needs attention · ${housekeeping.propertyTimezone}`
+              : "What needs attention at this property"
+          }
           action={
             <Button variant="ghost" size="sm" asChild className="h-8 text-xs">
               <Link href="/dashboard/availability">
@@ -223,6 +239,37 @@ export function DashboardOverview() {
             tone="muted"
           />
         </div>
+
+        {housekeeping ? (
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-border/60 pt-3">
+            <HousekeepingSignal
+              label="Dirty"
+              value={housekeeping.summary.dirty}
+              href="/dashboard/housekeeping?view=today"
+            />
+            <HousekeepingSignal
+              label="In progress"
+              value={housekeeping.summary.inProgress}
+              href="/dashboard/housekeeping?view=today"
+            />
+            <HousekeepingSignal
+              label="Overdue tasks"
+              value={housekeeping.summary.overdueTasks}
+              href="/dashboard/housekeeping?view=all&status=OPEN"
+            />
+            <HousekeepingSignal
+              label="Ready for arrivals"
+              value={housekeeping.summary.readyForArrivals}
+              href="/dashboard/housekeeping?view=today"
+            />
+            <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+              <Link href="/dashboard/housekeeping">
+                Housekeeping
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </Button>
+          </div>
+        ) : null}
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <StayList
@@ -316,8 +363,10 @@ export function DashboardOverview() {
             <div className="grid grid-cols-2 gap-2">
               <QuickAction href="/dashboard/bookings/new" icon={Plus} label="New booking" />
               <QuickAction href="/dashboard/availability" icon={CalendarDays} label="Calendar" />
+              <QuickAction href="/dashboard/housekeeping" icon={ClipboardList} label="Housekeeping" />
               <QuickAction href="/dashboard/payments" icon={Wallet} label="Payments" />
               <QuickAction href="/dashboard/channels" icon={Network} label="Channels" />
+              <QuickAction href="/dashboard/pricing" icon={Sparkles} label="Pricing" />
             </div>
           </Surface>
         </div>
@@ -326,13 +375,32 @@ export function DashboardOverview() {
   );
 }
 
-function buildAttention(overview: DashboardOverviewRecord): Array<{
+function buildAttention(
+  overview: DashboardOverviewRecord,
+  housekeeping: HousekeepingTodayBoard | null,
+): Array<{
   id: string;
   title: string;
   detail: string;
   href: string;
 }> {
   const items: Array<{ id: string; title: string; detail: string; href: string }> = [];
+  if (housekeeping && housekeeping.summary.dirty > 0) {
+    items.push({
+      id: "hk-dirty",
+      title: `${housekeeping.summary.dirty} dirty unit${housekeeping.summary.dirty === 1 ? "" : "s"}`,
+      detail: "Turnover / cleaning still needed",
+      href: "/dashboard/housekeeping?view=today",
+    });
+  }
+  if (housekeeping && housekeeping.summary.overdueTasks > 0) {
+    items.push({
+      id: "hk-overdue",
+      title: `${housekeeping.summary.overdueTasks} overdue task${housekeeping.summary.overdueTasks === 1 ? "" : "s"}`,
+      detail: "Open work past due",
+      href: "/dashboard/housekeeping?view=all&status=OPEN",
+    });
+  }
   if (overview.activeHoldCount > 0) {
     items.push({
       id: "holds",
@@ -354,10 +422,31 @@ function buildAttention(overview: DashboardOverviewRecord): Array<{
       id: "departures",
       title: `${overview.departuresToday} departure${overview.departuresToday === 1 ? "" : "s"} today`,
       detail: "Coordinate checkout and turnover",
-      href: "/dashboard/bookings",
+      href: "/dashboard/housekeeping?view=today",
     });
   }
   return items;
+}
+
+function HousekeepingSignal({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: number;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-border/70 bg-surface px-2.5 py-1 text-xs transition-colors hover:bg-surface-subtle"
+      aria-label={`${label}: ${value}`}
+    >
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="font-semibold tabular-nums text-foreground">{value}</span>
+    </Link>
+  );
 }
 
 function MetricCard({
