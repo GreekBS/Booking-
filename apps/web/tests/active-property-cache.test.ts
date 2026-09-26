@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/perf-diag", () => ({
-  perfClientLog: vi.fn(),
-  perfNow: () => 0,
-}));
-
 describe("active property client cache keys", () => {
   beforeEach(() => {
     vi.resetModules();

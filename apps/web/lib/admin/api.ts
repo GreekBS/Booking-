@@ -14,7 +14,6 @@ interface AdminFetchOptions extends RequestInit {
 }
 
 import type { PaginatedBookings, PaginatedProperties, OperatorBlockType } from "./types";
-import { perfClientLog, perfNow } from "@/lib/perf-diag";
 
 export async function adminFetch<T>(path: string, options: AdminFetchOptions = {}): Promise<T> {
   const { tenantId, ...init } = options;
@@ -27,7 +26,6 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
     headers.set("X-Tenant-Id", tenantId);
   }
 
-  const start = perfNow();
   const response = await fetch(`/api/admin/v1${path}`, {
     ...init,
     headers,
@@ -36,14 +34,6 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
   const payload = (await response.json()) as {
     error?: { code?: string; message?: string };
   } & T;
-
-  const elapsed = perfNow() - start;
-  const shortPath = path.split("?")[0] ?? path;
-  perfClientLog("client.adminFetch", elapsed, {
-    path: shortPath.slice(0, 64),
-    status: response.status,
-    method: (init.method ?? "GET").toString().slice(0, 8),
-  });
 
   if (!response.ok) {
     throw new AdminApiError(
