@@ -80,6 +80,31 @@ export { PrismaUnitHousekeepingStatusRepository } from "./repositories/operation
 export { PrismaHousekeepingTurnoverStore } from "./repositories/operations/HousekeepingTurnoverStore";
 export { PrismaHousekeepingTodayQuery } from "./repositories/operations/HousekeepingTodayQuery";
 export {
+  generateOpaqueToken,
+  CryptoOpaqueTokenFactory,
+} from "./repositories/operations/cleaning/cleaningTokens";
+export { PrismaUnitQrAccessRepository } from "./repositories/operations/cleaning/UnitQrAccessRepository";
+export { PrismaCleaningChecklistRepository } from "./repositories/operations/cleaning/CleaningChecklistRepository";
+export { PrismaCleaningExecutionRepository } from "./repositories/operations/cleaning/CleaningExecutionRepository";
+export { PrismaCleaningPhotoRepository } from "./repositories/operations/cleaning/CleaningPhotoRepository";
+export {
+  SupabaseCleaningObjectStorage,
+  CLEANING_PHOTOS_BUCKET_ENV,
+  DEFAULT_CLEANING_PHOTOS_BUCKET,
+  DEFAULT_CLEANING_SIGNED_URL_TTL_SECONDS,
+} from "./storage/cleaning/SupabaseCleaningObjectStorage";
+export {
+  LocalFsCleaningObjectStorage,
+  DEFAULT_LOCAL_CLEANING_PHOTOS_DIR,
+} from "./storage/cleaning/LocalFsCleaningObjectStorage";
+export {
+  createCleaningObjectStorage,
+  UnconfiguredCleaningObjectStorage,
+  CleaningObjectStorageUnavailableError,
+  CLEANING_PHOTOS_DRIVER_ENV,
+  CLEANING_PHOTOS_FS_ROOT_ENV,
+} from "./storage/cleaning/createCleaningObjectStorage";
+export {
   PrismaFiscalSeriesRepository,
   PrismaFiscalDocumentRepository,
   PrismaFiscalAllocationRepository,

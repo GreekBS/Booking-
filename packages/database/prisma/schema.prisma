@@ -256,41 +256,47 @@ model Tenant {
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz
 
-  memberships                  Membership[]
-  invitations                  Invitation[]
-  properties                   Property[]
-  amenities                    Amenity[]
-  commerceSettings             TenantCommerceSettings?
-  publishableKeys              TenantPublishableKey[]
-  storefrontIdempotencyRecords StorefrontIdempotencyRecord[]
-  unitAvailabilityRules        UnitAvailabilityRule[]
-  ratePlans                    RatePlan[]
-  rateSeasons                  RateSeason[]
-  rateDowModifiers             RateDowModifier[]
-  unitCalendarBlocks           UnitCalendarBlock[]
-  bookingHolds                 BookingHold[]
-  quotes                       Quote[]
-  bookings                     Booking[]
-  paymentRecords               PaymentRecord[]
-  payments                     Payment[]
-  paymentAllocations           PaymentAllocation[]
-  paymentAllocationReversals   PaymentAllocationReversal[]
-  paymentRefunds               PaymentRefund[]
-  folios                       Folio[]
-  folioLines                   FolioLine[]
-  taxRules                     TaxRule[]
-  businessFiscalProfiles       BusinessFiscalProfile[]
-  customerBillingProfiles      CustomerBillingProfile[]
-  guests                       Guest[]
-  guestNotes                   GuestNote[]
-  guestTags                    GuestTag[]
-  guestTagAssignments          GuestTagAssignment[]
-  tasks                        Task[]
-  unitHousekeepingStatuses     UnitHousekeepingStatus[]
-  fiscalSeries                 FiscalSeries[]
-  fiscalDocuments              FiscalDocument[]
-  fiscalDocumentLines          FiscalDocumentLine[]
-  fiscalLineAllocations        FiscalLineAllocation[]
+  memberships                    Membership[]
+  invitations                    Invitation[]
+  properties                     Property[]
+  amenities                      Amenity[]
+  commerceSettings               TenantCommerceSettings?
+  publishableKeys                TenantPublishableKey[]
+  storefrontIdempotencyRecords   StorefrontIdempotencyRecord[]
+  unitAvailabilityRules          UnitAvailabilityRule[]
+  ratePlans                      RatePlan[]
+  rateSeasons                    RateSeason[]
+  rateDowModifiers               RateDowModifier[]
+  unitCalendarBlocks             UnitCalendarBlock[]
+  bookingHolds                   BookingHold[]
+  quotes                         Quote[]
+  bookings                       Booking[]
+  paymentRecords                 PaymentRecord[]
+  payments                       Payment[]
+  paymentAllocations             PaymentAllocation[]
+  paymentAllocationReversals     PaymentAllocationReversal[]
+  paymentRefunds                 PaymentRefund[]
+  folios                         Folio[]
+  folioLines                     FolioLine[]
+  taxRules                       TaxRule[]
+  businessFiscalProfiles         BusinessFiscalProfile[]
+  customerBillingProfiles        CustomerBillingProfile[]
+  guests                         Guest[]
+  guestNotes                     GuestNote[]
+  guestTags                      GuestTag[]
+  guestTagAssignments            GuestTagAssignment[]
+  tasks                          Task[]
+  unitHousekeepingStatuses       UnitHousekeepingStatus[]
+  fiscalSeries                   FiscalSeries[]
+  fiscalDocuments                FiscalDocument[]
+  fiscalDocumentLines            FiscalDocumentLine[]
+  fiscalLineAllocations          FiscalLineAllocation[]
+  unitQrAccess                   UnitQrAccess[]
+  cleaningChecklistTemplates     CleaningChecklistTemplate[]
+  cleaningChecklistTemplateItems CleaningChecklistTemplateItem[]
+  cleaningExecutions             CleaningExecution[]
+  cleaningExecutionItems         CleaningExecutionItem[]
+  cleaningPhotos                 CleaningPhoto[]
 
   @@map("tenants")
 }
@@ -305,16 +311,20 @@ model User {
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  accounts    Account[]
-  sessions    Session[]
-  memberships Membership[]
-  invitations Invitation[] @relation("InvitedBy")
-  auditLogs   AuditLog[]
-  guestNotes  GuestNote[]
-  guestTagAssignments GuestTagAssignment[]
-  assignedTasks Task[] @relation("TaskAssignee")
-  createdTasks  Task[] @relation("TaskCreator")
-  housekeepingUpdates UnitHousekeepingStatus[] @relation("HousekeepingUpdater")
+  accounts               Account[]
+  sessions               Session[]
+  memberships            Membership[]
+  invitations            Invitation[]             @relation("InvitedBy")
+  auditLogs              AuditLog[]
+  guestNotes             GuestNote[]
+  guestTagAssignments    GuestTagAssignment[]
+  assignedTasks          Task[]                   @relation("TaskAssignee")
+  createdTasks           Task[]                   @relation("TaskCreator")
+  housekeepingUpdates    UnitHousekeepingStatus[] @relation("HousekeepingUpdater")
+  startedCleanings       CleaningExecution[]      @relation("CleaningStartedBy")
+  completedCleanings     CleaningExecution[]      @relation("CleaningCompletedBy")
+  checkedCleaningItems   CleaningExecutionItem[]  @relation("CleaningItemCheckedBy")
+  uploadedCleaningPhotos CleaningPhoto[]          @relation("CleaningPhotoUploader")
 
   @@map("users")
 }
@@ -420,21 +430,25 @@ model Property {
   createdAt              DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt              DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  units          Unit[]
-  amenities      PropertyAmenity[]
-  calendarBlocks UnitCalendarBlock[]
-  bookingHolds   BookingHold[]
-  quotes         Quote[]
-  bookings       Booking[]
-  payments       Payment[]
-  channelConnections ChannelConnection[]
-  businessFiscalProfiles BusinessFiscalProfile[]
-  fiscalSeries           FiscalSeries[]
-  fiscalDocuments        FiscalDocument[]
-  guestNotes             GuestNote[]
-  tasks                  Task[]
-  unitHousekeepingStatuses UnitHousekeepingStatus[]
+  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  units                      Unit[]
+  amenities                  PropertyAmenity[]
+  calendarBlocks             UnitCalendarBlock[]
+  bookingHolds               BookingHold[]
+  quotes                     Quote[]
+  bookings                   Booking[]
+  payments                   Payment[]
+  channelConnections         ChannelConnection[]
+  businessFiscalProfiles     BusinessFiscalProfile[]
+  fiscalSeries               FiscalSeries[]
+  fiscalDocuments            FiscalDocument[]
+  guestNotes                 GuestNote[]
+  tasks                      Task[]
+  unitHousekeepingStatuses   UnitHousekeepingStatus[]
+  unitQrAccess               UnitQrAccess[]
+  cleaningChecklistTemplates CleaningChecklistTemplate[]
+  cleaningExecutions         CleaningExecution[]
+  cleaningPhotos             CleaningPhoto[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -456,15 +470,18 @@ model Unit {
   createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  property         Property              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  availabilityRule UnitAvailabilityRule?
-  ratePlan         RatePlan?
-  calendarBlocks   UnitCalendarBlock[]
-  bookingHolds     BookingHold[]
-  quotes           Quote[]
-  bookings         Booking[]
-  tasks            Task[]
+  property           Property                @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  availabilityRule   UnitAvailabilityRule?
+  ratePlan           RatePlan?
+  calendarBlocks     UnitCalendarBlock[]
+  bookingHolds       BookingHold[]
+  quotes             Quote[]
+  bookings           Booking[]
+  tasks              Task[]
   housekeepingStatus UnitHousekeepingStatus?
+  qrAccess           UnitQrAccess[]
+  cleaningExecutions CleaningExecution[]
+  cleaningPhotos     CleaningPhoto[]
 
   @@unique([propertyId, slug])
   @@index([tenantId, propertyId])
@@ -827,30 +844,30 @@ model PaymentRecord {
 
 /// F4 settlement truth (ADR-027). Authoritative payment + allocation + refund ledger.
 model Payment {
-  id                String                   @id @default(uuid()) @db.Uuid
-  tenantId          String                   @map("tenant_id") @db.Uuid
+  id                String                  @id @default(uuid()) @db.Uuid
+  tenantId          String                  @map("tenant_id") @db.Uuid
   /// Canonical property ownership (Active Property 1.1). Required; independent of booking.
-  propertyId        String                   @map("property_id") @db.Uuid
-  currency          String                   @db.Char(3)
-  amount            Decimal                  @db.Decimal(19, 4)
+  propertyId        String                  @map("property_id") @db.Uuid
+  currency          String                  @db.Char(3)
+  amount            Decimal                 @db.Decimal(19, 4)
   status            PaymentLifecycleStatus
   method            PaymentMethodKind
-  collectionSource  PaymentCollectionSource  @map("collection_source")
-  externalReference String?                  @map("external_reference") @db.VarChar(255)
-  payerName         String?                  @map("payer_name") @db.VarChar(255)
-  bookingId         String?                  @map("booking_id") @db.Uuid
-  idempotencyKey    String                   @map("idempotency_key") @db.VarChar(128)
-  metadata          Json                     @default("{}")
-  receivedAt        DateTime                 @map("received_at") @db.Timestamptz
-  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+  collectionSource  PaymentCollectionSource @map("collection_source")
+  externalReference String?                 @map("external_reference") @db.VarChar(255)
+  payerName         String?                 @map("payer_name") @db.VarChar(255)
+  bookingId         String?                 @map("booking_id") @db.Uuid
+  idempotencyKey    String                  @map("idempotency_key") @db.VarChar(128)
+  metadata          Json                    @default("{}")
+  receivedAt        DateTime                @map("received_at") @db.Timestamptz
+  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime                @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant               Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  property             Property                    @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  booking              Booking?                    @relation(fields: [bookingId], references: [id], onDelete: Restrict)
-  allocations          PaymentAllocation[]
-  allocationReversals  PaymentAllocationReversal[]
-  refunds              PaymentRefund[]
+  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property            Property                    @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  booking             Booking?                    @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  allocations         PaymentAllocation[]
+  allocationReversals PaymentAllocationReversal[]
+  refunds             PaymentRefund[]
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, receivedAt])
@@ -861,20 +878,20 @@ model Payment {
 }
 
 model PaymentAllocation {
-  id                 String   @id @default(uuid()) @db.Uuid
-  tenantId           String   @map("tenant_id") @db.Uuid
-  paymentId          String   @map("payment_id") @db.Uuid
-  folioId            String   @map("folio_id") @db.Uuid
-  allocatedAmount    Decimal  @map("allocated_amount") @db.Decimal(19, 4)
-  currency           String   @db.Char(3)
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
-  createdByActorId   String?  @map("created_by_actor_id") @db.Uuid
-  reason             String?  @db.VarChar(512)
-  metadata           Json     @default("{}")
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  paymentId        String   @map("payment_id") @db.Uuid
+  folioId          String   @map("folio_id") @db.Uuid
+  allocatedAmount  Decimal  @map("allocated_amount") @db.Decimal(19, 4)
+  currency         String   @db.Char(3)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdByActorId String?  @map("created_by_actor_id") @db.Uuid
+  reason           String?  @db.VarChar(512)
+  metadata         Json     @default("{}")
 
-  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  folio     Folio   @relation(fields: [folioId], references: [id], onDelete: Restrict)
+  tenant    Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payment   Payment                     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  folio     Folio                       @relation(fields: [folioId], references: [id], onDelete: Restrict)
   reversals PaymentAllocationReversal[]
 
   @@index([tenantId, paymentId])
@@ -967,27 +984,27 @@ model Folio {
 
 /// Append-only posted financial lines. No update/delete of posted amounts.
 model FolioLine {
-  id            String           @id @default(uuid()) @db.Uuid
-  tenantId      String           @map("tenant_id") @db.Uuid
-  folioId       String           @map("folio_id") @db.Uuid
-  lineType      FolioLineType    @map("line_type")
-  description   String           @db.VarChar(512)
-  amount        Decimal          @db.Decimal(19, 4)
-  currency      String           @db.Char(3)
-  sourceType    String           @map("source_type") @db.VarChar(64)
-  sourceId      String           @map("source_id") @db.VarChar(255)
-  sourceLineRef String?          @map("source_line_ref") @db.VarChar(255)
-  sortOrder     Int              @map("sort_order")
-  postedAt      DateTime         @map("posted_at") @db.Timestamptz
-  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @map("tenant_id") @db.Uuid
+  folioId       String        @map("folio_id") @db.Uuid
+  lineType      FolioLineType @map("line_type")
+  description   String        @db.VarChar(512)
+  amount        Decimal       @db.Decimal(19, 4)
+  currency      String        @db.Char(3)
+  sourceType    String        @map("source_type") @db.VarChar(64)
+  sourceId      String        @map("source_id") @db.VarChar(255)
+  sourceLineRef String?       @map("source_line_ref") @db.VarChar(255)
+  sortOrder     Int           @map("sort_order")
+  postedAt      DateTime      @map("posted_at") @db.Timestamptz
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
   /// Immutable tax/levy evaluation snapshot (F2). Never a live TaxRule FK.
-  taxSnapshot   Json?            @map("tax_snapshot")
+  taxSnapshot   Json?         @map("tax_snapshot")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   folio  Folio  @relation(fields: [folioId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, folioId, sortOrder])
   @@unique([tenantId, folioId, sourceType, sourceId, sourceLineRef])
+  @@index([tenantId, folioId, sortOrder])
   @@map("folio_lines")
 }
 
@@ -1059,32 +1076,32 @@ model TaxRule {
 }
 
 model BusinessFiscalProfile {
-  id                     String   @id @default(uuid()) @db.Uuid
-  tenantId               String   @map("tenant_id") @db.Uuid
-  propertyId             String   @map("property_id") @db.Uuid
-  legalName              String   @map("legal_name") @db.VarChar(255)
-  tradeName              String?  @map("trade_name") @db.VarChar(255)
-  country                String   @db.Char(2)
-  vatNumber              String?  @map("vat_number") @db.VarChar(32)
-  addressLine1           String   @map("address_line1") @db.VarChar(255)
-  addressLine2           String?  @map("address_line2") @db.VarChar(255)
-  addressCity            String   @map("address_city") @db.VarChar(128)
-  addressRegion          String?  @map("address_region") @db.VarChar(128)
-  addressPostalCode      String   @map("address_postal_code") @db.VarChar(32)
-  addressCountry         String   @map("address_country") @db.Char(2)
+  id                                      String   @id @default(uuid()) @db.Uuid
+  tenantId                                String   @map("tenant_id") @db.Uuid
+  propertyId                              String   @map("property_id") @db.Uuid
+  legalName                               String   @map("legal_name") @db.VarChar(255)
+  tradeName                               String?  @map("trade_name") @db.VarChar(255)
+  country                                 String   @db.Char(2)
+  vatNumber                               String?  @map("vat_number") @db.VarChar(32)
+  addressLine1                            String   @map("address_line1") @db.VarChar(255)
+  addressLine2                            String?  @map("address_line2") @db.VarChar(255)
+  addressCity                             String   @map("address_city") @db.VarChar(128)
+  addressRegion                           String?  @map("address_region") @db.VarChar(128)
+  addressPostalCode                       String   @map("address_postal_code") @db.VarChar(32)
+  addressCountry                          String   @map("address_country") @db.Char(2)
   /// Stable catalog location id — VAT jurisdiction is derived, not free-selected.
-  establishmentLocationId String  @default("gr-mainland") @map("establishment_location_id") @db.VarChar(128)
-  establishmentInEligibleArea Boolean @default(false) @map("establishment_in_eligible_area")
-  servicePhysicallyExecutedInEligibleArea Boolean @default(false) @map("service_physically_executed_in_eligible_area")
+  establishmentLocationId                 String   @default("gr-mainland") @map("establishment_location_id") @db.VarChar(128)
+  establishmentInEligibleArea             Boolean  @default(false) @map("establishment_in_eligible_area")
+  servicePhysicallyExecutedInEligibleArea Boolean  @default(false) @map("service_physically_executed_in_eligible_area")
   /// Derived VAT jurisdiction (GR | GR-ISLAND-REDUCED).
-  fiscalJurisdiction     String   @map("fiscal_jurisdiction") @db.VarChar(64)
-  establishmentCode      String?  @map("establishment_code") @db.VarChar(64)
-  accommodationType      String   @map("accommodation_type") @db.VarChar(64)
-  propertyClassification String?  @map("property_classification") @db.VarChar(64)
-  floorAreaSqm           Int?     @map("floor_area_sqm")
-  metadata               Json     @default("{}")
-  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  fiscalJurisdiction                      String   @map("fiscal_jurisdiction") @db.VarChar(64)
+  establishmentCode                       String?  @map("establishment_code") @db.VarChar(64)
+  accommodationType                       String   @map("accommodation_type") @db.VarChar(64)
+  propertyClassification                  String?  @map("property_classification") @db.VarChar(64)
+  floorAreaSqm                            Int?     @map("floor_area_sqm")
+  metadata                                Json     @default("{}")
+  createdAt                               DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                               DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
@@ -1119,26 +1136,26 @@ model CustomerBillingProfile {
 
 /// CRM-1: Tenant-owned Guest identity (independent of Booking contact snapshots).
 model Guest {
-  id                 String    @id @default(uuid()) @db.Uuid
-  tenantId           String    @map("tenant_id") @db.Uuid
-  displayName        String    @map("display_name") @db.VarChar(255)
-  firstName          String?   @map("first_name") @db.VarChar(128)
-  lastName           String?   @map("last_name") @db.VarChar(128)
-  email              String?   @db.VarChar(255)
-  emailNormalized    String?   @map("email_normalized") @db.VarChar(255)
-  phone              String?   @db.VarChar(50)
-  phoneNormalized    String?   @map("phone_normalized") @db.VarChar(32)
-  country            String?   @db.Char(2)
-  preferredLanguage  String?   @map("preferred_language") @db.VarChar(16)
-  archivedAt         DateTime? @map("archived_at") @db.Timestamptz
-  mergedIntoGuestId  String?   @map("merged_into_guest_id") @db.Uuid
-  anonymizedAt       DateTime? @map("anonymized_at") @db.Timestamptz
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  displayName       String    @map("display_name") @db.VarChar(255)
+  firstName         String?   @map("first_name") @db.VarChar(128)
+  lastName          String?   @map("last_name") @db.VarChar(128)
+  email             String?   @db.VarChar(255)
+  emailNormalized   String?   @map("email_normalized") @db.VarChar(255)
+  phone             String?   @db.VarChar(50)
+  phoneNormalized   String?   @map("phone_normalized") @db.VarChar(32)
+  country           String?   @db.Char(2)
+  preferredLanguage String?   @map("preferred_language") @db.VarChar(16)
+  archivedAt        DateTime? @map("archived_at") @db.Timestamptz
+  mergedIntoGuestId String?   @map("merged_into_guest_id") @db.Uuid
+  anonymizedAt      DateTime? @map("anonymized_at") @db.Timestamptz
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mergedIntoGuest Guest?  @relation("GuestMerge", fields: [mergedIntoGuestId], references: [id], onDelete: Restrict)
-  mergedFrom      Guest[] @relation("GuestMerge")
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mergedIntoGuest Guest?               @relation("GuestMerge", fields: [mergedIntoGuestId], references: [id], onDelete: Restrict)
+  mergedFrom      Guest[]              @relation("GuestMerge")
   bookings        Booking[]
   notes           GuestNote[]
   tagAssignments  GuestTagAssignment[]
@@ -1197,10 +1214,10 @@ model GuestTagAssignment {
   assignedAt       DateTime @default(now()) @map("assigned_at") @db.Timestamptz
   assignedByUserId String?  @map("assigned_by_user_id") @db.Uuid
 
-  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  guest      Guest  @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
   tag        GuestTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  assignedBy User?  @relation(fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  assignedBy User?    @relation(fields: [assignedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, guestId, tagId])
   @@index([tenantId, guestId])
@@ -1233,13 +1250,15 @@ model Task {
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  unit       Unit?     @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  booking    Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  guest      Guest?    @relation(fields: [guestId], references: [id], onDelete: SetNull)
-  assignee   User?     @relation("TaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  createdBy  User?     @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property           Property            @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit               Unit?               @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  booking            Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  guest              Guest?              @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  assignee           User?               @relation("TaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdBy          User?               @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  cleaningExecutions CleaningExecution[]
+  cleaningPhotos     CleaningPhoto[]
 
   @@index([tenantId, propertyId, status])
   @@index([tenantId, dueAt])
@@ -1261,10 +1280,10 @@ model UnitHousekeepingStatus {
   updatedAt       DateTime @map("updated_at") @db.Timestamptz
   version         Int      @default(1)
 
-  unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  updatedBy  User?    @relation("HousekeepingUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  unit      Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property  Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  updatedBy User?    @relation("HousekeepingUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, propertyId, status])
   @@map("unit_housekeeping_statuses")
@@ -1272,17 +1291,17 @@ model UnitHousekeepingStatus {
 
 /// F3: Fiscal document series — next_sequence advanced only inside issue transaction.
 model FiscalSeries {
-  id            String   @id @db.Uuid
-  tenantId      String   @map("tenant_id") @db.Uuid
-  propertyId    String   @map("property_id") @db.Uuid
-  documentKind  String   @map("document_kind") @db.VarChar(64)
-  seriesCode    String   @map("series_code") @db.VarChar(32)
-  nextSequence  Int      @map("next_sequence")
-  active        Boolean  @default(true)
-  label         String?  @db.VarChar(255)
-  metadata      Json     @default("{}")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id           String   @id @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  propertyId   String   @map("property_id") @db.Uuid
+  documentKind String   @map("document_kind") @db.VarChar(64)
+  seriesCode   String   @map("series_code") @db.VarChar(32)
+  nextSequence Int      @map("next_sequence")
+  active       Boolean  @default(true)
+  label        String?  @db.VarChar(255)
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   property  Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
@@ -1295,39 +1314,39 @@ model FiscalSeries {
 }
 
 model FiscalDocument {
-  id                      String    @id @db.Uuid
-  tenantId                String    @map("tenant_id") @db.Uuid
-  propertyId              String    @map("property_id") @db.Uuid
-  documentKind            String    @map("document_kind") @db.VarChar(64)
-  status                  String    @db.VarChar(32)
-  seriesId                String?   @map("series_id") @db.Uuid
-  seriesCode              String?   @map("series_code") @db.VarChar(32)
-  sequenceNumber          Int?      @map("sequence_number")
-  issuanceIdempotencyKey  String?   @map("issuance_idempotency_key") @db.VarChar(128)
-  issuedAt                DateTime? @map("issued_at") @db.Timestamptz
-  currency                String    @db.Char(3)
-  issuerSnapshot          Json      @map("issuer_snapshot")
-  customerSnapshot        Json?     @map("customer_snapshot")
-  netTotal                Decimal   @map("net_total") @db.Decimal(19, 4)
-  vatTotal                Decimal   @map("vat_total") @db.Decimal(19, 4)
-  otherTaxTotal           Decimal   @map("other_tax_total") @db.Decimal(19, 4)
-  levyTotal               Decimal   @map("levy_total") @db.Decimal(19, 4)
-  grossTotal              Decimal   @map("gross_total") @db.Decimal(19, 4)
-  roundingPolicy          String    @default("deterministic_money_4dp") @map("rounding_policy") @db.VarChar(64)
-  paymentMethodSummary    String?   @map("payment_method_summary") @db.VarChar(255)
-  sourceBookingId         String?   @map("source_booking_id") @db.Uuid
-  originalDocumentId      String?   @map("original_document_id") @db.Uuid
-  creditReason            String?   @map("credit_reason") @db.VarChar(512)
-  creditedScope           String?   @map("credited_scope") @db.VarChar(16)
-  metadata                Json      @default("{}")
-  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                     String    @id @db.Uuid
+  tenantId               String    @map("tenant_id") @db.Uuid
+  propertyId             String    @map("property_id") @db.Uuid
+  documentKind           String    @map("document_kind") @db.VarChar(64)
+  status                 String    @db.VarChar(32)
+  seriesId               String?   @map("series_id") @db.Uuid
+  seriesCode             String?   @map("series_code") @db.VarChar(32)
+  sequenceNumber         Int?      @map("sequence_number")
+  issuanceIdempotencyKey String?   @map("issuance_idempotency_key") @db.VarChar(128)
+  issuedAt               DateTime? @map("issued_at") @db.Timestamptz
+  currency               String    @db.Char(3)
+  issuerSnapshot         Json      @map("issuer_snapshot")
+  customerSnapshot       Json?     @map("customer_snapshot")
+  netTotal               Decimal   @map("net_total") @db.Decimal(19, 4)
+  vatTotal               Decimal   @map("vat_total") @db.Decimal(19, 4)
+  otherTaxTotal          Decimal   @map("other_tax_total") @db.Decimal(19, 4)
+  levyTotal              Decimal   @map("levy_total") @db.Decimal(19, 4)
+  grossTotal             Decimal   @map("gross_total") @db.Decimal(19, 4)
+  roundingPolicy         String    @default("deterministic_money_4dp") @map("rounding_policy") @db.VarChar(64)
+  paymentMethodSummary   String?   @map("payment_method_summary") @db.VarChar(255)
+  sourceBookingId        String?   @map("source_booking_id") @db.Uuid
+  originalDocumentId     String?   @map("original_document_id") @db.Uuid
+  creditReason           String?   @map("credit_reason") @db.VarChar(512)
+  creditedScope          String?   @map("credited_scope") @db.VarChar(16)
+  metadata               Json      @default("{}")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  property    Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  series      FiscalSeries?        @relation(fields: [seriesId], references: [id], onDelete: Restrict)
-  original    FiscalDocument?      @relation("FiscalDocumentCredits", fields: [originalDocumentId], references: [id], onDelete: Restrict)
-  credits     FiscalDocument[]     @relation("FiscalDocumentCredits")
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property    Property               @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  series      FiscalSeries?          @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+  original    FiscalDocument?        @relation("FiscalDocumentCredits", fields: [originalDocumentId], references: [id], onDelete: Restrict)
+  credits     FiscalDocument[]       @relation("FiscalDocumentCredits")
   lines       FiscalDocumentLine[]
   allocations FiscalLineAllocation[]
 
@@ -1341,28 +1360,28 @@ model FiscalDocument {
 }
 
 model FiscalDocumentLine {
-  id                   String   @id @db.Uuid
-  tenantId             String   @map("tenant_id") @db.Uuid
-  fiscalDocumentId     String   @map("fiscal_document_id") @db.Uuid
-  sortOrder            Int      @map("sort_order")
-  description          String   @db.VarChar(512)
-  quantity             Decimal  @db.Decimal(19, 4)
-  unit                 String?  @db.VarChar(64)
-  netAmount            Decimal  @map("net_amount") @db.Decimal(19, 4)
-  vatAmount            Decimal  @map("vat_amount") @db.Decimal(19, 4)
-  levyAmount           Decimal  @map("levy_amount") @db.Decimal(19, 4)
-  grossAmount          Decimal  @map("gross_amount") @db.Decimal(19, 4)
-  currency             String   @db.Char(3)
-  classificationKey    String?  @map("classification_key") @db.VarChar(128)
-  taxSnapshot          Json?    @map("tax_snapshot")
-  sourceFolioId        String?  @map("source_folio_id") @db.Uuid
-  sourceFolioLineId    String?  @map("source_folio_line_id") @db.Uuid
-  dailyUseProvenance   Json?    @map("daily_use_provenance")
-  metadata             Json     @default("{}")
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                 String   @id @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  fiscalDocumentId   String   @map("fiscal_document_id") @db.Uuid
+  sortOrder          Int      @map("sort_order")
+  description        String   @db.VarChar(512)
+  quantity           Decimal  @db.Decimal(19, 4)
+  unit               String?  @db.VarChar(64)
+  netAmount          Decimal  @map("net_amount") @db.Decimal(19, 4)
+  vatAmount          Decimal  @map("vat_amount") @db.Decimal(19, 4)
+  levyAmount         Decimal  @map("levy_amount") @db.Decimal(19, 4)
+  grossAmount        Decimal  @map("gross_amount") @db.Decimal(19, 4)
+  currency           String   @db.Char(3)
+  classificationKey  String?  @map("classification_key") @db.VarChar(128)
+  taxSnapshot        Json?    @map("tax_snapshot")
+  sourceFolioId      String?  @map("source_folio_id") @db.Uuid
+  sourceFolioLineId  String?  @map("source_folio_line_id") @db.Uuid
+  dailyUseProvenance Json?    @map("daily_use_provenance")
+  metadata           Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  document FiscalDocument @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document    FiscalDocument         @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
   allocations FiscalLineAllocation[]
 
   @@index([tenantId, fiscalDocumentId])
@@ -1418,7 +1437,7 @@ model ChannelConnection {
 
   workspaceProperty Property? @relation(fields: [workspacePropertyId], references: [id], onDelete: SetNull)
 
-  pollCursor ChannelPollCursor?
+  pollCursor               ChannelPollCursor?
   inventoryReconciliations ChannelInventoryReconciliation[]
 
   @@id([tenantId, id])
@@ -1433,12 +1452,12 @@ model ChannelAriPushLedger {
   connectionId String @map("connection_id") @db.VarChar(255)
   coalesceKey  String @map("coalesce_key") @db.VarChar(512)
 
-  highestGeneration       BigInt  @map("highest_generation")
-  lastSucceededGeneration BigInt? @map("last_succeeded_generation")
-  pendingPayload          Json?   @map("pending_payload")
-  lastRuid                String? @map("last_ruid") @db.VarChar(255)
-  lastOutcome             String? @map("last_outcome") @db.VarChar(40)
-  lastError               String? @map("last_error") @db.Text
+  highestGeneration       BigInt   @map("highest_generation")
+  lastSucceededGeneration BigInt?  @map("last_succeeded_generation")
+  pendingPayload          Json?    @map("pending_payload")
+  lastRuid                String?  @map("last_ruid") @db.VarChar(255)
+  lastOutcome             String?  @map("last_outcome") @db.VarChar(40)
+  lastError               String?  @map("last_error") @db.Text
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@id([tenantId, connectionId, coalesceKey])
@@ -1568,20 +1587,20 @@ model ChannelInventoryReconciliation {
   connectionId  String @map("connection_id") @db.VarChar(255)
   cursorVersion Int    @map("cursor_version")
 
-  semanticConfigVersion Int @map("semantic_config_version")
+  semanticConfigVersion Int    @map("semantic_config_version")
   mappingId             String @map("mapping_id") @db.VarChar(255)
   mappingVersion        Int    @map("mapping_version")
   unitId                String @map("unit_id") @db.VarChar(255)
   propertyId            String @map("property_id") @db.VarChar(255)
 
-  snapshotHash       String                         @map("snapshot_hash") @db.Char(64)
-  actionableSnapshot Json                           @map("actionable_snapshot")
+  snapshotHash                String                          @map("snapshot_hash") @db.Char(64)
+  actionableSnapshot          Json                            @map("actionable_snapshot")
   /// P1-S7a: true only when observed/cancelled identity sets were durably recorded.
-  completeObservedEvidence      Boolean @default(false) @map("complete_observed_evidence")
-  observedSourceIdentityKeys    Json?   @map("observed_source_identity_keys")
-  cancelledSourceIdentityKeys   Json?   @map("cancelled_source_identity_keys")
-  reconcileStatus    ChannelInventoryReconcileStatus @map("reconcile_status")
-  reconcileErrorCode String?                        @map("reconcile_error_code") @db.VarChar(80)
+  completeObservedEvidence    Boolean                         @default(false) @map("complete_observed_evidence")
+  observedSourceIdentityKeys  Json?                           @map("observed_source_identity_keys")
+  cancelledSourceIdentityKeys Json?                           @map("cancelled_source_identity_keys")
+  reconcileStatus             ChannelInventoryReconcileStatus @map("reconcile_status")
+  reconcileErrorCode          String?                         @map("reconcile_error_code") @db.VarChar(80)
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
   appliedAt DateTime? @map("applied_at") @db.Timestamptz
@@ -1876,18 +1895,18 @@ model Lead {
   /// Opaque client submission token for retry idempotency (not email-based).
   submissionId String @unique @map("submission_id") @db.Uuid
 
-  fullName        String @map("full_name") @db.VarChar(120)
-  emailNormalized String @map("email_normalized") @db.VarChar(255)
+  fullName        String  @map("full_name") @db.VarChar(120)
+  emailNormalized String  @map("email_normalized") @db.VarChar(255)
   phone           String? @db.VarChar(40)
-  country         String @db.VarChar(100)
+  country         String  @db.VarChar(100)
 
   relationship LeadRelationship
 
-  portfolioSize       LeadPortfolioSize       @map("portfolio_size")
-  accommodationTypes  LeadAccommodationType[] @map("accommodation_types")
-  propertyCountry     String                  @map("property_country") @db.VarChar(100)
-  propertyCity        String?                 @map("property_city") @db.VarChar(120)
-  operatingState      LeadOperatingState      @map("operating_state")
+  portfolioSize      LeadPortfolioSize       @map("portfolio_size")
+  accommodationTypes LeadAccommodationType[] @map("accommodation_types")
+  propertyCountry    String                  @map("property_country") @db.VarChar(100)
+  propertyCity       String?                 @map("property_city") @db.VarChar(120)
+  operatingState     LeadOperatingState      @map("operating_state")
 
   channels              LeadChannel[] @default([])
   tools                 LeadTool[]    @default([])
@@ -1917,4 +1936,154 @@ model Lead {
   @@index([emailNormalized])
   @@index([demoRequestedAt])
   @@map("leads")
+}
+
+/// QR-1: Opaque per-unit QR access token. Only the SHA-256 hash is stored.
+/// One ACTIVE row per (tenant, unit) is enforced by a partial unique index in SQL.
+model UnitQrAccess {
+  id         String    @id @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  propertyId String    @map("property_id") @db.Uuid
+  unitId     String    @map("unit_id") @db.Uuid
+  tokenHash  String    @unique(map: "unit_qr_access_token_hash_uidx") @map("token_hash") @db.Char(64)
+  status     String    @default("ACTIVE") @db.VarChar(16)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  rotatedAt  DateTime? @map("rotated_at") @db.Timestamptz
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit     Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, propertyId], map: "unit_qr_access_tenant_property_idx")
+  @@map("unit_qr_access")
+}
+
+/// QR-1: Property-scoped cleaning checklist. One ACTIVE template per property.
+model CleaningChecklistTemplate {
+  id                      String   @id @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  propertyId              String   @map("property_id") @db.Uuid
+  name                    String   @db.VarChar(120)
+  isActive                Boolean  @default(true) @map("is_active")
+  version                 Int      @default(1)
+  minimumCompletionPhotos Int      @default(0) @map("minimum_completion_photos")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property   Property                        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  items      CleaningChecklistTemplateItem[]
+  executions CleaningExecution[]
+
+  @@index([tenantId, propertyId], map: "cleaning_checklist_templates_tenant_property_idx")
+  @@map("cleaning_checklist_templates")
+}
+
+/// QR-1: Ordered checklist line on a template.
+model CleaningChecklistTemplateItem {
+  id            String   @id @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  templateId    String   @map("template_id") @db.Uuid
+  label         String   @db.VarChar(255)
+  description   String?  @db.Text
+  position      Int
+  required      Boolean  @default(true)
+  photoRequired Boolean  @default(false) @map("photo_required")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template CleaningChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, position], map: "cleaning_checklist_template_items_template_pos_idx")
+  @@map("cleaning_checklist_template_items")
+}
+
+/// QR-1: One cleaning run against a housekeeping Task. One IN_PROGRESS per task.
+model CleaningExecution {
+  id                String    @id @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  propertyId        String    @map("property_id") @db.Uuid
+  unitId            String    @map("unit_id") @db.Uuid
+  taskId            String    @map("task_id") @db.Uuid
+  templateId        String?   @map("template_id") @db.Uuid
+  templateVersion   Int?      @map("template_version")
+  status            String    @default("IN_PROGRESS") @db.VarChar(16)
+  startedByUserId   String    @map("started_by_user_id") @db.Uuid
+  startedAt         DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  completedByUserId String?   @map("completed_by_user_id") @db.Uuid
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property    Property                   @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit        Unit                       @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  task        Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  template    CleaningChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  startedBy   User                       @relation("CleaningStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
+  completedBy User?                      @relation("CleaningCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  items       CleaningExecutionItem[]
+  photos      CleaningPhoto[]
+
+  @@index([tenantId, unitId, startedAt(sort: Desc)], map: "cleaning_executions_tenant_unit_idx")
+  @@index([tenantId, propertyId], map: "cleaning_executions_tenant_property_idx")
+  @@map("cleaning_executions")
+}
+
+/// QR-1: Immutable label snapshot of a template item at execution start.
+model CleaningExecutionItem {
+  id                   String    @id @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  executionId          String    @map("execution_id") @db.Uuid
+  sourceTemplateItemId String?   @map("source_template_item_id") @db.Uuid
+  labelSnapshot        String    @map("label_snapshot") @db.VarChar(255)
+  descriptionSnapshot  String?   @map("description_snapshot") @db.Text
+  position             Int
+  required             Boolean
+  photoRequired        Boolean   @map("photo_required")
+  checked              Boolean   @default(false)
+  checkedAt            DateTime? @map("checked_at") @db.Timestamptz
+  checkedByUserId      String?   @map("checked_by_user_id") @db.Uuid
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  execution CleaningExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  checkedBy User?             @relation("CleaningItemCheckedBy", fields: [checkedByUserId], references: [id], onDelete: SetNull)
+  photos    CleaningPhoto[]
+
+  @@index([executionId, position], map: "cleaning_execution_items_execution_pos_idx")
+  @@map("cleaning_execution_items")
+}
+
+/// QR-1: Cleaning evidence photo. Bytes live in object storage; only the key is stored.
+model CleaningPhoto {
+  id               String   @id @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  propertyId       String   @map("property_id") @db.Uuid
+  unitId           String   @map("unit_id") @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  executionId      String   @map("execution_id") @db.Uuid
+  executionItemId  String?  @map("execution_item_id") @db.Uuid
+  storageKey       String   @unique(map: "cleaning_photos_storage_key_uidx") @map("storage_key") @db.VarChar(512)
+  contentType      String   @map("content_type") @db.VarChar(128)
+  sizeBytes        Int      @map("size_bytes")
+  uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property      Property               @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit          Unit                   @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  task          Task                   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  execution     CleaningExecution      @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionItem CleaningExecutionItem? @relation(fields: [executionItemId], references: [id], onDelete: SetNull)
+  uploadedBy    User                   @relation("CleaningPhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([executionId], map: "cleaning_photos_execution_idx")
+  @@index([tenantId, propertyId], map: "cleaning_photos_tenant_property_idx")
+  @@map("cleaning_photos")
 }

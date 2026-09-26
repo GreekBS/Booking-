@@ -12,5 +12,6 @@ export * from "./application/taskAccess";
 export * from "./application/TaskUseCases";
 export * from "./application/TurnoverUseCases";
 export * from "./application/GetHousekeepingTodayUseCase";
+export * from "./cleaning/index";
 export * from "./jobs/GenerateHousekeepingTurnoverJobHandler";
 export * from "./outbox/HousekeepingBookingOutboxHandler";

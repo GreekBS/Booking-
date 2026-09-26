@@ -8,6 +8,7 @@
 import { auth } from "@/lib/auth/edge";
 import { NextResponse } from "next/server";
 import { isPublicMarketingPath } from "@/lib/marketing/site";
+import { buildLoginUrl, isSafeCallbackUrl } from "@/lib/auth/callback-url";
 
 export async function middleware(request: Request) {
   const requestId = crypto.randomUUID();
@@ -62,12 +63,18 @@ export async function middleware(request: Request) {
         ),
       );
     }
-    return attachRequestId(NextResponse.redirect(new URL("/login", request.url)));
+    // Preserve where the operator was heading (e.g. a scanned /q/<token>).
+    const requestedPath = `${url.pathname}${url.search}`;
+    return attachRequestId(
+      NextResponse.redirect(new URL(buildLoginUrl(requestedPath), request.url)),
+    );
   }
 
   if (session?.user && isAuthPage) {
-    const redirectUrl =
-      session.user.platformRole === "super_admin"
+    const callbackUrl = url.searchParams.get("callbackUrl");
+    const redirectUrl = isSafeCallbackUrl(callbackUrl)
+      ? callbackUrl!
+      : session.user.platformRole === "super_admin"
         ? "/platform"
         : "/dashboard";
     return attachRequestId(NextResponse.redirect(new URL(redirectUrl, request.url)));

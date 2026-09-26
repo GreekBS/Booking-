@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import type { AuthFormVariant } from "./RegisterForm";
+import {
+  DEFAULT_POST_LOGIN_PATH,
+  sanitizeCallbackUrl,
+} from "@/lib/auth/callback-url";
 
 type CredentialsSignInFormProps = {
   variant?: AuthFormVariant;
@@ -40,6 +44,18 @@ export function CredentialsSignInForm({
   const [loading, setLoading] = useState(false);
 
   const isMarketing = variant === "marketing";
+
+  /**
+   * Read at submit time from the live URL rather than `useSearchParams`, so the
+   * marketing sign-in modal does not force its host page out of static rendering.
+   */
+  function resolveCallbackUrl(): string {
+    if (typeof window === "undefined") return DEFAULT_POST_LOGIN_PATH;
+    return sanitizeCallbackUrl(
+      new URLSearchParams(window.location.search).get("callbackUrl"),
+    );
+  }
+
   const title = heading ?? (isMarketing ? "Welcome back" : "HCP Admin");
   const lede =
     description ??
@@ -67,16 +83,19 @@ export function CredentialsSignInForm({
     }
 
     onSuccess?.();
-    // Preserve existing safe path: land on /dashboard; server layouts apply F.1 SA routing.
-    router.push("/dashboard");
+    // Honor a safe relative ?callbackUrl (e.g. a scanned /q/<token>);
+    // otherwise land on /dashboard and let server layouts apply F.1 SA routing.
+    router.push(resolveCallbackUrl());
     router.refresh();
   }
 
   async function handleGoogleSignIn() {
     if (loading) return;
     setLoading(true);
-    // Preserve existing Google callback behavior exactly.
-    await signIn("google", { callbackUrl: "/" });
+    const target = resolveCallbackUrl();
+    await signIn("google", {
+      callbackUrl: target === DEFAULT_POST_LOGIN_PATH ? "/" : target,
+    });
   }
 
   const createAccountControl = onCreateAccount ? (

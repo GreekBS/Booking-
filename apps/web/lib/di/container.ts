@@ -159,6 +159,19 @@ import {
   GetHousekeepingTodayUseCase,
   GenerateHousekeepingTurnoverJobHandler,
   HousekeepingBookingOutboxHandler,
+  GetUnitQrUseCase,
+  GenerateUnitQrUseCase,
+  RotateUnitQrUseCase,
+  ResolveUnitQrUseCase,
+  GetCleaningChecklistTemplateUseCase,
+  UpsertCleaningChecklistTemplateUseCase,
+  ResolveCleaningContextUseCase,
+  StartOrResumeCleaningUseCase,
+  UpdateCleaningChecklistItemUseCase,
+  CompleteCleaningUseCase,
+  ListCleaningHistoryUseCase,
+  RegisterCleaningPhotoUseCase,
+  RemoveCleaningPhotoUseCase,
   UpdateGuestUseCase,
   ListGuestNotesUseCase,
   AddGuestNoteUseCase,
@@ -485,6 +498,12 @@ import {
   PrismaUnitHousekeepingStatusRepository,
   PrismaHousekeepingTurnoverStore,
   PrismaHousekeepingTodayQuery,
+  PrismaUnitQrAccessRepository,
+  PrismaCleaningChecklistRepository,
+  PrismaCleaningExecutionRepository,
+  PrismaCleaningPhotoRepository,
+  CryptoOpaqueTokenFactory,
+  createCleaningObjectStorage,
 
   PrismaFiscalSeriesRepository,
 
@@ -578,6 +597,7 @@ import {
 
 } from "@hcp/database";
 
+import nodePath from "node:path";
 import { BcryptPasswordHasher } from "@/lib/auth/BcryptPasswordHasher";
 import { stubInvitationNotifier } from "@/lib/notifications/stubInvitationNotifier";
 import { createProductionChannelProviderRegistry } from "@/lib/channels/enabled-providers";
@@ -605,6 +625,29 @@ const taskRepository = new PrismaTaskRepository();
 const unitHousekeepingStatusRepository = new PrismaUnitHousekeepingStatusRepository();
 const housekeepingTurnoverStore = new PrismaHousekeepingTurnoverStore();
 const housekeepingTodayQuery = new PrismaHousekeepingTodayQuery();
+
+const unitQrAccessRepository = new PrismaUnitQrAccessRepository();
+const cleaningChecklistRepository = new PrismaCleaningChecklistRepository();
+const cleaningExecutionRepository = new PrismaCleaningExecutionRepository(
+  housekeepingTurnoverStore,
+);
+const cleaningPhotoRepository = new PrismaCleaningPhotoRepository();
+const opaqueTokenFactory = new CryptoOpaqueTokenFactory();
+/**
+ * Supabase private bucket in normal operation; `CLEANING_PHOTOS_DRIVER=fs`
+ * switches to the repo-local demo store used by verification runs.
+ */
+export const cleaningObjectStorage = createCleaningObjectStorage({
+  fsRoot: nodePath.resolve(
+    process.cwd(),
+    "..",
+    "..",
+    "packages",
+    "database",
+    ".data",
+    "cleaning-photos",
+  ),
+});
 
 
 const userRepository = new PrismaUserRepository();
@@ -1308,6 +1351,84 @@ export const generateHousekeepingTurnoverUseCase = new GenerateHousekeepingTurno
 export const getHousekeepingTodayUseCase = new GetHousekeepingTodayUseCase(
   housekeepingTodayQuery,
   permissionChecker,
+);
+
+export const getUnitQrUseCase = new GetUnitQrUseCase(
+  unitQrAccessRepository,
+  propertyRepository,
+  permissionChecker,
+);
+export const generateUnitQrUseCase = new GenerateUnitQrUseCase(
+  unitQrAccessRepository,
+  propertyRepository,
+  opaqueTokenFactory,
+  permissionChecker,
+  auditLogRepository,
+);
+export const rotateUnitQrUseCase = new RotateUnitQrUseCase(
+  unitQrAccessRepository,
+  propertyRepository,
+  opaqueTokenFactory,
+  permissionChecker,
+  auditLogRepository,
+);
+export const resolveUnitQrUseCase = new ResolveUnitQrUseCase(
+  unitQrAccessRepository,
+  propertyRepository,
+  opaqueTokenFactory,
+  permissionChecker,
+);
+export const getCleaningChecklistTemplateUseCase =
+  new GetCleaningChecklistTemplateUseCase(
+    cleaningChecklistRepository,
+    permissionChecker,
+  );
+export const upsertCleaningChecklistTemplateUseCase =
+  new UpsertCleaningChecklistTemplateUseCase(
+    cleaningChecklistRepository,
+    permissionChecker,
+    auditLogRepository,
+  );
+export const resolveCleaningContextUseCase = new ResolveCleaningContextUseCase(
+  cleaningExecutionRepository,
+  cleaningChecklistRepository,
+  permissionChecker,
+);
+export const startOrResumeCleaningUseCase = new StartOrResumeCleaningUseCase(
+  cleaningExecutionRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const updateCleaningChecklistItemUseCase =
+  new UpdateCleaningChecklistItemUseCase(
+    cleaningExecutionRepository,
+    permissionChecker,
+  );
+export const completeCleaningUseCase = new CompleteCleaningUseCase(
+  cleaningExecutionRepository,
+  cleaningChecklistRepository,
+  cleaningPhotoRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const listCleaningHistoryUseCase = new ListCleaningHistoryUseCase(
+  cleaningExecutionRepository,
+  permissionChecker,
+);
+export const registerCleaningPhotoUseCase = new RegisterCleaningPhotoUseCase(
+  cleaningExecutionRepository,
+  cleaningPhotoRepository,
+  cleaningObjectStorage,
+  idGenerator,
+  permissionChecker,
+  auditLogRepository,
+);
+export const removeCleaningPhotoUseCase = new RemoveCleaningPhotoUseCase(
+  cleaningExecutionRepository,
+  cleaningPhotoRepository,
+  cleaningObjectStorage,
+  permissionChecker,
+  auditLogRepository,
 );
 
 

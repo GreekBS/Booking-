@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, QrCode } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
   renderActivePropertyGate,
@@ -55,6 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UnitQrSheet } from "@/features/cleaning/UnitQrSheet";
 
 export function UnitsPage() {
   const searchParams = useSearchParams();
@@ -76,6 +77,7 @@ export function UnitsPage() {
   const [editUnit, setEditUnit] = useState<FlatUnit | null>(null);
   const [archiveUnit, setArchiveUnit] = useState<FlatUnit | null>(null);
   const [detailUnit, setDetailUnit] = useState<FlatUnit | null>(null);
+  const [qrUnit, setQrUnit] = useState<FlatUnit | null>(null);
   const [form, setForm] = useState({
     propertyId: "",
     name: "",
@@ -297,6 +299,9 @@ export function UnitsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEdit(unit)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setQrUnit(unit)}>
+                            Cleaning QR
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setArchiveUnit(unit)}>
                             Archive
                           </DropdownMenuItem>
@@ -418,7 +423,7 @@ export function UnitsPage() {
                   </dd>
                 </div>
               </dl>
-              <div className="mt-6 flex gap-2">
+              <div className="mt-6 flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   onClick={() => {
@@ -428,6 +433,17 @@ export function UnitsPage() {
                 >
                   Edit
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setQrUnit(detailUnit);
+                    setDetailUnit(null);
+                  }}
+                >
+                  <QrCode className="h-4 w-4" />
+                  Cleaning QR
+                </Button>
                 <Button size="sm" variant="destructive" onClick={() => setArchiveUnit(detailUnit)}>
                   Archive
                 </Button>
@@ -436,6 +452,14 @@ export function UnitsPage() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {tenantId ? (
+        <UnitQrSheet
+          tenantId={tenantId}
+          unit={qrUnit}
+          onOpenChange={(open) => !open && setQrUnit(null)}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(archiveUnit)}

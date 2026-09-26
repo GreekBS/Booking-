@@ -1113,3 +1113,248 @@ export async function fetchMembers(tenantId: string): Promise<{
 }> {
   return adminFetch("/members", { tenantId });
 }
+
+/* ------------------------------------------------------------------ */
+/* QR Cleaning V1 (ADR-030)                                            */
+/* ------------------------------------------------------------------ */
+
+import type {
+  CleaningChecklistTemplateRecord,
+  CleaningContextRecord,
+  CleaningExecutionItemRecord,
+  CleaningExecutionRecord,
+  CleaningHistoryRecord,
+  CleaningPhotoRecord,
+  ResolvedQrUnit,
+  UnitQrRecord,
+} from "./types";
+
+export async function fetchUnitQr(
+  tenantId: string,
+  unitId: string,
+): Promise<UnitQrRecord> {
+  const res = await adminFetch<{ data: UnitQrRecord }>(`/units/${unitId}/qr`, {
+    tenantId,
+  });
+  return res.data;
+}
+
+/** Mints a code when none exists. `token` is null when one was already active. */
+export async function generateUnitQr(
+  tenantId: string,
+  unitId: string,
+): Promise<UnitQrRecord> {
+  const res = await adminFetch<{ data: UnitQrRecord }>(`/units/${unitId}/qr`, {
+    method: "POST",
+    tenantId,
+  });
+  return res.data;
+}
+
+export async function rotateUnitQr(
+  tenantId: string,
+  unitId: string,
+): Promise<UnitQrRecord> {
+  const res = await adminFetch<{ data: UnitQrRecord }>(
+    `/units/${unitId}/qr/rotate`,
+    { method: "POST", tenantId },
+  );
+  return res.data;
+}
+
+export async function resolveQrToken(
+  tenantId: string,
+  token: string,
+): Promise<ResolvedQrUnit> {
+  const res = await adminFetch<{ data: ResolvedQrUnit }>("/qr/resolve", {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify({ token }),
+  });
+  return res.data;
+}
+
+export async function fetchCleaningTemplate(
+  tenantId: string,
+  propertyId: string,
+): Promise<CleaningChecklistTemplateRecord | null> {
+  const res = await adminFetch<{ data: CleaningChecklistTemplateRecord | null }>(
+    `/cleaning/templates?propertyId=${encodeURIComponent(propertyId)}`,
+    { tenantId },
+  );
+  return res.data;
+}
+
+export async function saveCleaningTemplate(
+  tenantId: string,
+  body: {
+    propertyId: string;
+    name: string;
+    minimumCompletionPhotos: number;
+    items: Array<{
+      id?: string | null;
+      label: string;
+      description?: string | null;
+      required?: boolean;
+      photoRequired?: boolean;
+    }>;
+  },
+): Promise<CleaningChecklistTemplateRecord> {
+  const res = await adminFetch<{ data: CleaningChecklistTemplateRecord }>(
+    "/cleaning/templates",
+    { method: "PUT", tenantId, body: JSON.stringify(body) },
+  );
+  return res.data;
+}
+
+export async function fetchCleaningContext(
+  tenantId: string,
+  unitId: string,
+): Promise<CleaningContextRecord> {
+  const res = await adminFetch<{ data: CleaningContextRecord }>(
+    `/cleaning/context?unitId=${encodeURIComponent(unitId)}`,
+    { tenantId },
+  );
+  return res.data;
+}
+
+export async function startCleaning(
+  tenantId: string,
+  unitId: string,
+): Promise<{
+  execution: CleaningExecutionRecord;
+  created: boolean;
+  taskCreated: boolean;
+  taskId: string;
+}> {
+  const res = await adminFetch<{
+    data: {
+      execution: CleaningExecutionRecord;
+      created: boolean;
+      taskCreated: boolean;
+      taskId: string;
+    };
+  }>("/cleaning/executions", {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify({ unitId }),
+  });
+  return res.data;
+}
+
+export async function updateCleaningItem(
+  tenantId: string,
+  executionId: string,
+  itemId: string,
+  checked: boolean,
+): Promise<CleaningExecutionItemRecord> {
+  const res = await adminFetch<{ data: CleaningExecutionItemRecord }>(
+    `/cleaning/executions/${executionId}/items/${itemId}`,
+    { method: "PATCH", tenantId, body: JSON.stringify({ checked }) },
+  );
+  return res.data;
+}
+
+/** Multipart upload — `adminFetch` is bypassed so the browser sets the boundary. */
+export async function uploadCleaningPhoto(
+  tenantId: string,
+  executionId: string,
+  file: File,
+  executionItemId?: string | null,
+): Promise<CleaningPhotoRecord> {
+  const form = new FormData();
+  form.append("file", file);
+  if (executionItemId) form.append("executionItemId", executionItemId);
+
+  const response = await fetch(
+    `/api/admin/v1/cleaning/executions/${executionId}/photos`,
+    { method: "POST", headers: { "X-Tenant-Id": tenantId }, body: form },
+  );
+  const payload = (await response.json()) as {
+    error?: { code?: string; message?: string };
+    data?: CleaningPhotoRecord;
+  };
+  if (!response.ok || !payload.data) {
+    throw new AdminApiError(
+      payload.error?.code ?? "REQUEST_FAILED",
+      payload.error?.message ?? "Photo upload failed",
+      response.status,
+    );
+  }
+  return payload.data;
+}
+
+export async function deleteCleaningPhoto(
+  tenantId: string,
+  executionId: string,
+  photoId: string,
+): Promise<void> {
+  await adminFetch(
+    `/cleaning/executions/${executionId}/photos/${photoId}`,
+    { method: "DELETE", tenantId },
+  );
+}
+
+export async function completeCleaning(
+  tenantId: string,
+  executionId: string,
+  body: { expectedVersion: number; completionNote?: string | null },
+): Promise<{
+  execution: CleaningExecutionRecord;
+  task: { id: string; status: string; version: number; completedAt: string | null };
+  housekeeping: {
+    unitId: string;
+    status: string;
+    source: string;
+    version: number;
+    updatedAt: string;
+  } | null;
+}> {
+  const res = await adminFetch<{
+    data: {
+      execution: CleaningExecutionRecord;
+      task: {
+        id: string;
+        status: string;
+        version: number;
+        completedAt: string | null;
+      };
+      housekeeping: {
+        unitId: string;
+        status: string;
+        source: string;
+        version: number;
+        updatedAt: string;
+      } | null;
+    };
+  }>(`/cleaning/executions/${executionId}/complete`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+  return res.data;
+}
+
+export async function listCleaningHistory(
+  tenantId: string,
+  query: {
+    propertyId?: string;
+    unitId?: string;
+    entireTenant?: boolean;
+    page?: number;
+    limit?: number;
+  },
+): Promise<{
+  data: CleaningHistoryRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}> {
+  const params = new URLSearchParams();
+  if (query.propertyId) params.set("propertyId", query.propertyId);
+  if (query.unitId) params.set("unitId", query.unitId);
+  if (query.entireTenant) params.set("entireTenant", "true");
+  if (query.page) params.set("page", String(query.page));
+  if (query.limit) params.set("limit", String(query.limit));
+  return adminFetch(`/cleaning/history?${params.toString()}`, { tenantId });
+}

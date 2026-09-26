@@ -366,6 +366,12 @@ function HousekeepingPageContent() {
             <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
               Create Task
             </Button>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link href="/dashboard/housekeeping/checklist">Checklist</Link>
+            </Button>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link href="/dashboard/housekeeping/history">Cleaning history</Link>
+            </Button>
           </div>
         }
       />

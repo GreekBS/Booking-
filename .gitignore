@@ -25,6 +25,7 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 *.db
+packages/database/.data/
 
 # Playwright / local temp artifacts
 **/test-results/
@@ -32,3 +33,4 @@ packages/database/.tmp/
 **/playwright-report/
 **/blob-report/
 apps/web/tmp-test.css
+.vercel

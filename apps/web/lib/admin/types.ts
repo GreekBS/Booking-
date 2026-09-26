@@ -547,3 +547,149 @@ export interface HousekeepingTodayBoard {
     version: number;
   }>;
 }
+
+/** QR Cleaning V1 (ADR-030). */
+
+export interface UnitQrRecord {
+  unitId: string;
+  propertyId: string;
+  unitName: string;
+  propertyName: string;
+  status: "ACTIVE" | "REVOKED" | "NONE";
+  createdAt: string | null;
+  rotatedAt: string | null;
+  /** Only present in the response that minted the code. */
+  token: string | null;
+}
+
+export interface ResolvedQrUnit {
+  unitId: string;
+  propertyId: string;
+  unitName: string;
+  propertyName: string;
+}
+
+export interface CleaningChecklistTemplateItemRecord {
+  id: string;
+  label: string;
+  description: string | null;
+  position: number;
+  required: boolean;
+  photoRequired: boolean;
+}
+
+export interface CleaningChecklistTemplateRecord {
+  id: string;
+  propertyId: string;
+  name: string;
+  version: number;
+  minimumCompletionPhotos: number;
+  updatedAt: string;
+  items: CleaningChecklistTemplateItemRecord[];
+}
+
+export interface CleaningExecutionItemRecord {
+  id: string;
+  executionId: string;
+  sourceTemplateItemId: string | null;
+  label: string;
+  description: string | null;
+  position: number;
+  required: boolean;
+  photoRequired: boolean;
+  checked: boolean;
+  checkedAt: string | null;
+  checkedByUserId: string | null;
+}
+
+export interface CleaningPhotoRecord {
+  id: string;
+  executionId: string;
+  executionItemId: string | null;
+  contentType: string;
+  sizeBytes: number;
+  uploadedByUserId: string;
+  createdAt: string;
+  url: string | null;
+}
+
+export interface CleaningExecutionRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  unitId: string;
+  taskId: string;
+  templateId: string | null;
+  templateVersion: number | null;
+  status: "IN_PROGRESS" | "COMPLETED";
+  startedByUserId: string;
+  startedAt: string;
+  completedByUserId: string | null;
+  completedAt: string | null;
+  version: number;
+  items: CleaningExecutionItemRecord[];
+  photos: CleaningPhotoRecord[];
+}
+
+export type CleaningTaskSelection =
+  | { kind: "EXISTING"; taskId: string; reason: string }
+  | { kind: "CREATE_MANUAL" }
+  | { kind: "NO_WORK" };
+
+export interface CleaningCompletionBlocker {
+  code: string;
+  message: string;
+  itemId?: string;
+}
+
+export interface CleaningContextRecord {
+  propertyId: string;
+  propertyName: string;
+  propertyTimezone: string;
+  unitId: string;
+  unitName: string;
+  housekeepingStatus: "CLEAN" | "DIRTY";
+  housekeepingVersion: number;
+  selection: CleaningTaskSelection;
+  task: {
+    id: string;
+    title: string;
+    status: string;
+    source: string;
+    dueAt: string | null;
+    version: number;
+  } | null;
+  template: {
+    id: string;
+    name: string;
+    version: number;
+    minimumCompletionPhotos: number;
+    itemCount: number;
+  } | null;
+  readiness: {
+    ready: boolean;
+    blockers: CleaningCompletionBlocker[];
+    photoCount: number;
+    minimumCompletionPhotos: number;
+  } | null;
+  canPerform: boolean;
+  activeExecution: CleaningExecutionRecord | null;
+}
+
+export interface CleaningHistoryRecord {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  unitId: string;
+  unitName: string;
+  taskId: string;
+  taskTitle: string;
+  status: "IN_PROGRESS" | "COMPLETED";
+  startedByUserId: string;
+  startedAt: string;
+  completedByUserId: string | null;
+  completedAt: string | null;
+  itemsTotal: number;
+  itemsChecked: number;
+  photoCount: number;
+}
