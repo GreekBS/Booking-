@@ -11,9 +11,12 @@ import {
   createManualBooking,
   fetchPropertyUnitCatalog,
   flattenCatalogUnits,
+  getGuestForBookingSelection,
   previewQuoteForStay,
+  searchGuestsForBooking,
   type StayPricingPreview,
 } from "@/lib/admin/api";
+import type { GuestBookingSelectionRecord } from "@/lib/admin/types";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { CatalogPropertyRecord, QuoteRecord, BookingRecord } from "@/lib/admin/types";
 import { formatMoney } from "@/lib/admin/utils";
@@ -46,6 +49,7 @@ export function ManualBookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quoteIdFromUrl = searchParams.get("quoteId");
+  const guestIdFromUrl = searchParams.get("guestId");
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId: activePropertyId,
@@ -74,6 +78,10 @@ export function ManualBookingPage() {
   const [commercialQuote, setCommercialQuote] = useState<QuoteRecord | null>(null);
   const [booking, setBooking] = useState<BookingRecord | null>(null);
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
+  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
+  const [guestSearch, setGuestSearch] = useState("");
+  const [guestSearchResults, setGuestSearchResults] = useState<GuestBookingSelectionRecord[]>([]);
+  const [guestSearchLoading, setGuestSearchLoading] = useState(false);
 
   const filteredUnits = useMemo(
     () => units.filter((u) => !propertyId || u.propertyId === propertyId),
@@ -106,6 +114,81 @@ export function ManualBookingPage() {
     }
     setDefaultsApplied(true);
   }, [defaultsApplied, activePropertyId, properties]);
+
+  useEffect(() => {
+    if (!tenantId || !guestIdFromUrl) return;
+    const propForGuest = propertyId || activePropertyId;
+    if (!propForGuest) return;
+    let cancelled = false;
+    async function loadGuestFromUrl() {
+      try {
+        const picked = await getGuestForBookingSelection(tenantId!, {
+          guestId: guestIdFromUrl!,
+          propertyId: propForGuest!,
+        });
+        if (cancelled) return;
+        setSelectedGuestId(picked.id);
+        setGuest({
+          name: picked.displayName,
+          email: picked.email ?? "",
+          phone: picked.phone ?? "",
+        });
+      } catch {
+        /* deep link invalid — operator can still type contact */
+      }
+    }
+    void loadGuestFromUrl();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, guestIdFromUrl, propertyId, activePropertyId]);
+
+  useEffect(() => {
+    if (!tenantId || !propertyId) {
+      setGuestSearchResults([]);
+      return;
+    }
+    const q = guestSearch.trim();
+    if (q.length < 2) {
+      setGuestSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      void (async () => {
+        setGuestSearchLoading(true);
+        try {
+          const res = await searchGuestsForBooking(tenantId, {
+            propertyId,
+            search: q,
+            limit: 8,
+          });
+          setGuestSearchResults(res.data ?? []);
+        } catch {
+          setGuestSearchResults([]);
+        } finally {
+          setGuestSearchLoading(false);
+        }
+      })();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [tenantId, propertyId, guestSearch]);
+
+  function selectExistingGuest(picked: GuestBookingSelectionRecord) {
+    setSelectedGuestId(picked.id);
+    setGuest({
+      name: picked.displayName,
+      email: picked.email ?? "",
+      phone: picked.phone ?? "",
+    });
+    setGuestSearch("");
+    setGuestSearchResults([]);
+  }
+
+  function clearGuestSelection() {
+    setSelectedGuestId(null);
+    setGuestSearch("");
+    setGuestSearchResults([]);
+  }
 
   // Hold → booking: consume existing quoteId from URL.
   useEffect(() => {
@@ -191,6 +274,7 @@ export function ManualBookingPage() {
         created = (await createBookingFromQuote(tenantId, {
           quoteId: commercialQuote.id,
           guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
+          guestId: selectedGuestId,
           confirmationMode: "manual",
         })) as BookingRecord;
 
@@ -208,6 +292,7 @@ export function ManualBookingPage() {
           checkOut,
           guestCount,
           guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
+          guestId: selectedGuestId,
           confirm,
         })) as { booking: BookingRecord };
         created = result.booking;
@@ -435,11 +520,61 @@ export function ManualBookingPage() {
                 ) : null}
               </div>
               <div className="space-y-2">
+                <Label htmlFor="mb-guest-search">Find existing guest</Label>
+                <Input
+                  id="mb-guest-search"
+                  placeholder="Search by name, email, or phone (min 2 chars)…"
+                  value={guestSearch}
+                  onChange={(e) => setGuestSearch(e.target.value)}
+                  disabled={!propertyId}
+                />
+                {!propertyId ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Select a property in step 1 to search CRM guests.
+                  </p>
+                ) : null}
+                {guestSearchLoading ? (
+                  <p className="text-xs text-muted-foreground">Searching…</p>
+                ) : null}
+                {guestSearchResults.length > 0 ? (
+                  <ul className="max-h-40 overflow-y-auto rounded-md border border-border">
+                    {guestSearchResults.map((g) => (
+                      <li key={g.id}>
+                        <button
+                          type="button"
+                          className="flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-muted"
+                          onClick={() => selectExistingGuest(g)}
+                        >
+                          <span className="font-medium">{g.displayName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {[g.email, g.phone].filter(Boolean).join(" · ") || "No contact"}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {selectedGuestId ? (
+                  <div className="flex items-center justify-between rounded-md border border-border bg-surface-subtle/50 px-3 py-2 text-sm">
+                    <span>
+                      Linked CRM guest ·{" "}
+                      <span className="font-medium">{guest.name || "Selected"}</span>
+                    </span>
+                    <Button type="button" variant="ghost" size="sm" onClick={clearGuestSelection}>
+                      Clear
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="mb-guest-name">Guest name</Label>
                 <Input
                   id="mb-guest-name"
                   value={guest.name}
-                  onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                  onChange={(e) => {
+                    if (selectedGuestId) setSelectedGuestId(null);
+                    setGuest({ ...guest, name: e.target.value });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -448,7 +583,10 @@ export function ManualBookingPage() {
                   id="mb-guest-email"
                   type="email"
                   value={guest.email}
-                  onChange={(e) => setGuest({ ...guest, email: e.target.value })}
+                  onChange={(e) => {
+                    if (selectedGuestId) setSelectedGuestId(null);
+                    setGuest({ ...guest, email: e.target.value });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -456,7 +594,10 @@ export function ManualBookingPage() {
                 <Input
                   id="mb-guest-phone"
                   value={guest.phone}
-                  onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                  onChange={(e) => {
+                    if (selectedGuestId) setSelectedGuestId(null);
+                    setGuest({ ...guest, phone: e.target.value });
+                  }}
                 />
               </div>
               <div className="flex flex-wrap gap-2">

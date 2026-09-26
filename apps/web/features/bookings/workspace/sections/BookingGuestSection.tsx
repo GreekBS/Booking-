@@ -1,16 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import {
   WorkspaceDetailList,
   WorkspaceDetailRow,
   WorkspaceSection,
 } from "@/features/workspace/components/WorkspaceSection";
+import { Button } from "@/components/ui/button";
 import type { BookingSectionProps } from "../types";
 
-/**
- * CRM-2: reservation contact snapshot + minimal linked Guest identity.
- * Full Guest Profile/Directory is CRM-3 — no dead profile links.
- */
+/** Reservation contact snapshot + linked CRM Guest identity when authorized. */
 export function BookingGuestSection({ booking }: BookingSectionProps) {
   const linked = booking.linkedGuest ?? null;
 
@@ -26,12 +25,19 @@ export function BookingGuestSection({ booking }: BookingSectionProps) {
 
       <WorkspaceSection title="Linked Guest">
         {linked ? (
-          <WorkspaceDetailList>
-            <WorkspaceDetailRow label="Display name" value={linked.displayName} />
-            <WorkspaceDetailRow label="Email" value={linked.email ?? "—"} />
-            <WorkspaceDetailRow label="Phone" value={linked.phone ?? "—"} />
-            <WorkspaceDetailRow label="Guest id" value={linked.id} />
-          </WorkspaceDetailList>
+          <>
+            <WorkspaceDetailList>
+              <WorkspaceDetailRow label="Display name" value={linked.displayName} />
+              <WorkspaceDetailRow label="Email" value={linked.email ?? "—"} />
+              <WorkspaceDetailRow label="Phone" value={linked.phone ?? "—"} />
+              <WorkspaceDetailRow label="Guest id" value={linked.id} />
+            </WorkspaceDetailList>
+            <div className="mt-3">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/dashboard/guests/${linked.id}`}>View Guest Profile</Link>
+              </Button>
+            </div>
+          </>
         ) : booking.guestId ? (
           <WorkspaceDetailList>
             <WorkspaceDetailRow label="Guest id" value={booking.guestId} />

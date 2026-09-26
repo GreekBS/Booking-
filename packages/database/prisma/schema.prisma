@@ -282,6 +282,9 @@ model Tenant {
   businessFiscalProfiles       BusinessFiscalProfile[]
   customerBillingProfiles      CustomerBillingProfile[]
   guests                       Guest[]
+  guestNotes                   GuestNote[]
+  guestTags                    GuestTag[]
+  guestTagAssignments          GuestTagAssignment[]
   fiscalSeries                 FiscalSeries[]
   fiscalDocuments              FiscalDocument[]
   fiscalDocumentLines          FiscalDocumentLine[]
@@ -305,6 +308,8 @@ model User {
   memberships Membership[]
   invitations Invitation[] @relation("InvitedBy")
   auditLogs   AuditLog[]
+  guestNotes  GuestNote[]
+  guestTagAssignments GuestTagAssignment[]
 
   @@map("users")
 }
@@ -422,6 +427,7 @@ model Property {
   businessFiscalProfiles BusinessFiscalProfile[]
   fiscalSeries           FiscalSeries[]
   fiscalDocuments        FiscalDocument[]
+  guestNotes             GuestNote[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -1124,12 +1130,71 @@ model Guest {
   mergedIntoGuest Guest?  @relation("GuestMerge", fields: [mergedIntoGuestId], references: [id], onDelete: Restrict)
   mergedFrom      Guest[] @relation("GuestMerge")
   bookings        Booking[]
+  notes           GuestNote[]
+  tagAssignments  GuestTagAssignment[]
 
   @@index([tenantId, emailNormalized])
   @@index([tenantId, phoneNormalized])
   @@index([tenantId, displayName])
   @@index([tenantId, archivedAt])
   @@map("guests")
+}
+
+/// CRM-3: Append-only operational Guest note (property-scoped or tenant-wide).
+model GuestNote {
+  id           String   @id @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  guestId      String   @map("guest_id") @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  /// null = tenant-wide admin note; set = Property-scoped operational note
+  propertyId   String?  @map("property_id") @db.Uuid
+  body         String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  guest    Guest     @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, guestId, createdAt(sort: Desc)])
+  @@index([tenantId, propertyId])
+  @@map("guest_notes")
+}
+
+/// CRM-3: Tenant-owned manual Guest tag definition.
+model GuestTag {
+  id         String    @id @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  name       String    @db.VarChar(64)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments GuestTagAssignment[]
+
+  @@index([tenantId, archivedAt])
+  @@map("guest_tags")
+}
+
+/// CRM-3: Guest ↔ Tag assignment (unique per tenant/guest/tag).
+model GuestTagAssignment {
+  id               String   @id @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  guestId          String   @map("guest_id") @db.Uuid
+  tagId            String   @map("tag_id") @db.Uuid
+  assignedAt       DateTime @default(now()) @map("assigned_at") @db.Timestamptz
+  assignedByUserId String?  @map("assigned_by_user_id") @db.Uuid
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  guest      Guest  @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  tag        GuestTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedBy User?  @relation(fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, guestId, tagId])
+  @@index([tenantId, guestId])
+  @@index([tenantId, tagId])
+  @@map("guest_tag_assignments")
 }
 
 /// F3: Fiscal document series — next_sequence advanced only inside issue transaction.

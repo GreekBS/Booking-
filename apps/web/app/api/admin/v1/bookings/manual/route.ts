@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
           phone: body.guest.phone ?? null,
         },
         confirmationMode: "manual",
+        guestId: body.guestId ?? null,
       },
       permissionActor,
       { ipAddress: getClientIp(request) },

@@ -124,15 +124,15 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
     expect(policies).not.toContain("onSelectedPropertyChange");
   });
 
-  it("Guests is an honest booking-derived directory scoped to Active Property", () => {
+  it("Guests is a CRM directory scoped to Active Property", () => {
     const guests = read("features/guests/GuestsPage.tsx");
     expect(guests).toContain("useActiveProperty");
     expect(guests).toContain("renderActivePropertyGate");
     expect(guests).toContain("PageHeader");
-    expect(guests).toContain("not a CRM");
-    expect(guests).toContain("fetchAllBookings");
-    expect(guests).toContain("aggregateGuests");
-    expect(guests).toContain("/dashboard/bookings");
+    expect(guests).toContain("searchGuests");
+    expect(guests).toContain("/dashboard/guests/");
+    expect(guests).not.toContain("fetchAllBookings");
+    expect(guests).not.toContain("aggregateGuests");
     expect(guests).not.toContain("loyalty");
     expect(guests).not.toContain("lifetime value");
     expect(guests).not.toContain("marketing consent");

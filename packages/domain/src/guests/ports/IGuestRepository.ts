@@ -12,6 +12,52 @@ export interface GuestContactInput {
 
 export type GuestIdentityLockKind = "email" | "phone";
 
+/** Visible stay metrics — must be computed from actor-visible bookings only. */
+export interface GuestDirectoryStayMetrics {
+  stayCount: number;
+  lastStayCheckOut: string | null;
+  nextStayCheckIn: string | null;
+}
+
+export interface GuestDirectoryRow {
+  guest: Guest;
+  metrics: GuestDirectoryStayMetrics;
+  tags: Array<{ id: string; name: string }>;
+}
+
+export interface GuestDirectoryFilters {
+  tenantId: string;
+  /**
+   * null = tenant-wide (admin only).
+   * string = Active Property relevance (Guests with booking activity at property).
+   */
+  propertyId: string | null;
+  /**
+   * null = tenant-wide reader.
+   * string[] = Manager assigned properties (intersected with propertyId when set).
+   */
+  allowedPropertyIds: string[] | null;
+  search?: string | null;
+  includeArchived?: boolean;
+  page: number;
+  limit: number;
+}
+
+export interface PaginatedGuestDirectory {
+  data: GuestDirectoryRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GuestProfileMetrics {
+  stayCount: number;
+  firstStayCheckIn: string | null;
+  lastStayCheckOut: string | null;
+  nextStayCheckIn: string | null;
+  propertyIdsVisited: string[];
+}
+
 export interface IGuestRepository {
   save(guest: Guest): Promise<void>;
 
@@ -27,10 +73,6 @@ export interface IGuestRepository {
     phoneNormalized: string,
   ): Promise<Guest[]>;
 
-  /**
-   * Serialize resolve/create for a strong identity key within a tenant transaction.
-   * Uses scoped advisory locking — does NOT imply global uniqueness of email/phone.
-   */
   withIdentityLock<T>(
     tenantId: string,
     kind: GuestIdentityLockKind,
@@ -38,10 +80,6 @@ export interface IGuestRepository {
     fn: () => Promise<T>,
   ): Promise<T>;
 
-  /**
-   * Set bookings.guest_id when currently null. Does not mutate snapshot columns.
-   * Returns true when linkage was applied (or already linked to same guest).
-   */
   linkBookingGuestIfUnlinked(
     tenantId: string,
     bookingId: string,
@@ -52,4 +90,50 @@ export interface IGuestRepository {
     tenantId: string,
     bookingId: string,
   ): Promise<{ guestId: string | null } | null>;
+
+  /**
+   * Bounded directory query: Guests with visible Booking activity.
+   * Metrics and totals are computed only from allowedPropertyIds scope.
+   */
+  searchDirectory(filters: GuestDirectoryFilters): Promise<PaginatedGuestDirectory>;
+
+  /**
+   * True when Guest has at least one Booking in the visible property set.
+   * Used for Manager access to Guest identity.
+   */
+  hasVisibleBookingActivity(
+    tenantId: string,
+    guestId: string,
+    allowedPropertyIds: string[] | null,
+  ): Promise<boolean>;
+
+  /** Stay metrics from actor-visible bookings only. */
+  getVisibleStayMetrics(
+    tenantId: string,
+    guestId: string,
+    allowedPropertyIds: string[] | null,
+  ): Promise<GuestProfileMetrics>;
+
+  listVisibleBookingsForGuest(params: {
+    tenantId: string;
+    guestId: string;
+    allowedPropertyIds: string[] | null;
+    page: number;
+    limit: number;
+  }): Promise<{
+    data: Array<{
+      id: string;
+      propertyId: string;
+      unitId: string;
+      checkIn: string;
+      checkOut: string;
+      status: string;
+      guestCount: number;
+      guestName: string;
+      source: string | null;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }>;
 }

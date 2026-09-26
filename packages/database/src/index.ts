@@ -73,6 +73,8 @@ export {
   seedGreekStatutoryTaxRules,
 } from "./repositories/fiscal/FiscalRepositories";
 export { PrismaGuestRepository } from "./repositories/guests/GuestRepository";
+export { PrismaGuestNoteRepository } from "./repositories/guests/GuestNoteRepository";
+export { PrismaGuestTagRepository } from "./repositories/guests/GuestTagRepository";
 export {
   PrismaFiscalSeriesRepository,
   PrismaFiscalDocumentRepository,

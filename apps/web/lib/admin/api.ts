@@ -713,6 +713,173 @@ export async function updatePublishableKeyDomains(
   });
 }
 
+function guestListQuery(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "" && value !== false) {
+      query.set(key, String(value));
+    }
+  }
+  return query.toString();
+}
+
+export function mapGuestDirectoryRow(row: import("./types").GuestDirectoryRow): import("./types").GuestRecord {
+  return {
+    id: row.guest.id,
+    displayName: row.guest.displayName,
+    email: row.guest.email,
+    phone: row.guest.phone,
+    stayCount: row.metrics.stayCount,
+    lastStayCheckOut: row.metrics.lastStayCheckOut,
+    nextStayCheckIn: row.metrics.nextStayCheckIn,
+    tags: row.tags,
+  };
+}
+
+export async function searchGuests(
+  tenantId: string,
+  params: {
+    propertyId?: string;
+    entireTenant?: boolean;
+    search?: string;
+    page?: number;
+    limit?: number;
+    includeArchived?: boolean;
+  },
+): Promise<import("./types").PaginatedGuestDirectory> {
+  const qs = guestListQuery({
+    propertyId: params.entireTenant ? undefined : params.propertyId,
+    entireTenant: params.entireTenant ? true : undefined,
+    search: params.search,
+    page: params.page,
+    limit: params.limit,
+    includeArchived: params.includeArchived,
+  });
+  return adminFetch(`/guests?${qs}`, { tenantId });
+}
+
+export async function getGuestProfile(
+  tenantId: string,
+  guestId: string,
+): Promise<import("./types").GuestProfileRecord> {
+  return adminFetch(`/guests/${guestId}`, { tenantId });
+}
+
+export async function updateGuest(
+  tenantId: string,
+  guestId: string,
+  body: Partial<import("./types").GuestContactInput>,
+): Promise<import("./types").GuestIdentityRecord> {
+  return adminFetch(`/guests/${guestId}`, {
+    method: "PATCH",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function createGuest(
+  tenantId: string,
+  body: import("./types").GuestContactInput,
+): Promise<import("./types").GuestIdentityRecord> {
+  return adminFetch("/guests", {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function listGuestNotes(
+  tenantId: string,
+  guestId: string,
+): Promise<{ data: import("./types").GuestNoteRecord[] }> {
+  return adminFetch(`/guests/${guestId}/notes`, { tenantId });
+}
+
+export async function addGuestNote(
+  tenantId: string,
+  guestId: string,
+  body: { body: string; propertyId?: string | null },
+): Promise<import("./types").GuestNoteRecord> {
+  return adminFetch(`/guests/${guestId}/notes`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function listGuestReservations(
+  tenantId: string,
+  guestId: string,
+  params?: { page?: number; limit?: number },
+): Promise<import("./types").PaginatedGuestReservations> {
+  const qs = guestListQuery({ page: params?.page, limit: params?.limit });
+  return adminFetch(`/guests/${guestId}/reservations?${qs}`, { tenantId });
+}
+
+export async function listGuestTags(
+  tenantId: string,
+): Promise<{ data: import("./types").GuestTagRecord[] }> {
+  return adminFetch("/guest-tags", { tenantId });
+}
+
+export async function createGuestTag(
+  tenantId: string,
+  name: string,
+): Promise<import("./types").GuestTagRecord> {
+  return adminFetch("/guest-tags", {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function assignGuestTag(
+  tenantId: string,
+  guestId: string,
+  tagId: string,
+): Promise<void> {
+  await adminFetch(`/guests/${guestId}/tags/${tagId}`, {
+    method: "POST",
+    tenantId,
+  });
+}
+
+export async function unassignGuestTag(
+  tenantId: string,
+  guestId: string,
+  tagId: string,
+): Promise<void> {
+  await adminFetch(`/guests/${guestId}/tags/${tagId}`, {
+    method: "DELETE",
+    tenantId,
+  });
+}
+
+export async function searchGuestsForBooking(
+  tenantId: string,
+  params: { propertyId: string; search: string; limit?: number },
+): Promise<{ data: import("./types").GuestBookingSelectionRecord[] }> {
+  const qs = guestListQuery({
+    propertyId: params.propertyId,
+    search: params.search,
+    limit: params.limit,
+  });
+  return adminFetch(`/guests/search-for-booking?${qs}`, { tenantId });
+}
+
+export async function getGuestForBookingSelection(
+  tenantId: string,
+  params: { guestId: string; propertyId: string },
+): Promise<import("./types").GuestBookingSelectionRecord> {
+  const qs = guestListQuery({
+    guestId: params.guestId,
+    propertyId: params.propertyId,
+  });
+  return adminFetch(`/guests/search-for-booking?${qs}`, { tenantId });
+}
+
 export async function createManualBooking(
   tenantId: string,
   body: {
@@ -721,6 +888,7 @@ export async function createManualBooking(
     checkOut: string;
     guestCount: number;
     guest: { name: string; email: string; phone?: string | null };
+    guestId?: string | null;
     confirm?: boolean;
   },
 ) {
@@ -801,6 +969,7 @@ export async function createBookingFromQuote(
   body: {
     quoteId: string;
     guest: { name: string; email: string; phone?: string | null };
+    guestId?: string | null;
     confirmationMode?: "manual" | "payment_required";
   },
 ) {

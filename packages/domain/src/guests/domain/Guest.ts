@@ -52,6 +52,14 @@ export class Guest extends AggregateRoot<GuestProps> {
     return this.props.displayName;
   }
 
+  get firstName(): string | null {
+    return this.props.firstName;
+  }
+
+  get lastName(): string | null {
+    return this.props.lastName;
+  }
+
   get email(): string | null {
     return this.props.email;
   }
@@ -68,6 +76,14 @@ export class Guest extends AggregateRoot<GuestProps> {
     return this.props.phoneNormalized;
   }
 
+  get country(): string | null {
+    return this.props.country;
+  }
+
+  get preferredLanguage(): string | null {
+    return this.props.preferredLanguage;
+  }
+
   get archivedAt(): Date | null {
     return this.props.archivedAt;
   }
@@ -78,6 +94,14 @@ export class Guest extends AggregateRoot<GuestProps> {
 
   get anonymizedAt(): Date | null {
     return this.props.anonymizedAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   get isActive(): boolean {

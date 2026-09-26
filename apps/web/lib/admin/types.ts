@@ -301,12 +301,126 @@ export interface FlatUnit extends UnitSummary {
   propertyName: string;
 }
 
-export interface GuestRecord {
-  email: string;
-  name: string;
+export interface GuestIdentityRecord {
+  id: string;
+  tenantId: string;
+  displayName: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
   phone: string | null;
-  bookingCount: number;
+  country: string | null;
+  preferredLanguage: string | null;
+  archivedAt: string | null;
+  mergedIntoGuestId: string | null;
+  anonymizedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuestTagRef {
+  id: string;
+  name: string;
+}
+
+export interface GuestDirectoryStayMetrics {
+  stayCount: number;
   lastStayCheckOut: string | null;
+  nextStayCheckIn: string | null;
+}
+
+/** Row from GET /guests (CRM directory). */
+export interface GuestDirectoryRow {
+  guest: GuestIdentityRecord;
+  metrics: GuestDirectoryStayMetrics;
+  tags: GuestTagRef[];
+}
+
+export interface PaginatedGuestDirectory {
+  data: GuestDirectoryRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/** Flattened directory row for table rendering. */
+export interface GuestRecord {
+  id: string;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  stayCount: number;
+  lastStayCheckOut: string | null;
+  nextStayCheckIn: string | null;
+  tags: GuestTagRef[];
+}
+
+export interface GuestProfileMetrics {
+  stayCount: number;
+  firstStayCheckIn: string | null;
+  lastStayCheckOut: string | null;
+  nextStayCheckIn: string | null;
+  propertyIdsVisited: string[];
+}
+
+export interface GuestProfileRecord {
+  guest: GuestIdentityRecord;
+  metrics: GuestProfileMetrics;
+  tags: GuestTagRef[];
+}
+
+export interface GuestNoteRecord {
+  id: string;
+  tenantId: string;
+  guestId: string;
+  authorUserId: string;
+  propertyId: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface GuestReservationRecord {
+  id: string;
+  propertyId: string;
+  unitId: string;
+  checkIn: string;
+  checkOut: string;
+  status: string;
+  guestCount: number;
+  guestName: string;
+  source: string | null;
+}
+
+export interface PaginatedGuestReservations {
+  data: GuestReservationRecord[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GuestTagRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  archivedAt: string | null;
+  createdAt: string;
+}
+
+export interface GuestBookingSelectionRecord {
+  id: string;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface GuestContactInput {
+  displayName: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  country?: string | null;
+  preferredLanguage?: string | null;
 }
 
 export interface QuoteRecord {

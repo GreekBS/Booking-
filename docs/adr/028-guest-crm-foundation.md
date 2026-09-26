@@ -1,8 +1,8 @@
-# ADR-028: Guest CRM Foundation + Booking Integration
+# ADR-028: Guest CRM Foundation + Booking Integration + Operator Experience
 
 ## Status
 
-Accepted (CRM-1 foundation; CRM-2 booking integration).
+Accepted (CRM-1 foundation; CRM-2 booking integration; CRM-3 operator experience).
 
 ## Context
 
@@ -12,13 +12,15 @@ Talos stored stay contact only as denormalized `bookings.guest_name/email/phone`
 
 CRM-1 introduced tenant-owned Guest identity. CRM-2 wires that identity into every
 supported **new** reservation create path without becoming an alternate Booking path.
+CRM-3 replaces the booking-derived Guests page with a real Guest Directory and Profile.
 
 ## Decision
 
 ### Bounded context
 
-`packages/domain/src/guests/` owns persistent Guest identity, normalization, and
-`ResolveOrCreateGuest`. Commerce remains Booking/inventory authority (ADR-022).
+`packages/domain/src/guests/` owns persistent Guest identity, normalization,
+`ResolveOrCreateGuest`, directory/profile queries, Notes, and Tags.
+Commerce remains Booking/inventory authority (ADR-022).
 Billing/Fiscal remain settlement/document authorities.
 
 ### Ownership
@@ -34,7 +36,7 @@ Bookings. Active Property is UX/filter context only.
 - Reservation contact snapshots (`guest_name/email/phone`) remain historical evidence
 - Editing Guest never rewrites Booking snapshots or fiscal documents
 
-### Identity safety (CRM-1, reused by CRM-2)
+### Identity safety (CRM-1, reused by CRM-2/3)
 
 **False duplicates > false merges.**
 
@@ -58,41 +60,56 @@ Guest resolution is **never** an alternate Booking creation path.
 
 Transport / provider / inbox layers remain CRM-unaware (ADR-022).
 
-#### Manual / operator
+### CRM-3 Guest Directory
 
-- Operator enters reservation contact once; Talos auto-resolves/creates Guest
-- Optional explicit `guestId` (admin schema) selects an existing active Guest after tenant validation
-- Booking snapshot still comes from the confirmed reservation contact, not live CRM overwrite
-- Rich Guest search UI deferred to CRM-3
+Source of truth: `guests` table + `bookings.guest_id` (not email aggregation).
 
-#### Direct / storefront
+- Route: `/dashboard/guests`
+- Default scope: Guests with Booking activity at **Active Property**
+- Admin secondary option: Entire tenant
+- Manager: assigned Property activity only; server-side filtering before results leave
+- Server-side search (displayName / email / phone) + pagination
+- Metrics (`stayCount`, `lastStay`, `nextStay`) computed **only** from actor-visible bookings
+- Bounded SQL aggregation (no N+1 per Guest)
 
-- Public clients must not supply `guestId` (route reject + use-case Forbidden)
-- Identity resolved only from validated contact inputs server-side
-- Hold/Quote/Booking inventory semantics unchanged
+### CRM-3 Guest Profile
 
-#### Channel CREATE / retry / placeholder
+Route: `/dashboard/guests/[guestId]`
 
-- CREATE: resolve/create from normalized contact; link new Booking
-- Duplicate external reservation (early link or unique race): return duplicate **without** new Guest
-- Placeholder emails never merge distinct OTA humans; each reservation without strong identity gets a distinct Guest; retries reuse Booking/Guest via ChannelImportKey idempotency
+Sections: Overview, Reservations (`Booking.guestId`), Notes, Tags in header.
+No inferred CustomerBillingProfile / Payment.payerName linkage.
+Reservation Workspace links to profile when `linkedGuest` is authorized.
 
-### Enrichment policy (CRM-2)
+### Guest edit semantics
 
-**Conservative — MATCHED Guests are not overwritten by new booking snapshots.**
+Editable: displayName, firstName, lastName, email, phone, country, preferredLanguage.
+Does **not** mutate Booking snapshots, Billing, Payment, or Fiscal documents.
+Archived / merged / anonymized Guests are not selectable for new reservations.
 
-- On `MATCHED`: leave living Guest profile unchanged
-- On `CREATED` / `AMBIGUOUS`: new Guest is seeded from the reservation contact
-- Missing/placeholder OTA contact must not erase trusted CRM email/phone
-- Conflicting contact remains on the Booking snapshot; future CRM-4 may reconcile
+### Notes visibility model
 
-### Recovery use case
+Table: `guest_notes`
 
-`LinkBookingToGuestUseCase` links an unlinked Booking to an accessible Guest:
+| `propertyId` | Visibility |
+|--------------|------------|
+| `null` | Tenant-wide admin note — Admin / SA only |
+| Property A | Admin + Managers authorized for Property A |
 
-- same tenant, Booking property ACL, Guest active
-- idempotent same-link; conflicting existing link fails closed
-- no broad unlink/relink UI in CRM-2
+Manager creates notes with `propertyId` required and assigned.
+Permissions: `guest:note_create:tenant`, `guest:note_create:assigned`.
+
+### Tags
+
+Tables: `guest_tags`, `guest_tag_assignments`
+
+- Tenant-owned manual definitions (Admin / SA manage + assign)
+- Manager may **view** tags on Guests they can access
+- Derived facts (Returning Guest, channel source) are **not** persisted as tags
+
+### Manual Booking Guest selection
+
+Operator may search/select existing Guest → prefill contact → submitted values become Booking snapshot.
+Server validates Guest ID (tenant, usable, ACL). Public clients still cannot supply `guestId`.
 
 ### Authorization
 
@@ -102,34 +119,27 @@ Transport / provider / inbox layers remain CRM-unaware (ADR-022).
 | `guest:read:assigned` | — | yes |
 | `guest:create:tenant` | yes | no |
 | `guest:update:tenant` | yes | no |
+| `guest:note_create:tenant` | yes | no |
+| `guest:note_create:assigned` | — | yes |
+| `guest:tag_manage:tenant` | yes | no |
 
 Booking-create Guest resolution uses `executeForBookingCreate`, authorized by
 `booking:create:tenant` (or Guest admin). Managers are **not** granted
 `guest:create:tenant` merely to complete a reservation.
 
-Manager privacy: linking the same Guest across properties is allowed when strong
-resolution proves identity, but resolution results exposed to restricted actors
-must not leak other Properties’ booking/payment/fiscal history.
-
 ### RLS
 
-`guests`: ENABLE + FORCE RLS; tenant isolation via `app.current_tenant`.
-`talos_runtime` remains non-BYPASSRLS.
+`guests`, `guest_notes`, `guest_tags`, `guest_tag_assignments`:
+ENABLE + FORCE RLS; tenant isolation via `app.current_tenant`.
+Manager Property ACL is enforced in the application layer.
 
-### Reservation Workspace (CRM-2 minimal)
+### Explicit non-goals (CRM-4)
 
-Booking Workspace → Guest & Billing shows reservation contact snapshot plus
-Linked Guest identity (displayName / email / phone when authorized). No fake
-Guest Profile route until CRM-3.
-
-### Explicit non-goals
-
-Full Directory/Profile UI, notes, tags, merge UI, privacy export, consent,
-occupants, Guest↔CustomerBillingProfile FK, Payment.guestId, LTV, messaging,
-AI/fuzzy matching (CRM-3/4).
+Guest merge, duplicate-management UI, privacy export/anonymization workflow,
+consent, marketing, loyalty, AI/fuzzy matching, passport storage, occupants,
+Guest↔CustomerBillingProfile FK, Payment.guestId, LTV/revenue, messaging.
 
 ## Consequences
 
-- CRM-3 builds Guest Directory/Profile on trustworthy Guest↔Booking data
-- CRM-4 merge + privacy hardening
-- Historical demo backfill (CRM-1) + new creates (CRM-2) feed the CRM
+- CRM-4 merge + privacy hardening builds on CRM-3 directory/profile data
+- Channel architecture unchanged in CRM-3

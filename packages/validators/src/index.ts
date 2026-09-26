@@ -143,3 +143,4 @@ export * from "./storefront";
 export * from "./admin";
 export * from "./internal";
 export * from "./marketing";
+export * from "./guests";

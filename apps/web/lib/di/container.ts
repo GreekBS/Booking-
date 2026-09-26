@@ -136,6 +136,19 @@ import {
   PreviewStayPricingUseCase,
   ResolveOrCreateGuest,
   GetGuestUseCase,
+  GetGuestProfileUseCase,
+  ListGuestsUseCase,
+  ListGuestReservationsUseCase,
+  SearchGuestsForBookingUseCase,
+  GetGuestForBookingSelectionUseCase,
+  CreateGuestUseCase,
+  UpdateGuestUseCase,
+  ListGuestNotesUseCase,
+  AddGuestNoteUseCase,
+  ListGuestTagsUseCase,
+  CreateGuestTagUseCase,
+  AssignGuestTagUseCase,
+  UnassignGuestTagUseCase,
   LinkBookingToGuestUseCase,
 
   GetQuoteUseCase,
@@ -449,6 +462,8 @@ import {
   PrismaCustomerBillingProfileRepository,
 
   PrismaGuestRepository,
+  PrismaGuestNoteRepository,
+  PrismaGuestTagRepository,
 
   PrismaFiscalSeriesRepository,
 
@@ -964,6 +979,8 @@ const businessFiscalProfileRepository = new PrismaBusinessFiscalProfileRepositor
 const customerBillingProfileRepository = new PrismaCustomerBillingProfileRepository();
 
 const guestRepository = new PrismaGuestRepository();
+const guestNoteRepository = new PrismaGuestNoteRepository();
+const guestTagRepository = new PrismaGuestTagRepository();
 
 const fiscalSeriesRepository = new PrismaFiscalSeriesRepository();
 
@@ -1104,6 +1121,79 @@ export const resolveOrCreateGuest = new ResolveOrCreateGuest(
 
 export const getGuestUseCase = new GetGuestUseCase(
   guestRepository,
+  permissionChecker,
+);
+
+export const getGuestProfileUseCase = new GetGuestProfileUseCase(
+  guestRepository,
+  guestTagRepository,
+  permissionChecker,
+);
+
+export const listGuestsUseCase = new ListGuestsUseCase(
+  guestRepository,
+  permissionChecker,
+);
+
+export const listGuestReservationsUseCase = new ListGuestReservationsUseCase(
+  guestRepository,
+  permissionChecker,
+);
+
+export const searchGuestsForBookingUseCase = new SearchGuestsForBookingUseCase(
+  guestRepository,
+  permissionChecker,
+);
+
+export const getGuestForBookingSelectionUseCase =
+  new GetGuestForBookingSelectionUseCase(guestRepository, permissionChecker);
+
+export const createGuestUseCase = new CreateGuestUseCase(
+  guestRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const updateGuestUseCase = new UpdateGuestUseCase(
+  guestRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const listGuestNotesUseCase = new ListGuestNotesUseCase(
+  guestRepository,
+  guestNoteRepository,
+  permissionChecker,
+);
+
+export const addGuestNoteUseCase = new AddGuestNoteUseCase(
+  guestRepository,
+  guestNoteRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const listGuestTagsUseCase = new ListGuestTagsUseCase(
+  guestTagRepository,
+  permissionChecker,
+);
+
+export const createGuestTagUseCase = new CreateGuestTagUseCase(
+  guestTagRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const assignGuestTagUseCase = new AssignGuestTagUseCase(
+  guestRepository,
+  guestTagRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const unassignGuestTagUseCase = new UnassignGuestTagUseCase(
+  guestRepository,
+  guestTagRepository,
   permissionChecker,
 );
 

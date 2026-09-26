@@ -44,6 +44,7 @@ export const manualBookingWizardSchema = z.object({
     phone: z.string().max(50).nullable().optional(),
   }),
   confirm: z.boolean().optional(),
+  guestId: z.string().uuid().nullable().optional(),
 });
 
 const feedSemanticModeSchema = z.enum([
