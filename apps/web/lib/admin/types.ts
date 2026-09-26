@@ -451,3 +451,99 @@ export interface EnrichedBooking extends BookingRecord {
   unitName?: string;
   quote?: QuoteRecord | null;
 }
+
+export type TaskCategory =
+  | "HOUSEKEEPING"
+  | "MAINTENANCE"
+  | "INSPECTION"
+  | "GUEST_REQUEST"
+  | "GENERAL";
+
+export type TaskStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type TaskPriority = "NORMAL" | "HIGH" | "URGENT";
+
+export interface TaskRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  unitId: string | null;
+  bookingId: string | null;
+  guestId: string | null;
+  category: TaskCategory;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignedToUserId: string | null;
+  dueAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  completionNote: string | null;
+  source: string;
+  sourceKey: string | null;
+  version: number;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HousekeepingTodayBoard {
+  propertyId: string;
+  propertyName: string;
+  propertyTimezone: string;
+  localToday: string;
+  summary: {
+    departuresToday: number;
+    dirty: number;
+    inProgress: number;
+    readyForArrivals: number;
+    overdueTasks: number;
+  };
+  units: Array<{
+    unitId: string;
+    unitName: string;
+    housekeepingStatus: "CLEAN" | "DIRTY";
+    housekeepingVersion: number;
+    housekeepingSource: string;
+    departing: {
+      bookingId: string;
+      guestName: string;
+      checkIn: string;
+      checkOut: string;
+      guestId: string | null;
+    } | null;
+    arriving: {
+      bookingId: string;
+      guestName: string;
+      checkIn: string;
+      checkOut: string;
+      guestId: string | null;
+    } | null;
+    housekeepingTask: {
+      id: string;
+      title: string;
+      status: string;
+      priority: string;
+      source: string;
+      sourceKey: string | null;
+      bookingId: string | null;
+      assignedToUserId: string | null;
+      dueAt: string | null;
+      version: number;
+    } | null;
+    readyForArrival: boolean;
+    arrivalNeedsClean: boolean;
+  }>;
+  overdueTasks: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    source: string;
+    sourceKey: string | null;
+    bookingId: string | null;
+    assignedToUserId: string | null;
+    dueAt: string | null;
+    version: number;
+  }>;
+}

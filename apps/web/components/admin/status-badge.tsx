@@ -40,6 +40,13 @@ const statusVariant: Record<string, BadgeVariant> = {
   SUCCEEDED: "success",
   FAILED: "destructive",
   CANCELLED: "outline",
+  // Tasks
+  OPEN: "info",
+  IN_PROGRESS: "warning",
+  COMPLETED: "success",
+  // Housekeeping
+  CLEAN: "success",
+  DIRTY: "warning",
   // Channels
   paused: "warning",
   error: "destructive",

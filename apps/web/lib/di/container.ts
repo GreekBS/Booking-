@@ -156,6 +156,7 @@ import {
   GetUnitHousekeepingStatusUseCase,
   ReconcileBookingTurnoverUseCase,
   GenerateHousekeepingTurnoverUseCase,
+  GetHousekeepingTodayUseCase,
   GenerateHousekeepingTurnoverJobHandler,
   HousekeepingBookingOutboxHandler,
   UpdateGuestUseCase,
@@ -483,6 +484,7 @@ import {
   PrismaTaskRepository,
   PrismaUnitHousekeepingStatusRepository,
   PrismaHousekeepingTurnoverStore,
+  PrismaHousekeepingTodayQuery,
 
   PrismaFiscalSeriesRepository,
 
@@ -602,6 +604,7 @@ const propertyRepository = new PrismaPropertyRepository(outboxRepository);
 const taskRepository = new PrismaTaskRepository();
 const unitHousekeepingStatusRepository = new PrismaUnitHousekeepingStatusRepository();
 const housekeepingTurnoverStore = new PrismaHousekeepingTurnoverStore();
+const housekeepingTodayQuery = new PrismaHousekeepingTodayQuery();
 
 
 const userRepository = new PrismaUserRepository();
@@ -1300,6 +1303,11 @@ export const generateHousekeepingTurnoverUseCase = new GenerateHousekeepingTurno
   housekeepingTurnoverStore,
   reconcileBookingTurnoverUseCase,
   timezoneService,
+);
+
+export const getHousekeepingTodayUseCase = new GetHousekeepingTodayUseCase(
+  housekeepingTodayQuery,
+  permissionChecker,
 );
 
 

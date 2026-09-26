@@ -1,4 +1,4 @@
-# ADR-029: Housekeeping & Tasks (HT-1 / HT-2)
+# ADR-029: Housekeeping & Tasks (HT-1 / HT-2 / HT-3)
 
 Status: Accepted  
 Date: 2026-09-26
@@ -66,11 +66,23 @@ No Housekeeper role in V1. Managers restricted to assigned properties.
 
 `tasks` and `unit_housekeeping_statuses`: ENABLE + FORCE RLS, tenant GUC policies, grants to `talos_runtime`.
 
-### HT-3 / HT-4 boundaries
+### HT-3 Operator workspace
 
-HT-3: `/dashboard/housekeeping` UI.  
-HT-4: Dashboard chips, Booking strip, optional calendar markers.  
-Deferred: notifications, attachments, recurrence, READY≠CLEAN, inspection workflow.
+Route: `/dashboard/housekeeping` (single module; no `/dashboard/tasks`).
+
+- **Active Property**: global context only; Today + All Tasks reload on switch.
+- **Today read model**: `GET /api/admin/v1/housekeeping/today?propertyId=` — one batched query (units + HK status + day bookings + open HK tasks + overdue). Server `Property.timezone` defines `localToday`. Derived UI sections: Needs cleaning / In progress / Ready for arrivals. Dirty-without-task rows surface without GET-side repair.
+- **Derived READY**: arrival today + Unit CLEAN (UI only; not persisted). Dirty + arrival today → operational attention.
+- **All Tasks**: server-side filters + pagination; URL query state (`view`, `status`, `category`, `assignee`, `priority`, `page`, `taskId`, `bookingId`).
+- **Manual Task workflow**: Sheet create (Active Property, defaults NORMAL/OPEN); detail sheet with Start/Unstart/Complete(+note)/Cancel/Reopen/Assign via backend state machine.
+- **Manual Clean/Dirty**: secondary unit actions with CAS; Mark Clean does not complete open Tasks.
+- **Manager ACL**: property-scoped list/create/mutate/HK; guessed foreign property IDs denied server-side.
+- **409/CAS**: UI refreshes and surfaces conflict message; no silent retry.
+- **Mobile**: card list, large Start/Complete (~390px); desktop table for All Tasks.
+
+### HT-4 boundaries
+
+Dashboard chips, Booking workspace task strip, Calendar HK markers — deferred.
 
 ## Consequences
 

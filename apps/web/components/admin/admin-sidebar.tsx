@@ -16,6 +16,7 @@ import {
   FileText,
   PanelLeftClose,
   PanelLeft,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ export const adminNavSections: AdminNavSection[] = [
       { href: "/dashboard/bookings", label: "Bookings", icon: BookOpen },
       { href: "/dashboard/availability", label: "Availability", icon: CalendarDays },
       { href: "/dashboard/guests", label: "Guests", icon: Users },
+      { href: "/dashboard/housekeeping", label: "Housekeeping", icon: ClipboardList },
     ],
   },
   {

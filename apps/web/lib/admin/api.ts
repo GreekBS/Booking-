@@ -979,3 +979,137 @@ export async function createBookingFromQuote(
     body: JSON.stringify(body),
   });
 }
+
+/** Housekeeping Today board — property-local date from server. */
+export async function fetchHousekeepingToday(
+  tenantId: string,
+  propertyId: string,
+): Promise<import("./types").HousekeepingTodayBoard> {
+  const res = await adminFetch<{ data: import("./types").HousekeepingTodayBoard }>(
+    `/housekeeping/today?propertyId=${encodeURIComponent(propertyId)}`,
+    { tenantId },
+  );
+  return res.data;
+}
+
+export async function listTasks(
+  tenantId: string,
+  query: {
+    propertyId: string;
+    status?: string | string[];
+    category?: string | string[];
+    unitId?: string;
+    assignedToUserId?: string;
+    priority?: string | string[];
+    bookingId?: string;
+    page?: number;
+    limit?: number;
+  },
+): Promise<{
+  data: import("./types").TaskRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}> {
+  const params = new URLSearchParams();
+  params.set("propertyId", query.propertyId);
+  if (query.page) params.set("page", String(query.page));
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.unitId) params.set("unitId", query.unitId);
+  if (query.assignedToUserId) params.set("assignedToUserId", query.assignedToUserId);
+  if (query.bookingId) params.set("bookingId", query.bookingId);
+  const appendMulti = (key: string, value?: string | string[]) => {
+    if (!value) return;
+    if (Array.isArray(value)) value.forEach((v) => params.append(key, v));
+    else params.set(key, value);
+  };
+  appendMulti("status", query.status);
+  appendMulti("category", query.category);
+  appendMulti("priority", query.priority);
+  return adminFetch(`/tasks?${params.toString()}`, { tenantId });
+}
+
+export async function createTask(
+  tenantId: string,
+  body: {
+    propertyId: string;
+    category: string;
+    title: string;
+    description?: string | null;
+    unitId?: string | null;
+    bookingId?: string | null;
+    guestId?: string | null;
+    assignedToUserId?: string | null;
+    dueAt?: string | null;
+    priority?: string;
+  },
+): Promise<import("./types").TaskRecord> {
+  const res = await adminFetch<{ data: import("./types").TaskRecord }>("/tasks", {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+  return res.data;
+}
+
+export async function fetchTask(
+  tenantId: string,
+  taskId: string,
+): Promise<import("./types").TaskRecord> {
+  const res = await adminFetch<{ data: import("./types").TaskRecord }>(
+    `/tasks/${taskId}`,
+    { tenantId },
+  );
+  return res.data;
+}
+
+export async function mutateTask(
+  tenantId: string,
+  taskId: string,
+  action: "start" | "unstart" | "complete" | "cancel" | "reopen" | "assign",
+  body: Record<string, unknown>,
+): Promise<import("./types").TaskRecord> {
+  const res = await adminFetch<{ data: import("./types").TaskRecord }>(
+    `/tasks/${taskId}?action=${action}`,
+    {
+      method: "POST",
+      tenantId,
+      body: JSON.stringify(body),
+    },
+  );
+  return res.data;
+}
+
+export async function markUnitHousekeeping(
+  tenantId: string,
+  unitId: string,
+  action: "dirty" | "clean",
+  body: { propertyId: string; expectedVersion?: number },
+): Promise<{
+  unitId: string;
+  status: string;
+  source: string;
+  version: number;
+  updatedAt: string;
+}> {
+  const res = await adminFetch<{
+    data: {
+      unitId: string;
+      status: string;
+      source: string;
+      version: number;
+      updatedAt: string;
+    };
+  }>(`/housekeeping/units/${unitId}/mark-${action}`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+  return res.data;
+}
+
+export async function fetchMembers(tenantId: string): Promise<{
+  data: import("./types").MemberRecord[];
+}> {
+  return adminFetch("/members", { tenantId });
+}
