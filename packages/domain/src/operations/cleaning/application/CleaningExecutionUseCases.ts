@@ -53,16 +53,26 @@ export class ResolveCleaningContextUseCase {
   ) {}
 
   async execute(
-    input: { tenantId: string; unitId: string },
+    input: { tenantId: string; unitId?: string; locationId?: string },
     actor: ActorContext,
   ): Promise<Result<CleaningContextView, Error>> {
     try {
-      const snapshot = await this.executions.resolveContext(
-        input.tenantId,
-        input.unitId,
-      );
+      if (!input.locationId && !input.unitId) {
+        return Result.fail(
+          new ValidationError("Provide either locationId or unitId"),
+        );
+      }
+
+      const snapshot = await this.executions.resolveContext(input.tenantId, {
+        locationId: input.locationId,
+        unitId: input.unitId,
+      });
       if (!snapshot) {
-        return Result.fail(new NotFoundError("Unit", input.unitId));
+        return Result.fail(
+          input.locationId
+            ? new NotFoundError("Cleaning location", input.locationId)
+            : new NotFoundError("Unit", input.unitId!),
+        );
       }
       if (
         !canReadCleaningOnProperty(
@@ -129,17 +139,27 @@ export class StartOrResumeCleaningUseCase {
   ) {}
 
   async execute(
-    input: { tenantId: string; unitId: string },
+    input: { tenantId: string; unitId?: string; locationId?: string },
     actor: ActorContext,
     auditContext?: AuditIpContext,
   ): Promise<Result<StartOrResumeCleaningView, Error>> {
     try {
-      const snapshot = await this.executions.resolveContext(
-        input.tenantId,
-        input.unitId,
-      );
+      if (!input.locationId && !input.unitId) {
+        return Result.fail(
+          new ValidationError("Provide either locationId or unitId"),
+        );
+      }
+
+      const snapshot = await this.executions.resolveContext(input.tenantId, {
+        locationId: input.locationId,
+        unitId: input.unitId,
+      });
       if (!snapshot) {
-        return Result.fail(new NotFoundError("Unit", input.unitId));
+        return Result.fail(
+          input.locationId
+            ? new NotFoundError("Cleaning location", input.locationId)
+            : new NotFoundError("Unit", input.unitId!),
+        );
       }
       if (
         !canPerformCleaningOnProperty(
@@ -153,7 +173,9 @@ export class StartOrResumeCleaningUseCase {
       }
       if (snapshot.selection.kind === "NO_WORK") {
         return Result.fail(
-          new ValidationError("This unit is already clean — no cleaning is due"),
+          new ValidationError(
+            "This location is already clean — no cleaning is due",
+          ),
         );
       }
 
@@ -167,6 +189,7 @@ export class StartOrResumeCleaningUseCase {
       const result = await this.executions.startOrResume({
         tenantId: input.tenantId,
         unitId: input.unitId,
+        cleaningLocationId: input.locationId ?? snapshot.locationId ?? undefined,
         actorUserId: actor.userId,
       });
 
@@ -178,7 +201,8 @@ export class StartOrResumeCleaningUseCase {
           resourceType: "cleaning_execution",
           resourceId: result.execution.id,
           metadata: {
-            unitId: input.unitId,
+            unitId: input.unitId ?? snapshot.unitId,
+            locationId: snapshot.locationId,
             propertyId: snapshot.propertyId,
             taskId: result.taskId,
             taskCreated: result.taskCreated,
@@ -330,12 +354,13 @@ export class CompleteCleaningUseCase {
         action: "cleaning.completed",
         resourceType: "cleaning_execution",
         resourceId: result.execution.id,
-        metadata: {
-          unitId: result.execution.unitId,
-          propertyId: result.execution.propertyId,
-          taskId: result.task.id,
-          photoCount: readiness.photoCount,
-        },
+          metadata: {
+            unitId: result.execution.unitId,
+            locationId: result.execution.cleaningLocationId ?? null,
+            propertyId: result.execution.propertyId,
+            taskId: result.task.id,
+            photoCount: readiness.photoCount,
+          },
         ipAddress: auditContext?.ipAddress ?? null,
       });
       if (result.housekeeping) {
@@ -372,6 +397,7 @@ export class ListCleaningHistoryUseCase {
       tenantId: string;
       propertyId?: string | null;
       unitId?: string | null;
+      cleaningLocationId?: string | null;
       entireTenant?: boolean;
       page?: number;
       limit?: number;
@@ -394,6 +420,7 @@ export class ListCleaningHistoryUseCase {
         propertyId: scope.propertyId,
         allowedPropertyIds: scope.allowedPropertyIds,
         unitId: input.unitId,
+        cleaningLocationId: input.cleaningLocationId,
         page: input.page,
         limit: input.limit,
       });

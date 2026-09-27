@@ -297,6 +297,9 @@ model Tenant {
   cleaningExecutions             CleaningExecution[]
   cleaningExecutionItems         CleaningExecutionItem[]
   cleaningPhotos                 CleaningPhoto[]
+  cleaningLocations              CleaningLocation[]
+  cleaningLocationStatuses       CleaningLocationStatus[]
+  cleaningLocationQrAccess       CleaningLocationQrAccess[]
 
   @@map("tenants")
 }
@@ -320,11 +323,12 @@ model User {
   guestTagAssignments    GuestTagAssignment[]
   assignedTasks          Task[]                   @relation("TaskAssignee")
   createdTasks           Task[]                   @relation("TaskCreator")
-  housekeepingUpdates    UnitHousekeepingStatus[] @relation("HousekeepingUpdater")
-  startedCleanings       CleaningExecution[]      @relation("CleaningStartedBy")
-  completedCleanings     CleaningExecution[]      @relation("CleaningCompletedBy")
-  checkedCleaningItems   CleaningExecutionItem[]  @relation("CleaningItemCheckedBy")
-  uploadedCleaningPhotos CleaningPhoto[]          @relation("CleaningPhotoUploader")
+  housekeepingUpdates         UnitHousekeepingStatus[] @relation("HousekeepingUpdater")
+  cleaningLocationUpdates     CleaningLocationStatus[] @relation("CleaningLocationUpdater")
+  startedCleanings            CleaningExecution[]      @relation("CleaningStartedBy")
+  completedCleanings          CleaningExecution[]      @relation("CleaningCompletedBy")
+  checkedCleaningItems        CleaningExecutionItem[]  @relation("CleaningItemCheckedBy")
+  uploadedCleaningPhotos      CleaningPhoto[]          @relation("CleaningPhotoUploader")
 
   @@map("users")
 }
@@ -449,6 +453,9 @@ model Property {
   cleaningChecklistTemplates CleaningChecklistTemplate[]
   cleaningExecutions         CleaningExecution[]
   cleaningPhotos             CleaningPhoto[]
+  cleaningLocations          CleaningLocation[]
+  cleaningLocationStatuses   CleaningLocationStatus[]
+  cleaningLocationQrAccess   CleaningLocationQrAccess[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -482,6 +489,7 @@ model Unit {
   qrAccess           UnitQrAccess[]
   cleaningExecutions CleaningExecution[]
   cleaningPhotos     CleaningPhoto[]
+  linkedCleaningLocations CleaningLocation[]
 
   @@unique([propertyId, slug])
   @@index([tenantId, propertyId])
@@ -1231,6 +1239,7 @@ model Task {
   tenantId         String    @map("tenant_id") @db.Uuid
   propertyId       String    @map("property_id") @db.Uuid
   unitId           String?   @map("unit_id") @db.Uuid
+  cleaningLocationId String? @map("cleaning_location_id") @db.Uuid
   bookingId        String?   @map("booking_id") @db.Uuid
   guestId          String?   @map("guest_id") @db.Uuid
   category         String    @db.VarChar(32)
@@ -1253,6 +1262,7 @@ model Task {
   tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   property           Property            @relation(fields: [propertyId], references: [id], onDelete: Restrict)
   unit               Unit?               @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  cleaningLocation   CleaningLocation?   @relation(fields: [cleaningLocationId], references: [id], onDelete: SetNull)
   booking            Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   guest              Guest?              @relation(fields: [guestId], references: [id], onDelete: SetNull)
   assignee           User?               @relation("TaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
@@ -1265,6 +1275,7 @@ model Task {
   @@index([tenantId, assignedToUserId])
   @@index([tenantId, bookingId])
   @@index([tenantId, unitId])
+  @@index([tenantId, cleaningLocationId])
   @@index([tenantId, category, status])
   @@map("tasks")
 }
@@ -2003,33 +2014,36 @@ model CleaningChecklistTemplateItem {
 
 /// QR-1: One cleaning run against a housekeeping Task. One IN_PROGRESS per task.
 model CleaningExecution {
-  id                String    @id @db.Uuid
-  tenantId          String    @map("tenant_id") @db.Uuid
-  propertyId        String    @map("property_id") @db.Uuid
-  unitId            String    @map("unit_id") @db.Uuid
-  taskId            String    @map("task_id") @db.Uuid
-  templateId        String?   @map("template_id") @db.Uuid
-  templateVersion   Int?      @map("template_version")
-  status            String    @default("IN_PROGRESS") @db.VarChar(16)
-  startedByUserId   String    @map("started_by_user_id") @db.Uuid
-  startedAt         DateTime  @default(now()) @map("started_at") @db.Timestamptz
-  completedByUserId String?   @map("completed_by_user_id") @db.Uuid
-  completedAt       DateTime? @map("completed_at") @db.Timestamptz
-  version           Int       @default(1)
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                 String    @id @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  propertyId         String    @map("property_id") @db.Uuid
+  unitId             String?   @map("unit_id") @db.Uuid
+  cleaningLocationId String?   @map("cleaning_location_id") @db.Uuid
+  taskId             String    @map("task_id") @db.Uuid
+  templateId         String?   @map("template_id") @db.Uuid
+  templateVersion    Int?      @map("template_version")
+  status             String    @default("IN_PROGRESS") @db.VarChar(16)
+  startedByUserId    String    @map("started_by_user_id") @db.Uuid
+  startedAt          DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  completedByUserId  String?   @map("completed_by_user_id") @db.Uuid
+  completedAt        DateTime? @map("completed_at") @db.Timestamptz
+  version            Int       @default(1)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  property    Property                   @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  unit        Unit                       @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  task        Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  template    CleaningChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  startedBy   User                       @relation("CleaningStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
-  completedBy User?                      @relation("CleaningCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
-  items       CleaningExecutionItem[]
-  photos      CleaningPhoto[]
+  tenant           Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property         Property                   @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit             Unit?                      @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  cleaningLocation CleaningLocation?          @relation(fields: [cleaningLocationId], references: [id], onDelete: Restrict)
+  task             Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  template         CleaningChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  startedBy        User                       @relation("CleaningStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
+  completedBy      User?                      @relation("CleaningCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  items            CleaningExecutionItem[]
+  photos           CleaningPhoto[]
 
   @@index([tenantId, unitId, startedAt(sort: Desc)], map: "cleaning_executions_tenant_unit_idx")
+  @@index([tenantId, cleaningLocationId, startedAt(sort: Desc)], map: "cleaning_executions_tenant_location_idx")
   @@index([tenantId, propertyId], map: "cleaning_executions_tenant_property_idx")
   @@map("cleaning_executions")
 }
@@ -2062,28 +2076,99 @@ model CleaningExecutionItem {
 
 /// QR-1: Cleaning evidence photo. Bytes live in object storage; only the key is stored.
 model CleaningPhoto {
-  id               String   @id @db.Uuid
-  tenantId         String   @map("tenant_id") @db.Uuid
-  propertyId       String   @map("property_id") @db.Uuid
-  unitId           String   @map("unit_id") @db.Uuid
-  taskId           String   @map("task_id") @db.Uuid
-  executionId      String   @map("execution_id") @db.Uuid
-  executionItemId  String?  @map("execution_item_id") @db.Uuid
-  storageKey       String   @unique(map: "cleaning_photos_storage_key_uidx") @map("storage_key") @db.VarChar(512)
-  contentType      String   @map("content_type") @db.VarChar(128)
-  sizeBytes        Int      @map("size_bytes")
-  uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                 String   @id @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  propertyId         String   @map("property_id") @db.Uuid
+  unitId             String?  @map("unit_id") @db.Uuid
+  cleaningLocationId String?  @map("cleaning_location_id") @db.Uuid
+  taskId             String   @map("task_id") @db.Uuid
+  executionId        String   @map("execution_id") @db.Uuid
+  executionItemId    String?  @map("execution_item_id") @db.Uuid
+  storageKey         String   @unique(map: "cleaning_photos_storage_key_uidx") @map("storage_key") @db.VarChar(512)
+  contentType        String   @map("content_type") @db.VarChar(128)
+  sizeBytes          Int      @map("size_bytes")
+  uploadedByUserId   String   @map("uploaded_by_user_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  property      Property               @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  unit          Unit                   @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  task          Task                   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  execution     CleaningExecution      @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  executionItem CleaningExecutionItem? @relation(fields: [executionItemId], references: [id], onDelete: SetNull)
-  uploadedBy    User                   @relation("CleaningPhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property         Property               @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit             Unit?                  @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  cleaningLocation CleaningLocation?      @relation(fields: [cleaningLocationId], references: [id], onDelete: Restrict)
+  task             Task                   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  execution        CleaningExecution      @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionItem    CleaningExecutionItem? @relation(fields: [executionItemId], references: [id], onDelete: SetNull)
+  uploadedBy       User                   @relation("CleaningPhotoUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
 
   @@index([executionId], map: "cleaning_photos_execution_idx")
   @@index([tenantId, propertyId], map: "cleaning_photos_tenant_property_idx")
+  @@index([tenantId, cleaningLocationId], map: "cleaning_photos_tenant_location_idx")
   @@map("cleaning_photos")
+}
+
+/// Ops-only physical cleaning space (hotel room, villa, suite, common area).
+/// Not commercial inventory — never creates Units / ARI / channel mappings.
+model CleaningLocation {
+  id               String    @id @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  propertyId       String    @map("property_id") @db.Uuid
+  name             String    @db.VarChar(255)
+  status           String    @default("active") @db.VarChar(16)
+  sortOrder        Int       @default(0) @map("sort_order")
+  commercialUnitId String?   @map("commercial_unit_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz
+
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property       Property                @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  commercialUnit Unit?                   @relation(fields: [commercialUnitId], references: [id], onDelete: SetNull)
+  readiness      CleaningLocationStatus?
+  qrAccess       CleaningLocationQrAccess[]
+  tasks          Task[]
+  executions     CleaningExecution[]
+  photos         CleaningPhoto[]
+
+  @@index([tenantId, propertyId], map: "cleaning_locations_tenant_property_idx")
+  @@index([tenantId, propertyId, status], map: "cleaning_locations_tenant_property_status_idx")
+  @@map("cleaning_locations")
+}
+
+/// Per-location housekeeping readiness (CLEAN|DIRTY). Ops SoT — not inventory.
+model CleaningLocationStatus {
+  cleaningLocationId String   @id @map("cleaning_location_id") @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  propertyId         String   @map("property_id") @db.Uuid
+  status             String   @default("CLEAN") @db.VarChar(16)
+  source             String   @default("INIT") @db.VarChar(32)
+  updatedByUserId    String?  @map("updated_by_user_id") @db.Uuid
+  updatedAt          DateTime @map("updated_at") @db.Timestamptz
+  version            Int      @default(1)
+
+  cleaningLocation CleaningLocation @relation(fields: [cleaningLocationId], references: [id], onDelete: Cascade)
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property         Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  updatedBy        User?            @relation("CleaningLocationUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, propertyId, status], map: "cleaning_location_statuses_tenant_property_status_idx")
+  @@map("cleaning_location_statuses")
+}
+
+/// Opaque per-location QR access token. Only the SHA-256 hash is stored.
+model CleaningLocationQrAccess {
+  id                 String    @id @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  propertyId         String    @map("property_id") @db.Uuid
+  cleaningLocationId String    @map("cleaning_location_id") @db.Uuid
+  tokenHash          String    @unique(map: "cleaning_location_qr_access_token_hash_uidx") @map("token_hash") @db.Char(64)
+  status             String    @default("ACTIVE") @db.VarChar(16)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  rotatedAt          DateTime? @map("rotated_at") @db.Timestamptz
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property         Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  cleaningLocation CleaningLocation @relation(fields: [cleaningLocationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, propertyId], map: "cleaning_location_qr_access_tenant_property_idx")
+  @@map("cleaning_location_qr_access")
 }

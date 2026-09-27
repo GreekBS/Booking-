@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { CleaningLocationsPanel } from "@/features/housekeeping/CleaningLocationsPanel";
 import {
   elCommon,
   elNav,
@@ -373,6 +374,10 @@ function HousekeepingPageContent() {
       ) : null}
 
       {error ? <ErrorState title="Αποτυχία φόρτωσης" message={error} /> : null}
+
+      {tenantId && propertyId ? (
+        <CleaningLocationsPanel tenantId={tenantId} propertyId={propertyId} />
+      ) : null}
 
       {loading && !board && tasks.length === 0 ? (
         <div className="space-y-3">

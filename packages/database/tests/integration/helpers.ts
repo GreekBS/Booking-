@@ -76,4 +76,19 @@ export async function verifyRlsPoliciesActive(): Promise<boolean> {
   return rows.length === 21 && rows.every((row) => row.rowsecurity === true);
 }
 
+/** CleaningLocation V1 tables — FORCE RLS expected after migration 20260928010000. */
+export async function verifyCleaningLocationRlsPoliciesActive(): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ tablename: string; rowsecurity: boolean }>>`
+    SELECT tablename, rowsecurity
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'cleaning_locations',
+        'cleaning_location_statuses',
+        'cleaning_location_qr_access'
+      )
+  `;
+  return rows.length === 3 && rows.every((row) => row.rowsecurity === true);
+}
+
 export { prisma, setTenantContext, clearTenantContext };

@@ -19,7 +19,11 @@ export async function GET(request: NextRequest) {
     );
 
     const result = await resolveCleaningContextUseCase.execute(
-      { tenantId: actor.tenantId, unitId: query.unitId },
+      {
+        tenantId: actor.tenantId,
+        locationId: query.locationId,
+        unitId: query.unitId,
+      },
       toPermissionActor(actor),
     );
     if (result.isFailure) return mapResultError(result.getError());
@@ -40,6 +44,8 @@ export async function GET(request: NextRequest) {
         propertyId: context.propertyId,
         propertyName: context.propertyName,
         propertyTimezone: context.propertyTimezone,
+        locationId: context.locationId,
+        locationName: context.locationName,
         unitId: context.unitId,
         unitName: context.unitName,
         housekeepingStatus: context.housekeepingStatus,

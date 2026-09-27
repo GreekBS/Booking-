@@ -115,6 +115,7 @@ export class RegisterCleaningPhotoUseCase {
         tenantId: input.tenantId,
         propertyId: execution.propertyId,
         unitId: execution.unitId,
+        cleaningLocationId: execution.cleaningLocationId,
         executionId: execution.id,
         photoId,
         contentType: input.contentType,

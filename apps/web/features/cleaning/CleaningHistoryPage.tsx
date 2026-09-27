@@ -28,10 +28,12 @@ function formatTimestamp(value: string | null): string {
   return value ? new Date(value).toLocaleString() : "—";
 }
 
-/** Cleaning audit trail for the Active Property, optionally filtered by unit. */
+/** Cleaning audit trail for the Active Property, optionally filtered by unit/location. */
 export function CleaningHistoryPage() {
   const searchParams = useSearchParams();
   const unitId = searchParams.get("unitId") ?? undefined;
+  const cleaningLocationId =
+    searchParams.get("cleaningLocationId") ?? undefined;
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
@@ -53,6 +55,7 @@ export function CleaningHistoryPage() {
       const page = await listCleaningHistory(tenantId, {
         propertyId,
         unitId,
+        cleaningLocationId,
         limit: 50,
       });
       setRows(page.data);
@@ -63,7 +66,7 @@ export function CleaningHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, propertyId, unitId]);
+  }, [tenantId, propertyId, unitId, cleaningLocationId]);
 
   useEffect(() => {
     void load();
@@ -87,9 +90,11 @@ export function CleaningHistoryPage() {
       <PageHeader
         title="Ιστορικό καθαρισμών"
         description={
-          unitId
-            ? `Καθαρισμοί για την επιλεγμένη μονάδα${property ? ` · ${property.name}` : ""}`
-            : `Καθαρισμοί${property ? ` · ${property.name}` : ""}`
+          cleaningLocationId
+            ? `Καθαρισμοί για το επιλεγμένο δωμάτιο${property ? ` · ${property.name}` : ""}`
+            : unitId
+              ? `Καθαρισμοί για την επιλεγμένη μονάδα${property ? ` · ${property.name}` : ""}`
+              : `Καθαρισμοί${property ? ` · ${property.name}` : ""}`
         }
       />
 

@@ -563,10 +563,56 @@ export interface UnitQrRecord {
 }
 
 export interface ResolvedQrUnit {
-  unitId: string;
+  locationId: string;
+  locationName: string;
   propertyId: string;
-  unitName: string;
   propertyName: string;
+  /** Present when linked to a commercial unit (legacy). */
+  unitId: string | null;
+  /** Compat alias — same as locationName. */
+  unitName: string;
+}
+
+export interface CleaningLocationQrRecord {
+  locationId: string;
+  propertyId: string;
+  locationName: string;
+  propertyName: string;
+  status: "ACTIVE" | "REVOKED" | "NONE";
+  createdAt: string | null;
+  rotatedAt: string | null;
+  token: string | null;
+}
+
+export interface CleaningLocationBoardRow {
+  locationId: string;
+  propertyId: string;
+  name: string;
+  sortOrder: number;
+  commercialUnitId: string | null;
+  readinessStatus: "CLEAN" | "DIRTY";
+  readinessVersion: number;
+  readinessSource: string;
+  lastCompletedAt: string | null;
+  openTask: {
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+  } | null;
+  hasActiveQr: boolean;
+}
+
+export interface CleaningLocationRecord {
+  id: string;
+  propertyId: string;
+  name: string;
+  status: "active" | "archived";
+  sortOrder: number;
+  commercialUnitId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  archivedAt?: string | null;
 }
 
 export interface CleaningChecklistTemplateItemRecord {
@@ -617,7 +663,8 @@ export interface CleaningExecutionRecord {
   id: string;
   tenantId: string;
   propertyId: string;
-  unitId: string;
+  unitId: string | null;
+  cleaningLocationId?: string | null;
   taskId: string;
   templateId: string | null;
   templateVersion: number | null;
@@ -646,7 +693,9 @@ export interface CleaningContextRecord {
   propertyId: string;
   propertyName: string;
   propertyTimezone: string;
-  unitId: string;
+  locationId: string | null;
+  locationName: string | null;
+  unitId: string | null;
   unitName: string;
   housekeepingStatus: "CLEAN" | "DIRTY";
   housekeepingVersion: number;

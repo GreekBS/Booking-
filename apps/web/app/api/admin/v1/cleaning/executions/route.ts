@@ -13,7 +13,7 @@ import {
 import { apiSuccess, mapResultError } from "@/lib/api-error-handler";
 import { serializeCleaningExecution } from "@/lib/admin/cleaning-serializers";
 
-/** Start a cleaning, or resume the one already in progress for the unit. */
+/** Start a cleaning, or resume the one already in progress for the location/unit. */
 export async function POST(request: NextRequest) {
   try {
     const tenantId = request.headers.get("x-tenant-id");
@@ -21,7 +21,11 @@ export async function POST(request: NextRequest) {
     const body = startCleaningBodySchema.parse(await request.json());
 
     const result = await startOrResumeCleaningUseCase.execute(
-      { tenantId: actor.tenantId, unitId: body.unitId },
+      {
+        tenantId: actor.tenantId,
+        locationId: body.locationId,
+        unitId: body.unitId,
+      },
       toPermissionActor(actor),
       { ipAddress: getClientIp(request) },
     );

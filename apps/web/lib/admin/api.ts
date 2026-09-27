@@ -1124,6 +1124,9 @@ import type {
   CleaningExecutionItemRecord,
   CleaningExecutionRecord,
   CleaningHistoryRecord,
+  CleaningLocationBoardRow,
+  CleaningLocationQrRecord,
+  CleaningLocationRecord,
   CleaningPhotoRecord,
   ResolvedQrUnit,
   UnitQrRecord,
@@ -1174,6 +1177,109 @@ export async function resolveQrToken(
   return res.data;
 }
 
+export async function fetchCleaningLocationsBoard(
+  tenantId: string,
+  propertyId: string,
+): Promise<CleaningLocationBoardRow[]> {
+  const res = await adminFetch<{ data: CleaningLocationBoardRow[] }>(
+    `/cleaning/locations?propertyId=${encodeURIComponent(propertyId)}`,
+    { tenantId },
+  );
+  return res.data;
+}
+
+export async function bulkInitializeCleaningLocations(
+  tenantId: string,
+  propertyId: string,
+  count: number,
+): Promise<CleaningLocationRecord[]> {
+  const res = await adminFetch<{ data: CleaningLocationRecord[] }>(
+    "/cleaning/locations/bulk-initialize",
+    {
+      method: "POST",
+      tenantId,
+      body: JSON.stringify({ propertyId, count }),
+    },
+  );
+  return res.data;
+}
+
+export async function addCleaningLocation(
+  tenantId: string,
+  propertyId: string,
+  name: string,
+): Promise<CleaningLocationRecord> {
+  const res = await adminFetch<{ data: CleaningLocationRecord }>(
+    "/cleaning/locations",
+    {
+      method: "POST",
+      tenantId,
+      body: JSON.stringify({ propertyId, name }),
+    },
+  );
+  return res.data;
+}
+
+export async function renameCleaningLocation(
+  tenantId: string,
+  locationId: string,
+  name: string,
+): Promise<CleaningLocationRecord> {
+  const res = await adminFetch<{ data: CleaningLocationRecord }>(
+    `/cleaning/locations/${locationId}`,
+    {
+      method: "PATCH",
+      tenantId,
+      body: JSON.stringify({ name }),
+    },
+  );
+  return res.data;
+}
+
+export async function archiveCleaningLocation(
+  tenantId: string,
+  locationId: string,
+): Promise<CleaningLocationRecord> {
+  const res = await adminFetch<{ data: CleaningLocationRecord }>(
+    `/cleaning/locations/${locationId}/archive`,
+    { method: "POST", tenantId },
+  );
+  return res.data;
+}
+
+export async function fetchCleaningLocationQr(
+  tenantId: string,
+  locationId: string,
+): Promise<CleaningLocationQrRecord> {
+  const res = await adminFetch<{ data: CleaningLocationQrRecord }>(
+    `/cleaning/locations/${locationId}/qr`,
+    { tenantId },
+  );
+  return res.data;
+}
+
+export async function generateCleaningLocationQr(
+  tenantId: string,
+  locationId: string,
+): Promise<CleaningLocationQrRecord> {
+  const res = await adminFetch<{ data: CleaningLocationQrRecord }>(
+    `/cleaning/locations/${locationId}/qr`,
+    { method: "POST", tenantId },
+  );
+  return res.data;
+}
+
+export async function rotateCleaningLocationQr(
+  tenantId: string,
+  locationId: string,
+): Promise<CleaningLocationQrRecord> {
+  const res = await adminFetch<{ data: CleaningLocationQrRecord }>(
+    `/cleaning/locations/${locationId}/qr/rotate`,
+    { method: "POST", tenantId },
+  );
+  return res.data;
+}
+
 export async function fetchCleaningTemplate(
   tenantId: string,
   propertyId: string,
@@ -1209,10 +1315,13 @@ export async function saveCleaningTemplate(
 
 export async function fetchCleaningContext(
   tenantId: string,
-  unitId: string,
+  target: { locationId: string } | { unitId: string },
 ): Promise<CleaningContextRecord> {
+  const params = new URLSearchParams();
+  if ("locationId" in target) params.set("locationId", target.locationId);
+  else params.set("unitId", target.unitId);
   const res = await adminFetch<{ data: CleaningContextRecord }>(
-    `/cleaning/context?unitId=${encodeURIComponent(unitId)}`,
+    `/cleaning/context?${params.toString()}`,
     { tenantId },
   );
   return res.data;
@@ -1220,7 +1329,7 @@ export async function fetchCleaningContext(
 
 export async function startCleaning(
   tenantId: string,
-  unitId: string,
+  target: { locationId: string } | { unitId: string },
 ): Promise<{
   execution: CleaningExecutionRecord;
   created: boolean;
@@ -1237,7 +1346,7 @@ export async function startCleaning(
   }>("/cleaning/executions", {
     method: "POST",
     tenantId,
-    body: JSON.stringify({ unitId }),
+    body: JSON.stringify(target),
   });
   return res.data;
 }
@@ -1340,6 +1449,7 @@ export async function listCleaningHistory(
   query: {
     propertyId?: string;
     unitId?: string;
+    cleaningLocationId?: string;
     entireTenant?: boolean;
     page?: number;
     limit?: number;
@@ -1353,6 +1463,9 @@ export async function listCleaningHistory(
   const params = new URLSearchParams();
   if (query.propertyId) params.set("propertyId", query.propertyId);
   if (query.unitId) params.set("unitId", query.unitId);
+  if (query.cleaningLocationId) {
+    params.set("cleaningLocationId", query.cleaningLocationId);
+  }
   if (query.entireTenant) params.set("entireTenant", "true");
   if (query.page) params.set("page", String(query.page));
   if (query.limit) params.set("limit", String(query.limit));

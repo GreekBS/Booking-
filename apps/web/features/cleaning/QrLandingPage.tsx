@@ -56,5 +56,11 @@ export function QrLandingPage({ token }: { token: string }) {
   }
   if (!resolved) return <Skeleton className="m-4 h-64" />;
 
-  return <CleaningForm unitId={resolved.unitId} scannedFrom="Σαρωμένος κωδικός QR" />;
+  return (
+    <CleaningForm
+      locationId={resolved.locationId}
+      unitId={resolved.unitId ?? undefined}
+      scannedFrom="Σαρωμένος κωδικός QR"
+    />
+  );
 }

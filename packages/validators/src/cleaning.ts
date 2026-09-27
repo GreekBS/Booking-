@@ -29,13 +29,30 @@ export const upsertCleaningTemplateBodySchema = z.object({
   items: z.array(cleaningChecklistItemSchema).min(1).max(60),
 });
 
-export const cleaningContextQuerySchema = z.object({
-  unitId: z.string().uuid(),
-});
+/** Exactly one of locationId or unitId (legacy). */
+function exactlyOneLocationOrUnit<
+  T extends { locationId?: string; unitId?: string },
+>(schema: z.ZodType<T>) {
+  return schema.refine(
+    (value) =>
+      Number(value.locationId != null) + Number(value.unitId != null) === 1,
+    { message: "Provide either locationId or unitId" },
+  );
+}
 
-export const startCleaningBodySchema = z.object({
-  unitId: z.string().uuid(),
-});
+export const cleaningContextQuerySchema = exactlyOneLocationOrUnit(
+  z.object({
+    locationId: z.string().uuid().optional(),
+    unitId: z.string().uuid().optional(),
+  }),
+);
+
+export const startCleaningBodySchema = exactlyOneLocationOrUnit(
+  z.object({
+    locationId: z.string().uuid().optional(),
+    unitId: z.string().uuid().optional(),
+  }),
+);
 
 export const updateCleaningItemBodySchema = z.object({
   checked: z.boolean(),
@@ -53,8 +70,27 @@ export const cleaningPhotoUploadMetaSchema = z.object({
 export const listCleaningHistoryQuerySchema = paginationSchema.extend({
   propertyId: z.string().uuid().optional(),
   unitId: z.string().uuid().optional(),
+  cleaningLocationId: z.string().uuid().optional(),
   entireTenant: z
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
+});
+
+export const bulkInitializeCleaningLocationsBodySchema = z.object({
+  propertyId: z.string().uuid(),
+  count: z.number().int().min(1).max(300),
+});
+
+export const addCleaningLocationBodySchema = z.object({
+  propertyId: z.string().uuid(),
+  name: z.string().trim().min(1).max(255),
+});
+
+export const renameCleaningLocationBodySchema = z.object({
+  name: z.string().trim().min(1).max(255),
+});
+
+export const cleaningLocationsBoardQuerySchema = z.object({
+  propertyId: z.string().uuid(),
 });

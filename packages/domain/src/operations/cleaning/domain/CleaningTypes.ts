@@ -95,7 +95,8 @@ export interface CleaningPhotoRecord {
   id: string;
   tenantId: string;
   propertyId: string;
-  unitId: string;
+  unitId: string | null;
+  cleaningLocationId?: string | null;
   taskId: string;
   executionId: string;
   executionItemId: string | null;
@@ -110,7 +111,9 @@ export interface CleaningExecutionRecord {
   id: string;
   tenantId: string;
   propertyId: string;
-  unitId: string;
+  /** Legacy commercial unit; nullable for hotel locations without a Unit. */
+  unitId: string | null;
+  cleaningLocationId?: string | null;
   taskId: string;
   templateId: string | null;
   templateVersion: number | null;

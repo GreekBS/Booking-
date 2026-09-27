@@ -12,7 +12,8 @@ type PhotoRow = {
   id: string;
   tenantId: string;
   propertyId: string;
-  unitId: string;
+  unitId: string | null;
+  cleaningLocationId?: string | null;
   taskId: string;
   executionId: string;
   executionItemId: string | null;
@@ -29,6 +30,7 @@ function mapPhoto(row: PhotoRow): CleaningPhotoRecord {
     tenantId: row.tenantId,
     propertyId: row.propertyId,
     unitId: row.unitId,
+    cleaningLocationId: row.cleaningLocationId ?? null,
     taskId: row.taskId,
     executionId: row.executionId,
     executionItemId: row.executionItemId,
@@ -74,9 +76,16 @@ export class PrismaCleaningPhotoRepository implements ICleaningPhotoRepository {
     return withTenantTransaction(command.tenantId, async (tx) => {
       // Lock the execution so the per-execution cap holds under concurrency.
       const locked = await tx.$queryRaw<
-        Array<{ id: string; property_id: string; unit_id: string; task_id: string; status: string }>
+        Array<{
+          id: string;
+          property_id: string;
+          unit_id: string | null;
+          cleaning_location_id: string | null;
+          task_id: string;
+          status: string;
+        }>
       >`
-        SELECT id, property_id, unit_id, task_id, status
+        SELECT id, property_id, unit_id, cleaning_location_id, task_id, status
         FROM cleaning_executions
         WHERE id = ${command.executionId}::uuid
           AND tenant_id = ${command.tenantId}::uuid
@@ -105,6 +114,7 @@ export class PrismaCleaningPhotoRepository implements ICleaningPhotoRepository {
           tenantId: command.tenantId,
           propertyId: execution.property_id,
           unitId: execution.unit_id,
+          cleaningLocationId: execution.cleaning_location_id,
           taskId: execution.task_id,
           executionId: command.executionId,
           executionItemId: command.executionItemId,

@@ -27,7 +27,8 @@ const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 
 type CleaningFormProps = {
-  unitId: string;
+  locationId?: string;
+  unitId?: string;
   /** Rendered above the card, e.g. after resolving a scanned code. */
   scannedFrom?: string;
 };
@@ -36,7 +37,11 @@ type CleaningFormProps = {
  * Phone-first cleaning run: checklist, evidence photos, single Complete action.
  * Every control is at least 44px tall so it stays usable with gloves on.
  */
-export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
+export function CleaningForm({
+  locationId,
+  unitId,
+  scannedFrom,
+}: CleaningFormProps) {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const [context, setContext] = useState<CleaningContextRecord | null>(null);
   const [execution, setExecution] = useState<CleaningExecutionRecord | null>(null);
@@ -48,10 +53,16 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingItemRef = useRef<string | null>(null);
 
+  const target = locationId
+    ? ({ locationId } as const)
+    : unitId
+      ? ({ unitId } as const)
+      : null;
+
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !target) return;
     try {
-      const next = await fetchCleaningContext(tenantId, unitId);
+      const next = await fetchCleaningContext(tenantId, target);
       setContext(next);
       setExecution(next.activeExecution);
       setError(null);
@@ -60,17 +71,17 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, unitId]);
+  }, [tenantId, locationId, unitId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   async function handleStart() {
-    if (!tenantId || busy) return;
+    if (!tenantId || !target || busy) return;
     setBusy(true);
     try {
-      const result = await startCleaning(tenantId, unitId);
+      const result = await startCleaning(tenantId, target);
       setExecution(result.execution);
       toastSuccess(result.created ? "Ξεκίνησε ο καθαρισμός" : "Συνεχίστηκε ο καθαρισμός");
       await load();
@@ -219,10 +230,16 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-medium text-emerald-900">Ολοκληρώθηκε ο καθαρισμός</p>
           <p className="mt-1 text-sm text-emerald-800">
-            Η εργασία καθαριότητας έκλεισε και η μονάδα σημειώθηκε καθαρή.
+            Η εργασία καθαριότητας έκλεισε και το δωμάτιο σημειώθηκε καθαρό.
           </p>
           <Link
-            href={`/dashboard/housekeeping/history?unitId=${context.unitId}`}
+            href={
+              context.locationId
+                ? `/dashboard/housekeeping/history?cleaningLocationId=${context.locationId}`
+                : context.unitId
+                  ? `/dashboard/housekeeping/history?unitId=${context.unitId}`
+                  : "/dashboard/housekeeping/history"
+            }
             className="mt-3 inline-block text-sm underline"
           >
             Ιστορικό καθαρισμών

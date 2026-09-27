@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         tenantId: actor.tenantId,
         propertyId: query.propertyId,
         unitId: query.unitId,
+        cleaningLocationId: query.cleaningLocationId,
         entireTenant: query.entireTenant,
         page: query.page,
         limit: query.limit,

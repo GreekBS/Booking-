@@ -163,6 +163,15 @@ import {
   GenerateUnitQrUseCase,
   RotateUnitQrUseCase,
   ResolveUnitQrUseCase,
+  BulkInitializeCleaningLocationsUseCase,
+  AddCleaningLocationUseCase,
+  RenameCleaningLocationUseCase,
+  ArchiveCleaningLocationUseCase,
+  ListCleaningLocationsBoardUseCase,
+  GetCleaningLocationQrUseCase,
+  GenerateCleaningLocationQrUseCase,
+  RotateCleaningLocationQrUseCase,
+  ResolveCleaningQrUseCase,
   GetCleaningChecklistTemplateUseCase,
   UpsertCleaningChecklistTemplateUseCase,
   ResolveCleaningContextUseCase,
@@ -499,6 +508,8 @@ import {
   PrismaHousekeepingTurnoverStore,
   PrismaHousekeepingTodayQuery,
   PrismaUnitQrAccessRepository,
+  PrismaCleaningLocationRepository,
+  PrismaCleaningLocationQrAccessRepository,
   PrismaCleaningChecklistRepository,
   PrismaCleaningExecutionRepository,
   PrismaCleaningPhotoRepository,
@@ -627,6 +638,9 @@ const housekeepingTurnoverStore = new PrismaHousekeepingTurnoverStore();
 const housekeepingTodayQuery = new PrismaHousekeepingTodayQuery();
 
 const unitQrAccessRepository = new PrismaUnitQrAccessRepository();
+const cleaningLocationRepository = new PrismaCleaningLocationRepository();
+const cleaningLocationQrAccessRepository =
+  new PrismaCleaningLocationQrAccessRepository();
 const cleaningChecklistRepository = new PrismaCleaningChecklistRepository();
 const cleaningExecutionRepository = new PrismaCleaningExecutionRepository(
   housekeepingTurnoverStore,
@@ -1374,6 +1388,65 @@ export const rotateUnitQrUseCase = new RotateUnitQrUseCase(
 );
 export const resolveUnitQrUseCase = new ResolveUnitQrUseCase(
   unitQrAccessRepository,
+  propertyRepository,
+  opaqueTokenFactory,
+  permissionChecker,
+);
+export const bulkInitializeCleaningLocationsUseCase =
+  new BulkInitializeCleaningLocationsUseCase(
+    cleaningLocationRepository,
+    permissionChecker,
+    auditLogRepository,
+  );
+export const addCleaningLocationUseCase = new AddCleaningLocationUseCase(
+  cleaningLocationRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const renameCleaningLocationUseCase = new RenameCleaningLocationUseCase(
+  cleaningLocationRepository,
+  permissionChecker,
+  auditLogRepository,
+);
+export const archiveCleaningLocationUseCase =
+  new ArchiveCleaningLocationUseCase(
+    cleaningLocationRepository,
+    permissionChecker,
+    auditLogRepository,
+  );
+export const listCleaningLocationsBoardUseCase =
+  new ListCleaningLocationsBoardUseCase(
+    cleaningLocationRepository,
+    permissionChecker,
+  );
+export const getCleaningLocationQrUseCase = new GetCleaningLocationQrUseCase(
+  cleaningLocationQrAccessRepository,
+  cleaningLocationRepository,
+  propertyRepository,
+  permissionChecker,
+);
+export const generateCleaningLocationQrUseCase =
+  new GenerateCleaningLocationQrUseCase(
+    cleaningLocationQrAccessRepository,
+    cleaningLocationRepository,
+    propertyRepository,
+    opaqueTokenFactory,
+    permissionChecker,
+    auditLogRepository,
+  );
+export const rotateCleaningLocationQrUseCase =
+  new RotateCleaningLocationQrUseCase(
+    cleaningLocationQrAccessRepository,
+    cleaningLocationRepository,
+    propertyRepository,
+    opaqueTokenFactory,
+    permissionChecker,
+    auditLogRepository,
+  );
+export const resolveCleaningQrUseCase = new ResolveCleaningQrUseCase(
+  cleaningLocationQrAccessRepository,
+  unitQrAccessRepository,
+  cleaningLocationRepository,
   propertyRepository,
   opaqueTokenFactory,
   permissionChecker,

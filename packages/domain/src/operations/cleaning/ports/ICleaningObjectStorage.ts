@@ -22,7 +22,9 @@ export interface ICleaningObjectStorage {
 export function buildCleaningPhotoStorageKey(input: {
   tenantId: string;
   propertyId: string;
-  unitId: string;
+  /** Legacy commercial unit; prefer cleaningLocationId when unit is absent. */
+  unitId: string | null;
+  cleaningLocationId?: string | null;
   executionId: string;
   photoId: string;
   contentType: string;
@@ -33,5 +35,7 @@ export function buildCleaningPhotoStorageKey(input: {
       : input.contentType === "image/webp"
         ? "webp"
         : "jpg";
-  return `${input.tenantId}/${input.propertyId}/${input.unitId}/${input.executionId}/${input.photoId}.${ext}`;
+  const spaceKey =
+    input.unitId ?? input.cleaningLocationId ?? "location";
+  return `${input.tenantId}/${input.propertyId}/${spaceKey}/${input.executionId}/${input.photoId}.${ext}`;
 }

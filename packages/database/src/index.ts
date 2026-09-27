@@ -84,6 +84,8 @@ export {
   CryptoOpaqueTokenFactory,
 } from "./repositories/operations/cleaning/cleaningTokens";
 export { PrismaUnitQrAccessRepository } from "./repositories/operations/cleaning/UnitQrAccessRepository";
+export { PrismaCleaningLocationRepository } from "./repositories/operations/cleaning/CleaningLocationRepository";
+export { PrismaCleaningLocationQrAccessRepository } from "./repositories/operations/cleaning/CleaningLocationQrAccessRepository";
 export { PrismaCleaningChecklistRepository } from "./repositories/operations/cleaning/CleaningChecklistRepository";
 export { PrismaCleaningExecutionRepository } from "./repositories/operations/cleaning/CleaningExecutionRepository";
 export { PrismaCleaningPhotoRepository } from "./repositories/operations/cleaning/CleaningPhotoRepository";
