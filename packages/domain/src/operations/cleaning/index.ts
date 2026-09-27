@@ -1,4 +1,5 @@
 export * from "./domain/CleaningTypes";
+export * from "./domain/defaultCleaningChecklist";
 export * from "./domain/cleaningTaskPolicy";
 export * from "./domain/cleaningCompletion";
 export * from "./ports/IOpaqueTokenFactory";

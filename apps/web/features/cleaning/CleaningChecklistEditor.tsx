@@ -67,23 +67,20 @@ export function CleaningChecklistEditor() {
     setLoading(true);
     try {
       const template = await fetchCleaningTemplate(tenantId, propertyId);
-      if (template) {
-        setName(template.name);
-        setMinimumCompletionPhotos(template.minimumCompletionPhotos);
-        setVersion(template.version);
-        setItems(
-          template.items.map((item) => ({
-            id: item.id,
-            label: item.label,
-            description: item.description ?? "",
-            required: item.required,
-            photoRequired: item.photoRequired,
-          })),
-        );
-      } else {
-        setVersion(null);
-        setItems([emptyItem()]);
-      }
+      setName(template.name);
+      setMinimumCompletionPhotos(template.minimumCompletionPhotos);
+      setVersion(template.version);
+      setItems(
+        template.items.length > 0
+          ? template.items.map((item) => ({
+              id: item.id,
+              label: item.label,
+              description: item.description ?? "",
+              required: item.required,
+              photoRequired: item.photoRequired,
+            }))
+          : [emptyItem()],
+      );
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης λίστας ελέγχου");

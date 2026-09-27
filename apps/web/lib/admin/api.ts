@@ -1177,8 +1177,8 @@ export async function resolveQrToken(
 export async function fetchCleaningTemplate(
   tenantId: string,
   propertyId: string,
-): Promise<CleaningChecklistTemplateRecord | null> {
-  const res = await adminFetch<{ data: CleaningChecklistTemplateRecord | null }>(
+): Promise<CleaningChecklistTemplateRecord> {
+  const res = await adminFetch<{ data: CleaningChecklistTemplateRecord }>(
     `/cleaning/templates?propertyId=${encodeURIComponent(propertyId)}`,
     { tenantId },
   );

@@ -26,12 +26,12 @@ export async function GET(request: NextRequest) {
     const result = await getCleaningChecklistTemplateUseCase.execute(
       { tenantId: actor.tenantId, propertyId: query.propertyId },
       toPermissionActor(actor),
+      { ipAddress: getClientIp(request) },
     );
     if (result.isFailure) return mapResultError(result.getError());
 
-    const template = result.getValue();
     return apiSuccess({
-      data: template ? serializeCleaningTemplate(template) : null,
+      data: serializeCleaningTemplate(result.getValue()),
     });
   } catch (error) {
     return mapResultError(error instanceof Error ? error : new Error(String(error)));

@@ -161,9 +161,39 @@ describe("operator-ui QR cleaning V1", () => {
       /await saveCleaningTemplate[\s\S]*router\.push\("\/dashboard\/housekeeping"\)/,
     );
 
+    const form = read("features/cleaning/CleaningForm.tsx");
+    expect(form).toContain("<details");
+    expect(form).toContain("Οδηγίες");
+    expect(form).toContain("Απαιτείται φωτογραφία");
+
     const history = read("features/cleaning/CleaningHistoryPage.tsx");
     expect(history).toContain("listCleaningHistory");
     expect(history).toContain('searchParams.get("unitId")');
+  });
+
+  it("wires default checklist ensure into template GET and cleaning start", () => {
+    const templates = read("app/api/admin/v1/cleaning/templates/route.ts");
+    expect(templates).toContain("getCleaningChecklistTemplateUseCase");
+    expect(templates).not.toContain("template ? serializeCleaningTemplate(template) : null");
+
+    const domainDefaults = readRepo(
+      "packages/domain/src/operations/cleaning/domain/defaultCleaningChecklist.ts",
+    );
+    expect(domainDefaults).toContain("Προετοιμασία υπνοδωματίου");
+    expect(domainDefaults).toContain("Τελικός έλεγχος καταλύματος");
+    expect(domainDefaults).toContain("photoRequired: true");
+
+    const repo = readRepo(
+      "packages/database/src/repositories/operations/cleaning/CleaningChecklistRepository.ts",
+    );
+    expect(repo).toContain("ensureDefaultActiveTemplate");
+    expect(repo).toContain("DEFAULT_CLEANING_CHECKLIST_NAME");
+
+    const container = read("lib/di/container.ts");
+    expect(container).toContain("startOrResumeCleaningUseCase");
+    expect(container).toMatch(
+      /new StartOrResumeCleaningUseCase\(\s*cleaningExecutionRepository,\s*cleaningChecklistRepository/s,
+    );
   });
 
   it("client api helpers cover the whole cleaning flow", () => {

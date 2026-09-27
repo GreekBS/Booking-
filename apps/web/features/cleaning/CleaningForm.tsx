@@ -253,15 +253,10 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
               ? `Συνδεδεμένη εργασία: ${context.task.title}`
               : "Θα ανοίξει εργασία καθαριότητας για αυτόν τον καθαρισμό."}
           </p>
-          {context.template ? (
-            <p className="text-sm text-muted-foreground">
-              Λίστα ελέγχου: {context.template.name} · {context.template.itemCount} στοιχεία
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Δεν έχει ρυθμιστεί λίστα ελέγχου για αυτό το κατάλυμα.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Λίστα ελέγχου: {context.template.name} · {context.template.itemCount}{" "}
+            στοιχεία
+          </p>
           <Button
             className="min-h-12 w-full text-base"
             onClick={() => void handleStart()}
@@ -302,16 +297,28 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                           }
                         />
                         <span className="flex-1">
-                          <span className="block text-base leading-snug">
+                          <span className="block text-base font-medium leading-snug">
                             {item.label}
                             {item.required ? (
-                              <span className="ml-1 text-destructive">*</span>
-                            ) : null}
+                              <span className="ml-1 text-destructive" title="Υποχρεωτικό">
+                                *
+                              </span>
+                            ) : (
+                              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                (προαιρετικό)
+                              </span>
+                            )}
                           </span>
                           {item.description ? (
-                            <span className="mt-0.5 block text-sm text-muted-foreground">
-                              {item.description}
-                            </span>
+                            <details className="mt-1 group">
+                              <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden">
+                                <span className="group-open:hidden">Οδηγίες</span>
+                                <span className="hidden group-open:inline">Απόκρυψη οδηγιών</span>
+                              </summary>
+                              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                                {item.description}
+                              </p>
+                            </details>
                           ) : null}
                           {item.photoRequired ? (
                             <span className="mt-1 block text-xs font-medium text-amber-700">

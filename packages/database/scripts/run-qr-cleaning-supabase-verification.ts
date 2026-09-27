@@ -147,6 +147,7 @@ async function main(): Promise<void> {
   const getTemplate = new GetCleaningChecklistTemplateUseCase(
     checklists,
     permissions,
+    audit,
   );
   const resolveContext = new ResolveCleaningContextUseCase(
     executions,
@@ -155,6 +156,7 @@ async function main(): Promise<void> {
   );
   const startCleaning = new StartOrResumeCleaningUseCase(
     executions,
+    checklists,
     permissions,
     audit,
   );

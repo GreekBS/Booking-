@@ -3,8 +3,16 @@ import type { Prisma } from "@prisma/client";
 import type {
   CleaningChecklistTemplateItemRecord,
   CleaningChecklistTemplateRecord,
+  EnsureDefaultChecklistTemplateInput,
+  EnsureDefaultChecklistTemplateResult,
   ICleaningChecklistRepository,
   UpsertChecklistTemplateInput,
+} from "@hcp/domain";
+import {
+  DEFAULT_CLEANING_CHECKLIST_MINIMUM_PHOTOS,
+  DEFAULT_CLEANING_CHECKLIST_NAME,
+  buildDefaultCleaningChecklistItems,
+  NotFoundError,
 } from "@hcp/domain";
 import { withTenantTransaction } from "../../../client";
 
@@ -203,6 +211,76 @@ export class PrismaCleaningChecklistRepository
       });
 
       return loadTemplate(tx, input.tenantId, templateId);
+    });
+  }
+
+  async ensureDefaultActiveTemplate(
+    input: EnsureDefaultChecklistTemplateInput,
+  ): Promise<EnsureDefaultChecklistTemplateResult> {
+    const now = input.now ?? new Date();
+
+    return withTenantTransaction(input.tenantId, async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM properties
+        WHERE id = ${input.propertyId}::uuid AND tenant_id = ${input.tenantId}::uuid
+        FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new NotFoundError("Property", input.propertyId);
+      }
+
+      const existing = await tx.cleaningChecklistTemplate.findFirst({
+        where: {
+          tenantId: input.tenantId,
+          propertyId: input.propertyId,
+          isActive: true,
+        },
+        include: { items: { orderBy: { position: "asc" } } },
+      });
+      if (existing) {
+        return {
+          template: mapTemplate(existing as TemplateRow),
+          created: false,
+        };
+      }
+
+      const templateId = randomUUID();
+      const defaults = buildDefaultCleaningChecklistItems();
+
+      await tx.cleaningChecklistTemplate.create({
+        data: {
+          id: templateId,
+          tenantId: input.tenantId,
+          propertyId: input.propertyId,
+          name: DEFAULT_CLEANING_CHECKLIST_NAME,
+          isActive: true,
+          version: 1,
+          minimumCompletionPhotos: DEFAULT_CLEANING_CHECKLIST_MINIMUM_PHOTOS,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+
+      await tx.cleaningChecklistTemplateItem.createMany({
+        data: defaults.map((item, index) => ({
+          id: randomUUID(),
+          tenantId: input.tenantId,
+          templateId,
+          label: item.label.trim(),
+          description: item.description?.trim() || null,
+          position: index,
+          required: item.required ?? true,
+          photoRequired: item.photoRequired ?? false,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      });
+
+      return {
+        template: await loadTemplate(tx, input.tenantId, templateId),
+        created: true,
+      };
     });
   }
 }

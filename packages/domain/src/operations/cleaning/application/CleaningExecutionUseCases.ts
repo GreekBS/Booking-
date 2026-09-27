@@ -33,14 +33,14 @@ import {
 import type { AuditIpContext } from "../../application/TaskUseCases";
 
 export interface CleaningContextView extends CleaningContextSnapshot {
-  /** Active checklist for the property, resolved for display before start. */
+  /** Active checklist for the property (defaults ensured when missing). */
   template: {
     id: string;
     name: string;
     version: number;
     minimumCompletionPhotos: number;
     itemCount: number;
-  } | null;
+  };
   readiness: CleaningCompletionReadiness | null;
   canPerform: boolean;
 }
@@ -75,12 +75,13 @@ export class ResolveCleaningContextUseCase {
         return Result.fail(new ForbiddenError());
       }
 
-      const template = await this.checklists.findActiveTemplateByProperty(
-        input.tenantId,
-        snapshot.propertyId,
-      );
+      const { template } = await this.checklists.ensureDefaultActiveTemplate({
+        tenantId: input.tenantId,
+        propertyId: snapshot.propertyId,
+        actorUserId: actor.userId,
+      });
 
-      const minimumCompletionPhotos = template?.minimumCompletionPhotos ?? 0;
+      const minimumCompletionPhotos = template.minimumCompletionPhotos;
       const readiness = snapshot.activeExecution
         ? evaluateCleaningCompletion({
             items: snapshot.activeExecution.items,
@@ -91,15 +92,13 @@ export class ResolveCleaningContextUseCase {
 
       return Result.ok({
         ...snapshot,
-        template: template
-          ? {
-              id: template.id,
-              name: template.name,
-              version: template.version,
-              minimumCompletionPhotos: template.minimumCompletionPhotos,
-              itemCount: template.items.filter((i) => i.isActive).length,
-            }
-          : null,
+        template: {
+          id: template.id,
+          name: template.name,
+          version: template.version,
+          minimumCompletionPhotos: template.minimumCompletionPhotos,
+          itemCount: template.items.filter((i) => i.isActive).length,
+        },
         readiness,
         canPerform: canPerformCleaningOnProperty(
           this.permissionChecker,
@@ -124,6 +123,7 @@ export interface StartOrResumeCleaningView {
 export class StartOrResumeCleaningUseCase {
   constructor(
     private readonly executions: ICleaningExecutionRepository,
+    private readonly checklists: ICleaningChecklistRepository,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
   ) {}
@@ -156,6 +156,13 @@ export class StartOrResumeCleaningUseCase {
           new ValidationError("This unit is already clean — no cleaning is due"),
         );
       }
+
+      // Ensure an ACTIVE checklist exists before snapshotting into the execution.
+      await this.checklists.ensureDefaultActiveTemplate({
+        tenantId: input.tenantId,
+        propertyId: snapshot.propertyId,
+        actorUserId: actor.userId,
+      });
 
       const result = await this.executions.startOrResume({
         tenantId: input.tenantId,

@@ -665,7 +665,7 @@ export interface CleaningContextRecord {
     version: number;
     minimumCompletionPhotos: number;
     itemCount: number;
-  } | null;
+  };
   readiness: {
     ready: boolean;
     blockers: CleaningCompletionBlocker[];

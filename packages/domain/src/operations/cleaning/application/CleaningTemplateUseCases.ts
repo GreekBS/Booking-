@@ -25,12 +25,14 @@ export class GetCleaningChecklistTemplateUseCase {
   constructor(
     private readonly checklists: ICleaningChecklistRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly audit?: IAuditLogRepository,
   ) {}
 
   async execute(
     input: { tenantId: string; propertyId: string },
     actor: ActorContext,
-  ): Promise<Result<CleaningChecklistTemplateRecord | null, Error>> {
+    auditContext?: AuditIpContext,
+  ): Promise<Result<CleaningChecklistTemplateRecord, Error>> {
     try {
       if (
         !canReadCleaningOnProperty(
@@ -42,11 +44,30 @@ export class GetCleaningChecklistTemplateUseCase {
       ) {
         return Result.fail(new ForbiddenError());
       }
-      const template = await this.checklists.findActiveTemplateByProperty(
-        input.tenantId,
-        input.propertyId,
-      );
-      return Result.ok(template);
+
+      const ensured = await this.checklists.ensureDefaultActiveTemplate({
+        tenantId: input.tenantId,
+        propertyId: input.propertyId,
+        actorUserId: actor.userId,
+      });
+
+      if (ensured.created) {
+        await this.audit?.append({
+          tenantId: input.tenantId,
+          actorId: actor.userId,
+          action: "cleaning_checklist.default_ensured",
+          resourceType: "cleaning_checklist_template",
+          resourceId: ensured.template.id,
+          metadata: {
+            propertyId: input.propertyId,
+            version: ensured.template.version,
+            itemCount: ensured.template.items.filter((i) => i.isActive).length,
+          },
+          ipAddress: auditContext?.ipAddress ?? null,
+        });
+      }
+
+      return Result.ok(ensured.template);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }

@@ -1382,6 +1382,7 @@ export const getCleaningChecklistTemplateUseCase =
   new GetCleaningChecklistTemplateUseCase(
     cleaningChecklistRepository,
     permissionChecker,
+    auditLogRepository,
   );
 export const upsertCleaningChecklistTemplateUseCase =
   new UpsertCleaningChecklistTemplateUseCase(
@@ -1396,6 +1397,7 @@ export const resolveCleaningContextUseCase = new ResolveCleaningContextUseCase(
 );
 export const startOrResumeCleaningUseCase = new StartOrResumeCleaningUseCase(
   cleaningExecutionRepository,
+  cleaningChecklistRepository,
   permissionChecker,
   auditLogRepository,
 );
