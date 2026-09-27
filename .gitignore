@@ -34,3 +34,6 @@ packages/database/.tmp/
 **/blob-report/
 apps/web/tmp-test.css
 .vercel
+
+.env.cleaning.local
+

@@ -121,13 +121,47 @@ Bucket requirements:
   short-lived signed URLs after Talos auth + property ACL
 - Completed executions reject photo removal (evidence immutability)
 
-**Production verification status (2026-09-27):** Vercel Production env does
-**not** yet contain `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`. Until those
-are set and a private `cleaning-photos` bucket exists, Production resolves to
-`UnconfiguredCleaningObjectStorage` and QR Cleaning V1 remains PARTIAL for
-storage closure. Demo/fs path verification against the authorized demo DB is
-PASS (23/23), including ACL, limits, photoRequired, minimum photos, and atomic
-completion.
+**Production verification status (2026-09-27):** COMPLETE.
+
+Verified against live Production (`talos-jade.vercel.app`) with the private
+`cleaning-photos` bucket:
+
+- Runtime driver resolves to **supabase** (signed URLs hosted on
+  `*.supabase.co`; `CLEANING_PHOTOS_DRIVER` unset)
+- Real PNG upload via `POST /api/admin/v1/cleaning/executions/:id/photos`
+  created `CleaningPhoto` metadata and a short-lived signed URL
+- Public/direct object URLs return non-200 (bucket remains private)
+- Authorized signed URL fetch returns the object bytes
+- `photoRequired` / `minimumCompletionPhotos` reject Complete until evidence
+  exists; after upload, Complete succeeds
+- Atomic result: `CleaningExecution=COMPLETED`, `Task=COMPLETED`,
+  `UnitHousekeepingStatus=CLEAN`; unit calendar blocks untouched
+- Photo removal allowed only while `IN_PROGRESS`; after completion rejected
+- Guessed `photoId` / `executionId` do not bypass authorization
+- Service role remains server-only (never `NEXT_PUBLIC_*`, never in client
+  serializers — `storageKey` is omitted from API responses)
+
+`SUPABASE_URL` was missing from Vercel Production despite the service-role
+secret being present; it was added as the project API URL for
+`eofmpszxlumqequjqcmp` before the successful redeploy. `CLEANING_PHOTOS_BUCKET`
+remains omitted (default `cleaning-photos`).
+
+### 5.2 Build-time `DATABASE_URL` / Prisma messages
+
+Vercel Production **does** define `DATABASE_URL` (and `DIRECT_URL`). Runtime DB
+access is healthy (auth, catalog, housekeeping, cleaning APIs all succeed).
+
+During `turbo` builds, Turborepo warned that `DATABASE_URL` was set on the
+platform but missing from `turbo.json`, so it was not forwarded into some
+build/SSG workers — Prisma then logged `Environment variable not found:
+DATABASE_URL` while evaluating modules that import the shared client (e.g.
+Auth.js adapter paths pulled into page data collection). That is a **build-time
+env-forwarding** issue, not a Production runtime connection defect, and does
+not change the established pooler / `talos_runtime` / `pgbouncer=true` model.
+
+Mitigation: list `DATABASE_URL` (and related runtime secrets) in
+`turbo.json` `globalPassThroughEnv` so build workers receive the same platform
+env without altering connection architecture.
 
 ### 6. Access control reuses the Housekeeping ACL verbatim
 
