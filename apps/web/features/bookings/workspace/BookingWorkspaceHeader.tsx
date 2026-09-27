@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { nightsBetween } from "@/lib/admin/utils";
 import { formatBookingDisplayId } from "./lib/booking-display";
 import { BookingQuickActions } from "./BookingQuickActions";
+import { elCommon } from "@/lib/i18n";
 
 interface BookingWorkspaceHeaderProps {
   booking: BookingRecord;
@@ -51,10 +52,10 @@ export function BookingWorkspaceHeader({
 
           <p className="mt-1.5 text-sm text-muted-foreground">
             <span className="text-foreground/80">
-              {propertyLabel ?? "Property"}
+              {propertyLabel ?? elCommon.property}
             </span>
             {" · "}
-            <span className="text-foreground/80">{unitLabel ?? "Unit"}</span>
+            <span className="text-foreground/80">{unitLabel ?? elCommon.unit}</span>
           </p>
         </div>
         {onClose ? (
@@ -63,7 +64,7 @@ export function BookingWorkspaceHeader({
             size="icon"
             className="h-8 w-8 shrink-0"
             onClick={onClose}
-            aria-label="Close reservation"
+            aria-label="Κλείσιμο κράτησης"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -71,18 +72,18 @@ export function BookingWorkspaceHeader({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-        <MetaChip label="Arrival" value={booking.checkIn} />
-        <MetaChip label="Departure" value={booking.checkOut} />
-        <MetaChip label="Nights" value={String(nights)} />
-        <MetaChip label="Guests" value={String(booking.guestCount)} />
+        <MetaChip label={elCommon.checkIn} value={booking.checkIn} />
+        <MetaChip label={elCommon.checkOut} value={booking.checkOut} />
+        <MetaChip label={elCommon.nights} value={String(nights)} />
+        <MetaChip label={elCommon.guests} value={String(booking.guestCount)} />
         {reservationTotalLabel ? (
-          <MetaChip label="Reservation total" value={reservationTotalLabel} />
+          <MetaChip label="Σύνολο κράτησης" value={reservationTotalLabel} />
         ) : null}
       </div>
 
       {outstandingLabel ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Folio outstanding:{" "}
+          Υπόλοιπο λογαριασμού:{" "}
           <span className="font-semibold text-foreground">{outstandingLabel}</span>
         </p>
       ) : null}

@@ -23,7 +23,7 @@ export function resolveDayCellState(
   if (!ctaAllowed) {
     return {
       availability: "closed",
-      label: "Closed to arrival",
+      label: "Κλειστή άφιξη",
       ctaAllowed,
       ctdAllowed,
     };
@@ -31,7 +31,7 @@ export function resolveDayCellState(
 
   return {
     availability: "available",
-    label: "Available",
+    label: "Διαθέσιμο",
     ctaAllowed,
     ctdAllowed,
   };

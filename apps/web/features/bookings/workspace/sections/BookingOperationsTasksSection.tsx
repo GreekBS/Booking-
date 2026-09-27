@@ -9,24 +9,10 @@ import type { TaskRecord } from "@/lib/admin/types";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case "OPEN":
-      return "Open";
-    case "IN_PROGRESS":
-      return "In progress";
-    case "COMPLETED":
-      return "Completed";
-    case "CANCELLED":
-      return "Cancelled";
-    default:
-      return status;
-  }
-}
+import { elCommon, elPriority, elTaskCategory, statusLabelEl } from "@/lib/i18n";
 
 function categoryLabel(category: string): string {
-  return category.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return elTaskCategory[category] ?? category.replace(/_/g, " ").toLowerCase();
 }
 
 /**
@@ -65,7 +51,7 @@ export function BookingOperationsTasksSection({
       setTasks(res.data);
       setTotal(res.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης εργασιών");
       setTasks([]);
       setTotal(0);
     } finally {
@@ -91,26 +77,26 @@ export function BookingOperationsTasksSection({
             id="booking-ops-tasks-heading"
             className="text-sm font-semibold text-foreground"
           >
-            Operational tasks
+            Λειτουργικές εργασίες
           </h3>
           <p className="text-xs text-muted-foreground">
             {loading
-              ? "Loading…"
+              ? elCommon.loading
               : total === 0
-                ? "No open operational tasks."
-                : `${openCount} open · ${inProgressCount} in progress`}
+                ? "Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες."
+                : `${openCount} ανοιχτές · ${inProgressCount} σε εξέλιξη`}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
             <Link href={createHref}>
               <ClipboardList className="h-3.5 w-3.5" aria-hidden />
-              Create task
+              Δημιουργία εργασίας
             </Link>
           </Button>
           <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
             <Link href={hkHref}>
-              View all tasks
+              Όλες οι εργασίες
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </Button>
@@ -128,7 +114,7 @@ export function BookingOperationsTasksSection({
       ) : null}
 
       {!loading && tasks.length === 0 && !error ? (
-        <p className="text-xs text-muted-foreground">No open operational tasks.</p>
+        <p className="text-xs text-muted-foreground">Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες.</p>
       ) : null}
 
       {tasks.length > 0 ? (
@@ -139,19 +125,21 @@ export function BookingOperationsTasksSection({
                 <p className="truncate text-sm font-medium">{task.title}</p>
                 <p className="text-[11px] text-muted-foreground">
                   {categoryLabel(task.category)}
-                  {task.priority !== "NORMAL" ? ` · ${task.priority}` : ""}
+                  {task.priority !== "NORMAL"
+                    ? ` · ${elPriority[task.priority] ?? task.priority}`
+                    : ""}
                   {task.dueAt
-                    ? ` · due ${new Date(task.dueAt).toISOString().slice(0, 10)}`
+                    ? ` · προθεσμία ${new Date(task.dueAt).toISOString().slice(0, 10)}`
                     : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <StatusBadge status={task.status} label={statusLabel(task.status)} />
+                <StatusBadge status={task.status} label={statusLabelEl(task.status)} />
                 <Button variant="outline" size="sm" className="h-8 min-h-8 text-xs" asChild>
                   <Link
                     href={`/dashboard/housekeeping?view=all&taskId=${encodeURIComponent(task.id)}&bookingId=${encodeURIComponent(bookingId)}`}
                   >
-                    View in Housekeeping
+                    Στην καθαριότητα
                   </Link>
                 </Button>
               </div>

@@ -10,21 +10,21 @@ type EmptyVariant =
 
 const COPY: Record<EmptyVariant, { title: string; description: string }> = {
   "no-property-selected": {
-    title: "Select an Active Property",
+    title: "Επιλέξτε ενεργό κατάλυμα",
     description:
-      "Choose a property from the header Active Property control to open its calendar workspace.",
+      "Επιλέξτε κατάλυμα από τον έλεγχο ενεργού καταλύματος στην κεφαλίδα.",
   },
   "no-unit-selected": {
-    title: "Select a unit",
-    description: "Choose a unit from the calendar toolbar to view its month calendar.",
+    title: "Επιλέξτε μονάδα",
+    description: "Επιλέξτε μονάδα από τη γραμμή εργαλείων για το μηνιαίο ημερολόγιο.",
   },
   "no-search-results": {
-    title: "No units match your search",
-    description: "Try a different unit name or clear the search field.",
+    title: "Δεν βρέθηκαν μονάδες",
+    description: "Δοκιμάστε άλλο όνομα ή καθαρίστε την αναζήτηση.",
   },
   "no-units-in-property": {
-    title: "No units in this property",
-    description: "Add units to this property to manage availability on the calendar.",
+    title: "Δεν υπάρχουν μονάδες",
+    description: "Προσθέστε μονάδες στο κατάλυμα για διαχείριση διαθεσιμότητας.",
   },
 };
 

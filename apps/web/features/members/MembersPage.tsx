@@ -76,7 +76,7 @@ export function MembersPage() {
       setPendingInvitations(membersRes.pendingInvitations ?? []);
       setProperties(catalog.properties);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load members");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης μελών");
     } finally {
       setLoading(false);
     }
@@ -101,10 +101,10 @@ export function MembersPage() {
       });
       setInviteOpen(false);
       setInviteForm({ email: "", role: "manager", propertyIds: [] });
-      toastSuccess("Invitation sent");
+      toastSuccess("Η πρόσκληση στάλθηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Invite failed");
+      toastError(err instanceof Error ? err.message : "Η πρόσκληση απέτυχε");
     } finally {
       setActionLoading(false);
     }
@@ -123,10 +123,10 @@ export function MembersPage() {
         }),
       });
       setEditMember(null);
-      toastSuccess("Member updated");
+      toastSuccess("Το μέλος ενημερώθηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Update failed");
+      toastError(err instanceof Error ? err.message : "Η ενημέρωση απέτυχε");
     } finally {
       setActionLoading(false);
     }
@@ -140,10 +140,10 @@ export function MembersPage() {
         method: "POST",
         tenantId,
       });
-      toastSuccess("Invitation resent");
+      toastSuccess("Η πρόσκκληση στάλθηκε ξανά");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Resend failed");
+      toastError(err instanceof Error ? err.message : "Η επαναποστολή απέτυχε");
     } finally {
       setActionLoading(false);
     }
@@ -154,18 +154,18 @@ export function MembersPage() {
     setActionLoading(true);
     try {
       await adminFetch(`/members/${revokeTarget.id}`, { method: "DELETE", tenantId });
-      toastSuccess("Member revoked");
+      toastSuccess("Η πρόσβαση του μέλους ανακλήθηκε");
       setRevokeTarget(null);
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Revoke failed");
+      toastError(err instanceof Error ? err.message : "Η ανάκληση απέτυχε");
     } finally {
       setActionLoading(false);
     }
   }
 
   function propertyLabel(ids: string[] | null) {
-    if (!ids || ids.length === 0) return "All properties";
+    if (!ids || ids.length === 0) return "Όλα τα καταλύματα";
     return ids
       .map((id) => properties.find((p) => p.id === id)?.name ?? id.slice(0, 6))
       .join(", ");
@@ -183,28 +183,28 @@ export function MembersPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Members"
-        description="Tenant-wide team access, roles, and property scoping for managers"
+        title="Μέλη"
+        description="Πρόσβαση ομάδας, ρόλοι και πεδίο καταλυμάτων για υπεύθυνους"
         actions={
           <Button onClick={() => setInviteOpen(true)}>
             <UserPlus className="h-4 w-4" />
-            Invite member
+            Πρόσκληση μέλους
           </Button>
         }
       />
 
       {members.length === 0 ? (
         <EmptyState
-          title="No team members"
-          description="Invite colleagues to help manage your properties."
-          action={{ label: "Invite member", onClick: () => setInviteOpen(true) }}
+          title="Δεν υπάρχουν μέλη ομάδας"
+          description="Προσκαλέστε συνεργάτες για τη διαχείριση των καταλυμάτων σας."
+          action={{ label: "Πρόσκληση μέλους", onClick: () => setInviteOpen(true) }}
         />
       ) : (
         <Surface variant="panel" padding="none">
           <div className="border-b border-border px-4 py-3">
             <SurfaceHeader
               className="mb-0"
-              title="Team members"
+              title="Μέλη ομάδας"
               description={`${members.length} member${members.length === 1 ? "" : "s"} with access to this tenant`}
             />
           </div>
@@ -212,11 +212,11 @@ export function MembersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Όνομα</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Properties</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Ρόλος</TableHead>
+                  <TableHead>Καταλύματα</TableHead>
+                  <TableHead>Κατάσταση</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -227,7 +227,7 @@ export function MembersPage() {
                     <TableCell>{member.user?.email ?? "—"}</TableCell>
                     <TableCell>{memberRoleLabel(member.role)}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                      {member.role === "manager" ? propertyLabel(member.propertyIds) : "All"}
+                      {member.role === "manager" ? propertyLabel(member.propertyIds) : "Όλα"}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={member.status} />
@@ -249,16 +249,16 @@ export function MembersPage() {
                               });
                             }}
                           >
-                            Edit role & properties
+                            Επεξεργασία ρόλου και καταλυμάτων
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             disabled
-                            title="Resend is only for pending invitations"
+                            title="Η επαναποστολή ισχύει μόνο για εκκρεμείς προσκλήσεις"
                           >
-                            Resend invite
+                            Επαναποστολή πρόσκλησης
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setRevokeTarget(member)}>
-                            Revoke
+                            Ανάκληση
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -276,8 +276,8 @@ export function MembersPage() {
           <div className="border-b border-border px-4 py-3">
             <SurfaceHeader
               className="mb-0"
-              title="Pending invitations"
-              description="Invites that have not been accepted yet"
+              title="Εκκρεμείς προσκλήσεις"
+              description="Προσκλήσεις που δεν έχουν αποδεχθεί ακόμα"
             />
           </div>
           <div className="overflow-x-auto">
@@ -285,8 +285,8 @@ export function MembersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Expires</TableHead>
+                  <TableHead>Ρόλος</TableHead>
+                  <TableHead>Λήξη</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -303,7 +303,7 @@ export function MembersPage() {
                         disabled={actionLoading}
                         onClick={() => void resendInvite(invitation.id)}
                       >
-                        Resend
+                        Επαναποστολή
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -317,7 +317,7 @@ export function MembersPage() {
       <MemberFormDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
-        title="Invite member"
+        title="Πρόσκληση μέλους"
         email={inviteForm.email}
         role={inviteForm.role}
         propertyIds={inviteForm.propertyIds}
@@ -339,7 +339,7 @@ export function MembersPage() {
       <MemberFormDialog
         open={Boolean(editMember)}
         onOpenChange={(open) => !open && setEditMember(null)}
-        title="Edit member"
+        title="Επεξεργασία μέλους"
         role={editForm.role}
         propertyIds={editForm.propertyIds}
         properties={properties}
@@ -365,9 +365,9 @@ export function MembersPage() {
       <ConfirmDialog
         open={Boolean(revokeTarget)}
         onOpenChange={(open) => !open && setRevokeTarget(null)}
-        title="Revoke member"
-        description={`Remove access for ${revokeTarget?.user?.email ?? "this member"}?`}
-        confirmLabel="Revoke"
+        title="Ανάκληση μέλους"
+        description={`Remove access for ${revokeTarget?.user?.email ?? "αυτό το μέλος"}?`}
+        confirmLabel="Ανάκληση"
         destructive
         loading={actionLoading}
         onConfirm={revoke}
@@ -421,20 +421,20 @@ function MemberFormDialog({
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label>Role</Label>
+            <Label>Ρόλος</Label>
             <Select value={role} onValueChange={onRoleChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="admin">Διαχειριστής</SelectItem>
+                <SelectItem value="manager">Υπεύθυνος</SelectItem>
               </SelectContent>
             </Select>
           </div>
           {role === "manager" ? (
             <div className="space-y-2">
-              <Label>Assigned properties</Label>
+              <Label>Ανατεθειμένα καταλύματα</Label>
               <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-border p-3">
                 {properties.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 text-sm">
@@ -452,10 +452,10 @@ function MemberFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Ακύρωση
           </Button>
           <Button disabled={loading} onClick={onSubmit}>
-            {loading ? "Saving..." : "Save"}
+            {loading ? "Αποθήκευση…" : "Αποθήκευση"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -67,7 +67,7 @@ export function PropertiesPage() {
         if (!cancelled) setData(res);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load properties");
+          setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλυμάτων");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -105,8 +105,8 @@ export function PropertiesPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Properties"
-        description="Tenant-wide listings — search, open details, or jump to units. Not scoped to Active Property."
+        title="Καταλύματα"
+        description="Καταλύματα οργανισμού — αναζήτηση, λεπτομέρειες ή μετάβαση στις μονάδες. Χωρίς φίλτρο ενεργού καταλύματος."
         actions={
           <Button asChild>
             <Link href="/dashboard/properties/new">
@@ -119,14 +119,14 @@ export function PropertiesPage() {
 
       <Surface variant="panel" padding="md">
         <SurfaceHeader
-          title="Find properties"
-          description="Filter by name, slug, or publication status."
+          title="Εύρεση καταλυμάτων"
+          description="Φίλτρο ανά όνομα, slug ή κατάσταση δημοσίευσης."
         />
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by name or slug..."
+              placeholder="Αναζήτηση ανά όνομα ή slug…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -134,13 +134,13 @@ export function PropertiesPage() {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[160px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Κατάσταση" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">Όλα statuses</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="active">Ενεργό</SelectItem>
+              <SelectItem value="inactive">Ανενεργό</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -148,8 +148,8 @@ export function PropertiesPage() {
 
       {filtered.length === 0 ? (
         <EmptyState
-          title="No properties found"
-          description="Create your first property to start accepting bookings."
+          title="Δεν βρέθηκαν καταλύματα"
+          description="Δημιουργήστε το πρώτο κατάλυμα για κρατήσεις."
           action={{ label: "Add property", href: "/dashboard/properties/new", onClick: () => {} }}
         />
       ) : (
@@ -161,7 +161,7 @@ export function PropertiesPage() {
           <div className="border-b border-border px-4 py-3">
             <SurfaceHeader
               className="mb-0"
-              title="All properties"
+              title="Όλα τα καταλύματα"
               description={
                 data
                   ? `${data.meta.total} total · page ${page} of ${totalPages}`
@@ -173,10 +173,10 @@ export function PropertiesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Όνομα</TableHead>
                   <TableHead>Slug</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Τύπος</TableHead>
+                  <TableHead>Κατάσταση</TableHead>
                   <TableHead>Units</TableHead>
                   <TableHead className="w-[50px]" />
                 </TableRow>

@@ -32,10 +32,10 @@ export function WorkspaceFooter({
     >
       <div className="flex flex-wrap gap-2">
         <Button size="sm" disabled={!canSave || saving} onClick={onSave}>
-          {saving ? "Saving…" : "Save"}
+          {saving ? "Αποθήκευση…" : "Αποθήκευση"}
         </Button>
         <Button size="sm" variant="outline" disabled={saving} onClick={onCancel}>
-          Cancel
+          Ακύρωση
         </Button>
       </div>
     </div>

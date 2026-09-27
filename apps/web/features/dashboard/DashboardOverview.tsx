@@ -38,10 +38,11 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { elCommon, elNav, elStatus } from "@/lib/i18n";
 
 function formatOpsDate(iso: string): string {
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat("el-GR", {
       weekday: "long",
       month: "short",
       day: "numeric",
@@ -92,7 +93,7 @@ export function DashboardOverview() {
       setOverview(data);
       setHousekeeping(hk);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης πίνακα ελέγχου");
       setOverview(null);
       setHousekeeping(null);
     } finally {
@@ -134,7 +135,12 @@ export function DashboardOverview() {
   }
 
   if (!overview) {
-    return <ErrorState message="Dashboard overview unavailable" onRetry={() => void load()} />;
+    return (
+      <ErrorState
+        message="Η επισκόπηση πίνακα ελέγχου δεν είναι διαθέσιμη"
+        onRetry={() => void load()}
+      />
+    );
   }
 
   const revenue = overview.revenue
@@ -149,7 +155,7 @@ export function DashboardOverview() {
   return (
     <div className="space-y-5 md:space-y-6">
       <PageHeader
-        title="Operations"
+        title={elNav.operations}
         description={
           property
             ? `${property.name} · ${housekeeping?.localToday ? formatOpsDate(housekeeping.localToday) : todayLabel}`
@@ -159,7 +165,7 @@ export function DashboardOverview() {
           <Button asChild size="sm">
             <Link href="/dashboard/bookings/new">
               <Plus className="h-4 w-4" />
-              New booking
+              Νέα κράτηση
             </Link>
           </Button>
         }
@@ -168,28 +174,32 @@ export function DashboardOverview() {
       {/* Primary metrics — hierarchy, not equal wall */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Occupancy (30d)"
+          label="Πληρότητα (30 ημ.)"
           value={`${overview.occupancyPct}%`}
-          hint="Estimated"
+          hint="Εκτίμηση"
           icon={Percent}
           emphasis
         />
         <MetricCard
-          label="Revenue"
+          label={elNav.revenue}
           value={revenue ? formatMoney(revenue.total.toFixed(4), revenue.currency) : "—"}
-          hint={revenue ? "Confirmed & completed" : "No confirmed bookings"}
+          hint={
+            revenue
+              ? "Επιβεβαιωμένες & ολοκληρωμένες"
+              : "Δεν υπάρχουν επιβεβαιωμένες κρατήσεις"
+          }
           icon={DollarSign}
         />
         <MetricCard
-          label="Bookings"
+          label={elCommon.bookings}
           value={overview.bookingCount}
-          hint={`${overview.unitCount} units`}
+          hint={`${overview.unitCount} ${elCommon.units.toLowerCase()}`}
           icon={BookOpen}
         />
         <MetricCard
-          label="Active holds"
+          label="Ενεργές δεσμεύσεις"
           value={overview.activeHoldCount}
-          hint="Open inventory holds"
+          hint="Ανοιχτές δεσμεύσεις αποθέματος"
           icon={Timer}
         />
       </div>
@@ -197,16 +207,16 @@ export function DashboardOverview() {
       {/* Today board */}
       <Surface variant="panel" padding="md">
         <SurfaceHeader
-          title="Today"
+          title={elCommon.today}
           description={
             housekeeping
-              ? `What needs attention · ${housekeeping.propertyTimezone}`
-              : "What needs attention at this property"
+              ? `Τι χρειάζεται προσοχή · ${housekeeping.propertyTimezone}`
+              : "Τι χρειάζεται προσοχή στο κατάλυμα"
           }
           action={
             <Button variant="ghost" size="sm" asChild className="h-8 text-xs">
               <Link href="/dashboard/availability">
-                Calendar
+                {elNav.availability}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -215,27 +225,27 @@ export function DashboardOverview() {
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <TodayStat
             icon={LogIn}
-            label="Arrivals"
+            label="Αφίξεις"
             value={overview.arrivalsToday}
             tone="info"
           />
           <TodayStat
             icon={LogOut}
-            label="Departures"
+            label="Αναχωρήσεις"
             value={overview.departuresToday}
             tone="warning"
           />
           <TodayStat
             icon={Users}
-            label="In-house"
+            label="Στο κατάλυμα"
             value={overview.inHouseToday}
             tone="success"
           />
           <TodayStat
             icon={CalendarDays}
-            label="Next 7 days"
+            label="Επόμενες 7 ημέρες"
             value={overview.arrivalsNext7Days + overview.departuresNext7Days}
-            hint={`${overview.arrivalsNext7Days} in · ${overview.departuresNext7Days} out`}
+            hint={`${overview.arrivalsNext7Days} είσ. · ${overview.departuresNext7Days} εξ.`}
             tone="muted"
           />
         </div>
@@ -243,28 +253,28 @@ export function DashboardOverview() {
         {housekeeping ? (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-border/60 pt-3">
             <HousekeepingSignal
-              label="Dirty"
+              label={elStatus.DIRTY ?? "Βρώμικα"}
               value={housekeeping.summary.dirty}
               href="/dashboard/housekeeping?view=today"
             />
             <HousekeepingSignal
-              label="In progress"
+              label={elStatus.IN_PROGRESS ?? "Σε εξέλιξη"}
               value={housekeeping.summary.inProgress}
               href="/dashboard/housekeeping?view=today"
             />
             <HousekeepingSignal
-              label="Overdue tasks"
+              label="Εκπρόθεσμες εργασίες"
               value={housekeeping.summary.overdueTasks}
               href="/dashboard/housekeeping?view=all&status=OPEN"
             />
             <HousekeepingSignal
-              label="Ready for arrivals"
+              label="Έτοιμα για αφίξεις"
               value={housekeeping.summary.readyForArrivals}
               href="/dashboard/housekeeping?view=today"
             />
             <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
               <Link href="/dashboard/housekeeping">
-                Housekeeping
+                {elNav.housekeeping}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
             </Button>
@@ -273,13 +283,13 @@ export function DashboardOverview() {
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <StayList
-            title="Arriving today"
-            empty="No arrivals today."
+            title="Αφίξεις σήμερα"
+            empty="Δεν υπάρχουν αφίξεις σήμερα."
             items={overview.todayArrivals}
           />
           <StayList
-            title="Departing today"
-            empty="No departures today."
+            title="Αναχωρήσεις σήμερα"
+            empty="Δεν υπάρχουν αναχωρήσεις σήμερα."
             items={overview.todayDepartures}
           />
         </div>
@@ -288,20 +298,20 @@ export function DashboardOverview() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Surface variant="panel" padding="md" className="lg:col-span-2">
           <SurfaceHeader
-            title="Recent reservations"
-            description="Latest bookings for the active property"
+            title="Πρόσφατες κρατήσεις"
+            description="Τελευταίες κρατήσεις για το ενεργό κατάλυμα"
             action={
               <Button variant="ghost" size="sm" asChild className="h-8 text-xs">
-                <Link href="/dashboard/bookings">View all</Link>
+                <Link href="/dashboard/bookings">{elCommon.viewAll}</Link>
               </Button>
             }
           />
           {overview.recentBookings.length === 0 ? (
             <EmptyState
               compact
-              title="No bookings yet"
-              description="Create a manual booking or wait for channel reservations."
-              action={{ label: "New booking", href: "/dashboard/bookings/new" }}
+              title="Δεν υπάρχουν κρατήσεις ακόμα"
+              description="Δημιουργήστε χειροκίνητη κράτηση ή περιμένετε κρατήσεις από κανάλια."
+              action={{ label: "Νέα κράτηση", href: "/dashboard/bookings/new" }}
             />
           ) : (
             <ul className="divide-y divide-border">
@@ -333,10 +343,13 @@ export function DashboardOverview() {
 
         <div className="space-y-4">
           <Surface variant={attentionItems.length > 0 ? "attention" : "subtle"} padding="md">
-            <SurfaceHeader title="Attention" description="Signals from current data" />
+            <SurfaceHeader
+              title="Προσοχή"
+              description="Ενδείξεις από τα τρέχοντα δεδομένα"
+            />
             {attentionItems.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                No operational alerts from available data.
+                Δεν υπάρχουν λειτουργικές ειδοποιήσεις από τα διαθέσιμα δεδομένα.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -359,14 +372,22 @@ export function DashboardOverview() {
           </Surface>
 
           <Surface variant="panel" padding="md">
-            <SurfaceHeader title="Quick actions" />
+            <SurfaceHeader title="Γρήγορες ενέργειες" />
             <div className="grid grid-cols-2 gap-2">
-              <QuickAction href="/dashboard/bookings/new" icon={Plus} label="New booking" />
-              <QuickAction href="/dashboard/availability" icon={CalendarDays} label="Calendar" />
-              <QuickAction href="/dashboard/housekeeping" icon={ClipboardList} label="Housekeeping" />
-              <QuickAction href="/dashboard/payments" icon={Wallet} label="Payments" />
-              <QuickAction href="/dashboard/channels" icon={Network} label="Channels" />
-              <QuickAction href="/dashboard/pricing" icon={Sparkles} label="Pricing" />
+              <QuickAction href="/dashboard/bookings/new" icon={Plus} label="Νέα κράτηση" />
+              <QuickAction
+                href="/dashboard/availability"
+                icon={CalendarDays}
+                label={elNav.availability}
+              />
+              <QuickAction
+                href="/dashboard/housekeeping"
+                icon={ClipboardList}
+                label={elNav.housekeeping}
+              />
+              <QuickAction href="/dashboard/payments" icon={Wallet} label={elNav.payments} />
+              <QuickAction href="/dashboard/channels" icon={Network} label={elNav.channels} />
+              <QuickAction href="/dashboard/pricing" icon={Sparkles} label={elNav.pricing} />
             </div>
           </Surface>
         </div>
@@ -386,42 +407,47 @@ function buildAttention(
 }> {
   const items: Array<{ id: string; title: string; detail: string; href: string }> = [];
   if (housekeeping && housekeeping.summary.dirty > 0) {
+    const n = housekeeping.summary.dirty;
     items.push({
       id: "hk-dirty",
-      title: `${housekeeping.summary.dirty} dirty unit${housekeeping.summary.dirty === 1 ? "" : "s"}`,
-      detail: "Turnover / cleaning still needed",
+      title: n === 1 ? "1 βρώμικη μονάδα" : `${n} βρώμικες μονάδες`,
+      detail: "Απαιτείται αλλαγή / καθαριότητα",
       href: "/dashboard/housekeeping?view=today",
     });
   }
   if (housekeeping && housekeeping.summary.overdueTasks > 0) {
+    const n = housekeeping.summary.overdueTasks;
     items.push({
       id: "hk-overdue",
-      title: `${housekeeping.summary.overdueTasks} overdue task${housekeeping.summary.overdueTasks === 1 ? "" : "s"}`,
-      detail: "Open work past due",
+      title: n === 1 ? "1 εκπρόθεσμη εργασία" : `${n} εκπρόθεσμες εργασίες`,
+      detail: "Ανοιχτές εργασίες με ληξιπρόθεσμη προθεσμία",
       href: "/dashboard/housekeeping?view=all&status=OPEN",
     });
   }
   if (overview.activeHoldCount > 0) {
+    const n = overview.activeHoldCount;
     items.push({
       id: "holds",
-      title: `${overview.activeHoldCount} active hold${overview.activeHoldCount === 1 ? "" : "s"}`,
-      detail: "Review open inventory holds on the calendar",
+      title: n === 1 ? "1 ενεργή δέσμευση" : `${n} ενεργές δεσμεύσεις`,
+      detail: "Ελέγξτε τις ανοιχτές δεσμεύσεις στο ημερολόγιο",
       href: "/dashboard/availability",
     });
   }
   if (overview.arrivalsToday > 0) {
+    const n = overview.arrivalsToday;
     items.push({
       id: "arrivals",
-      title: `${overview.arrivalsToday} arrival${overview.arrivalsToday === 1 ? "" : "s"} today`,
-      detail: "Prepare units and guest check-in",
+      title: n === 1 ? "1 άφιξη σήμερα" : `${n} αφίξεις σήμερα`,
+      detail: "Προετοιμασία μονάδων και check-in επισκεπτών",
       href: "/dashboard/bookings",
     });
   }
   if (overview.departuresToday > 0) {
+    const n = overview.departuresToday;
     items.push({
       id: "departures",
-      title: `${overview.departuresToday} departure${overview.departuresToday === 1 ? "" : "s"} today`,
-      detail: "Coordinate checkout and turnover",
+      title: n === 1 ? "1 αναχώρηση σήμερα" : `${n} αναχωρήσεις σήμερα`,
+      detail: "Συντονισμός check-out και αλλαγής",
       href: "/dashboard/housekeeping?view=today",
     });
   }
@@ -542,7 +568,7 @@ function StayList({
                 <div className="min-w-0">
                   <p className="truncate font-medium">{b.guestName}</p>
                   <p className="truncate text-[11px] text-muted-foreground">
-                    {b.unitName ?? "Unit"} · {b.checkIn} → {b.checkOut}
+                    {b.unitName ?? elCommon.unit} · {b.checkIn} → {b.checkOut}
                   </p>
                 </div>
                 <StatusBadge status={b.status} />

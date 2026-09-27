@@ -49,57 +49,57 @@ export function CalendarDayCell({
 
         <ContextMenuItem
           disabled={!canBlock}
-          title={!canBlock ? "Cannot block dates with an active booking or hold" : undefined}
+          title={!canBlock ? "Δεν κλειδώνουν ημερομηνίες με ενεργή κράτηση ή δέσμευση" : undefined}
           onSelect={() => cellActions.onBlockDates(meta, date)}
         >
-          Block dates
+          Κλείδωμα ημερομηνιών
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!canOpen}
-          title={!canOpen ? "Cannot open dates with an active booking or hold" : undefined}
+          title={!canOpen ? "Δεν ανοίγουν ημερομηνίες με ενεργή κράτηση ή δέσμευση" : undefined}
           onSelect={() => cellActions.onOpenDates(meta, date)}
         >
-          Open dates
+          Άνοιγμα ημερομηνιών
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
           disabled={!canBlock}
-          title={!canBlock ? "Unavailable while booked or held" : undefined}
+          title={!canBlock ? "Μη διαθέσιμο όσο υπάρχει κράτηση ή δέσμευση" : undefined}
           onSelect={() => cellActions.onCreateBlockType(meta, date, "maintenance")}
         >
-          Maintenance
+          Συντήρηση
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!canBlock}
-          title={!canBlock ? "Unavailable while booked or held" : undefined}
+          title={!canBlock ? "Μη διαθέσιμο όσο υπάρχει κράτηση ή δέσμευση" : undefined}
           onSelect={() => cellActions.onCreateBlockType(meta, date, "cleaning")}
         >
-          Cleaning
+          Καθαρισμός
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!canBlock}
-          title={!canBlock ? "Unavailable while booked or held" : undefined}
+          title={!canBlock ? "Μη διαθέσιμο όσο υπάρχει κράτηση ή δέσμευση" : undefined}
           onSelect={() => cellActions.onCreateBlockType(meta, date, "owner")}
         >
-          Owner stay
+          Διαμονή ιδιοκτήτη
         </ContextMenuItem>
 
         {(hasBooking || hasHold || hasOperatorBlock) && <ContextMenuSeparator />}
 
         {hasBooking && (
           <ContextMenuItem onSelect={() => cellActions.onViewReservation(meta, date)}>
-            View reservation
+            Προβολή κράτησης
             <ContextMenuShortcut>↵</ContextMenuShortcut>
           </ContextMenuItem>
         )}
         {hasHold && (
           <ContextMenuItem onSelect={() => cellActions.onReleaseHold(meta, date)}>
-            Release hold
+            Απελευθέρωση δέσμευσης
           </ContextMenuItem>
         )}
         {hasOperatorBlock && (
           <ContextMenuItem onSelect={() => cellActions.onReleaseBlock(meta, date)}>
-            Release block
+            Απελευθέρωση block
           </ContextMenuItem>
         )}
       </ContextMenuContent>

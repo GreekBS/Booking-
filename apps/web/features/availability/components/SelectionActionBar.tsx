@@ -41,7 +41,7 @@ export function SelectionActionBar({
         className,
       )}
       role="toolbar"
-      aria-label="Selection actions"
+      aria-label="Ενέργειες επιλογής"
     >
       <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1 text-sm">
@@ -49,16 +49,16 @@ export function SelectionActionBar({
         <span className="mx-1.5 text-muted-foreground">·</span>
         <span className={cn(isDragging && "text-primary")}>{label}</span>
         {isDragging && (
-          <span className="ml-2 text-xs text-muted-foreground">(dragging)</span>
+          <span className="ml-2 text-xs text-muted-foreground">(μεταφορά)</span>
         )}
       </div>
       <Button size="sm" variant="secondary" className="h-8" onClick={onBlock} disabled={isDragging}>
         <Lock className="h-3.5 w-3.5" />
-        Block
+        Κλείδωμα
       </Button>
       <Button size="sm" variant="secondary" className="h-8" onClick={onOpen} disabled={isDragging}>
         <Unlock className="h-3.5 w-3.5" />
-        Open
+        Άνοιγμα
       </Button>
       <Button
         size="sm"
@@ -68,7 +68,7 @@ export function SelectionActionBar({
         disabled={isDragging}
       >
         <Wrench className="h-3.5 w-3.5" />
-        Maint.
+        Συντ.
       </Button>
       <Button
         size="sm"
@@ -78,7 +78,7 @@ export function SelectionActionBar({
         disabled={isDragging}
       >
         <Sparkles className="h-3.5 w-3.5" />
-        Clean
+        Καθ.
       </Button>
       <Button
         size="sm"
@@ -88,14 +88,14 @@ export function SelectionActionBar({
         disabled={isDragging}
       >
         <Home className="h-3.5 w-3.5" />
-        Owner
+        Ιδιοκτ.
       </Button>
       <Button size="sm" variant="secondary" className="h-8" onClick={onMinStay} disabled={isDragging}>
-        Min stay
+        Ελάχ. διαμονή
       </Button>
       <Button size="sm" variant="ghost" className="h-8" onClick={onCancel}>
         <X className="h-3.5 w-3.5" />
-        Cancel
+        Ακύρωση
       </Button>
     </div>
   );

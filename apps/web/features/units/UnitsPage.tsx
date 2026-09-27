@@ -116,7 +116,7 @@ export function UnitsPage() {
       const res = await fetchAllProperties(tenantId, 1, 100);
       setProperties(res.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load units");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης μονάδων");
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ export function UnitsPage() {
     setDialogOpen(true);
   }
 
-  function openEdit(unit: FlatUnit) {
+  function openΕπεξεργασία(unit: FlatUnit) {
     setEditUnit(unit);
     setForm({
       propertyId: unit.propertyId,
@@ -174,7 +174,7 @@ export function UnitsPage() {
             status: form.status,
           }),
         });
-        toastSuccess("Unit updated");
+        toastSuccess("Η μονάδα ενημερώθηκε");
       } else {
         await adminFetch(`/properties/${form.propertyId}/units`, {
           method: "POST",
@@ -186,13 +186,13 @@ export function UnitsPage() {
             bathrooms: form.bathrooms,
           }),
         });
-        toastSuccess("Unit created");
+        toastSuccess("Η μονάδα δημιουργήθηκε");
       }
       invalidatePropertiesCache(tenantId);
       setDialogOpen(false);
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to save unit");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης μονάδας");
     }
   }
 
@@ -202,7 +202,7 @@ export function UnitsPage() {
       method: "DELETE",
       tenantId,
     });
-    toastSuccess("Unit archived");
+    toastSuccess("Η μονάδα αρχειοθετήθηκε");
     setArchiveUnit(null);
     setDetailUnit(null);
     invalidatePropertiesCache(tenantId);
@@ -225,32 +225,32 @@ export function UnitsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Units"
+        title="Μονάδες"
         description={
           property
             ? `Rooms for ${property.name} (Active Property)`
-            : "Manage rooms and accommodation units"
+            : "Διαχείριση δωματίων και μονάδων διαμονής"
         }
         actions={
           <Button onClick={openCreate} disabled={!propertyId}>
             <Plus className="h-4 w-4" />
-            Add unit
+            Προσθήκη μονάδας
           </Button>
         }
       />
 
       {units.length === 0 ? (
         <EmptyState
-          title="No units yet"
-          description="Add units to this property to manage availability and pricing."
-          action={{ label: "Add unit", onClick: openCreate }}
+          title="Δεν υπάρχουν μονάδες ακόμα"
+          description="Προσθέστε μονάδες για διαχείσιμότητα και τιμές."
+          action={{ label: "Προσθήκη μονάδας", onClick: openCreate }}
         />
       ) : (
         <Surface variant="panel" padding="none">
           <div className="border-b border-border px-4 py-3">
             <SurfaceHeader
               className="mb-0"
-              title="Unit roster"
+              title="Κατάλογος μονάδων"
               description={
                 property
                   ? `${units.length} unit${units.length === 1 ? "" : "s"} · ${property.name}`
@@ -265,8 +265,8 @@ export function UnitsPage() {
                   <TableHead>Unit</TableHead>
                   <TableHead>Property</TableHead>
                   <TableHead>Capacity</TableHead>
-                  <TableHead>Bed / Bath</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Υπν. / Μπάν</TableHead>
+                  <TableHead>Κατάσταση</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -283,7 +283,7 @@ export function UnitsPage() {
                       </button>
                     </TableCell>
                     <TableCell>{unit.propertyName}</TableCell>
-                    <TableCell>{unit.maxGuests} guests</TableCell>
+                    <TableCell>{unit.maxGuests} επισκέπτες</TableCell>
                     <TableCell>
                       {unit.bedrooms} / {unit.bathrooms}
                     </TableCell>
@@ -298,12 +298,12 @@ export function UnitsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(unit)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openΕπεξεργασία(unit)}>Επεξεργασία</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setQrUnit(unit)}>
-                            Cleaning QR
+                            QR καθαριότητας
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setArchiveUnit(unit)}>
-                            Archive
+                            Αρχειοθέτηση
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -319,7 +319,7 @@ export function UnitsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editUnit ? "Edit unit" : "New unit"}</DialogTitle>
+            <DialogTitle>{editUnit ? "Επεξεργασία μονάδας" : "Νέα μονάδα"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             {!editUnit && property ? (
@@ -329,7 +329,7 @@ export function UnitsPage() {
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>Όνομα</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -337,7 +337,7 @@ export function UnitsPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Max guests</Label>
+                <Label>Μέγ. επισκέπτες</Label>
                 <Input
                   type="number"
                   min={1}
@@ -346,7 +346,7 @@ export function UnitsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Bedrooms</Label>
+                <Label>Υπνοδωμάτια</Label>
                 <Input
                   type="number"
                   min={0}
@@ -355,7 +355,7 @@ export function UnitsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Bathrooms</Label>
+                <Label>Μπάνια</Label>
                 <Input
                   type="number"
                   min={0}
@@ -366,14 +366,14 @@ export function UnitsPage() {
             </div>
             {editUnit ? (
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>Κατάσταση</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Ενεργό</SelectItem>
+                    <SelectItem value="inactive">Ανενεργό</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -381,9 +381,9 @@ export function UnitsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              Ακύρωση
             </Button>
-            <Button onClick={() => void saveUnit()}>Save</Button>
+            <Button onClick={() => void saveUnit()}>Αποθήκευση</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -406,18 +406,18 @@ export function UnitsPage() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Capacity</dt>
-                  <dd>{detailUnit.maxGuests} guests</dd>
+                  <dd>{detailUnit.maxGuests} επισκέπτες</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Bedrooms</dt>
+                  <dt className="text-muted-foreground">Υπνοδωμάτια</dt>
                   <dd>{detailUnit.bedrooms}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Bathrooms</dt>
+                  <dt className="text-muted-foreground">Μπάνια</dt>
                   <dd>{detailUnit.bathrooms}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Status</dt>
+                  <dt className="text-muted-foreground">Κατάσταση</dt>
                   <dd>
                     <StatusBadge status={detailUnit.status} />
                   </dd>
@@ -427,11 +427,11 @@ export function UnitsPage() {
                 <Button
                   size="sm"
                   onClick={() => {
-                    openEdit(detailUnit);
+                    openΕπεξεργασία(detailUnit);
                     setDetailUnit(null);
                   }}
                 >
-                  Edit
+                  Επεξεργασία
                 </Button>
                 <Button
                   size="sm"
@@ -442,10 +442,10 @@ export function UnitsPage() {
                   }}
                 >
                   <QrCode className="h-4 w-4" />
-                  Cleaning QR
+                  QR καθαριότητας
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => setArchiveUnit(detailUnit)}>
-                  Archive
+                  Αρχειοθέτηση
                 </Button>
               </div>
             </>
@@ -464,9 +464,9 @@ export function UnitsPage() {
       <ConfirmDialog
         open={Boolean(archiveUnit)}
         onOpenChange={(open) => !open && setArchiveUnit(null)}
-        title="Archive unit"
-        description={`Archive "${archiveUnit?.name}"? It will no longer accept bookings.`}
-        confirmLabel="Archive"
+        title="Αρχειοθέτηση μονάδας"
+        description={`Αρχειοθέτηση «${archiveUnit?.name}»; δεν θα δέχεται πλέον κρατήσεις.`}
+        confirmLabel="Αρχειοθέτηση"
         destructive
         onConfirm={() => {
           if (archiveUnit) void archiveUnitAction(archiveUnit);

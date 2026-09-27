@@ -5,6 +5,12 @@
 
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/admin/utils";
+import {
+  collectionSourceLabelEl,
+  fiscalDocumentKindLabelEl,
+  paymentMethodLabelEl,
+  paymentStatusLabelEl,
+} from "@/lib/i18n";
 
 /** Compact currency for ledgers and forms (operator-friendly decimals). */
 export function formatOperatorMoney(amount: string, currency: string): string {
@@ -19,7 +25,7 @@ export function moneyCellClassName(className?: string): string {
 /** Compact date/time for payment ledgers. */
 export function formatOperatorDateTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString(undefined, {
+    return new Date(iso).toLocaleString("el-GR", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -35,7 +41,7 @@ export function formatOperatorDateTime(iso: string): string {
 export function formatOperatorDate(iso: string | null): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
+    return new Date(iso).toLocaleDateString("el-GR", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -45,49 +51,18 @@ export function formatOperatorDate(iso: string | null): string {
   }
 }
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: "Cash",
-  CARD: "Card",
-  BANK_TRANSFER: "Bank transfer",
-  OTA: "OTA",
-  OTHER: "Other",
-};
-
-const COLLECTION_SOURCE_LABELS: Record<string, string> = {
-  DIRECT: "Direct",
-  PROPERTY: "Property",
-  OTA: "OTA",
-  PAYMENT_GATEWAY: "Payment gateway",
-  OTHER: "Other",
-};
-
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pending",
-  SUCCEEDED: "Succeeded",
-  FAILED: "Failed",
-  CANCELLED: "Cancelled",
-};
-
-const FISCAL_KIND_LABELS: Record<string, string> = {
-  SERVICE_INVOICE: "Service invoice",
-  SERVICE_RECEIPT: "Service receipt",
-  SERVICE_CREDIT: "Service credit",
-  RETAIL_CREDIT: "Retail credit",
-  CLIMATE_RESILIENCE_FEE_RECEIPT: "Climate Resilience Fee receipt",
-};
-
 export function paymentMethodLabel(method: string): string {
-  return PAYMENT_METHOD_LABELS[method] ?? method.replace(/_/g, " ");
+  return paymentMethodLabelEl(method);
 }
 
 export function collectionSourceLabel(source: string): string {
-  return COLLECTION_SOURCE_LABELS[source] ?? source.replace(/_/g, " ");
+  return collectionSourceLabelEl(source);
 }
 
 export function paymentStatusLabel(status: string): string {
-  return PAYMENT_STATUS_LABELS[status] ?? status.replace(/_/g, " ");
+  return paymentStatusLabelEl(status);
 }
 
 export function fiscalDocumentKindLabel(kind: string): string {
-  return FISCAL_KIND_LABELS[kind] ?? kind.replace(/_/g, " ");
+  return fiscalDocumentKindLabelEl(kind);
 }

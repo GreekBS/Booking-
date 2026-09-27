@@ -48,7 +48,7 @@ export function AmenitiesPage() {
       const res = await adminFetch<{ data: AmenityRecord[] }>("/amenities", { tenantId });
       setAmenities(res.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load amenities");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης παροχών");
       setAmenities([]);
     } finally {
       setLoading(false);
@@ -74,10 +74,10 @@ export function AmenitiesPage() {
       });
       setDialogOpen(false);
       setForm({ name: "", icon: "", category: "" });
-      toastSuccess("Amenity created");
+      toastSuccess("Η παροχή δημιουργήθηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to create amenity");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας παροχής");
     } finally {
       setCreating(false);
     }
@@ -93,8 +93,8 @@ export function AmenitiesPage() {
   return (
     <div>
       <PageHeader
-        title="Amenities"
-        description="Tenant-wide catalog of amenity definitions. Assign amenities to a property from Property detail — this page does not use Active Property."
+        title="Παροχές"
+        description="Κατάλογος παροχών σε επίπεδο οργανισμού. Αναθέστε παροχές σε κατάλυμα από τη σελίδα λεπτομερειών — δεν χρησιμοποιεί το ενεργό κατάλυμα."
         meta={
           <span className="text-xs text-muted-foreground">
             Assign on{" "}
@@ -109,7 +109,7 @@ export function AmenitiesPage() {
         actions={
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add amenity
+            Προσθήκη παροχής
           </Button>
         }
       />
@@ -118,8 +118,8 @@ export function AmenitiesPage() {
         <div className="border-b border-border px-4 py-3">
           <SurfaceHeader
             className="mb-0"
-            title="Amenity catalog"
-            description="Shared definitions for the tenant. Property assignment happens on each property’s detail page."
+            title="Κατάλογος παροχών"
+            description="Κοινός ορισμός για τον οργανισμό. Η ανάθεση γίνεται στη σελίδα λεπτομερειών κάθε καταλύματος."
           />
         </div>
 
@@ -137,10 +137,10 @@ export function AmenitiesPage() {
           <div className="p-4">
             <EmptyState
               compact
-              title="No amenities yet"
-              description="Create catalog entries here, then assign them on a property’s detail page."
+              title="Δεν υπάρχουν παροχές ακόμα"
+              description="Δημιουργήστε εγγραφές εδώ και μετά αναθέστε τις στη σελίδα λεπτομερειών καταλύματος."
               action={{
-                label: "Add amenity",
+                label: "Προσθήκη παροχής",
                 onClick: () => setDialogOpen(true),
               }}
             />
@@ -159,8 +159,8 @@ export function AmenitiesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead>Όνομα</TableHead>
+                <TableHead>Κατηγορία</TableHead>
                 <TableHead className="hidden sm:table-cell">Icon</TableHead>
               </TableRow>
             </TableHeader>
@@ -184,11 +184,11 @@ export function AmenitiesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New amenity</DialogTitle>
+            <DialogTitle>Νέα παροχή</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amenity-name">Name</Label>
+              <Label htmlFor="amenity-name">Όνομα</Label>
               <Input
                 id="amenity-name"
                 value={form.name}
@@ -196,12 +196,12 @@ export function AmenitiesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amenity-category">Category</Label>
+              <Label htmlFor="amenity-category">Κατηγορία</Label>
               <Input
                 id="amenity-category"
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                placeholder="Optional"
+                placeholder="Προαιρετικό"
               />
             </div>
             <div className="space-y-2">
@@ -210,19 +210,19 @@ export function AmenitiesPage() {
                 id="amenity-icon"
                 value={form.icon}
                 onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                placeholder="Optional key or name"
+                placeholder="Προαιρετικό κλειδί ή όνομα"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              Ακύρωση
             </Button>
             <Button
               disabled={creating || !form.name.trim()}
               onClick={() => void create()}
             >
-              {creating ? "Creating…" : "Create"}
+              {creating ? "Δημιουργία…" : "Δημιουργία"}
             </Button>
           </DialogFooter>
         </DialogContent>

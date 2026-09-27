@@ -56,7 +56,7 @@ async function downloadFiscalPdf(tenantId: string, documentId: string): Promise<
     headers: { "x-tenant-id": tenantId },
   });
   if (!res.ok) {
-    throw new Error("Download failed");
+    throw new Error("Η λήψη απέτυχε");
   }
   const blob = await res.blob();
   const cd = res.headers.get("content-disposition") ?? "";
@@ -94,7 +94,7 @@ export function FiscalDocumentsPage() {
       );
       setRows(res.documents ?? []);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Failed to load fiscal documents");
+      setLoadError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης παραστατικών");
       setRows([]);
     } finally {
       setLoading(false);
@@ -119,12 +119,12 @@ export function FiscalDocumentsPage() {
   return (
     <div>
       <PageHeader
-        title="Fiscal documents"
-        description="Locally issued fiscal documents for the active property. Distinct from payments and folio charges. Not transmitted to AADE."
+        title="Παραστατικά"
+        description="Τοπικά εκδοθέντα παραστατικά για το ενεργό κατάλυμα. Ξεχωριστά από πληρωμές και χρεώσεις folio. Δεν διαβιβάζονται στην ΑΑΔΕ."
         meta={
           property?.name ? (
             <span className="text-xs text-muted-foreground">
-              Active property · <span className="font-medium text-foreground">{property.name}</span>
+              Ενεργό κατάλυμα · <span className="font-medium text-foreground">{property.name}</span>
             </span>
           ) : null
         }
@@ -132,8 +132,7 @@ export function FiscalDocumentsPage() {
 
       <Surface variant="subtle" className="mb-5" padding="sm">
         <p className="text-xs text-muted-foreground">
-          Documents use immutable issuer/customer snapshots. Climate Resilience Fee (levy) is not
-          VAT. Provider fiscalization (AADE / myDATA) is not implemented yet.
+          Τα παραστατικά χρησιμοποιούν αμετάβλητα στιγμιότυπα εκδότη/πελάτη. Το τέλος κλιματικής ανθεκτικότητας (εισφορά) δεν είναι ΦΠΑ. Η fiskalization μέσω παρόχου (ΑΑΔΕ / myDATA) δεν έχει υλοποιηθεί ακόμα.
         </p>
       </Surface>
 
@@ -141,8 +140,8 @@ export function FiscalDocumentsPage() {
         <div className="border-b border-border px-4 py-3">
           <SurfaceHeader
             className="mb-0"
-            title="Document ledger"
-            description="Issue from a booking folio. Open a document for lines, tax summary, and PDF."
+            title="Βιβλίο παραστατικών"
+            description="Έκδοση από folio κράτησης. Ανοίξτε παραστατικό για γραμμές, φορολογική σύνοψη και PDF."
           />
         </div>
 
@@ -160,9 +159,9 @@ export function FiscalDocumentsPage() {
           <div className="p-4">
             <EmptyState
               compact
-              title="No fiscal documents"
-              description="Issue a document from a booking folio when settlement is ready."
-              action={{ label: "Go to bookings", href: "/dashboard/bookings", onClick: () => {} }}
+              title="Δεν υπάρχουν παραστατικά"
+              description="Εκδώστε παραστατικό από folio κράτησης όταν ο συμψηφισμός είναι έτοιμος."
+              action={{ label: "Μετάβαση στις κρατήσεις", href: "/dashboard/bookings", onClick: () => {} }}
             />
           </div>
         ) : (
@@ -171,16 +170,16 @@ export function FiscalDocumentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Document</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Issue date</TableHead>
-                    <TableHead className="hidden lg:table-cell">Customer</TableHead>
-                    <TableHead className="hidden xl:table-cell text-right">Net</TableHead>
-                    <TableHead className="hidden xl:table-cell text-right">VAT</TableHead>
-                    <TableHead className="hidden xl:table-cell text-right">Levy</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Παραστατικό</TableHead>
+                    <TableHead>Τύπος</TableHead>
+                    <TableHead>Ημ. έκδοσης</TableHead>
+                    <TableHead className="hidden lg:table-cell">Πελάτης</TableHead>
+                    <TableHead className="hidden xl:table-cell text-right">Καθαρή αξία</TableHead>
+                    <TableHead className="hidden xl:table-cell text-right">ΦΠΑ</TableHead>
+                    <TableHead className="hidden xl:table-cell text-right">Εισφορά</TableHead>
+                    <TableHead className="text-right">Συνολική αξία</TableHead>
+                    <TableHead>Κατάσταση</TableHead>
+                    <TableHead className="text-right">Ενέργειες</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -217,13 +216,13 @@ export function FiscalDocumentsPage() {
                         <TableCell>
                           <StatusBadge
                             status={d.status}
-                            label={d.status === "ISSUED" ? "Issued" : d.status === "DRAFT" ? "Draft" : r.localStatusLabel}
+                            label={d.status === "ISSUED" ? "Εκδοθέν" : d.status === "DRAFT" ? "Πρόχειρο" : r.localStatusLabel}
                           />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-1.5">
                             <Button asChild variant="outline" size="sm">
-                              <Link href={`/dashboard/fiscal-documents/${d.id}`}>Open</Link>
+                              <Link href={`/dashboard/fiscal-documents/${d.id}`}>Άνοιγμα</Link>
                             </Button>
                             {d.status === "ISSUED" && tenantId ? (
                               <Button
@@ -231,7 +230,7 @@ export function FiscalDocumentsPage() {
                                 variant="secondary"
                                 onClick={() => {
                                   void downloadFiscalPdf(tenantId, d.id).catch((e) =>
-                                    toastError(e instanceof Error ? e.message : "Download failed"),
+                                    toastError(e instanceof Error ? e.message : "Η λήψη απέτυχε"),
                                   );
                                 }}
                               >
@@ -267,12 +266,12 @@ export function FiscalDocumentsPage() {
                       </div>
                       <StatusBadge
                         status={d.status}
-                        label={d.status === "ISSUED" ? "Issued" : "Draft"}
+                        label={d.status === "ISSUED" ? "Εκδοθέν" : "Πρόχειρο"}
                       />
                     </div>
                     <div className="mt-2 flex gap-2">
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/dashboard/fiscal-documents/${d.id}`}>Open</Link>
+                        <Link href={`/dashboard/fiscal-documents/${d.id}`}>Άνοιγμα</Link>
                       </Button>
                       {d.status === "ISSUED" && tenantId ? (
                         <Button
@@ -280,7 +279,7 @@ export function FiscalDocumentsPage() {
                           variant="secondary"
                           onClick={() => {
                             void downloadFiscalPdf(tenantId, d.id).catch((e) =>
-                              toastError(e instanceof Error ? e.message : "Download failed"),
+                              toastError(e instanceof Error ? e.message : "Η λήψη απέτυχε"),
                             );
                           }}
                         >

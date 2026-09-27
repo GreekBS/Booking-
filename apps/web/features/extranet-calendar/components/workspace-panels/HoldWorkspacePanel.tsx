@@ -23,7 +23,7 @@ import { WorkspacePanelActions } from "./WorkspacePanelActions";
 
 function formatCountdown(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
-  if (ms <= 0) return "Expired";
+  if (ms <= 0) return "Έληξε";
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -83,7 +83,7 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
   }, [active, data?.expiresAt]);
 
   const holdSource = useMemo(() => {
-    if (!data?.sessionRef) return "Storefront session";
+    if (!data?.sessionRef) return "Σύνολο καταστήματος";
     return data.sessionRef;
   }, [data?.sessionRef]);
 
@@ -92,11 +92,11 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
     setActionLoading(true);
     try {
       await releaseHold(tenantId, data.id);
-      toastSuccess("Hold released");
+      toastSuccess("Η δέσμευση απελευθερώθηκε");
       refreshCalendars();
       closeWorkspace();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to release hold");
+      toastError(err instanceof Error ? err.message : "Αποτυχία απελευθέρωσης δέσμευσης");
     } finally {
       setActionLoading(false);
     }
@@ -107,13 +107,13 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
     setActionLoading(true);
     try {
       const quote = await createQuoteFromHold(tenantId, data.id);
-      toastSuccess("Quote created — continue in New Booking");
+      toastSuccess("Δημιουργήθηκε προσφορά — συνεχίστε στη Νέα κράτηση");
       closeWorkspace();
       router.push(
         `/dashboard/bookings/new?quoteId=${encodeURIComponent(quote.id)}`,
       );
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to create quote");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας προσφοράς");
     } finally {
       setActionLoading(false);
     }
@@ -131,7 +131,7 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
   }
 
   if (!data) {
-    return <p className="text-sm text-muted-foreground">Hold unavailable.</p>;
+    return <p className="text-sm text-muted-foreground">Η δέσμευση δεν είναι διαθέσιμη.</p>;
   }
 
   return (
@@ -140,31 +140,31 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
         <div>
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-amber-700 dark:text-amber-300" aria-hidden />
-            <h3 className="text-sm font-semibold">Active hold</h3>
+            <h3 className="text-sm font-semibold">Ενεργή δέσμευση</h3>
             <StatusBadge status={data.status} />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{target.unitName}</p>
         </div>
 
-        <DrawerSection title="Time remaining">
+        <DrawerSection title="Υπολειπόμενος χρόνος">
           <p className="font-mono text-xl font-semibold tabular-nums text-[#111827] dark:text-foreground">
             {countdown || "—"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Expires {new Date(data.expiresAt).toLocaleString()}
+            Λήγει {new Date(data.expiresAt).toLocaleString()}
           </p>
         </DrawerSection>
 
-        <DrawerSection title="Stay">
+        <DrawerSection title="Διαμονή">
           <DrawerDetailList>
-            <DrawerDetailRow label="Arrival" value={data.checkIn} />
-            <DrawerDetailRow label="Departure" value={data.checkOut} />
+            <DrawerDetailRow label="Άφιξη" value={data.checkIn} />
+            <DrawerDetailRow label="Αναχώρηση" value={data.checkOut} />
             <DrawerDetailRow
-              label="Nights"
+              label="Νύχτες"
               value={String(nightsBetween(data.checkIn, data.checkOut))}
             />
             <DrawerDetailRow
-              label="Guests"
+              label="Επισκέπτες"
               value={data.guestCount > 0 ? String(data.guestCount) : "—"}
             />
           </DrawerDetailList>
@@ -172,20 +172,20 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
 
         <DrawerDivider />
 
-        <DrawerSection title="Location">
+        <DrawerSection title="Τοποθεσία">
           <DrawerDetailList>
-            <DrawerDetailRow label="Property" value={target.propertyName} />
-            <DrawerDetailRow label="Unit" value={target.unitName} />
+            <DrawerDetailRow label="Κατάλυμα" value={target.propertyName} />
+            <DrawerDetailRow label="Μονάδα" value={target.unitName} />
           </DrawerDetailList>
         </DrawerSection>
 
         <DrawerDivider />
 
-        <DrawerSection title="Reference">
+        <DrawerSection title="Αναφορά">
           <DrawerDetailList>
-            <DrawerDetailRow label="Hold ID" value={data.id.slice(0, 12)} mono />
-            <DrawerDetailRow label="Quote ref" value={data.sessionRef ?? "—"} mono />
-            <DrawerDetailRow label="Source" value={holdSource} />
+            <DrawerDetailRow label="ID δέσμευσης" value={data.id.slice(0, 12)} mono />
+            <DrawerDetailRow label="Αναφ. προσφοράς" value={data.sessionRef ?? "—"} mono />
+            <DrawerDetailRow label="Πηγή" value={holdSource} />
           </DrawerDetailList>
         </DrawerSection>
       </div>
@@ -197,7 +197,7 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
           disabled={actionLoading || data.status !== "active"}
           onClick={() => void handleRelease()}
         >
-          Release hold
+          Απελευθέρωση δέσμευσης
         </Button>
         <Button
           size="sm"
@@ -205,10 +205,10 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
           disabled={actionLoading || data.status !== "active"}
           onClick={() => void handleConvert()}
         >
-          Convert to booking
+          Μετατροπή σε κράτηση
         </Button>
         <Button size="sm" variant="ghost" onClick={closeWorkspace}>
-          Close
+          Κλείσιμο
         </Button>
       </WorkspacePanelActions>
     </>

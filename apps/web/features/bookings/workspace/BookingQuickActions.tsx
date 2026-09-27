@@ -2,6 +2,7 @@
 
 import type { BookingRecord } from "@/lib/admin/types";
 import { Button } from "@/components/ui/button";
+import { elCommon } from "@/lib/i18n";
 
 interface BookingQuickActionsProps {
   booking: BookingRecord;
@@ -27,12 +28,12 @@ export function BookingQuickActions({
     <div className="flex flex-wrap gap-2">
       {canConfirm ? (
         <Button size="sm" disabled={actionLoading} onClick={onConfirm}>
-          Confirm
+          {elCommon.confirm}
         </Button>
       ) : null}
       {canCancel ? (
         <Button size="sm" variant="destructive" disabled={actionLoading} onClick={onCancel}>
-          Cancel reservation
+          Ακύρωση κράτησης
         </Button>
       ) : null}
     </div>

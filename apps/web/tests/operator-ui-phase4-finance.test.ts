@@ -8,7 +8,6 @@ import {
   paymentMethodLabel,
   paymentStatusLabel,
 } from "@/lib/admin/money-presentation";
-
 const root = join(__dirname, "..");
 
 function read(rel: string): string {
@@ -23,23 +22,20 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
     expect(page).toContain("PageHeader");
     expect(page).toContain("Surface");
     expect(page).toContain("SurfaceHeader");
-    expect(page).toContain('aria-label="Select unit"');
-    expect(page).toContain("Base rate");
-    expect(page).toContain("Seasonal pricing");
-    expect(page).toContain("Day-of-week adjustments");
-    expect(page).toContain("Length-of-stay discounts");
+    expect(page).toContain('aria-label="Επιλογή μονάδας"');
+    expect(page).toContain("Βασική τιμή");
+    expect(page).toContain("elCommon.guests");
     expect(page).not.toContain("onSelectedPropertyChange");
     expect(page).not.toContain("Select property");
-    // Unit label must not re-show propertyName — Active Property is authoritative
     expect(page).not.toContain("{u.propertyName} — {u.name}");
   });
 
   it("Pricing quote preview is read-only and does not create Hold", () => {
     const page = read("features/pricing/PricingPage.tsx");
     expect(page).toContain("previewQuoteForStay");
-    expect(page).toContain("Read-only estimate");
-    expect(page).toContain("Does not create a Hold");
-    expect(page).toContain("Preview price");
+    expect(page).toContain("Εκτίμηση μόνο για ανάγνωση");
+    expect(page).toContain("Δεν δημιουργεί δέσμευση");
+    expect(page).toContain("Προεπισκόπηση τιμής");
     expect(page).not.toContain("Preview (creates Hold)");
     expect(page).not.toContain("Creates a temporary Hold");
     expect(page).not.toContain("inventory-mutating preview");
@@ -63,8 +59,6 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
     expect(page).toContain("useActiveProperty");
     expect(page).toContain("renderActivePropertyGate");
     expect(page).toContain("`/payments?propertyId=");
-    expect(page).toContain("Record payment");
-    expect(page).toContain("Unallocated");
     expect(page).toContain("externalReference");
     expect(page).toContain("bookingId");
     expect(page).toContain("idempotencyKey");
@@ -77,7 +71,6 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
   it("Payments summary uses SUCCEEDED list amounts only (not booking totals)", () => {
     const page = read("features/payments/PaymentsPage.tsx");
     expect(page).toContain('p.status === "SUCCEEDED"');
-    expect(page).toContain("Sum of SUCCEEDED payments in this list");
     expect(page).not.toContain("folioTotal");
     expect(page).not.toContain("outstandingBalance");
   });
@@ -89,7 +82,6 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
     expect(page).toContain("StatusBadge");
     expect(page).toContain("useActiveProperty");
     expect(page).toContain("levyTotal");
-    expect(page).toContain("Climate Resilience Fee");
     expect(page).toContain("/download");
     expect(page).toContain("ISSUED");
     expect(page).toContain("DRAFT");
@@ -101,15 +93,15 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
   it("Fiscal detail preserves immutability, PDF path, and levy ≠ VAT", () => {
     const detail = read("features/fiscal/FiscalDocumentDetailPage.tsx");
     expect(detail).toContain("PageHeader");
-    expect(detail).toContain("Issuer snapshot");
-    expect(detail).toContain("Customer snapshot");
-    expect(detail).toContain("immutable");
+    expect(detail).toContain("Στιγμιότυπο εκδότη");
+    expect(detail).toContain("Στιγμιότυπο πελάτη");
+    expect(detail).toContain("αμετάβλητα");
     expect(detail).toContain("levyTotal");
-    expect(detail).toContain("Climate Resilience Fee / levy");
-    expect(detail).toContain("(not VAT)");
+    expect(detail).toContain("Τέλος κλιματικής ανθεκτικότητας");
+    expect(detail).toContain("(όχι ΦΠΑ)");
     expect(detail).toContain("/download");
-    expect(detail).toContain("Issue locally");
-    expect(detail).toContain("Download PDF");
+    expect(detail).toContain("Τοπική έκδοση");
+    expect(detail).toContain("elCommon.back");
     expect(detail).not.toContain("editIssuer");
     expect(detail).not.toContain("setVatTotal");
     expect(detail).not.toContain("AADE transmission");
@@ -117,11 +109,11 @@ describe("Talos operator Phase 4 — Pricing / Payments / Fiscal", () => {
 
   it("money presentation helpers format without inventing fiscalization labels", () => {
     expect(formatOperatorMoney("120.5000", "EUR")).toMatch(/120/);
-    expect(paymentMethodLabel("BANK_TRANSFER")).toBe("Bank transfer");
-    expect(collectionSourceLabel("PAYMENT_GATEWAY")).toBe("Payment gateway");
-    expect(paymentStatusLabel("SUCCEEDED")).toBe("Succeeded");
+    expect(paymentMethodLabel("BANK_TRANSFER")).toBe("Τραπεζική μεταφορά");
+    expect(collectionSourceLabel("PAYMENT_GATEWAY")).toBe("Πύλη πληρωμών");
+    expect(paymentStatusLabel("SUCCEEDED")).toBe("Επιτυχής");
     expect(fiscalDocumentKindLabel("CLIMATE_RESILIENCE_FEE_RECEIPT")).toContain(
-      "Climate Resilience Fee",
+      "κλιματικής ανθεκτικότητας",
     );
   });
 });

@@ -100,7 +100,7 @@ export function PaymentsPage() {
       );
       setRows(res.payments ?? []);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Failed to load payments");
+      setLoadError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης πληρωμών");
       setRows([]);
     } finally {
       setLoading(false);
@@ -153,10 +153,10 @@ export function PaymentsPage() {
       setPayerName("");
       setExternalReference("");
       setShowForm(false);
-      toastSuccess("Payment recorded");
+      toastSuccess("Η πληρωμή καταχωρήθηκε");
       await load();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Payment failed";
+      const msg = err instanceof Error ? err.message : "Η πληρωμή απέτυχε";
       setRecordError(msg);
       toastError(msg);
     } finally {
@@ -178,12 +178,12 @@ export function PaymentsPage() {
   return (
     <div>
       <PageHeader
-        title="Payments"
-        description="Operational payment ledger — money collected for the active property. Distinct from folio settlement and fiscal documents."
+        title="Πληρωμές"
+        description="Λειτουργικό βιβλίο πληρωμών — χρήματα που εισπράχθηκαν για το ενεργό κατάλυμα. Ξεχωριστά από τον συμψηφισμό folio και τα παραστατικά."
         meta={
           property?.name ? (
             <span className="text-xs text-muted-foreground">
-              Active property · <span className="font-medium text-foreground">{property.name}</span>
+              Ενεργό κατάλυμα · <span className="font-medium text-foreground">{property.name}</span>
             </span>
           ) : null
         }
@@ -194,7 +194,7 @@ export function PaymentsPage() {
               setRecordError(null);
             }}
           >
-            {showForm ? "Hide form" : "Record payment"}
+            {showForm ? "Απόκρυψη φόρμας" : "Καταχώρηση πληρωμής"}
           </Button>
         }
       />
@@ -209,7 +209,7 @@ export function PaymentsPage() {
               {formatOperatorMoney(String(summary.collected), summary.currency)}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Sum of SUCCEEDED payments in this list
+              Άθροισμα επιτυχών (SUCCEEDED) πληρωμών στη λίστα
             </p>
           </Surface>
           <Surface variant="metric" padding="sm">
@@ -217,14 +217,14 @@ export function PaymentsPage() {
               Succeeded
             </p>
             <p className="mt-1 text-lg font-semibold tabular-nums">{summary.succeededCount}</p>
-            <p className="text-[11px] text-muted-foreground">Only SUCCEEDED affects settlement</p>
+            <p className="text-[11px] text-muted-foreground">Μόνο SUCCEEDED επηρεάζει τον συμψηφισμό</p>
           </Surface>
           <Surface variant="metric" padding="sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Payment count
             </p>
             <p className="mt-1 text-lg font-semibold tabular-nums">{summary.count}</p>
-            <p className="text-[11px] text-muted-foreground">All statuses · up to 100 loaded</p>
+            <p className="text-[11px] text-muted-foreground">Όλες οι καταστάσεις · έως 100 εγγραφές</p>
           </Surface>
         </div>
       ) : null}
@@ -232,8 +232,8 @@ export function PaymentsPage() {
       {showForm ? (
         <Surface className="mb-5">
           <SurfaceHeader
-            title="Record payment"
-            description="Creates a property-owned payment. Booking linkage is optional (unallocated payments are valid)."
+            title="Καταχώρηση πληρωμής"
+            description="Δημιουργεί πληρωμή του καταλύματος. Η σύνδεση με κράτηση είναι προαιρετική (επιτρέπονται μη κατανεμημένες πληρωμές)."
           />
           {recordError ? (
             <div className="mb-3">
@@ -242,7 +242,7 @@ export function PaymentsPage() {
           ) : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1.5">
-              <Label htmlFor="pay-amount">Amount</Label>
+              <Label htmlFor="pay-amount">Ποσό</Label>
               <Input
                 id="pay-amount"
                 inputMode="decimal"
@@ -252,7 +252,7 @@ export function PaymentsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pay-currency">Currency</Label>
+              <Label htmlFor="pay-currency">Νόμισμα</Label>
               <Input
                 id="pay-currency"
                 maxLength={3}
@@ -261,7 +261,7 @@ export function PaymentsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Method</Label>
+              <Label>Τρόπος πληρωμής</Label>
               <Select value={payMethod} onValueChange={setPayMethod}>
                 <SelectTrigger aria-label="Payment method">
                   <SelectValue />
@@ -276,7 +276,7 @@ export function PaymentsPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Collection source</Label>
+              <Label>Πηγή είσπραξης</Label>
               <Select value={collectionSource} onValueChange={setCollectionSource}>
                 <SelectTrigger aria-label="Collection source">
                   <SelectValue />
@@ -296,7 +296,7 @@ export function PaymentsPage() {
                 id="pay-booking"
                 value={bookingId}
                 onChange={(e) => setBookingId(e.target.value)}
-                placeholder="UUID — leave blank if unallocated"
+                placeholder="UUID — αφήστε κενό αν δεν είναι κατανεμημένη"
               />
             </div>
             <div className="space-y-1.5">
@@ -305,7 +305,7 @@ export function PaymentsPage() {
                 id="pay-payer"
                 value={payerName}
                 onChange={(e) => setPayerName(e.target.value)}
-                placeholder="Guest or payer name"
+                placeholder="Όνομα επισκέπτη ή πληρωτή"
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
@@ -314,7 +314,7 @@ export function PaymentsPage() {
                 id="pay-ref"
                 value={externalReference}
                 onChange={(e) => setExternalReference(e.target.value)}
-                placeholder="Bank ref, gateway id, OTA payment id…"
+                placeholder="Τραπεζική αναφ., id πύλης, id πληρωμής OTA…"
               />
             </div>
           </div>
@@ -323,10 +323,10 @@ export function PaymentsPage() {
               disabled={recording || !payAmount.trim()}
               onClick={() => void recordPayment()}
             >
-              {recording ? "Recording…" : "Record payment"}
+              {recording ? "Καταχώρηση…" : "Καταχώρηση πληρωμής"}
             </Button>
             <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancel
+              Ακύρωση
             </Button>
           </div>
         </Surface>
@@ -336,8 +336,8 @@ export function PaymentsPage() {
         <div className="border-b border-border px-4 py-3">
           <SurfaceHeader
             className="mb-0"
-            title="Payment ledger"
-            description="Newest first. Method and collection source are separate fields."
+            title="Βιβλίο πληρωμών"
+            description="Νεότερες πρώτα. Τρόπος πληρωμής και πηγή είσπραξης είναι ξεχωριστά πεδία."
           />
         </div>
         {loadError ? (
@@ -354,10 +354,10 @@ export function PaymentsPage() {
           <div className="p-4">
             <EmptyState
               compact
-              title="No payments recorded"
-              description="Record a payment for this property, or wait for payments linked from bookings."
+              title="Δεν υπάρχουν καταχωρημένες πληρωμές"
+              description="Καταχωρήστε πληρωμή για αυτό το κατάλυμα ή περιμένετε πληρωμές από κρατήσεις."
               action={{
-                label: "Record payment",
+                label: "Καταχώρηση πληρωμής",
                 onClick: () => setShowForm(true),
               }}
             />
@@ -369,14 +369,14 @@ export function PaymentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead className="hidden lg:table-cell">Source</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">Booking</TableHead>
-                    <TableHead className="hidden xl:table-cell">Reference</TableHead>
-                    <TableHead className="hidden sm:table-cell">Payer</TableHead>
+                    <TableHead>Ημερομηνία</TableHead>
+                    <TableHead className="text-right">Ποσό</TableHead>
+                    <TableHead>Τρόπος πληρωμής</TableHead>
+                    <TableHead className="hidden lg:table-cell">Πηγή</TableHead>
+                    <TableHead>Κατάσταση</TableHead>
+                    <TableHead className="hidden lg:table-cell">Κράτηση</TableHead>
+                    <TableHead className="hidden xl:table-cell">Αναφορά</TableHead>
+                    <TableHead className="hidden sm:table-cell">Πληρωτής</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -407,7 +407,7 @@ export function PaymentsPage() {
                             {p.bookingId.slice(0, 8)}…
                           </Link>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Unallocated</span>
+                          <span className="text-xs text-muted-foreground">Μη κατανεμημένη</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden max-w-[140px] truncate text-xs text-muted-foreground xl:table-cell">
@@ -437,7 +437,7 @@ export function PaymentsPage() {
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {p.bookingId
                           ? `Booking ${p.bookingId.slice(0, 8)}…`
-                          : "Unallocated"}
+                          : "Μη κατανεμημένη"}
                         {p.externalReference ? ` · ${p.externalReference}` : ""}
                       </p>
                     </div>

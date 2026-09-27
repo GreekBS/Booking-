@@ -17,7 +17,7 @@ export function truncateLabel(value: string, maxLen: number): string {
 
 export function holdCountdownShort(expiresAt: string, nowMs = Date.now()): string {
   const ms = new Date(expiresAt).getTime() - nowMs;
-  if (ms <= 0) return "Exp";
+  if (ms <= 0) return "Λήξ";
   const totalMinutes = Math.floor(ms / 60_000);
   if (totalMinutes < 60) return `${totalMinutes}m`;
   const hours = Math.floor(totalMinutes / 60);

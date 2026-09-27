@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { elCommon } from "@/lib/i18n";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -27,7 +28,7 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
+  confirmLabel = elCommon.confirm,
   destructive,
   loading,
   onConfirm,
@@ -40,7 +41,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{elCommon.cancel}</AlertDialogCancel>
           <AlertDialogAction
             disabled={loading}
             className={destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
@@ -49,7 +50,7 @@ export function ConfirmDialog({
               void onConfirm();
             }}
           >
-            {loading ? "Working..." : confirmLabel}
+            {loading ? "Εκτέλεση…" : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

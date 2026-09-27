@@ -53,7 +53,7 @@ export function useBookingWorkspaceData({
       setQuote(quoteData);
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
-      const message = err instanceof Error ? err.message : "Failed to load booking details";
+      const message = err instanceof Error ? err.message : "Αποτυχία φόρτωσης στοιχείων κράτησης";
       setError(message);
       toastError(message);
     } finally {

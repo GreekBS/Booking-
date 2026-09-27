@@ -60,6 +60,13 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  elCommon,
+  elNav,
+  elPriority,
+  statusLabelEl,
+  taskCategoryLabelEl,
+} from "@/lib/i18n";
 
 const PAGE_SIZE = 20;
 
@@ -71,48 +78,22 @@ const CATEGORIES: TaskCategory[] = [
   "GENERAL",
 ];
 
-function taskStatusLabel(status: string): string {
-  switch (status) {
-    case "OPEN":
-      return "Open";
-    case "IN_PROGRESS":
-      return "In progress";
-    case "COMPLETED":
-      return "Completed";
-    case "CANCELLED":
-      return "Cancelled";
-    default:
-      return status;
-  }
-}
-
 function priorityLabel(priority: string): string {
-  switch (priority) {
-    case "HIGH":
-      return "High";
-    case "URGENT":
-      return "Urgent";
-    default:
-      return "Normal";
-  }
-}
-
-function categoryLabel(category: string): string {
-  return category.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return elPriority[priority] ?? elPriority.NORMAL ?? priority;
 }
 
 function assigneeName(
   userId: string | null | undefined,
   members: MemberRecord[],
 ): string {
-  if (!userId) return "Unassigned";
+  if (!userId) return "Χωρίς ανάθεση";
   const m = members.find((x) => x.userId === userId);
-  return m?.user?.name || m?.user?.email || "Assigned";
+  return m?.user?.name || m?.user?.email || "Ανατεθειμένο";
 }
 
 function conflictMessage(err: unknown): string | null {
   if (err instanceof AdminApiError && (err.status === 409 || err.code === "CONFLICT")) {
-    return "This task changed since you opened it. Latest status loaded.";
+    return "Η εργασία άλλαξε από όταν την ανοίξατε. Φορτώθηκε η τελευταία κατάσταση.";
   }
   return null;
 }
@@ -244,7 +225,7 @@ function HousekeepingPageContent() {
         setBoard(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load housekeeping");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καθαριότητας");
       setBoard(null);
       setTasks([]);
     } finally {
@@ -316,7 +297,7 @@ function HousekeepingPageContent() {
           }
         }
       } else {
-        setFlash(err instanceof Error ? err.message : "Action failed");
+        setFlash(err instanceof Error ? err.message : "Η ενέργεια απέτυχε");
       }
     } finally {
       setBusyKey(null);
@@ -339,11 +320,11 @@ function HousekeepingPageContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Housekeeping"
+        title={elNav.housekeeping}
         description={
           property
             ? `${property.name} · ${board?.localToday ?? "…"} · ${board?.propertyTimezone ?? ""}`
-            : "Active property operations"
+            : "Λειτουργίες ενεργού καταλύματος"
         }
         actions={
           <div className="flex flex-wrap gap-2">
@@ -353,7 +334,7 @@ function HousekeepingPageContent() {
               size="sm"
               onClick={() => syncParams({ view: "today", page: null, bookingId: null })}
             >
-              Today
+              {elCommon.today}
             </Button>
             <Button
               type="button"
@@ -361,16 +342,16 @@ function HousekeepingPageContent() {
               size="sm"
               onClick={() => syncParams({ view: "all", page: "1" })}
             >
-              All Tasks
+              Όλες οι εργασίες
             </Button>
             <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
-              Create Task
+              Δημιουργία εργασίας
             </Button>
             <Button type="button" variant="outline" size="sm" asChild>
-              <Link href="/dashboard/housekeeping/checklist">Checklist</Link>
+              <Link href="/dashboard/housekeeping/checklist">Λίστα ελέγχου</Link>
             </Button>
             <Button type="button" variant="outline" size="sm" asChild>
-              <Link href="/dashboard/housekeeping/history">Cleaning history</Link>
+              <Link href="/dashboard/housekeeping/history">Ιστορικό καθαρισμών</Link>
             </Button>
           </div>
         }
@@ -385,7 +366,7 @@ function HousekeepingPageContent() {
         </p>
       ) : null}
 
-      {error ? <ErrorState title="Could not load" message={error} /> : null}
+      {error ? <ErrorState title="Αποτυχία φόρτωσης" message={error} /> : null}
 
       {loading && !board && tasks.length === 0 ? (
         <div className="space-y-3">
@@ -399,11 +380,11 @@ function HousekeepingPageContent() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {(
               [
-                ["Departures today", board.summary.departuresToday],
-                ["Dirty", board.summary.dirty],
-                ["In progress", board.summary.inProgress],
-                ["Ready for arrivals", board.summary.readyForArrivals],
-                ["Overdue tasks", board.summary.overdueTasks],
+                ["Αναχωρήσεις σήμερα", board.summary.departuresToday],
+                ["Βρώμικα", board.summary.dirty],
+                ["Σε εξέλιξη", board.summary.inProgress],
+                ["Έτοιμα για άφιξη", board.summary.readyForArrivals],
+                ["Εκπρόθεσμες εργασίες", board.summary.overdueTasks],
               ] as const
             ).map(([label, value]) => (
               <Surface key={label} variant="panel" className="px-3 py-2">
@@ -418,7 +399,7 @@ function HousekeepingPageContent() {
           {arrivalAttention.length > 0 ? (
             <Surface variant="panel" className="border-warning/50 px-4 py-3">
               <p className="text-sm font-medium text-warning-foreground">
-                Arrival today on dirty units — clean before check-in
+                Άφιξη σήμερα σε βρώμικες μονάδες — καθαρίστε πριν το check-in
               </p>
               <p className="text-xs text-muted-foreground">
                 {arrivalAttention.map((u) => u.unitName).join(", ")}
@@ -427,8 +408,8 @@ function HousekeepingPageContent() {
           ) : null}
 
           <TodaySection
-            title="Needs cleaning"
-            empty="No cleaning required right now."
+            title="Χρειάζεται καθαρισμός"
+            empty="Δεν απαιτείται καθαρισμός αυτή τη στιγμή."
             rows={needsCleaning}
             members={members}
             busyKey={busyKey}
@@ -455,8 +436,8 @@ function HousekeepingPageContent() {
           />
 
           <TodaySection
-            title="In progress"
-            empty="Nothing is being cleaned right now."
+            title="Σε εξέλιξη"
+            empty="Δεν εκτελείται καθαρισμός αυτή τη στιγμή."
             rows={inProgress}
             members={members}
             busyKey={busyKey}
@@ -477,8 +458,8 @@ function HousekeepingPageContent() {
           />
 
           <TodaySection
-            title="Ready for arrivals"
-            empty="No arrivals are ready yet."
+            title="Έτοιμα για άφιξη"
+            empty="Δεν υπάρχουν ακόμα έτοιμες αφίξεις."
             rows={ready}
             members={members}
             busyKey={busyKey}
@@ -494,7 +475,7 @@ function HousekeepingPageContent() {
 
           {board.overdueTasks.length > 0 ? (
             <Surface>
-              <SurfaceHeader title="Overdue tasks" />
+              <SurfaceHeader title="Εκπρόθεσμες εργασίες" />
               <ul className="divide-y divide-border">
                 {board.overdueTasks.map((t) => (
                   <li
@@ -504,7 +485,7 @@ function HousekeepingPageContent() {
                     <div>
                       <p className="font-medium">{t.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {taskStatusLabel(t.status)} · {priorityLabel(t.priority)}
+                        {statusLabelEl(t.status)} · {priorityLabel(t.priority)}
                       </p>
                     </div>
                     <Button
@@ -520,7 +501,7 @@ function HousekeepingPageContent() {
                         })()
                       }
                     >
-                      Open
+                      {elCommon.open}
                     </Button>
                   </li>
                 ))}
@@ -535,7 +516,7 @@ function HousekeepingPageContent() {
           {filterBookingId ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-subtle/50 px-4 py-2 text-xs">
               <p>
-                Filtered to booking{" "}
+                Φίλτρο κράτησης{" "}
                 <Link
                   className="font-medium text-primary underline-offset-2 hover:underline"
                   href={`/dashboard/bookings?bookingId=${encodeURIComponent(filterBookingId)}`}
@@ -550,45 +531,45 @@ function HousekeepingPageContent() {
                 className="h-7 text-xs"
                 onClick={() => syncParams({ bookingId: null })}
               >
-                Clear booking filter
+                Καθαρισμός φίλτρου κράτησης
               </Button>
             </div>
           ) : null}
           <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:flex-wrap sm:items-end">
             <FilterSelect
-              label="Status"
+              label={elCommon.status}
               value={filterStatus || "all"}
               onChange={(v) =>
                 syncParams({ status: v === "all" ? null : v, page: "1" })
               }
               options={[
-                ["all", "All statuses"],
-                ["OPEN", "Open"],
-                ["IN_PROGRESS", "In progress"],
-                ["COMPLETED", "Completed"],
-                ["CANCELLED", "Cancelled"],
+                ["all", "Όλες οι καταστάσεις"],
+                ["OPEN", statusLabelEl("OPEN")],
+                ["IN_PROGRESS", statusLabelEl("IN_PROGRESS")],
+                ["COMPLETED", statusLabelEl("COMPLETED")],
+                ["CANCELLED", statusLabelEl("CANCELLED")],
               ]}
             />
             <FilterSelect
-              label="Category"
+              label="Κατηγορία"
               value={filterCategory || "all"}
               onChange={(v) =>
                 syncParams({ category: v === "all" ? null : v, page: "1" })
               }
               options={[
-                ["all", "All categories"],
-                ...CATEGORIES.map((c) => [c, categoryLabel(c)] as [string, string]),
+                ["all", "Όλες οι κατηγορίες"],
+                ...CATEGORIES.map((c) => [c, taskCategoryLabelEl(c)] as [string, string]),
               ]}
             />
             <FilterSelect
-              label="Assignee"
+              label="Ανάθεση"
               value={filterAssignee || "all"}
               onChange={(v) =>
                 syncParams({ assignee: v === "all" ? null : v, page: "1" })
               }
               options={[
-                ["all", "Anyone"],
-                ["me", "Assigned to me"],
+                ["all", "Οποιοσδήποτε"],
+                ["me", "Ανατεθειμένες σε εμένα"],
                 ...eligibleAssignees.map(
                   (m) =>
                     [m.userId, m.user?.name || m.user?.email || m.userId] as [
@@ -599,24 +580,24 @@ function HousekeepingPageContent() {
               ]}
             />
             <FilterSelect
-              label="Priority"
+              label={elCommon.priority}
               value={filterPriority || "all"}
               onChange={(v) =>
                 syncParams({ priority: v === "all" ? null : v, page: "1" })
               }
               options={[
-                ["all", "All priorities"],
-                ["NORMAL", "Normal"],
-                ["HIGH", "High"],
-                ["URGENT", "Urgent"],
+                ["all", "Όλες οι προτεραιότητες"],
+                ["NORMAL", priorityLabel("NORMAL")],
+                ["HIGH", priorityLabel("HIGH")],
+                ["URGENT", priorityLabel("URGENT")],
               ]}
             />
           </div>
 
           {!loading && tasks.length === 0 ? (
             <EmptyState
-              title="No tasks match these filters."
-              description="Try clearing filters or create a new task."
+              title="Δεν βρέθηκαν εργασίες με αυτά τα φίλτρα."
+              description="Δοκιμάστε να καθαρίσετε τα φίλτρα ή δημιουργήστε νέα εργασία."
             />
           ) : (
             <>
@@ -624,23 +605,23 @@ function HousekeepingPageContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Assignee</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Τίτλος</TableHead>
+                      <TableHead>Κατηγορία</TableHead>
+                      <TableHead>{elCommon.status}</TableHead>
+                      <TableHead>{elCommon.priority}</TableHead>
+                      <TableHead>Ανάθεση</TableHead>
+                      <TableHead className="text-right">{elCommon.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tasks.map((t) => (
                       <TableRow key={t.id}>
                         <TableCell className="font-medium">{t.title}</TableCell>
-                        <TableCell>{categoryLabel(t.category)}</TableCell>
+                        <TableCell>{taskCategoryLabelEl(t.category)}</TableCell>
                         <TableCell>
                           <StatusBadge
                             status={t.status}
-                            label={taskStatusLabel(t.status)}
+                            label={statusLabelEl(t.status)}
                           />
                         </TableCell>
                         <TableCell>{priorityLabel(t.priority)}</TableCell>
@@ -658,7 +639,7 @@ function HousekeepingPageContent() {
                               syncParams({ taskId: t.id });
                             }}
                           >
-                            Open
+                            {elCommon.open}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -673,13 +654,13 @@ function HousekeepingPageContent() {
                       <div>
                         <p className="font-medium">{t.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {categoryLabel(t.category)} ·{" "}
+                          {taskCategoryLabelEl(t.category)} ·{" "}
                           {assigneeName(t.assignedToUserId, members)}
                         </p>
                       </div>
                       <StatusBadge
                         status={t.status}
-                        label={taskStatusLabel(t.status)}
+                        label={statusLabelEl(t.status)}
                       />
                     </div>
                     <Button
@@ -693,7 +674,7 @@ function HousekeepingPageContent() {
                         syncParams({ taskId: t.id });
                       }}
                     >
-                      Open task
+                      Άνοιγμα εργασίας
                     </Button>
                   </li>
                 ))}
@@ -841,7 +822,7 @@ function TodaySection({
       <SurfaceHeader title={title} />
       {rows.length === 0 ? (
         <div className="px-4 pb-4">
-          <EmptyState title={empty} description="Nothing queued in this lane." compact />
+          <EmptyState title={empty} description="Δεν υπάρχει ουρά σε αυτή τη στήλη." compact />
         </div>
       ) : (
         <ul className="divide-y divide-border">
@@ -857,29 +838,29 @@ function TodaySection({
                     <p className="text-base font-semibold">{row.unitName}</p>
                     <StatusBadge
                       status={row.housekeepingStatus}
-                      label={row.housekeepingStatus === "CLEAN" ? "Clean" : "Dirty"}
+                      label={row.housekeepingStatus === "CLEAN" ? statusLabelEl("CLEAN") : statusLabelEl("DIRTY")}
                     />
                     {row.readyForArrival ? (
-                      <StatusBadge status="COMPLETED" label="Ready for arrival" />
+                      <StatusBadge status="COMPLETED" label="Έτοιμο για άφιξη" />
                     ) : null}
                     {task ? (
                       <StatusBadge
                         status={task.status}
-                        label={taskStatusLabel(task.status)}
+                        label={statusLabelEl(task.status)}
                       />
                     ) : row.housekeepingStatus === "DIRTY" ? (
                       <span className="text-xs text-muted-foreground">
-                        No open housekeeping task
+                        Δεν υπάρχει ανοιχτή εργασία καθαριότητας
                       </span>
                     ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {row.departing
-                      ? `Departure · ${row.departing.guestName}`
+                      ? `Αναχώρηση · ${row.departing.guestName}`
                       : null}
                     {row.departing && row.arriving ? " · " : null}
-                    {row.arriving ? `Arrival · ${row.arriving.guestName}` : null}
-                    {!row.departing && !row.arriving ? "No stay movement today" : null}
+                    {row.arriving ? `Άφιξη · ${row.arriving.guestName}` : null}
+                    {!row.departing && !row.arriving ? "Καμία κίνηση διαμονής σήμερα" : null}
                   </p>
                   {task ? (
                     <p className="text-xs text-muted-foreground">
@@ -899,7 +880,7 @@ function TodaySection({
                       disabled={busyKey === `start:${task.id}`}
                       onClick={() => onStart(task)}
                     >
-                      Start
+                      Έναρξη
                     </Button>
                   ) : null}
                   {task?.status === "IN_PROGRESS" ? (
@@ -910,7 +891,7 @@ function TodaySection({
                       disabled={busyKey === `complete:${task.id}`}
                       onClick={() => onComplete(task)}
                     >
-                      Complete
+                      Ολοκλήρωση
                     </Button>
                   ) : null}
                   {task ? (
@@ -920,13 +901,13 @@ function TodaySection({
                       variant="outline"
                       onClick={() => onOpenTask(task.id)}
                     >
-                      Details
+                      {elCommon.details}
                     </Button>
                   ) : null}
                   {row.departing ? (
                     <Button type="button" size="sm" variant="ghost" asChild>
                       <Link href={`/dashboard/bookings?bookingId=${row.departing.bookingId}`}>
-                        Booking
+                        {elCommon.booking}
                       </Link>
                     </Button>
                   ) : null}
@@ -991,11 +972,11 @@ function CreateTaskSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Create task</SheetTitle>
+          <SheetTitle>Δημιουργία εργασίας</SheetTitle>
           <SheetDescription>
-            Property is taken from Active Property. Defaults to Open / Normal.
+            Το κατάλυμα προέρχεται από το ενεργό κατάλυμα. Προεπιλογή: ανοιχτή / κανονική προτεραιότητα.
             {initialBookingId
-              ? " Linked to the current booking."
+              ? " Συνδέεται με την τρέχουσα κράτηση."
               : ""}
           </SheetDescription>
         </SheetHeader>
@@ -1017,7 +998,7 @@ function CreateTaskSheet({
           }}
         >
           <div className="space-y-1">
-            <Label htmlFor="hk-cat">Category</Label>
+            <Label htmlFor="hk-cat">Κατηγορία</Label>
             <Select
               value={category}
               onValueChange={(v) => setCategory(v as TaskCategory)}
@@ -1028,14 +1009,14 @@ function CreateTaskSheet({
               <SelectContent>
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c} value={c}>
-                    {categoryLabel(c)}
+                    {taskCategoryLabelEl(c)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="hk-title">Title</Label>
+            <Label htmlFor="hk-title">Τίτλος</Label>
             <Input
               id="hk-title"
               value={title}
@@ -1045,7 +1026,7 @@ function CreateTaskSheet({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="hk-desc">Description</Label>
+            <Label htmlFor="hk-desc">{elCommon.description}</Label>
             <Textarea
               id="hk-desc"
               value={description}
@@ -1054,13 +1035,13 @@ function CreateTaskSheet({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="hk-unit">Unit</Label>
+            <Label htmlFor="hk-unit">{elCommon.unit}</Label>
             <Select value={unitId} onValueChange={setUnitId}>
               <SelectTrigger id="hk-unit">
-                <SelectValue placeholder="Optional" />
+                <SelectValue placeholder={elCommon.optional} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No unit</SelectItem>
+                <SelectItem value="none">Χωρίς μονάδα</SelectItem>
                 {units.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     {u.name}
@@ -1070,13 +1051,13 @@ function CreateTaskSheet({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="hk-assignee">Assignee</Label>
+            <Label htmlFor="hk-assignee">Ανάθεση</Label>
             <Select value={assignee} onValueChange={setAssignee}>
               <SelectTrigger id="hk-assignee">
-                <SelectValue placeholder="Unassigned" />
+                <SelectValue placeholder="Χωρίς ανάθεση" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
+                <SelectItem value="none">Χωρίς ανάθεση</SelectItem>
                 {assignees.map((m) => (
                   <SelectItem key={m.userId} value={m.userId}>
                     {m.user?.name || m.user?.email || m.userId}
@@ -1086,7 +1067,7 @@ function CreateTaskSheet({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="hk-priority">Priority</Label>
+            <Label htmlFor="hk-priority">{elCommon.priority}</Label>
             <Select
               value={priority}
               onValueChange={(v) => setPriority(v as TaskPriority)}
@@ -1095,14 +1076,14 @@ function CreateTaskSheet({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="NORMAL">Normal</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="URGENT">Urgent</SelectItem>
+                <SelectItem value="NORMAL">{priorityLabel("NORMAL")}</SelectItem>
+                <SelectItem value="HIGH">{priorityLabel("HIGH")}</SelectItem>
+                <SelectItem value="URGENT">{priorityLabel("URGENT")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="hk-due">Due</Label>
+            <Label htmlFor="hk-due">Προθεσμία</Label>
             <Input
               id="hk-due"
               type="datetime-local"
@@ -1111,7 +1092,7 @@ function CreateTaskSheet({
             />
           </div>
           <Button type="submit" className="w-full" disabled={busy || !title.trim()}>
-            Create task
+            Δημιουργία εργασίας
           </Button>
         </form>
       </SheetContent>
@@ -1162,32 +1143,32 @@ function TaskDetailSheet({
         <SheetHeader>
           <SheetTitle>{task.title}</SheetTitle>
           <SheetDescription>
-            {categoryLabel(task.category)} · v{task.version}
+            {taskCategoryLabelEl(task.category)} · v{task.version}
           </SheetDescription>
         </SheetHeader>
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
-            <StatusBadge status={task.status} label={taskStatusLabel(task.status)} />
+            <StatusBadge status={task.status} label={statusLabelEl(task.status)} />
             <StatusBadge status={task.priority} label={priorityLabel(task.priority)} />
           </div>
           <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-xs text-muted-foreground">Assignee</dt>
+              <dt className="text-xs text-muted-foreground">Ανάθεση</dt>
               <dd>{assigneeName(task.assignedToUserId, allMembers)}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Due</dt>
+              <dt className="text-xs text-muted-foreground">Προθεσμία</dt>
               <dd>
                 {task.dueAt ? new Date(task.dueAt).toLocaleString() : "—"}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs text-muted-foreground">Description</dt>
+              <dt className="text-xs text-muted-foreground">{elCommon.description}</dt>
               <dd className="whitespace-pre-wrap">{task.description || "—"}</dd>
             </div>
             {task.completionNote ? (
               <div className="sm:col-span-2">
-                <dt className="text-xs text-muted-foreground">Completion note</dt>
+                <dt className="text-xs text-muted-foreground">Σημείωση ολοκλήρωσης</dt>
                 <dd>{task.completionNote}</dd>
               </div>
             ) : null}
@@ -1196,20 +1177,20 @@ function TaskDetailSheet({
           {task.bookingId ? (
             <Button type="button" variant="outline" size="sm" asChild>
               <Link href={`/dashboard/bookings?bookingId=${task.bookingId}`}>
-                Open booking
+                Άνοιγμα κράτησης
               </Link>
             </Button>
           ) : null}
 
           <div className="space-y-2 rounded-md border border-border p-3">
-            <Label htmlFor="hk-assign">Assign</Label>
+            <Label htmlFor="hk-assign">Ανάθεση</Label>
             <div className="flex gap-2">
               <Select value={assignee} onValueChange={setAssignee}>
                 <SelectTrigger id="hk-assign" className="flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
+                  <SelectItem value="none">Χωρίς ανάθεση</SelectItem>
                   {members.map((m) => (
                     <SelectItem key={m.userId} value={m.userId}>
                       {m.user?.name || m.user?.email || m.userId}
@@ -1228,7 +1209,7 @@ function TaskDetailSheet({
                   })
                 }
               >
-                Save
+                {elCommon.save}
               </Button>
             </div>
           </div>
@@ -1243,7 +1224,7 @@ function TaskDetailSheet({
                   onAction("start", { expectedVersion: task.version })
                 }
               >
-                Start
+                Έναρξη
               </Button>
             ) : null}
             {task.status === "IN_PROGRESS" ? (
@@ -1257,10 +1238,10 @@ function TaskDetailSheet({
                     onAction("unstart", { expectedVersion: task.version })
                   }
                 >
-                  Unstart
+                  Αναίρεση έναρξης
                 </Button>
                 <div className="w-full space-y-1">
-                  <Label htmlFor="hk-note">Completion note</Label>
+                  <Label htmlFor="hk-note">Σημείωση ολοκλήρωσης</Label>
                   <Input
                     id="hk-note"
                     value={note}
@@ -1278,7 +1259,7 @@ function TaskDetailSheet({
                     })
                   }
                 >
-                  Complete
+                  Ολοκλήρωση
                 </Button>
               </>
             ) : null}
@@ -1292,7 +1273,7 @@ function TaskDetailSheet({
                   onAction("cancel", { expectedVersion: task.version })
                 }
               >
-                Cancel
+                {elCommon.cancel}
               </Button>
             ) : null}
             {task.status === "COMPLETED" ? (
@@ -1304,7 +1285,7 @@ function TaskDetailSheet({
                   onAction("reopen", { expectedVersion: task.version })
                 }
               >
-                Reopen
+                Επανάνοιγμα
               </Button>
             ) : null}
           </div>
@@ -1312,15 +1293,15 @@ function TaskDetailSheet({
           {task.unitId ? (
             <div className={cn("space-y-2 border-t border-border pt-3")}>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Unit housekeeping
+                Κατάσταση μονάδας
               </p>
               <p className="text-sm">
-                Status:{" "}
+                {elCommon.status}:{" "}
                 {housekeepingStatus === "DIRTY"
-                  ? "Dirty"
+                  ? statusLabelEl("DIRTY")
                   : housekeepingStatus === "CLEAN"
-                    ? "Clean"
-                    : "Unknown"}
+                    ? statusLabelEl("CLEAN")
+                    : "Άγνωστο"}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -1330,7 +1311,7 @@ function TaskDetailSheet({
                   disabled={busyKey?.startsWith("hk:dirty")}
                   onClick={() => onMarkUnit("dirty", housekeepingVersion)}
                 >
-                  Mark Dirty
+                  Σήμανση ως βρώμικο
                 </Button>
                 <Button
                   type="button"
@@ -1339,11 +1320,11 @@ function TaskDetailSheet({
                   disabled={busyKey?.startsWith("hk:clean")}
                   onClick={() => onMarkUnit("clean", housekeepingVersion)}
                 >
-                  Mark Clean
+                  Σήμανση ως καθαρό
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Marking Clean does not complete an open housekeeping task.
+                Η σήμανση ως καθαρό δεν ολοκληρώνει ανοιχτή εργασία καθαριότητας.
               </p>
             </div>
           ) : null}

@@ -23,6 +23,7 @@ import {
   validateExclusiveDateRange,
 } from "../../lib/selection-availability-actions";
 import { setNightlyPriceForDateRange } from "../../lib/rate-plan-actions";
+import { elCommon } from "@/lib/i18n";
 import { addDaysIso } from "../../lib/timeline-model";
 import { useTimelineInteraction } from "../../context/TimelineInteractionContext";
 import { SetNightlyPriceFields } from "./SetNightlyPriceFields";
@@ -37,12 +38,12 @@ export type ManualAvailabilityAction =
   | "min_stay";
 
 const ACTION_OPTIONS: Array<{ value: ManualAvailabilityAction; label: string }> = [
-  { value: "manual_block", label: "Manual block" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "owner_stay", label: "Owner stay" },
-  { value: "open_dates", label: "Open dates" },
-  { value: "min_stay", label: "Set minimum stay" },
+  { value: "manual_block", label: "Χειροκίνητο block" },
+  { value: "maintenance", label: "Συντήρηση" },
+  { value: "cleaning", label: "Καθαρισμός" },
+  { value: "owner_stay", label: "Διαμονή ιδιοκτήτη" },
+  { value: "open_dates", label: "Άνοιγμα ημερομηνιών" },
+  { value: "min_stay", label: "Ορισμός ελάχ. διαμονής" },
 ];
 
 const BLOCK_ACTIONS = new Set<ManualAvailabilityAction>([
@@ -66,9 +67,9 @@ function blockTypeForAction(action: ManualAvailabilityAction): OperatorBlockType
 }
 
 function actionSuccessLabel(action: ManualAvailabilityAction): string {
-  if (action === "open_dates") return "Dates opened";
-  if (action === "min_stay") return "Minimum stay updated";
-  if (action === "manual_block") return "Dates blocked";
+  if (action === "open_dates") return "Άνοιγαν οι ημερομηνίες";
+  if (action === "min_stay") return "Ενημερώθηκε η ελάχ. διαμονή";
+  if (action === "manual_block") return "Κλειδώθηκαν οι ημερομηνίες";
   return `${blockTypeForAction(action).replace("_", " ")} block created`;
 }
 
@@ -148,7 +149,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
     if (!tenantId) return;
 
     if (!unitId) {
-      toastError("Unit is required");
+      toastError("Απαιτείται μονάδα");
       return;
     }
 
@@ -162,21 +163,21 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
     const hasAction = action !== null;
 
     if (!hasPrice && !hasAction) {
-      toastError("Enter a nightly price and/or choose an action");
+      toastError("Εισάγετε νυχτερινή τιμή και/ή επιλέξτε ενέργεια");
       return;
     }
 
     if (hasPrice) {
       const normalized = normalizeDecimalMoney(nightlyPrice.trim());
       if (!normalized || Number.parseFloat(normalized) <= 0) {
-        toastError("Enter a valid positive amount (e.g. 120 or 120.50).");
+        toastError("Εισάγετε έγκυρο θετικό ποσό (π.χ. 120 ή 120,50).");
         return;
       }
     }
 
     if (hasAction && action === "min_stay") {
       if (!Number.isInteger(minStay) || minStay < 1) {
-        toastError("Minimum stay must be a positive integer");
+        toastError("Η ελάχ. διαμονή πρέπει να είναι θετικός ακέραιος");
         return;
       }
     }
@@ -195,7 +196,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
           existingPlan: ratePlansByUnit[unitId],
         });
         patchRatePlanForUnit(unitId, saved);
-        outcomes.push("Nightly price updated");
+        outcomes.push("Ενημερώθηκε η νυχτερινή τιμή");
       }
 
       if (hasAction && action) {
@@ -207,7 +208,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
             checkOut,
             calendar: calendarsByUnit[unitId],
           });
-          outcomes.push(released ? "Dates opened" : "No blocks to release");
+          outcomes.push(released ? "Άνοιγαν οι ημερομηνίες" : "Δεν υπήρχαν blocks προς απελευθέρωση");
           refreshCalendars();
         } else if (action === "min_stay") {
           const updated = await updateUnitMinStay({
@@ -217,7 +218,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
             rules: rulesByUnit[unitId],
           });
           patchRulesForUnit(unitId, updated);
-          outcomes.push("Minimum stay updated");
+          outcomes.push("Ενημερώθηκε η ελάχ. διαμονή");
           refreshCalendars();
         } else {
           await createBlockForDateRange({
@@ -233,10 +234,10 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
         }
       }
 
-      toastSuccess(outcomes.join(" and "));
+      toastSuccess(outcomes.join(" και "));
       resetForm();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Action failed");
+      toastError(err instanceof Error ? err.message : "Η ενέργεια απέτυχε");
     } finally {
       setBusy(false);
     }
@@ -244,24 +245,24 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
 
   if (units.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">Select a property with units to edit availability.</p>
+      <p className="text-sm text-muted-foreground">Επιλέξτε κατάλυμα με μονάδες για επεξεργασία διαθεσιμότητας.</p>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-sm font-medium text-[#111827] dark:text-foreground">Edit availability</p>
+        <p className="text-sm font-medium text-[#111827] dark:text-foreground">Επεξεργασία διαθεσιμότητας</p>
         <p className="mt-1 text-xs text-[#6b7280] dark:text-muted-foreground">
-          Or click a day / drag a range on the calendar.
+          Ή κάντε κλικ σε ημέρα / σύρετε εύρος στο ημερολόγιο.
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="manual-edit-unit">Unit</Label>
+        <Label htmlFor="manual-edit-unit">Μονάδα</Label>
         <Select value={unitId || undefined} onValueChange={setUnitId}>
           <SelectTrigger id="manual-edit-unit">
-            <SelectValue placeholder="Select unit" />
+            <SelectValue placeholder="Επιλέξτε μονάδα" />
           </SelectTrigger>
           <SelectContent>
             {units.map((unit) => (
@@ -275,7 +276,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="manual-edit-check-in">Check-in</Label>
+          <Label htmlFor="manual-edit-check-in">{elCommon.checkIn}</Label>
           <Input
             id="manual-edit-check-in"
             type="date"
@@ -284,7 +285,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="manual-edit-check-out">Check-out</Label>
+          <Label htmlFor="manual-edit-check-out">{elCommon.checkOut}</Label>
           <Input
             id="manual-edit-check-out"
             type="date"
@@ -293,7 +294,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
           />
         </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">Check-out is exclusive (last night is the day before).</p>
+      <p className="text-[11px] text-muted-foreground">Το check-out είναι αποκλειστικό (τελευταία νύχτα είναι την προηγούμενη ημέρα).</p>
 
       <SetNightlyPriceFields
         idPrefix="manual-edit"
@@ -303,13 +304,13 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
       />
 
       <div className="space-y-2">
-        <Label htmlFor="manual-edit-action">Action</Label>
+        <Label htmlFor="manual-edit-action">Ενέργεια</Label>
         <Select
           value={action ?? undefined}
           onValueChange={(v) => setAction(v as ManualAvailabilityAction)}
         >
           <SelectTrigger id="manual-edit-action">
-            <SelectValue placeholder="Optional" />
+            <SelectValue placeholder="Προαιρετικό" />
           </SelectTrigger>
           <SelectContent>
             {ACTION_OPTIONS.map((opt) => (
@@ -323,7 +324,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
 
       {showReason && (
         <div className="space-y-2">
-          <Label htmlFor="manual-edit-reason">Reason (optional)</Label>
+          <Label htmlFor="manual-edit-reason">Αιτία (προαιρετικό)</Label>
           <Input
             id="manual-edit-reason"
             value={reason}
@@ -334,7 +335,7 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
 
       {showMinStay && (
         <div className="space-y-2">
-          <Label htmlFor="manual-edit-min-stay">Minimum stay (nights)</Label>
+          <Label htmlFor="manual-edit-min-stay">Ελάχιστη διαμονή (νύχτες)</Label>
           <Input
             id="manual-edit-min-stay"
             type="number"
@@ -344,13 +345,13 @@ export function ManualDateEditForm({ units, selectedUnitId }: ManualDateEditForm
             onChange={(e) => setMinStay(Number(e.target.value))}
           />
           <p className="text-[11px] text-muted-foreground">
-            Updates availability rules for the selected unit. Per-date min stay is not yet supported.
+            Ενημερώνει τους κανόνες διαθεσιμότητας της μονάδας. Ανά ημέρα δεν υποστηρίζεται ακόμα.
           </p>
         </div>
       )}
 
       <Button type="button" disabled={busy} onClick={() => void handleApply()}>
-        Apply
+        Εφαρμογή
       </Button>
     </div>
   );

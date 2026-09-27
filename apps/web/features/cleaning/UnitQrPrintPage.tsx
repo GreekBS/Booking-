@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/admin/error-state";
 import { buildQrScanUrl } from "./UnitQrSheet";
 
 /**
- * Print-friendly sticker for a unit QR code.
+ * Εκτύπωση-friendly sticker for a unit QR code.
  *
  * On open it asks the API to mint a code. If one is already active the token
  * cannot be recovered (hash-only storage), so the page offers an explicit
@@ -29,7 +29,7 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
       setRecord(await generateUnitQr(tenantId, unitId));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to prepare QR code");
+      setError(err instanceof Error ? err.message : "Αποτυχία προετοιμασίας κωδικού QR");
     }
   }, [tenantId, unitId]);
 
@@ -43,7 +43,7 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
     try {
       setRecord(await rotateUnitQr(tenantId, unitId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rotate QR code");
+      setError(err instanceof Error ? err.message : "Αποτυχία αντικατάστασης κωδικού QR");
     } finally {
       setBusy(false);
     }
@@ -67,20 +67,20 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
 
       <div className="qr-print-hide mb-6 flex flex-wrap gap-2">
         <Button onClick={() => window.print()} disabled={!token}>
-          Print
+          Εκτύπωση
         </Button>
         <Button variant="outline" onClick={() => void handleRotate()} disabled={busy}>
-          Rotate &amp; print new code
+          Αντικατάσταση &amp; εκτύπωση νέου
         </Button>
       </div>
 
       {!token ? (
         <div className="rounded-lg border bg-muted/40 p-6">
-          <p className="font-medium">This unit already has an active QR code</p>
+          <p className="font-medium">Η μονάδα έχει ήδη ενεργό κωδικό QR</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Codes are stored as one-way hashes and cannot be reprinted. Use
-            &ldquo;Rotate &amp; print new code&rdquo; to issue a replacement — the
-            existing sticker stops working the moment you do.
+            Οι κωδικοί αποθηκεύονται ως μονόδρομα hash και δεν επανεκτυπώνονται. Χρησιμοποιήστε
+            «Αντικατάσταση &amp; εκτύπωση νέου» για αντικατάσταση — το
+            υπάρχον αυτοκόλλητο σταματά αμέσως.
           </p>
         </div>
       ) : (
@@ -90,7 +90,7 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
           </p>
           <h1 className="mt-2 text-4xl font-bold">{record.unitName}</h1>
           <p className="mt-1 text-lg font-medium text-neutral-700">
-            Scan to start cleaning
+            Σαρώστε για έναρξη καθαρισμού
           </p>
 
           <div className="my-8 flex justify-center">
@@ -101,7 +101,7 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
             {buildQrScanUrl(token)}
           </p>
           <p className="mt-6 text-sm text-neutral-600">
-            Sign in with your Talos account to record the cleaning.
+            Συνδεθείτε με λογαριασμό Talos για να καταγράψετε τον καθαρισμό.
           </p>
         </article>
       )}

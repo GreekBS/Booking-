@@ -52,8 +52,8 @@ export function BookingDetailDrawer({
         className="flex w-full flex-col overflow-hidden border-border bg-surface p-0 sm:max-w-[min(900px,92vw)] [&>button]:hidden"
       >
         <SheetHeader className="sr-only">
-          <SheetTitle>Reservation workspace</SheetTitle>
-          <SheetDescription>Reservation information and actions</SheetDescription>
+          <SheetTitle>Χώρος εργασίας κράτησης</SheetTitle>
+          <SheetDescription>Στοιχεία κράτησης και ενέργειες</SheetDescription>
         </SheetHeader>
 
         {open ? (

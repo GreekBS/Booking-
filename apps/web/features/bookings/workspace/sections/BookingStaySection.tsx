@@ -18,6 +18,7 @@ import {
 import type { StayChangePreviewRecord } from "@/lib/admin/types";
 import type { StayDraft } from "../hooks/useBookingStayDraft";
 import type { WorkspaceUnitOption } from "../types";
+import { elCommon } from "@/lib/i18n";
 
 export interface BookingStaySectionProps {
   draft: StayDraft;
@@ -44,29 +45,29 @@ export function BookingStaySection({
 
   if (readOnly) {
     return (
-      <WorkspaceSection title="Stay">
+      <WorkspaceSection title="Διαμονή">
         <WorkspaceDetailList>
-          <WorkspaceDetailRow label="Arrival" value={draft.checkIn} />
-          <WorkspaceDetailRow label="Departure" value={draft.checkOut} />
-          <WorkspaceDetailRow label="Nights" value={String(nights)} />
-          <WorkspaceDetailRow label="Guests" value={String(draft.guestCount)} />
+          <WorkspaceDetailRow label={elCommon.checkIn} value={draft.checkIn} />
+          <WorkspaceDetailRow label={elCommon.checkOut} value={draft.checkOut} />
+          <WorkspaceDetailRow label={elCommon.nights} value={String(nights)} />
+          <WorkspaceDetailRow label={elCommon.guests} value={String(draft.guestCount)} />
         </WorkspaceDetailList>
       </WorkspaceSection>
     );
   }
 
   return (
-    <WorkspaceSection title="Stay">
+    <WorkspaceSection title="Διαμονή">
       <div className="space-y-3">
         {unitOptions.length > 1 ? (
           <div className="space-y-1.5">
-            <Label htmlFor="stay-unit">Unit</Label>
+            <Label htmlFor="stay-unit">{elCommon.unit}</Label>
             <Select
               value={draft.unitId}
               onValueChange={(unitId) => onDraftChange({ unitId })}
             >
               <SelectTrigger id="stay-unit">
-                <SelectValue placeholder="Select unit" />
+                <SelectValue placeholder={`Επιλέξτε ${elCommon.unit.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
                 {unitOptions.map((unit) => (
@@ -78,12 +79,12 @@ export function BookingStaySection({
             </Select>
           </div>
         ) : (
-          <WorkspaceDetailRow label="Unit" value={unitLabel ?? draft.unitId.slice(0, 8)} />
+          <WorkspaceDetailRow label={elCommon.unit} value={unitLabel ?? draft.unitId.slice(0, 8)} />
         )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="stay-check-in">Arrival</Label>
+            <Label htmlFor="stay-check-in">{elCommon.checkIn}</Label>
             <Input
               id="stay-check-in"
               type="date"
@@ -92,7 +93,7 @@ export function BookingStaySection({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="stay-check-out">Departure</Label>
+            <Label htmlFor="stay-check-out">{elCommon.checkOut}</Label>
             <Input
               id="stay-check-out"
               type="date"
@@ -103,7 +104,7 @@ export function BookingStaySection({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="stay-guests">Guests</Label>
+          <Label htmlFor="stay-guests">{elCommon.guests}</Label>
           <Input
             id="stay-guests"
             type="number"
@@ -116,10 +117,10 @@ export function BookingStaySection({
           />
         </div>
 
-        <WorkspaceDetailRow label="Nights" value={String(nights)} />
+        <WorkspaceDetailRow label={elCommon.nights} value={String(nights)} />
 
         {previewLoading && (
-          <p className="text-xs text-muted-foreground">Checking availability…</p>
+          <p className="text-xs text-muted-foreground">Έλεγχος διαθεσιμότητας…</p>
         )}
         {previewError && (
           <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
@@ -135,7 +136,7 @@ export function BookingStaySection({
         )}
         {preview?.priceDelta && preview.proposed && (
           <p className="text-xs text-muted-foreground">
-            New total: {formatMoney(preview.proposed.totalAmount, preview.proposed.currency)}
+            Νέο σύνολο: {formatMoney(preview.proposed.totalAmount, preview.proposed.currency)}
             {" · "}
             <span
               className={
@@ -145,7 +146,7 @@ export function BookingStaySection({
               }
             >
               {preview.priceDelta.amount.startsWith("-") ? "" : "+"}
-              {formatMoney(preview.priceDelta.amount, preview.priceDelta.currency)} vs current
+              {formatMoney(preview.priceDelta.amount, preview.priceDelta.currency)} έναντι τρέχοντος
             </span>
           </p>
         )}

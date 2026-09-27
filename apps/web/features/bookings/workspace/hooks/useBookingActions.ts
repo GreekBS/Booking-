@@ -22,11 +22,11 @@ export function useBookingActions(onUpdated?: (booking: BookingRecord) => void) 
           tenantId,
         });
         onUpdated?.(updated);
-        toastSuccess("Booking confirmed");
+        toastSuccess("Η κράτηση επιβεβαιώθηκε");
         setConfirmOpen(false);
         return updated;
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Confirm failed");
+        toastError(err instanceof Error ? err.message : "Αποτυχία επιβεβαίωσης");
         return null;
       } finally {
         setActionLoading(false);
@@ -46,11 +46,11 @@ export function useBookingActions(onUpdated?: (booking: BookingRecord) => void) 
           body: JSON.stringify({ reason: "Cancelled from admin panel" }),
         });
         onUpdated?.(updated);
-        toastSuccess("Booking cancelled");
+        toastSuccess("Η κράτηση ακυρώθηκε");
         setCancelOpen(false);
         return updated;
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Cancel failed");
+        toastError(err instanceof Error ? err.message : "Αποτυχία ακύρωσης");
         return null;
       } finally {
         setActionLoading(false);

@@ -33,10 +33,10 @@ type UnitQrSheetProps = {
 };
 
 /**
- * Generate / view / print / rotate the unit QR code.
+ * Δημιουργία / view / print / rotate the unit QR code.
  *
  * Only the token hash is stored, so an existing code can never be re-displayed.
- * Viewing an already-active code therefore shows metadata plus a Rotate action.
+ * Viewing an already-active code therefore shows metadata plus a Αντικατάσταση action.
  */
 export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) {
   const [record, setRecord] = useState<UnitQrRecord | null>(null);
@@ -50,7 +50,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
     try {
       setRecord(await fetchUnitQr(tenantId, unit.id));
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to load QR code");
+      toastError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης κωδικού QR");
     } finally {
       setLoading(false);
     }
@@ -67,9 +67,9 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
     try {
       const next = await generateUnitQr(tenantId, unit.id);
       setRecord(next);
-      toastSuccess(next.token ? "QR code generated" : "A code is already active");
+      toastSuccess(next.token ? "Δημιουργήθηκε κωδικός QR" : "Υπάρχει ήδη ενεργός κωδικός");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to generate QR code");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας κωδικού QR");
     } finally {
       setBusy(false);
     }
@@ -82,9 +82,9 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
     try {
       const next = await rotateUnitQr(tenantId, unit.id);
       setRecord(next);
-      toastSuccess("QR code rotated — reprint and replace the sticker");
+      toastSuccess("Αντικαταστάθηκε ο κωδικός QR — εκτυπώστε και αντικαταστήστε το αυτοκόλλητο");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to rotate QR code");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αντικατάστασης κωδικού QR");
     } finally {
       setBusy(false);
     }
@@ -98,7 +98,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
       <Sheet open={Boolean(unit)} onOpenChange={onOpenChange}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Cleaning QR · {unit?.name ?? ""}</SheetTitle>
+            <SheetTitle>QR καθαρισμού · {unit?.name ?? ""}</SheetTitle>
           </SheetHeader>
 
           {loading ? (
@@ -114,34 +114,34 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                     {buildQrScanUrl(token)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Print this now — the code is stored as a one-way hash and cannot
-                    be shown again.
+                    Εκτυπώστε τώρα — ο κωδικός αποθηκεύεται ως μονόδρομο hash και δεν
+                    μπορεί να εμφανιστεί ξανά.
                   </p>
                 </div>
               ) : hasActive ? (
                 <div className="rounded-lg border bg-muted/40 p-4 text-sm">
-                  <p className="font-medium">A QR code is already active</p>
+                  <p className="font-medium">Υπάρχει ήδη ενεργός κωδικός QR</p>
                   <p className="mt-1 text-muted-foreground">
-                    Codes are stored hashed, so this one cannot be displayed again.
-                    Rotate to print a replacement; the old sticker stops working.
+                    Οι κωδικοί αποθηκεύονται κρυπτογραφημένοι, οπότε δεν εμφανίζονται ξανά.
+                    Αντικαταστήστε για νέα εκτύπωση· το παλιό αυτοκόλλητο σταματά να λειτουργεί.
                   </p>
                 </div>
               ) : (
                 <div className="rounded-lg border bg-muted/40 p-4 text-sm">
-                  <p className="font-medium">No QR code yet</p>
+                  <p className="font-medium">Δεν υπάρχει ακόμα κωδικός QR</p>
                   <p className="mt-1 text-muted-foreground">
-                    Generate a code, then print and attach it inside the unit.
+                    Δημιουργήστε κωδικό, εκτυπώστε και τοποθετήστε τον μέσα στη μονάδα.
                   </p>
                 </div>
               )}
 
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Status</dt>
+                  <dt className="text-muted-foreground">Κατάσταση</dt>
                   <dd>{record?.status ?? "NONE"}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Created</dt>
+                  <dt className="text-muted-foreground">Δημιουργήθηκε</dt>
                   <dd>
                     {record?.createdAt
                       ? new Date(record.createdAt).toLocaleString()
@@ -149,7 +149,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Last rotated</dt>
+                  <dt className="text-muted-foreground">Τελευταία αντικατάσταση</dt>
                   <dd>
                     {record?.rotatedAt
                       ? new Date(record.rotatedAt).toLocaleString()
@@ -162,14 +162,14 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                 {!hasActive ? (
                   <Button size="sm" disabled={busy} onClick={() => void handleGenerate()}>
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Generate
+                    Δημιουργία
                   </Button>
                 ) : null}
                 {unit ? (
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/dashboard/units/qr/${unit.id}/print`} target="_blank">
                       <Printer className="h-4 w-4" />
-                      Print
+                      Εκτύπωση
                     </Link>
                   </Button>
                 ) : null}
@@ -180,7 +180,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                   onClick={() => setConfirmRotate(true)}
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Rotate
+                  Αντικατάσταση
                 </Button>
               </div>
             </div>
@@ -191,9 +191,9 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
       <ConfirmDialog
         open={confirmRotate}
         onOpenChange={setConfirmRotate}
-        title="Rotate QR code"
-        description="The current sticker stops working immediately. Print and attach the new code before the next cleaning."
-        confirmLabel="Rotate"
+        title="Αντικατάσταση κωδικού QR"
+        description="Το τρέχον αυτοκόλλητο σταματά αμέσως. Εκτυπώστε και τοποθετήστε τον νέο κωδικό πριν τον επόμενο καθαρισμό."
+        confirmLabel="Αντικατάσταση"
         destructive
         onConfirm={() => void handleRotate()}
       />

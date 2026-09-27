@@ -59,7 +59,7 @@ export function CleaningHistoryPage() {
       setTotal(page.total);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load history");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης ιστορικού");
     } finally {
       setLoading(false);
     }
@@ -85,39 +85,39 @@ export function CleaningHistoryPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Cleaning history"
+        title="Ιστορικό καθαρισμών"
         description={
           unitId
-            ? `Cleanings recorded for the selected unit${property ? ` at ${property.name}` : ""}`
-            : `Cleanings recorded${property ? ` at ${property.name}` : ""}`
+            ? `Καθαρισμοί για την επιλεγμένη μονάδα${property ? ` · ${property.name}` : ""}`
+            : `Καθαρισμοί${property ? ` · ${property.name}` : ""}`
         }
       />
 
       {rows.length === 0 ? (
         <EmptyState
-          title="No cleanings recorded"
-          description="Cleanings appear here once housekeepers scan a unit QR code and complete the checklist."
+          title="Δεν έχουν καταγραφεί καθαρισμοί"
+          description="Οι καθαρισμοί εμφανίζονται εδώ όταν το προσωπικό σκανάρει QR μονάδας και ολοκληρώνει τη λίστα ελέγχου."
         />
       ) : (
         <Surface variant="panel" padding="none">
           <div className="border-b border-border px-4 py-3">
             <SurfaceHeader
               className="mb-0"
-              title="Completed and in-progress cleanings"
-              description={`${total} record${total === 1 ? "" : "s"}`}
+              title="Ολοκληρωμένοι και ενεργοί καθαρισμοί"
+              description={`${total} ${total === 1 ? "εγγραφή" : "εγγραφές"}`}
             />
           </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Task</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Started</TableHead>
-                  <TableHead>Completed</TableHead>
-                  <TableHead>Checklist</TableHead>
-                  <TableHead>Photos</TableHead>
+                  <TableHead>Μονάδα</TableHead>
+                  <TableHead>Εργασία</TableHead>
+                  <TableHead>Κατάσταση</TableHead>
+                  <TableHead>Έναρξη</TableHead>
+                  <TableHead>Ολοκλήρωση</TableHead>
+                  <TableHead>Λίστα</TableHead>
+                  <TableHead>Φωτογραφίες</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -211,7 +211,7 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
         selection ??
         (focus ? { unitId: focus.unitId, from: focus.date, to: focus.date } : null);
       if (!sel) {
-        toastError("Select dates on the calendar first");
+        toastError("Επιλέξτε πρώτα ημερομηνίες στο ημερολόγιο");
         return;
       }
 
@@ -219,7 +219,7 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
       const to = sel.from <= sel.to ? sel.to : sel.from;
       const normalized = normalizeSelectionRange(from, to);
       if (normalized.checkIn >= normalized.checkOut) {
-        toastError("Check-out must be after check-in");
+        toastError("Το check-out πρέπει να είναι μετά το check-in");
         return;
       }
 
@@ -235,7 +235,7 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
         clearSelection();
         closeWorkspace();
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Failed to create block");
+        toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας block");
       }
     },
     [tenantId, selection, focus, refreshCalendars, clearSelection, closeWorkspace],
@@ -255,7 +255,7 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
         toastSuccess(`${blockType.replace("_", " ")} block created`);
         refreshCalendars();
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Failed to create block");
+        toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας block");
       }
     },
     [tenantId, refreshCalendars],
@@ -266,11 +266,11 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
       if (!tenantId) return;
       try {
         await releaseHold(tenantId, holdId);
-        toastSuccess("Hold released");
+        toastSuccess("Η δέσμευση απελευθερώθηκε");
         refreshCalendars();
         closeWorkspace();
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Failed to release hold");
+        toastError(err instanceof Error ? err.message : "Αποτυχία απελευθέρωσης δέσμευσης");
       }
     },
     [tenantId, refreshCalendars, closeWorkspace],
@@ -281,11 +281,11 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
       if (!tenantId) return;
       try {
         await releaseOperatorBlock(tenantId, unit.unitId, blockId);
-        toastSuccess("Block removed");
+        toastSuccess("Το block αφαιρέθηκε");
         refreshCalendars();
         closeWorkspace();
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Failed to release block");
+        toastError(err instanceof Error ? err.message : "Αποτυχία απελευθέρωσης block");
       }
     },
     [tenantId, refreshCalendars, closeWorkspace],
@@ -299,10 +299,10 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
           method: "POST",
           tenantId,
         });
-        toastSuccess("Booking confirmed");
+        toastSuccess("Η κράτηση επιβεβαιώθηκε");
         refreshCalendars();
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Confirm failed");
+        toastError(err instanceof Error ? err.message : "Η επιβεβαίωση απέτυχε");
       }
     },
     [tenantId, refreshCalendars],
@@ -317,10 +317,10 @@ export function CalendarOpsActionsProvider({ children }: { children: ReactNode }
           tenantId,
           body: JSON.stringify({ reason: "Cancelled from calendar" }),
         });
-        toastSuccess("Booking cancelled");
+        toastSuccess("Η κράτηση ακυρώθηκε");
         refreshCalendars();
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Cancel failed");
+        toastError(err instanceof Error ? err.message : "Η ακύρωση απέτυχε");
       }
     },
     [tenantId, refreshCalendars],

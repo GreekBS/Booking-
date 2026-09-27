@@ -69,7 +69,7 @@ export function buildTodayOperations(
             id: `arr-b-${booking.id}`,
             kind: "arrival",
             label: booking.guestName,
-            detail: `Check-in · ${booking.status.replace(/_/g, " ")}`,
+            detail: `Άφιξη · ${booking.status.replace(/_/g, " ")}`,
           });
         }
 
@@ -79,7 +79,7 @@ export function buildTodayOperations(
             id: `dep-b-${booking.id}`,
             kind: "departure",
             label: booking.guestName,
-            detail: "Check-out",
+            detail: "Αναχώρηση",
           });
         }
 
@@ -111,7 +111,7 @@ export function buildTodayOperations(
             id: `arr-h-${hold.id}`,
             kind: "arrival",
             label: unit.unitName,
-            detail: "Hold arrival",
+            detail: "Άφιξη δέσμευσης",
           });
         }
 
@@ -121,7 +121,7 @@ export function buildTodayOperations(
             id: `dep-h-${hold.id}`,
             kind: "departure",
             label: unit.unitName,
-            detail: "Hold departure",
+            detail: "Αναχώρηση δέσμευσης",
           });
         }
 

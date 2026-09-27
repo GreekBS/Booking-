@@ -60,9 +60,9 @@ export function PropertyGroupSection({
   );
 
   const summaryParts: string[] = [
-    `${summary.unitCount} unit${summary.unitCount !== 1 ? "s" : ""}`,
-    `${summary.activeBookings} booking${summary.activeBookings !== 1 ? "s" : ""}`,
-    `${summary.activeHolds} hold${summary.activeHolds !== 1 ? "s" : ""}`,
+    `${summary.unitCount} ${summary.unitCount === 1 ? "μονάδα" : "μονάδες"}`,
+    `${summary.activeBookings} ${summary.activeBookings === 1 ? "κράτηση" : "κρατήσεις"}`,
+    `${summary.activeHolds} ${summary.activeHolds === 1 ? "δέσμευση" : "δεσμεύσεις"}`,
     `${summary.operatorBlocks} block${summary.operatorBlocks !== 1 ? "s" : ""}`,
   ];
 

@@ -31,7 +31,7 @@ export function QrLandingPage({ token }: { token: string }) {
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "This QR code is not recognized",
+            err instanceof Error ? err.message : "Αυτός ο κωδικός QR δεν αναγνωρίζεται",
           );
         }
       }
@@ -48,13 +48,13 @@ export function QrLandingPage({ token }: { token: string }) {
       <div className="mx-auto max-w-lg p-4">
         <ErrorState message={error} />
         <p className="mt-3 text-sm text-muted-foreground">
-          The code may have been rotated, or it belongs to a different workspace.
-          Ask an administrator to print a new one.
+          Ο κωδικός μπορεί να έχει αντικατασταθεί ή να ανήκει σε άλλο workspace.
+          Ζητήστε από διαχειριστή να εκτυπώσει νέο.
         </p>
       </div>
     );
   }
   if (!resolved) return <Skeleton className="m-4 h-64" />;
 
-  return <CleaningForm unitId={resolved.unitId} scannedFrom="Scanned QR code" />;
+  return <CleaningForm unitId={resolved.unitId} scannedFrom="Σαρωμένος κωδικός QR" />;
 }

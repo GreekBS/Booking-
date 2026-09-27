@@ -1,13 +1,13 @@
 import { cn } from "@/lib/utils";
 
 const LEGEND_ITEMS = [
-  { cls: "border border-blue-700 bg-blue-600/90", label: "Booked (bar)" },
-  { cls: "border-2 border-dashed border-amber-700 bg-amber-500/85", label: "Hold (bar)" },
-  { cls: "border border-red-700 bg-red-500/90", label: "Block (bar)" },
-  { cls: "border border-orange-700 bg-orange-500/90", label: "Maintenance" },
-  { cls: "border border-violet-700 bg-violet-500/90", label: "Cleaning" },
-  { cls: "border border-slate-600 bg-slate-500/90", label: "Owner" },
-  { cls: "bg-muted border-border", label: "Closed arrival" },
+  { cls: "border border-blue-700 bg-blue-600/90", label: "Κράτηση (ράβδος)" },
+  { cls: "border-2 border-dashed border-amber-700 bg-amber-500/85", label: "Δέσμευση (ράβδος)" },
+  { cls: "border border-red-700 bg-red-500/90", label: "Block (ράβδος)" },
+  { cls: "border border-orange-700 bg-orange-500/90", label: "Συντήρηση" },
+  { cls: "border border-violet-700 bg-violet-500/90", label: "Καθαρισμός" },
+  { cls: "border border-slate-600 bg-slate-500/90", label: "Ιδιοκτήτης" },
+  { cls: "bg-muted border-border", label: "Κλειστή άφιξη" },
 ] as const;
 
 interface CalendarLegendProps {
@@ -28,13 +28,13 @@ export function CalendarLegend({ compact }: CalendarLegendProps) {
           {item.label}
         </span>
       ))}
-      <span className="inline-flex items-center gap-1" title="Check-in day marker">
+      <span className="inline-flex items-center gap-1" title="Σημάδι ημέρας άφιξης">
         <span className="h-2.5 w-0.5 bg-emerald-600" aria-hidden />
-        Check-in
+        Άφιξη
       </span>
-      <span className="inline-flex items-center gap-1" title="Check-out day marker">
+      <span className="inline-flex items-center gap-1" title="Σημάδι ημέρας αναχώρησης">
         <span className="h-2.5 w-0.5 bg-rose-600" aria-hidden />
-        Check-out
+        Αναχώρηση
       </span>
     </div>
   );

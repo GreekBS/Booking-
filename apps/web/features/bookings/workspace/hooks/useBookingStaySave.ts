@@ -22,10 +22,10 @@ export function useBookingStaySave(
         const updated = await commitBookingStayChange(tenantId, bookingId, draft);
         const quote = await fetchQuote(tenantId, updated.quoteId).catch(() => null);
         onSaved(updated, quote);
-        toastSuccess("Stay updated");
+        toastSuccess("Η διαμονή ενημερώθηκε");
         return true;
       } catch (err) {
-        toastError(err instanceof Error ? err.message : "Failed to save stay");
+        toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης διαμονής");
         return false;
       } finally {
         setSaving(false);

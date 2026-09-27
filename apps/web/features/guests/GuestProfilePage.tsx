@@ -57,6 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { elCommon, elNav } from "@/lib/i18n";
 
 const SECTION_TRIGGER_CLASS =
   "rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none";
@@ -114,7 +115,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
         preferredLanguage: data.guest.preferredLanguage ?? "",
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load guest");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης επισκέπτη");
       setProfileData(null);
     } finally {
       setLoading(false);
@@ -183,11 +184,11 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
         country: editForm.country.trim() || null,
         preferredLanguage: editForm.preferredLanguage.trim() || null,
       });
-      toastSuccess("Guest updated");
+      toastSuccess("Ο επισκέπτης ενημερώθηκε");
       setEditOpen(false);
       await loadProfile();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Update failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία ενημέρωσης");
     } finally {
       setSaving(false);
     }
@@ -202,10 +203,10 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
         propertyId: propertyId ?? null,
       });
       setNoteBody("");
-      toastSuccess("Note added");
+      toastSuccess("Η σημείωση προστέθηκε");
       await loadNotes();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Could not add note");
+      toastError(err instanceof Error ? err.message : "Αποτυχία προσθήκης σημείωσης");
     } finally {
       setAddingNote(false);
     }
@@ -217,9 +218,9 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
       await assignGuestTag(tenantId, guestId, tagId);
       setAssignTagId("");
       await loadProfile();
-      toastSuccess("Tag assigned");
+      toastSuccess("Η ετικέτα αντιστοιχίστηκε");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Assign failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αντιστοίχισης");
     }
   }
 
@@ -229,7 +230,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
       await unassignGuestTag(tenantId, guestId, tagId);
       await loadProfile();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Remove failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αφαίρεσης");
     }
   }
 
@@ -241,7 +242,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
       await loadTagsCatalog();
       await handleAssignTag(tag.id);
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Create tag failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας ετικέτας");
     }
   }
 
@@ -255,7 +256,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
   if (error || !profileData) {
     return (
       <ErrorState
-        message={error ?? "Guest not found"}
+        message={error ?? "Ο επισκέπτης δεν βρέθηκε"}
         onRetry={() => void loadProfile()}
       />
     );
@@ -268,13 +269,16 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
     <div className="space-y-5">
       <PageHeader
         title={guest.displayName}
-        description={[guest.email, guest.phone].filter(Boolean).join(" · ") || "No contact on file"}
+        description={
+          [guest.email, guest.phone].filter(Boolean).join(" · ") ||
+          "Δεν υπάρχουν στοιχεία επικοινωνίας"
+        }
         meta={
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {[guest.country, guest.preferredLanguage].filter(Boolean).join(" · ") || null}
             {isArchived ? (
               <Badge variant="outline" className="text-[10px]">
-                Archived
+                Αρχειοθετημένος
               </Badge>
             ) : null}
             {tags.map((tag) => (
@@ -287,16 +291,16 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/guests">Back to directory</Link>
+              <Link href="/dashboard/guests">Πίσω στον κατάλογο</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/bookings/new?guestId=${encodeURIComponent(guestId)}`}>
-                New reservation
+                Νέα κράτηση
               </Link>
             </Button>
             {canEditGuest ? (
               <Button size="sm" onClick={() => setEditOpen(true)}>
-                Edit guest
+                Επεξεργασία επισκέπτη
               </Button>
             ) : null}
           </div>
@@ -305,7 +309,10 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
 
       {canManageTags ? (
         <Surface variant="panel" padding="md">
-          <SurfaceHeader title="Tags" description="Tenant tag definitions and assignments." />
+          <SurfaceHeader
+            title="Ετικέτες"
+            description="Ορισμοί ετικετών οργανισμού και αντιστοιχίσεις."
+          />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {tags.map((tag) => (
               <Badge key={tag.id} variant="secondary" className="gap-1 pr-1">
@@ -313,7 +320,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                 <button
                   type="button"
                   className="rounded p-0.5 hover:bg-muted"
-                  aria-label={`Remove tag ${tag.name}`}
+                  aria-label={`Αφαίρεση ετικέτας ${tag.name}`}
                   onClick={() => void handleUnassignTag(tag.id)}
                 >
                   <X className="h-3 w-3" />
@@ -322,8 +329,8 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
             ))}
             {unassignedTags.length > 0 ? (
               <Select value={assignTagId} onValueChange={(v) => void handleAssignTag(v)}>
-                <SelectTrigger className="h-8 w-[160px]" aria-label="Assign tag">
-                  <SelectValue placeholder="Assign tag…" />
+                <SelectTrigger className="h-8 w-[160px]" aria-label="Αντιστοίχιση ετικέτας">
+                  <SelectValue placeholder="Αντιστοίχιση ετικέτας…" />
                 </SelectTrigger>
                 <SelectContent>
                   {unassignedTags.map((t) => (
@@ -337,7 +344,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
             <div className="flex gap-2">
               <Input
                 className="h-8 w-[140px]"
-                placeholder="New tag"
+                placeholder="Νέα ετικέτα"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
               />
@@ -348,7 +355,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                 disabled={!newTagName.trim()}
                 onClick={() => void handleCreateTag()}
               >
-                Create & assign
+                Δημιουργία & αντιστοίχιση
               </Button>
             </div>
           </div>
@@ -359,13 +366,13 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
         <div className="border-b border-border">
           <TabsList className="h-9 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
             <TabsTrigger value="overview" className={SECTION_TRIGGER_CLASS}>
-              Overview
+              {elNav.overview}
             </TabsTrigger>
             <TabsTrigger value="reservations" className={SECTION_TRIGGER_CLASS}>
-              Reservations
+              Κρατήσεις
             </TabsTrigger>
             <TabsTrigger value="notes" className={SECTION_TRIGGER_CLASS}>
-              Notes
+              {elCommon.notes}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -373,16 +380,16 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
         <TabsContent value="overview" className="mt-0 space-y-4 focus-visible:outline-none">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="Stay metrics"
-              description="Computed from reservations visible to your role — not billing totals."
+              title="Μετρήσεις διαμονής"
+              description="Υπολογίζονται από κρατήσεις ορατές στο ρόλο σας — όχι λογιστικά σύνολα."
             />
             <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Metric label="Total stays" value={String(metrics.stayCount)} />
-              <Metric label="First stay check-in" value={metrics.firstStayCheckIn ?? "—"} />
-              <Metric label="Last stay check-out" value={metrics.lastStayCheckOut ?? "—"} />
-              <Metric label="Next stay check-in" value={metrics.nextStayCheckIn ?? "—"} />
+              <Metric label="Σύνολο διαμονών" value={String(metrics.stayCount)} />
+              <Metric label={`Πρώτη ${elCommon.checkIn.toLowerCase()}`} value={metrics.firstStayCheckIn ?? "—"} />
+              <Metric label={`Τελευταία ${elCommon.checkOut.toLowerCase()}`} value={metrics.lastStayCheckOut ?? "—"} />
+              <Metric label={`Επόμενη ${elCommon.checkIn.toLowerCase()}`} value={metrics.nextStayCheckIn ?? "—"} />
               <Metric
-                label="Properties visited"
+                label="Καταλύματα που επισκέφθηκε"
                 value={String(metrics.propertyIdsVisited.length)}
               />
             </dl>
@@ -396,10 +403,10 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                 <div className="p-4">
                   <EmptyState
                     compact
-                    title="No reservations"
-                    description="No linked stays are visible in your scope."
+                    title="Δεν υπάρχουν κρατήσεις"
+                    description="Δεν εμφανίζονται συνδεδεμένες διαμονές στο εύρος σας."
                     action={{
-                      label: "New reservation",
+                      label: "Νέα κράτηση",
                       href: `/dashboard/bookings/new?guestId=${encodeURIComponent(guestId)}`,
                     }}
                   />
@@ -408,12 +415,12 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Guest name</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Guests</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Open</TableHead>
+                      <TableHead>Όνομα επισκέπτη</TableHead>
+                      <TableHead>{elCommon.checkIn}</TableHead>
+                      <TableHead>{elCommon.checkOut}</TableHead>
+                      <TableHead>{elCommon.guests}</TableHead>
+                      <TableHead>{elCommon.status}</TableHead>
+                      <TableHead className="text-right">{elCommon.open}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -431,7 +438,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                             <Link
                               href={`/dashboard/bookings?bookingId=${encodeURIComponent(row.id)}`}
                             >
-                              Open
+                              {elCommon.open}
                             </Link>
                           </Button>
                         </TableCell>
@@ -446,26 +453,30 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
 
         <TabsContent value="notes" className="mt-0 space-y-4 focus-visible:outline-none">
           <Surface variant="panel" padding="md">
-            <SurfaceHeader title="Add note" />
+            <SurfaceHeader title="Προσθήκη σημείωσης" />
             <div className="mt-3 space-y-2">
               <Textarea
                 value={noteBody}
                 onChange={(e) => setNoteBody(e.target.value)}
-                placeholder="Write a note for your team…"
+                placeholder="Γράψτε μια σημείωση για την ομάδα σας…"
                 rows={3}
               />
               <Button
                 disabled={addingNote || !noteBody.trim()}
                 onClick={() => void submitNote()}
               >
-                {addingNote ? "Saving…" : "Add note"}
+                {addingNote ? elCommon.saving : "Προσθήκη σημείωσης"}
               </Button>
             </div>
           </Surface>
           <Surface padding="none">
             {notes.length === 0 ? (
               <div className="p-4">
-                <EmptyState compact title="No notes yet" description="Add the first note above." />
+                <EmptyState
+                  compact
+                  title="Δεν υπάρχουν σημειώσεις ακόμα"
+                  description="Προσθέστε την πρώτη σημείωση παραπάνω."
+                />
               </div>
             ) : (
               <ul className="divide-y divide-border">
@@ -474,7 +485,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                     <p className="whitespace-pre-wrap text-sm">{note.body}</p>
                     <p className="mt-1 text-[11px] text-muted-foreground">
                       {new Date(note.createdAt).toLocaleString()}
-                      {note.propertyId ? " · Property-scoped" : " · Tenant-wide"}
+                      {note.propertyId ? " · Εύρος καταλύματος" : " · Εύρος οργανισμού"}
                     </p>
                   </li>
                 ))}
@@ -487,11 +498,11 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit guest</DialogTitle>
+            <DialogTitle>Επεξεργασία επισκέπτη</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
             <div className="space-y-1">
-              <Label htmlFor="gp-display">Display name</Label>
+              <Label htmlFor="gp-display">Εμφανιζόμενο όνομα</Label>
               <Input
                 id="gp-display"
                 value={editForm.displayName}
@@ -500,7 +511,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="gp-first">First name</Label>
+                <Label htmlFor="gp-first">Όνομα</Label>
                 <Input
                   id="gp-first"
                   value={editForm.firstName}
@@ -508,7 +519,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="gp-last">Last name</Label>
+                <Label htmlFor="gp-last">Επώνυμο</Label>
                 <Input
                   id="gp-last"
                   value={editForm.lastName}
@@ -517,7 +528,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="gp-email">Email</Label>
+              <Label htmlFor="gp-email">{elCommon.email}</Label>
               <Input
                 id="gp-email"
                 type="email"
@@ -526,7 +537,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="gp-phone">Phone</Label>
+              <Label htmlFor="gp-phone">{elCommon.phone}</Label>
               <Input
                 id="gp-phone"
                 value={editForm.phone}
@@ -535,7 +546,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="gp-country">Country</Label>
+                <Label htmlFor="gp-country">Χώρα</Label>
                 <Input
                   id="gp-country"
                   value={editForm.country}
@@ -543,7 +554,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="gp-lang">Language</Label>
+                <Label htmlFor="gp-lang">Γλώσσα</Label>
                 <Input
                   id="gp-lang"
                   value={editForm.preferredLanguage}
@@ -556,10 +567,10 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
+              {elCommon.cancel}
             </Button>
             <Button disabled={saving || !editForm.displayName.trim()} onClick={() => void saveGuest()}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? elCommon.saving : elCommon.save}
             </Button>
           </DialogFooter>
         </DialogContent>

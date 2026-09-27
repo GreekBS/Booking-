@@ -25,6 +25,7 @@ import { BookingPricingSection } from "./sections/BookingPricingSection";
 import { BookingStaySection } from "./sections/BookingStaySection";
 import { BookingTimelineSection } from "./sections/BookingTimelineSection";
 import type { BookingWorkspaceLabels, WorkspaceUnitOption } from "./types";
+import { elCommon } from "@/lib/i18n";
 
 export interface BookingWorkspaceViewProps {
   bookingId: string;
@@ -128,14 +129,14 @@ export function BookingWorkspaceView({
 
   const handleSave = useCallback(async () => {
     if (!draft || !canSave) {
-      throw new Error("Cannot save stay changes");
+      throw new Error("Δεν είναι δυνατή η αποθήκευση αλλαγών διαμονής");
     }
 
     setSaveError(false);
     const ok = await save(draft);
     if (!ok) {
       setSaveError(true);
-      throw new Error("Failed to save stay changes");
+      throw new Error("Αποτυχία αποθήκευσης αλλαγών διαμονής");
     }
   }, [canSave, draft, save]);
 
@@ -179,7 +180,7 @@ export function BookingWorkspaceView({
   if (!booking || !draft) {
     return (
       <div className={fillHeight ? "flex flex-1 items-center justify-center p-4" : "p-4"}>
-        <p className="text-sm text-muted-foreground">{error ?? "Booking unavailable."}</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Η κράτηση δεν είναι διαθέσιμη."}</p>
       </div>
     );
   }
@@ -238,25 +239,25 @@ export function BookingWorkspaceView({
               value="overview"
               className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
             >
-              Overview
+              Επισκόπηση
             </TabsTrigger>
             <TabsTrigger
               value="financials"
               className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
             >
-              Financials
+              Οικονομικά
             </TabsTrigger>
             <TabsTrigger
               value="guest"
               className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
             >
-              Guest &amp; Billing
+              Επισκέπτης &amp; χρέωση
             </TabsTrigger>
             <TabsTrigger
               value="activity"
               className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
             >
-              Activity
+              Δραστηριότητα
             </TabsTrigger>
           </TabsList>
         </div>
@@ -323,9 +324,9 @@ export function BookingWorkspaceView({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Confirm booking"
-        description="Mark this reservation as confirmed?"
-        confirmLabel="Confirm"
+        title="Επιβεβαίωση κράτησης"
+        description="Να σημειωθεί η κράτηση ως επιβεβαιωμένη;"
+        confirmLabel={elCommon.confirm}
         loading={actionLoading}
         onConfirm={handleConfirm}
       />
@@ -333,9 +334,9 @@ export function BookingWorkspaceView({
       <ConfirmDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        title="Cancel booking"
-        description="This will cancel the reservation. This action uses the existing cancel API."
-        confirmLabel="Cancel booking"
+        title="Ακύρωση κράτησης"
+        description="Η κράτηση θα ακυρωθεί. Η ενέργεια εκτελείται μέσω του υπάρχοντος API ακύρωσης."
+        confirmLabel="Ακύρωση κράτησης"
         destructive
         loading={actionLoading}
         onConfirm={handleCancel}

@@ -42,16 +42,16 @@ export function buildCellHoverInfo(
     const dow = dayOfWeekUtc(date);
     const cta = rules.checkInDays.length === 0 || rules.checkInDays.includes(dow);
     const ctd = rules.checkOutDays.length === 0 || rules.checkOutDays.includes(dow);
-    restrictionsLine = `Min ${rules.minNights}n · max ${rules.maxNights}n · CTA ${cta ? "yes" : "no"} · CTD ${ctd ? "yes" : "no"}`;
+    restrictionsLine = `Ελάχ. ${rules.minNights}ν · μέγ. ${rules.maxNights}ν · CTA ${cta ? "ναι" : "όχι"} · CTD ${ctd ? "ναι" : "όχι"}`;
   }
 
   let summaryLine: string | null = null;
   if (interaction.bookingId && calendar) {
     const b = calendar.bookings.find((x) => x.id === interaction.bookingId);
-    if (b) summaryLine = `Booking: ${b.guestName} (${b.status})`;
+    if (b) summaryLine = `Κράτηση: ${b.guestName} (${b.status})`;
   } else if (interaction.holdId && calendar) {
     const h = calendar.holds.find((x) => x.id === interaction.holdId);
-    if (h) summaryLine = `Hold: expires ${holdCountdownShort(h.expiresAt)}`;
+    if (h) summaryLine = `Δέσμευση: λήγει ${holdCountdownShort(h.expiresAt)}`;
   } else if (interaction.blockId && calendar) {
     const b = calendar.blocks.find((x) => x.id === interaction.blockId);
     if (b) summaryLine = `Block: ${b.reason ?? b.blockType}`;

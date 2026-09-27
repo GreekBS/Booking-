@@ -7,17 +7,17 @@ import type { WorkspaceMode } from "../lib/workspace-types";
 import { isEntityWorkspaceMode } from "../lib/workspace-types";
 
 const MODE_LABELS: Record<WorkspaceMode, string> = {
-  idle: "Workspace",
-  "date-edit": "Edit dates",
-  booking: "Reservation",
-  hold: "Hold",
+  idle: "Χώρος εργασίας",
+  "date-edit": "Επεξεργασία ημερομηνιών",
+  booking: "Κράτηση",
+  hold: "Δέσμευση",
   block: "Block",
 };
 
 const MODE_SUBTITLES: Partial<Record<WorkspaceMode, string>> = {
-  booking: "Reservation details",
-  hold: "Hold details",
-  block: "Block details",
+  booking: "Λεπτομέρειες κράτησης",
+  hold: "Λεπτομέρειες δέσμευσης",
+  block: "Λεπτομέρειες block",
 };
 
 interface WorkspaceHeaderProps {
@@ -48,7 +48,7 @@ export function WorkspaceHeader({ mode, onClose, showClose, className }: Workspa
       {showClose && onClose && (
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
           <X className="h-4 w-4" />
-          <span className="sr-only">Close workspace</span>
+          <span className="sr-only">Κλείσιμο χώρου εργασίας</span>
         </Button>
       )}
     </div>

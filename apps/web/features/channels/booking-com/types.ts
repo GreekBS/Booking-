@@ -155,16 +155,16 @@ export interface BookingComReconcileResult {
 }
 
 export const BOOKING_COM_WIZARD_STEPS = [
-  { id: "before", title: "Before you start", helpAnchor: "before-you-start" },
-  { id: "connect", title: "Connect in Booking.com", helpAnchor: "connect-in-booking" },
-  { id: "property", title: "Match property", helpAnchor: "match-property" },
-  { id: "rooms", title: "Map rooms", helpAnchor: "map-rooms" },
-  { id: "rates", title: "Map rates", helpAnchor: "map-rates" },
-  { id: "validate", title: "Validate", helpAnchor: "review-sync" },
-  { id: "sync", title: "Synchronization", helpAnchor: "review-sync" },
-  { id: "preview", title: "Initial sync preview", helpAnchor: "review-sync" },
-  { id: "confirm", title: "Confirm", helpAnchor: "activate" },
-  { id: "activate", title: "Activate", helpAnchor: "activate" },
+  { id: "before", title: "Πριν ξεκινήσετε", helpAnchor: "before-you-start" },
+  { id: "connect", title: "Σύνδεση στο Booking.com", helpAnchor: "connect-in-booking" },
+  { id: "property", title: "Αντιστοίχιση καταλύματος", helpAnchor: "match-property" },
+  { id: "rooms", title: "Αντιστοίχιση δωματίων", helpAnchor: "map-rooms" },
+  { id: "rates", title: "Αντιστοίχιση τιμών", helpAnchor: "map-rates" },
+  { id: "validate", title: "Επικύρωση", helpAnchor: "review-sync" },
+  { id: "sync", title: "Συγχρονισμός", helpAnchor: "review-sync" },
+  { id: "preview", title: "Προεπισκόπηση αρχικού sync", helpAnchor: "review-sync" },
+  { id: "confirm", title: "Επιβεβαίωση", helpAnchor: "activate" },
+  { id: "activate", title: "Ενεργοποίηση", helpAnchor: "activate" },
 ] as const;
 
 export type BookingComWizardStepId = (typeof BOOKING_COM_WIZARD_STEPS)[number]["id"];

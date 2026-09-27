@@ -30,23 +30,23 @@ interface AvailabilityToolbarProps {
   onOverlayChange: (key: keyof OverlayToggles, value: boolean) => void;
   onToday: () => void;
   onShiftRange: (days: number) => void;
-  onRefresh: () => void;
+  onΑνανέωση: () => void;
   /** Optional read-only label for the active property (selection lives in header). */
   activePropertyName?: string | null;
 }
 
 const RANGE_PRESETS = [
-  { value: 7, label: "7 days" },
-  { value: 14, label: "14 days" },
-  { value: 30, label: "Month" },
-  { value: 35, label: "35 days" },
-  { value: 42, label: "42 days" },
+  { value: 7, label: "7 ημέρες" },
+  { value: 14, label: "14 ημέρες" },
+  { value: 30, label: "Μήνας" },
+  { value: 35, label: "35 ημέρες" },
+  { value: 42, label: "42 ημέρες" },
 ] as const;
 
 const OVERLAY_BUTTONS: Array<{ key: keyof OverlayToggles; label: string }> = [
-  { key: "price", label: "Price" },
-  { key: "minStay", label: "Min stay" },
-  { key: "maxStay", label: "Max stay" },
+  { key: "price", label: "Τιμή" },
+  { key: "minStay", label: "Ελάχ. διαμονή" },
+  { key: "maxStay", label: "Μέγ. διαμονή" },
   { key: "cta", label: "CTA" },
   { key: "ctd", label: "CTD" },
 ];
@@ -62,7 +62,7 @@ export function AvailabilityToolbar({
   onOverlayChange,
   onToday,
   onShiftRange,
-  onRefresh,
+  onΑνανέωση,
   activePropertyName,
 }: AvailabilityToolbarProps) {
   return (
@@ -81,14 +81,14 @@ export function AvailabilityToolbar({
               <Input
                 value={unitSearch}
                 onChange={(e) => onUnitSearchChange(e.target.value)}
-                placeholder="Search unit…"
+                placeholder="Αναζήτηση μονάδας…"
                 className="h-8 w-[140px] pl-7 text-xs"
-                aria-label="Search unit"
+                aria-label="Αναζήτηση μονάδας"
               />
             </div>
 
             <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs" onClick={onToday}>
-              Today
+              Σήμερα
             </Button>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onShiftRange(-7)}>
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -101,7 +101,7 @@ export function AvailabilityToolbar({
               value={rangeStart}
               onChange={(e) => onRangeStartChange(e.target.value)}
               className="h-8 w-[130px] text-xs"
-              aria-label="Range start"
+              aria-label="Έναρξη εύρους"
             />
             <Select value={String(rangeDays)} onValueChange={(v) => onRangeDaysChange(Number(v))}>
               <SelectTrigger className="h-8 w-[100px] text-xs">
@@ -129,9 +129,9 @@ export function AvailabilityToolbar({
                 {label}
               </Button>
             ))}
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5 text-xs" onClick={onRefresh}>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5 text-xs" onClick={onΑνανέωση}>
               <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
+              Ανανέωση
             </Button>
           </div>
         </div>

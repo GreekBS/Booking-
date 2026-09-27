@@ -41,7 +41,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { elCommon, elWeekdaysShort } from "@/lib/i18n";
+
+const DAYS = [...elWeekdaysShort];
 
 const defaultRatePlan: RatePlanRecord = {
   baseNightlyAmount: "100.0000",
@@ -96,7 +98,7 @@ export function PricingPage() {
         setAllUnits(flattenCatalogUnits(catalog));
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load units");
+        setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης μονάδων");
         setLoading(false);
       });
   }, [tenantId]);
@@ -134,7 +136,7 @@ export function PricingPage() {
         setPlan(formatRatePlanForDisplay(data ?? defaultRatePlan));
         setFieldErrors({});
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load rate plan");
+        setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης τιμοκαταλόγου");
       } finally {
         setLoading(false);
       }
@@ -148,7 +150,7 @@ export function PricingPage() {
     const { payload, errors } = normalizeRatePlanForSubmit(plan);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      const msg = "Please fix the highlighted amount fields before saving.";
+      const msg = "Διορθώστε τα επισημασμένα πεδία ποσών πριν την αποθήκευση.";
       setError(msg);
       toastError(msg);
       return;
@@ -165,7 +167,7 @@ export function PricingPage() {
       });
       setPlan(formatRatePlanForDisplay(saved));
       setPlanPersisted(true);
-      toastSuccess("Rate plan saved");
+      toastSuccess("Ο τιμοκατάλογος αποθηκεύτηκε");
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Failed to save";
       const { message, fields } = parseApiValidationError(raw);
@@ -206,7 +208,7 @@ export function PricingPage() {
       );
       setPreview(quote);
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Preview failed");
+      toastError(err instanceof Error ? err.message : "Η προεπισκόπηση απέτυχε");
     } finally {
       setPreviewLoading(false);
     }
@@ -228,9 +230,9 @@ export function PricingPage() {
   if (units.length === 0) {
     return (
       <EmptyState
-        title="No units available"
-        description="Create a unit for the active property before configuring pricing."
-        action={{ label: "Go to units", href: "/dashboard/units", onClick: () => {} }}
+        title="Δεν υπάρχουν διαθέσιμες μονάδες"
+        description="Δημιουργήστε μονάδα για το ενεργό κατάλυμα πριν τη ρύθμιση τιμών."
+        action={{ label: "Μετάβαση στις μονάδες", href: "/dashboard/units", onClick: () => {} }}
       />
     );
   }
@@ -238,31 +240,31 @@ export function PricingPage() {
   return (
     <div>
       <PageHeader
-        title="Pricing"
-        description="Commercial stay pricing for the active property — rate plans, seasons, and modifiers."
+        title="Τιμές"
+        description="Εμπορική τιμολόγηση διαμονής για το ενεργό κατάλυμα — τιμοκατάλογοι, εποχές και τροποποιητές."
         meta={
           property?.name ? (
             <span className="text-xs text-muted-foreground">
-              Active property · <span className="font-medium text-foreground">{property.name}</span>
+              Ενεργό κατάλυμα · <span className="font-medium text-foreground">{property.name}</span>
             </span>
           ) : null
         }
         actions={
           <Button onClick={() => void save()} disabled={saving || !unitId}>
-            {saving ? "Saving…" : "Save rate plan"}
+            {saving ? "Αποθήκευση…" : "Αποθήκευση τιμοκαταλόγου"}
           </Button>
         }
       />
 
       <Surface className="mb-5" padding="md">
         <SurfaceHeader
-          title="Unit"
-          description="Pricing is configured per unit. Active Property is set in the header."
+          title="Μονάδα"
+          description="Η τιμολόγηση ρυθμίζεται ανά μονάδα. Το ενεργό κατάλυμα ορίζεται στην κεφαλίδα."
         />
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Select value={unitId} onValueChange={setUnitId}>
-            <SelectTrigger className="w-full sm:w-[280px]" aria-label="Select unit">
-              <SelectValue placeholder="Select unit" />
+            <SelectTrigger className="w-full sm:w-[280px]" aria-label="Επιλογή μονάδας">
+              <SelectValue placeholder="Επιλέξτε μονάδα" />
             </SelectTrigger>
             <SelectContent>
               {units.map((u) => (
@@ -274,7 +276,7 @@ export function PricingPage() {
           </Select>
           {selectedUnit ? (
             <p className="text-xs text-muted-foreground">
-              Editing <span className="font-medium text-foreground">{selectedUnit.name}</span>
+              Επεξεργασία <span className="font-medium text-foreground">{selectedUnit.name}</span>
             </p>
           ) : null}
         </div>
@@ -302,18 +304,17 @@ export function PricingPage() {
           <div className="space-y-5">
             <Surface>
               <SurfaceHeader
-                title="Base rate"
-                description="Default nightly amount when no seasonal rate applies."
+                title="Βασική τιμή"
+                description="Προεπιλεγμένη νυχτερινή τιμή όταν δεν ισχύει εποχική τιμή."
               />
               {!planPersisted ? (
                 <p className="mb-3 rounded-md border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-950">
-                  No saved rate plan yet for this unit. Values below are a draft default until you
-                  save — the calendar will show nightly rates only after save.
+                  Δεν υπάρχει αποθηκευμένος τιμοκατάλογος για αυτή τη μονάδα. Οι τιμές παρακάτω είναι προεπιλογή πρόχειρου μέχρι την αποθήκευση — το ημερολόγιο θα δείχνει νυχτερινές τιμές μόνο μετά την αποθήκευση.
                 </p>
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="pricing-base-amount">Nightly amount</Label>
+                  <Label htmlFor="pricing-base-amount">Νυχτερινό ποσό</Label>
                   <Input
                     id="pricing-base-amount"
                     value={plan.baseNightlyAmount}
@@ -331,7 +332,7 @@ export function PricingPage() {
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pricing-currency">Currency</Label>
+                  <Label htmlFor="pricing-currency">Νόμισμα</Label>
                   <Input
                     id="pricing-currency"
                     maxLength={3}
@@ -346,8 +347,8 @@ export function PricingPage() {
 
             <Surface>
               <SurfaceHeader
-                title="Seasonal pricing"
-                description="Date-ranged nightly rates that override the base rate."
+                title="Εποχική τιμολόγηση"
+                description="Νυχτερινές τιμές με εύρος ημερομηνιών που υπερισχύουν της βασικής."
                 action={
                   <Button
                     size="sm"
@@ -369,20 +370,20 @@ export function PricingPage() {
                     }
                   >
                     <Plus className="mr-1 h-4 w-4" />
-                    Add season
+                    Προσθήκη εποχής
                   </Button>
                 }
               />
               {plan.seasons.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No seasonal rates configured.</p>
+                <p className="text-sm text-muted-foreground">Δεν έχουν ρυθμιστεί εποχικές τιμές.</p>
               ) : (
                 <div className="space-y-2">
                   <div className="hidden gap-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[1fr_1fr_1fr_1fr_2.5rem]">
-                    <span>Name</span>
+                    <span>Όνομα</span>
                     <span>Start</span>
                     <span>End</span>
                     <span>Nightly</span>
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">Ενέργειες</span>
                   </div>
                   {plan.seasons.map((season, index) => (
                     <div
@@ -396,7 +397,7 @@ export function PricingPage() {
                           seasons[index] = { ...season, name: e.target.value };
                           setPlan({ ...plan, seasons });
                         }}
-                        placeholder="Name"
+                        placeholder="Όνομα"
                         aria-label={`Season ${index + 1} name`}
                       />
                       <Input
@@ -428,7 +429,7 @@ export function PricingPage() {
                           clearFieldError(`seasons.${index}.nightlyAmount`);
                         }}
                         className={moneyInputClass(`seasons.${index}.nightlyAmount`)}
-                        placeholder="Amount"
+                        placeholder="Ποσό"
                         inputMode="decimal"
                         aria-label={`Season ${index + 1} nightly amount`}
                         aria-invalid={Boolean(fieldErrors[`seasons.${index}.nightlyAmount`])}
@@ -455,8 +456,8 @@ export function PricingPage() {
 
             <Surface>
               <SurfaceHeader
-                title="Day-of-week adjustments"
-                description="Fixed or percent modifiers for specific weekdays."
+                title="Προσαρμογές ανά ημέρα εβδομάδας"
+                description="Σταθερές ή ποσοστιαίες τροποποιήσεις για συγκεκριμένες ημέρες."
                 action={
                   <Button
                     size="sm"
@@ -481,7 +482,7 @@ export function PricingPage() {
                 }
               />
               {plan.dowModifiers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No day-of-week modifiers.</p>
+                <p className="text-sm text-muted-foreground">Δεν υπάρχουν τροποποιητές ανά ημέρα.</p>
               ) : (
                 <div className="space-y-2">
                   {plan.dowModifiers.map((mod, index) => (
@@ -520,8 +521,8 @@ export function PricingPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="fixed">Fixed</SelectItem>
-                          <SelectItem value="percent">Percent</SelectItem>
+                          <SelectItem value="fixed">Σταθερό</SelectItem>
+                          <SelectItem value="percent">Ποσοστό</SelectItem>
                         </SelectContent>
                       </Select>
                       <Input
@@ -562,8 +563,8 @@ export function PricingPage() {
 
             <Surface>
               <SurfaceHeader
-                title="Length-of-stay discounts"
-                description="Percent off when stay length meets the minimum nights."
+                title="Εκπτώσεις διάρκειας διαμονής"
+                description="Έκπτωση ποσοστού όταν η διάρκεια διαμονής φτάνει τις ελάχιστες νύχτες."
                 action={
                   <Button
                     size="sm"
@@ -584,7 +585,7 @@ export function PricingPage() {
                 }
               />
               {plan.losDiscounts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No length-of-stay discounts.</p>
+                <p className="text-sm text-muted-foreground">Δεν υπάρχουν εκπτώσεις διάρκειας διαμονής.</p>
               ) : (
                 <div className="space-y-2">
                   {plan.losDiscounts.map((disc, index) => (
@@ -594,7 +595,7 @@ export function PricingPage() {
                     >
                       <div className="space-y-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          Min nights
+                          Ελάχ. νύχτες
                         </Label>
                         <Input
                           type="number"
@@ -613,7 +614,7 @@ export function PricingPage() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          Percent off
+                          Έκπτωση %
                         </Label>
                         <Input
                           value={disc.percentOff}
@@ -659,15 +660,15 @@ export function PricingPage() {
           <div className="space-y-5 xl:sticky xl:top-4 xl:self-start">
             <Surface variant="attention">
               <SurfaceHeader
-                title="Price preview"
-                description="Read-only estimate from the saved rate plan. Does not create a Hold, Quote, or inventory block."
+                title="Προεπισκόπηση τιμής"
+                description="Εκτίμηση μόνο για ανάγνωση από τον αποθηκευμένο τιμοκατάλογο. Δεν δημιουργεί δέσμευση, προσφορά ή μπλοκάρισμα αποθέματος."
               />
               <p className="mb-3 text-xs text-muted-foreground">
-                Unsaved editor changes are not used — save the rate plan first.
+                Οι μη αποθηκευμένες αλλαγές δεν χρησιμοποιούνται — αποθηκεύστε πρώτα τον τιμοκατάλογο.
               </p>
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="preview-check-in">Check-in</Label>
+                  <Label htmlFor="preview-check-in">{elCommon.checkIn}</Label>
                   <Input
                     id="preview-check-in"
                     type="date"
@@ -678,7 +679,7 @@ export function PricingPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="preview-check-out">Check-out</Label>
+                  <Label htmlFor="preview-check-out">{elCommon.checkOut}</Label>
                   <Input
                     id="preview-check-out"
                     type="date"
@@ -689,7 +690,7 @@ export function PricingPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="preview-guests">Guests</Label>
+                  <Label htmlFor="preview-guests">{elCommon.guests}</Label>
                   <Input
                     id="preview-guests"
                     type="number"
@@ -708,7 +709,7 @@ export function PricingPage() {
                   onClick={() => void runPreview()}
                   disabled={previewLoading || !unitId}
                 >
-                  {previewLoading ? "Calculating…" : "Preview price"}
+                  {previewLoading ? "Υπολογισμός…" : "Προεπισκόπηση τιμής"}
                 </Button>
               </div>
               {preview ? (
@@ -717,7 +718,7 @@ export function PricingPage() {
                     {formatMoney(preview.totalAmount, preview.currency)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {nightsBetween(previewForm.checkIn, previewForm.checkOut)} nights · subtotal{" "}
+                    {nightsBetween(previewForm.checkIn, previewForm.checkOut)} νύχτες · καθαρή αξία {" "}
                     {formatMoney(preview.subtotalAmount, preview.currency)}
                   </p>
                   {preview.lineItems.length > 0 ? (

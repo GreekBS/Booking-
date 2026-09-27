@@ -28,7 +28,7 @@ export function RestrictionOverlayRows({
       {showMin && (
         <OverlayRow label={`Min ${rules.minNights}n`}>
           {dates.map((date) => (
-            <OverlayCell key={date} date={date} title={`Min stay: ${rules.minNights} nights`}>
+            <OverlayCell key={date} date={date} title={`Ελάχ. διαμονή: ${rules.minNights} νύχτες`}>
               {rules.minNights}
             </OverlayCell>
           ))}
@@ -37,7 +37,7 @@ export function RestrictionOverlayRows({
       {showMax && (
         <OverlayRow label={`Max ${rules.maxNights}n`}>
           {dates.map((date) => (
-            <OverlayCell key={date} date={date} title={`Max stay: ${rules.maxNights} nights`}>
+            <OverlayCell key={date} date={date} title={`Μέγ. διαμονή: ${rules.maxNights} νύχτες`}>
               {rules.maxNights}
             </OverlayCell>
           ))}
@@ -52,7 +52,7 @@ export function RestrictionOverlayRows({
               <OverlayCell
                 key={date}
                 date={date}
-                title={allowed ? "Check-in allowed" : "Closed to arrival"}
+                title={allowed ? "Επιτρέπεται άφιξη" : "Κλειστή άφιξη"}
                 className={allowed ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground/50"}
               >
                 {allowed ? "↓" : "·"}
@@ -70,7 +70,7 @@ export function RestrictionOverlayRows({
               <OverlayCell
                 key={date}
                 date={date}
-                title={allowed ? "Check-out allowed" : "Closed to departure"}
+                title={allowed ? "Επιτρέπεται αναχώρηση" : "Κλειστή αναχώρηση"}
                 className={allowed ? "text-sky-700 dark:text-sky-400" : "text-muted-foreground/50"}
               >
                 {allowed ? "↑" : "·"}

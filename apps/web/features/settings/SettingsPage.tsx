@@ -72,7 +72,7 @@ export function SettingsPage() {
       setCommerceSettings(commerce);
       setKeys(keyList.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load settings");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης ρυθμίσεων");
     } finally {
       setLoading(false);
     }
@@ -88,9 +88,9 @@ export function SettingsPage() {
     try {
       const updated = await updateTenantSettings(tenantId, tenantSettings);
       setTenantSettings(updated);
-      toastSuccess("Regional settings saved");
+      toastSuccess("Οι περιφερειακές ρυθμίσεις αποθηκεύτηκαν");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Save failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
@@ -106,9 +106,9 @@ export function SettingsPage() {
         defaultCurrency: commerceSettings.defaultCurrency,
       });
       setCommerceSettings(updated);
-      toastSuccess("Commerce settings saved");
+      toastSuccess("Οι ρυθμίσεις εμπορίου αποθηκεύτηκαν");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Save failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
@@ -127,7 +127,7 @@ export function SettingsPage() {
       toastSuccess(`${environment} key created — copy it now, it won't be shown again`);
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Create key failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας κλειδιού");
     } finally {
       setSaving(false);
     }
@@ -138,10 +138,10 @@ export function SettingsPage() {
     setSaving(true);
     try {
       await revokePublishableKey(tenantId, keyId);
-      toastSuccess("Key revoked");
+      toastSuccess("Το κλειδί ανακλήθηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Revoke failed");
+      toastError(err instanceof Error ? err.message : "Η ανάκληση απέτυχε");
     } finally {
       setSaving(false);
     }
@@ -156,10 +156,10 @@ export function SettingsPage() {
     setSaving(true);
     try {
       await updatePublishableKeyDomains(tenantId, key.id, allowedDomains);
-      toastSuccess("Allowed domains updated");
+      toastSuccess("Οι επιτρεπόμενοι τομείς ενημερώθηκαν");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Update failed");
+      toastError(err instanceof Error ? err.message : "Η ενημέρωση απέτυχε");
     } finally {
       setSaving(false);
     }
@@ -174,14 +174,14 @@ export function SettingsPage() {
   if (loading) return <Skeleton className="h-96 w-full" />;
   if (error) return <ErrorState message={error ?? "Error"} onRetry={() => void load()} />;
   if (!tenantSettings || !commerceSettings) {
-    return <ErrorState message="Failed to load settings." onRetry={() => void load()} />;
+    return <ErrorState message="Αποτυχία φόρτωσης ρυθμίσεων." onRetry={() => void load()} />;
   }
 
   return (
     <div>
       <PageHeader
-        title="Settings"
-        description="Organization, regional, commerce, fiscal, and storefront configuration"
+        title="Ρυθμίσεις"
+        description="Ρυθμίσεις οργανισμού, περιοχής, εμπορίου, φορολογίας και vitrine"
       />
 
       <Tabs
@@ -212,8 +212,8 @@ export function SettingsPage() {
         <TabsContent value="organization" className="mt-0 focus-visible:outline-none">
           <Surface>
             <SurfaceHeader
-              title="Tenant profile"
-              description="Read-only session context for the active organization"
+              title="Προφίλ οργανισμού"
+              description="Πλαίσιο συνεδρίας μόνο για ανάγνωση του ενεργού οργανισμού"
             />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
@@ -235,8 +235,8 @@ export function SettingsPage() {
         <TabsContent value="regional" className="mt-0 focus-visible:outline-none">
           <Surface>
             <SurfaceHeader
-              title="Regional settings"
-              description="Timezone, locale, currency, and display formats"
+              title="Περιφερειακές ρυθμίσεις"
+              description="Ζώνη ώρας, locale, νόμισμα και μορφές εμφάνισης"
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -307,7 +307,7 @@ export function SettingsPage() {
               </div>
               <div className="sm:col-span-2">
                 <Button disabled={saving} onClick={() => void saveTenantSettings()}>
-                  Save regional settings
+                  Αποθήκευση regional settings
                 </Button>
               </div>
             </div>
@@ -317,8 +317,8 @@ export function SettingsPage() {
         <TabsContent value="commerce" className="mt-0 focus-visible:outline-none">
           <Surface>
             <SurfaceHeader
-              title="Commerce settings"
-              description="Hold TTL, confirmation mode, and commerce currency"
+              title="Ρυθμίσεις εμπορίου"
+              description="TTL δέσμευσης, τρόπος επιβεβαίωσης και νόμισμα εμπορίου"
             />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
@@ -335,7 +335,7 @@ export function SettingsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Confirmation mode</Label>
+                <Label>Τρόπος επιβεβαίωσης</Label>
                 <Select
                   value={commerceSettings.confirmationMode}
                   onValueChange={(value) =>
@@ -366,7 +366,7 @@ export function SettingsPage() {
               </div>
               <div className="sm:col-span-3">
                 <Button disabled={saving} onClick={() => void saveCommerceSettings()}>
-                  Save commerce settings
+                  Αποθήκευση commerce settings
                 </Button>
               </div>
             </div>
@@ -380,8 +380,8 @@ export function SettingsPage() {
         <TabsContent value="storefront-keys" className="mt-0 focus-visible:outline-none">
           <Surface>
             <SurfaceHeader
-              title="Storefront publishable keys"
-              description="Only publishable keys are shown — secret keys are never stored or returned"
+              title="Δημόσια κλειδιά storefront"
+              description="Εμφανίζονται μόνο δημόσια κλειδιά — τα μυστικά δεν αποθηκεύονται ούτε επιστρέφονται"
               action={
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -390,7 +390,7 @@ export function SettingsPage() {
                     disabled={saving}
                     onClick={() => void createKey("test")}
                   >
-                    Create test key
+                    Δημιουργία δοκιμαστικού κλειδιού
                   </Button>
                   <Button
                     variant="outline"
@@ -398,19 +398,19 @@ export function SettingsPage() {
                     disabled={saving}
                     onClick={() => void createKey("live")}
                   >
-                    Create live key
+                    Δημιουργία παραγωγικού κλειδιού
                   </Button>
                 </div>
               }
             />
             {newKeyValue && (
               <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
-                <p className="font-medium">New key (copy now):</p>
+                <p className="font-medium">Νέο κλειδί (αντιγράψτε τώρα):</p>
                 <code className="mt-1 block break-all font-mono">{newKeyValue}</code>
               </div>
             )}
             {keys.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No publishable keys yet.</p>
+              <p className="text-sm text-muted-foreground">Δεν υπάρχουν ακόμα δημόσια κλειδιά.</p>
             ) : (
               <div className="space-y-3">
                 {keys.map((key) => (
@@ -455,13 +455,13 @@ function KeyRow({
         </div>
         {keyRecord.isActive && (
           <Button variant="destructive" size="sm" disabled={saving} onClick={onRevoke}>
-            Revoke
+            Ανάκληση
           </Button>
         )}
       </div>
       {keyRecord.isActive && (
         <div className="mt-3 space-y-2">
-          <Label>Allowed domains (comma-separated, * or *.example.com)</Label>
+          <Label>Όλαowed domains (comma-separated, * or *.example.com)</Label>
           <Input value={domains} onChange={(e) => setDomains(e.target.value)} />
           <Button size="sm" variant="outline" disabled={saving} onClick={() => onSaveDomains(domains)}>
             Update domains

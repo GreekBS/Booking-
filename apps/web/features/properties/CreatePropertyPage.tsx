@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { elCommon } from "@/lib/i18n";
 
 export function CreatePropertyPage() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export function CreatePropertyPage() {
       router.push("/dashboard/properties");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create property");
+      setError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας καταλύματος");
     } finally {
       setLoading(false);
     }
@@ -58,8 +59,8 @@ export function CreatePropertyPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="New property"
-        description="Create a listing for this tenant. A default unit is created with the guest capacity below."
+        title="Νέο κατάλυμα"
+        description="Δημιουργία καταχώρησης για τον οργανισμό. Δημιουργείται προεπιλεγμένη μονάδα με την παρακάτω χωρητικότητα."
       />
 
       <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-4">
@@ -67,16 +68,16 @@ export function CreatePropertyPage() {
 
         <Surface variant="panel" padding="md">
           <SurfaceHeader
-            title="Listing basics"
-            description="Name and type shown across the operator UI and storefront."
+            title="Βασικά καταχώρησης"
+            description="Όνομα και τύπος στο πάνελ χειριστή και στο storefront."
           />
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Όνομα</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
+              <Label htmlFor="type">Τύπος</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger id="type">
                   <SelectValue />
@@ -94,11 +95,11 @@ export function CreatePropertyPage() {
 
         <Surface variant="panel" padding="md">
           <SurfaceHeader
-            title="Default unit"
-            description="Initial room capacity. You can add more units after creation."
+            title="Προεπιλεγμένη μονάδα"
+            description="Αρχική χωρητικότητα. Μπορείτε να προσθέσετε μονάδες μετά τη δημιουργία."
           />
           <div className="space-y-2">
-            <Label htmlFor="maxGuests">Max guests</Label>
+            <Label htmlFor="maxGuests">Μέγ. επισκέπτες</Label>
             <Input
               id="maxGuests"
               type="number"
@@ -110,7 +111,7 @@ export function CreatePropertyPage() {
         </Surface>
 
         <Button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Create property"}
+          {loading ? `${elCommon.create}…` : elCommon.createProperty}
         </Button>
       </form>
     </div>

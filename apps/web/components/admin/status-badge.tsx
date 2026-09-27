@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { statusLabelEl } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type BadgeVariant =
@@ -71,12 +72,12 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   const variant = statusVariant[status] ?? statusVariant[status.toLowerCase()] ?? "outline";
-  const display = label ?? status.replace(/_/g, " ");
+  const display = label ?? statusLabelEl(status);
   return (
     <Badge
       variant={variant === "info" ? "secondary" : variant}
       className={cn(
-        "rounded-md px-2 py-0.5 text-[11px] font-medium capitalize",
+        "rounded-md px-2 py-0.5 text-[11px] font-medium",
         toneClass[variant],
         className,
       )}

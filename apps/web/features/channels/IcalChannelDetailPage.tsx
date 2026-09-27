@@ -178,7 +178,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
   if (error || !connection) {
     return (
       <ErrorState
-        message={error ?? "Connection not found"}
+        message={error ?? "Η σύνδεση δεν βρέθηκε"}
         onRetry={() => void load()}
       />
     );
@@ -200,7 +200,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
     <div className="space-y-5">
       <PageHeader
         title={connection.displayName}
-        description="iCal feed — blocks externally reserved dates. Does not create Talos bookings."
+        description="Ροή iCal — αποκλεισμός εξωτερικών ημερομηνιών. Δεν δημιουργεί κρατήσεις Talos."
         meta={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
@@ -211,16 +211,17 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               {channelProviderLabel(connection.provider)}
             </span>
             <span className="text-xs text-muted-foreground">
-              Feed: {connection.hasCredentialRef ? "connected" : "not set"}
+              Ροή: {connection.hasCredentialRef ? "συνδεδεμένη" : "μη ορισμένη"}
             </span>
             <span className="text-xs text-muted-foreground">
-              Inventory sync: {connection.inventoryApplyEnabled ? "on" : "off"}
+              Συγχρονισμός διαθεσιμότητας:{" "}
+              {connection.inventoryApplyEnabled ? "ενεργός" : "ανενεργός"}
             </span>
           </div>
         }
         actions={
           <Button variant="outline" asChild>
-            <Link href="/dashboard/channels">Back to channels</Link>
+            <Link href="/dashboard/channels">Πίσω στα κανάλια</Link>
           </Button>
         }
       />
@@ -242,9 +243,9 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
         </p>
       ) : null}
 
-      <Section title="Feed" description="Paste the HTTPS calendar URL. After save, Talos stores it securely and never shows the URL again.">
+      <Section title="Ροή" description="Επικολλήστε HTTPS URL ημερολογίου. Μετά την αποθήκευση το Talos το αποθηκεύει ασφαλώς και δεν το ξαναδείχνει.">
         <div className="space-y-2">
-          <Label htmlFor="feed-url">iCal feed URL</Label>
+          <Label htmlFor="feed-url">URL ροής iCal</Label>
           <Input
             id="feed-url"
             type="url"
@@ -261,11 +262,11 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await putIcalFeedCredentials(tenantId!, connectionId, feedUrl.trim());
-                  setActionMessage("Feed saved securely.");
+                  setActionMessage("Η ροή αποθηκεύτηκε με ασφάλεια.");
                 })
               }
             >
-              Save feed URL
+              Αποθήκευση feed URL
             </Button>
           ) : null}
           {canRotateCredential ? (
@@ -281,23 +282,23 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     version,
                   );
                   setActionMessage(
-                    "Feed rotated. Connection is paused — resume when ready, then refresh.",
+                    "Η ροή αντικαταστάθηκε. Η σύνδεση είναι σε παύση — συνεχίστε όταν είστε έτοιμοι και ανανεώστε.",
                   );
                 })
               }
             >
-              Rotate feed URL
+              Αντικατάσταση URL ροής
             </Button>
           ) : null}
         </div>
       </Section>
 
       <Section
-        title="Mode"
-        description="This pilot uses availability-block mode (blocks dates only)."
+        title="Λειτουργία"
+        description="Pilot λειτουργίας αποκλεισμού διαθεσιμότητας (μόνο ημερομηνίες)."
       >
         {connection.semanticMode === "availability_block_feed" ? (
-          <p className="text-sm text-success">Availability-block mode is active.</p>
+          <p className="text-sm text-success">Η λειτουργία αποκλεισμού διαθεσιμότητας είναι ενεργή.</p>
         ) : (
           <Button
             disabled={busy || connection.status === "disconnected"}
@@ -309,16 +310,16 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                   version,
                   connection.semanticMode,
                 );
-                setActionMessage("Availability-block mode enabled.");
+                setActionMessage("Ενεργοποιήθηκε η λειτουργία αποκλεισμού.");
               })
             }
           >
-            Enable availability-block mode
+            Ενεργοποίηση λειτουργίας αποκλεισμού
           </Button>
         )}
       </Section>
 
-      <Section title="Connection status" description="Activate after the feed is saved.">
+      <Section title="Κατάσταση σύνδεσης" description="Ενεργοποίηση αφού αποθηκευτεί η ροή.">
         <div className="flex flex-wrap gap-2">
           {canActivate ? (
             <Button
@@ -326,7 +327,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await activateChannelConnection(tenantId!, connectionId, version);
-                  setActionMessage("Connection activated.");
+                  setActionMessage("Η σύνδεση ενεργοποιήθηκε.");
                 })
               }
             >
@@ -340,7 +341,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await pauseChannelConnection(tenantId!, connectionId, version);
-                  setActionMessage("Connection paused.");
+                  setActionMessage("Η σύνδεση τέθηκε σε παύση.");
                 })
               }
             >
@@ -353,7 +354,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await resumeChannelConnection(tenantId!, connectionId, version);
-                  setActionMessage("Connection resumed.");
+                  setActionMessage("Η σύνδεση συνεχίστηκε.");
                 })
               }
             >
@@ -362,18 +363,18 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
           ) : null}
         </div>
         {!connection.hasCredentialRef ? (
-          <p className="text-xs text-muted-foreground">Save a feed URL before activating.</p>
+          <p className="text-xs text-muted-foreground">Αποθήκευση a feed URL before activating.</p>
         ) : null}
         {connection.status === "draft" ? (
           <p className="text-xs text-muted-foreground">
-            Save the feed first, then activate the connection.
+            Αποθήκευση the feed first, then activate the connection.
           </p>
         ) : null}
       </Section>
 
       <Section
-        title="Mapped unit"
-        description="Map this feed to one unit. Mapping requires an active or paused connection."
+        title="Αντιστοιχισμένη μονάδα"
+        description="Αντιστοιχίστε τη ροή σε μία μονάδα. Απαιτείται ενεργή ή παυμένη σύνδεση."
       >
         {!canMap ? (
           <p className="text-sm text-amber-800">Activate the connection before mapping.</p>
@@ -390,7 +391,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                   }}
                 >
                   <SelectTrigger aria-label="Mapping property">
-                    <SelectValue placeholder="Select property" />
+                    <SelectValue placeholder="Επιλέξτε κατάλυμα" />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map((p) => (
@@ -409,7 +410,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                 <Label>Unit</Label>
                 <Select value={unitId} onValueChange={setUnitId}>
                   <SelectTrigger aria-label="Mapped unit">
-                    <SelectValue placeholder="Select unit" />
+                    <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
                     {units.map((u) => (
@@ -427,7 +428,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                 id="external-listing"
                 value={externalListingId}
                 onChange={(e) => setExternalListingId(e.target.value)}
-                placeholder="Defaults to selected unit id"
+                placeholder="Προεπιλογή: id επιλεγμένης μονάδας"
               />
             </div>
             {activeMapping ? (
@@ -447,19 +448,19 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     unitId,
                     expectedSemanticConfigVersion: version,
                   });
-                  setActionMessage("Unit mapping saved.");
+                  setActionMessage("Η αντιστοίχιση μονάδας αποθηκεύτηκε.");
                 })
               }
             >
-              {activeMapping ? "Update mapping" : "Create mapping"}
+              {activeMapping ? "Ενημέρωση αντιστοίχισης" : "Δημιουργία αντιστοίχισης"}
             </Button>
           </>
         )}
       </Section>
 
       <Section
-        title="Inventory synchronization"
-        description="When enabled, imported blocked dates write as channel inventory for this connection."
+        title="Συγχρονισμός αποθέματος"
+        description="Όταν ενεργό, οι εισαγόμενες ημερομηνίες γράφονται ως απόθεμα καναλιού."
       >
         <div className="flex flex-wrap gap-2">
           {!connection.inventoryApplyEnabled ? (
@@ -468,7 +469,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await enableInventoryApply(tenantId!, connectionId, version);
-                  setActionMessage("Inventory synchronization enabled.");
+                  setActionMessage("Ενεργοποιήθηκε συγχρονισμός αποθέματος.");
                 })
               }
             >
@@ -481,7 +482,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
               onClick={() =>
                 void runAction(async () => {
                   await disableInventoryApply(tenantId!, connectionId, version);
-                  setActionMessage("Inventory synchronization disabled.");
+                  setActionMessage("Απενεργοποιήθηκε συγχρονισμός αποθέματος.");
                 })
               }
             >
@@ -491,7 +492,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
         </div>
       </Section>
 
-      <Section title="Refresh & status" description="Pull the latest feed and review connection health.">
+      <Section title="Ανανέωση και κατάσταση" description="Λήψη τελευταίας ροής και έλεγχος υγείας σύνδεσης.">
         <Button
           disabled={busy || connection.status !== "active"}
           onClick={() =>
@@ -503,7 +504,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
             })
           }
         >
-          Refresh feed now
+          Ανανέωση ροής now
         </Button>
         {connection.status !== "active" ? (
           <p className="text-xs text-muted-foreground">
@@ -527,7 +528,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                 {health.activeChannelImportCount}
               </p>
               <p>
-                <span className="text-muted-foreground">Inventory sync effective: </span>
+                <span className="text-muted-foreground">Ενεργός συγχρονισμός διαθεσιμότητας: </span>
                 {health.inventoryApplyEffective ? "Yes" : "No"}
               </p>
             </div>
@@ -583,8 +584,8 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
       </Section>
 
       <Section
-        title="Disconnect"
-        description="Releases imported calendar blocks for this connection. Hold and booking inventory is not released."
+        title="Αποσύνδεση"
+        description="Απελευθερώνει εισαγόμενα blocks ημερολογίου. Δέσμευση και απόθεμα κρατήσεων δεν απελευθερώνονται."
       >
         <div className="flex flex-wrap gap-2">
           <Button
@@ -614,32 +615,32 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirmKind === "disconnect"
-                ? "Disconnect this connection?"
-                : "Clear imported blocks?"}
+                ? "Αποσύνδεση αυτής της σύνδεσης;"
+                : "Καθαρισμός εισαγόμενων blocks;"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmKind === "disconnect"
-                ? "This disconnects the feed and releases imported calendar blocks. Guest bookings and holds are not affected."
-                : "This releases imported calendar blocks and pauses if currently active. Guest bookings and holds are not affected."}
+                ? "Αποσυνδέει τη ροή και απελευθερώνει εισαγόμενα blocks ημερολογίου. Κρατήσεις και δεσμεύσεις δεν επηρεάζονται."
+                : "Απελευθερώνει εισαγόμενα blocks και θέτει σε παύση αν είναι ενεργή. Κρατήσεις και δεσμεύσεις δεν επηρεάζονται."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
                 void runAction(async () => {
                   if (confirmKind === "disconnect") {
                     await disconnectChannelConnection(tenantId!, connectionId, version);
-                    setActionMessage("Connection disconnected.");
+                    setActionMessage("Η σύνδεση αποσυνδέθηκε.");
                   } else if (confirmKind === "deactivate_inventory") {
                     await deactivateConnectionInventory(tenantId!, connectionId, version);
-                    setActionMessage("Imported blocks cleared.");
+                    setActionMessage("Τα εισαγόμενα blocks καθαρίστηκαν.");
                   }
                   setConfirmKind(null);
                 })
               }
             >
-              Confirm
+              Επιβεβαίωση
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

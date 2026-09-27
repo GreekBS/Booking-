@@ -22,6 +22,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     setCollapsed(readSidebarCollapsed());
   }, []);
 
+  useEffect(() => {
+    const previous = document.documentElement.lang;
+    document.documentElement.lang = "el";
+    return () => {
+      document.documentElement.lang = previous;
+    };
+  }, []);
+
   function handleCollapsedChange(next: boolean) {
     setCollapsed(next);
     writeSidebarCollapsed(next);

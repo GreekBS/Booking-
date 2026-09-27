@@ -1,6 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { elCommon } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface ErrorStateProps {
@@ -11,7 +12,7 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = "Something went wrong",
+  title = elCommon.somethingWentWrong,
   message,
   onRetry,
   className,
@@ -24,7 +25,7 @@ export function ErrorState({
         <span className="text-sm">{message}</span>
         {onRetry ? (
           <Button variant="outline" size="sm" className="w-fit bg-background" onClick={onRetry}>
-            Try again
+            {elCommon.tryAgain}
           </Button>
         ) : null}
       </AlertDescription>

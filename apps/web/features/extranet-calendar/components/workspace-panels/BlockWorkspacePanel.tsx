@@ -22,6 +22,7 @@ import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import { useCalendarActions } from "../../context/CalendarActionsContext";
 import type { WorkspaceBlockTarget } from "../../types";
 import { WorkspacePanelActions } from "./WorkspacePanelActions";
+import { elCommon } from "@/lib/i18n";
 
 interface BlockWorkspacePanelProps {
   target: WorkspaceBlockTarget;
@@ -50,11 +51,11 @@ export function BlockWorkspacePanel({ target, active }: BlockWorkspacePanelProps
     setBusy(true);
     try {
       await releaseOperatorBlock(tenantId, target.unitId, target.id);
-      toastSuccess("Block removed");
+      toastSuccess("Το block αφαιρέθηκε");
       refreshCalendars();
       closeWorkspace();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to delete block");
+      toastError(err instanceof Error ? err.message : "Αποτυχία διαγραφής block");
     } finally {
       setBusy(false);
       setDeleteOpen(false);
@@ -75,25 +76,25 @@ export function BlockWorkspacePanel({ target, active }: BlockWorkspacePanelProps
           <p className="mt-1 text-xs text-muted-foreground">{target.unitName}</p>
         </div>
 
-        <DrawerSection title="Details">
+        <DrawerSection title="Λεπτομέρειες">
           <DrawerDetailList>
             <DrawerDetailRow
-              label="Type"
+              label="Τύπος"
               value={<span className="capitalize">{typeLabel}</span>}
             />
-            <DrawerDetailRow label="Reason" value={target.reason?.trim() || "—"} />
+            <DrawerDetailRow label="Αιτία" value={target.reason?.trim() || "—"} />
           </DrawerDetailList>
         </DrawerSection>
 
         <DrawerDivider />
 
-        <DrawerSection title="Dates">
+        <DrawerSection title="Ημερομηνίες">
           <DrawerDetailList>
-            <DrawerDetailRow label="Check-in" value={target.checkIn} />
-            <DrawerDetailRow label="Check-out" value={target.checkOut} />
+            <DrawerDetailRow label={elCommon.checkIn} value={target.checkIn} />
+            <DrawerDetailRow label={elCommon.checkOut} value={target.checkOut} />
             <DrawerDetailRow
-              label="Duration"
-              value={`${nights} night${nights !== 1 ? "s" : ""}`}
+              label="Διάρκεια"
+              value={`${nights} ${nights === 1 ? "νύχτα" : "νύχτες"}`}
             />
           </DrawerDetailList>
         </DrawerSection>
@@ -104,14 +105,14 @@ export function BlockWorkspacePanel({ target, active }: BlockWorkspacePanelProps
           <DrawerDetailList>
             <DrawerDetailRow label="Property" value={target.propertyName} />
             <DrawerDetailRow label="Unit" value={target.unitName} />
-            <DrawerDetailRow label="Block ID" value={target.id.slice(0, 12)} mono />
+            <DrawerDetailRow label="ID block" value={target.id.slice(0, 12)} mono />
           </DrawerDetailList>
         </DrawerSection>
       </div>
 
       <WorkspacePanelActions>
-        <Button size="sm" variant="secondary" disabled title="Edit coming soon">
-          Edit coming soon
+        <Button size="sm" variant="secondary" disabled title="Η επεξεργασία έρχεται σύντομα">
+          Η επεξεργασία έρχεται σύντομα
         </Button>
         <Button
           size="sm"
@@ -119,19 +120,19 @@ export function BlockWorkspacePanel({ target, active }: BlockWorkspacePanelProps
           disabled={busy}
           onClick={() => setDeleteOpen(true)}
         >
-          Release block
+          Απελευθέρωση block
         </Button>
         <Button size="sm" variant="ghost" onClick={closeWorkspace}>
-          Close
+          Κλείσιμο
         </Button>
       </WorkspacePanelActions>
 
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Release block"
-        description="Remove this block and open the dates on the calendar?"
-        confirmLabel="Release"
+        title="Απελευθέρωση block"
+        description="Να αφαιρεθεί το block και να ανοίξουν οι ημερομηνίες στο ημερολόγιο;"
+        confirmLabel="Απελευθέρωση"
         destructive
         loading={busy}
         onConfirm={handleDelete}

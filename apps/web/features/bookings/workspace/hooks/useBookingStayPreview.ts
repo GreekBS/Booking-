@@ -40,7 +40,7 @@ export function useBookingStayPreview(
         .catch((err) => {
           if (requestId !== requestIdRef.current) return;
           setPreview(null);
-          setError(err instanceof Error ? err.message : "Preview failed");
+          setError(err instanceof Error ? err.message : "Αποτυχία προεπισκόπησης");
         })
         .finally(() => {
           if (requestId === requestIdRef.current) {

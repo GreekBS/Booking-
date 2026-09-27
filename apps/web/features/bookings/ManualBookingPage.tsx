@@ -35,14 +35,15 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { elCommon, statusLabelEl } from "@/lib/i18n";
 
 const STEPS = [
-  "Property & unit",
-  "Dates & guests",
-  "Availability",
-  "Quote",
-  "Create booking",
-  "Confirm",
+  "Κατάλυμα & μονάδα",
+  "Ημερομηνίες & επισκέπτες",
+  "Διαθεσιμότητα",
+  "Προσφορά",
+  "Δημιουργία κράτησης",
+  "Επιβεβαίωση",
 ] as const;
 
 export function ManualBookingPage() {
@@ -99,7 +100,7 @@ export function ManualBookingPage() {
         setProperties(catalog.properties);
         setUnits(flattenCatalogUnits(catalog));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load catalog");
+        setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλόγου");
       } finally {
         setLoading(false);
       }
@@ -207,7 +208,7 @@ export function ManualBookingPage() {
         setStep(4);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load quote");
+          setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης προσφοράς");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -232,10 +233,10 @@ export function ManualBookingPage() {
       if (result.available) {
         setStep(3);
       } else {
-        toastError("Dates are not available");
+        toastError("Οι ημερομηνίες δεν είναι διαθέσιμες");
       }
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Availability check failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία ελέγχου διαθεσιμότητας");
     } finally {
       setSubmitting(false);
     }
@@ -257,7 +258,7 @@ export function ManualBookingPage() {
       setCommercialQuote(null);
       setStep(4);
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Quote failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία προσφοράς");
     } finally {
       setSubmitting(false);
     }
@@ -299,14 +300,14 @@ export function ManualBookingPage() {
       }
 
       setBooking(created);
-      toastSuccess(confirm ? "Booking confirmed" : "Booking created");
+      toastSuccess(confirm ? "Η κράτηση επιβεβαιώθηκε" : "Η κράτηση δημιουργήθηκε");
       if (confirm) {
         setStep(5);
       } else {
         router.push(`/dashboard/bookings?bookingId=${encodeURIComponent(created.id)}`);
       }
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Booking failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας κράτησης");
     } finally {
       setSubmitting(false);
     }
@@ -328,23 +329,23 @@ export function ManualBookingPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <PageHeader
-        title="New booking"
+        title="Νέα κράτηση"
         description={
           convertingHold
-            ? "Complete guest details to convert the existing hold"
+            ? "Συμπληρώστε τα στοιχεία επισκέπτη για μετατροπή της υπάρχουσας δέσμευσης"
             : selectedPropertyName
-              ? `Manual reservation · ${selectedPropertyName}`
-              : "Create a reservation without payment"
+              ? `Χειροκίνητη κράτηση · ${selectedPropertyName}`
+              : "Δημιουργία κράτησης χωρίς online πληρωμή"
         }
         actions={
           <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/bookings">Back</Link>
+            <Link href="/dashboard/bookings">{elCommon.back}</Link>
           </Button>
         }
       />
 
       {!convertingHold ? (
-        <ol className="flex flex-wrap gap-1.5" aria-label="Booking steps">
+        <ol className="flex flex-wrap gap-1.5" aria-label="Βήματα κράτησης">
           {STEPS.map((label, index) => (
             <li key={label}>
               <span
@@ -366,18 +367,18 @@ export function ManualBookingPage() {
 
       <Surface variant="panel" padding="md">
         <SurfaceHeader
-          title={convertingHold ? "Guest & confirm" : STEPS[step]!}
+          title={convertingHold ? "Επισκέπτης & επιβεβαίωση" : STEPS[step]!}
           description={
             convertingHold
-              ? "Booking will consume the hold-backed quote"
-              : `Step ${step + 1} of ${STEPS.length}`
+              ? "Η κράτηση θα καταναλώσει την προσφορά της δέσμευσης"
+              : `Βήμα ${step + 1} από ${STEPS.length}`
           }
         />
         <div className="space-y-4">
           {step === 0 && !convertingHold && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="mb-property">Property</Label>
+                <Label htmlFor="mb-property">{elCommon.property}</Label>
                 <Select
                   value={propertyId}
                   onValueChange={(v) => {
@@ -385,29 +386,30 @@ export function ManualBookingPage() {
                     setUnitId("");
                   }}
                 >
-                  <SelectTrigger id="mb-property" aria-label="Select property">
-                    <SelectValue placeholder="Select property" />
+                  <SelectTrigger id="mb-property" aria-label={`Επιλογή ${elCommon.property.toLowerCase()}`}>
+                    <SelectValue placeholder={`Επιλέξτε ${elCommon.property.toLowerCase()}`} />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
-                        {p.id === activePropertyId ? " (active)" : ""}
+                        {p.id === activePropertyId ? " (ενεργό)" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {activePropertyId ? (
                   <p className="text-[11px] text-muted-foreground">
-                    Defaults to Active Property. You may select another authorized property.
+                    Προεπιλογή το ενεργό κατάλυμα. Μπορείτε να επιλέξετε άλλο εξουσιοδοτημένο
+                    κατάλυμα.
                   </p>
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mb-unit">Unit</Label>
+                <Label htmlFor="mb-unit">{elCommon.unit}</Label>
                 <Select value={unitId} onValueChange={setUnitId} disabled={!propertyId}>
-                  <SelectTrigger id="mb-unit" aria-label="Select unit">
-                    <SelectValue placeholder="Select unit" />
+                  <SelectTrigger id="mb-unit" aria-label={`Επιλογή ${elCommon.unit.toLowerCase()}`}>
+                    <SelectValue placeholder={`Επιλέξτε ${elCommon.unit.toLowerCase()}`} />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredUnits.map((u) => (
@@ -419,7 +421,7 @@ export function ManualBookingPage() {
                 </Select>
               </div>
               <Button disabled={!unitId} onClick={() => setStep(1)}>
-                Continue
+                {elCommon.continue}
               </Button>
             </>
           )}
@@ -428,7 +430,7 @@ export function ManualBookingPage() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="mb-check-in">Check-in</Label>
+                  <Label htmlFor="mb-check-in">{elCommon.checkIn}</Label>
                   <Input
                     id="mb-check-in"
                     type="date"
@@ -437,7 +439,7 @@ export function ManualBookingPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="mb-check-out">Check-out</Label>
+                  <Label htmlFor="mb-check-out">{elCommon.checkOut}</Label>
                   <Input
                     id="mb-check-out"
                     type="date"
@@ -447,7 +449,7 @@ export function ManualBookingPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mb-guests">Guests</Label>
+                <Label htmlFor="mb-guests">{elCommon.guests}</Label>
                 <Input
                   id="mb-guests"
                   type="number"
@@ -458,10 +460,10 @@ export function ManualBookingPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(0)}>
-                  Back
+                  {elCommon.back}
                 </Button>
                 <Button disabled={!checkIn || !checkOut} onClick={() => setStep(2)}>
-                  Continue
+                  {elCommon.continue}
                 </Button>
               </div>
             </>
@@ -470,17 +472,18 @@ export function ManualBookingPage() {
           {step === 2 && !convertingHold && (
             <>
               <p className="text-sm text-muted-foreground">
-                Check availability for {checkIn} → {checkOut}, {guestCount} guest(s)
+                Έλεγχος διαθεσιμότητας για {checkIn} → {checkOut}, {guestCount}{" "}
+                {guestCount === 1 ? "επισκέπτη" : "επισκέπτες"}
               </p>
               {availabilityOk === false ? (
-                <p className="text-sm text-destructive">Not available for selected dates.</p>
+                <p className="text-sm text-destructive">Μη διαθέσιμο για τις επιλεγμένες ημερομηνίες.</p>
               ) : null}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(1)}>
-                  Back
+                  {elCommon.back}
                 </Button>
                 <Button disabled={submitting} onClick={() => void checkAvailability()}>
-                  {submitting ? "Checking…" : "Check availability"}
+                  {submitting ? "Έλεγχος…" : "Έλεγχος διαθεσιμότητας"}
                 </Button>
               </div>
             </>
@@ -488,17 +491,17 @@ export function ManualBookingPage() {
 
           {step === 3 && !convertingHold && (
             <>
-              <p className="text-sm text-success">Dates are available.</p>
+              <p className="text-sm text-success">Οι ημερομηνίες είναι διαθέσιμες.</p>
               <p className="text-xs text-muted-foreground">
-                Price preview is read-only. Inventory Hold is created only when you create the
-                booking.
+                Η προεπισκόπηση τιμής είναι μόνο για ανάγνωση. Η δέσμευση αποθέματος δημιουργείται
+                μόνο κατά τη δημιουργία της κράτησης.
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)}>
-                  Back
+                  {elCommon.back}
                 </Button>
                 <Button disabled={submitting} onClick={() => void generateQuote()}>
-                  {submitting ? "Calculating…" : "Preview price"}
+                  {submitting ? "Υπολογισμός…" : "Προεπισκόπηση τιμής"}
                 </Button>
               </div>
             </>
@@ -508,33 +511,33 @@ export function ManualBookingPage() {
             <>
               <div className="rounded-md border border-border bg-surface-subtle/50 px-3 py-2 text-sm">
                 <span className="text-muted-foreground">
-                  {commercialQuote ? "Quoted total · " : "Estimated total · "}
+                  {commercialQuote ? "Σύνολο προσφοράς · " : "Εκτιμώμενο σύνολο · "}
                 </span>
                 <span className="font-semibold tabular-nums">
                   {formatMoney(displayTotal.totalAmount, displayTotal.currency)}
                 </span>
                 {!commercialQuote ? (
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Estimate only — final quote is created with the booking.
+                    Μόνο εκτίμηση — η τελική προσφορά δημιουργείται με την κράτηση.
                   </p>
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mb-guest-search">Find existing guest</Label>
+                <Label htmlFor="mb-guest-search">Εύρεση υπάρχοντος επισκέπτη</Label>
                 <Input
                   id="mb-guest-search"
-                  placeholder="Search by name, email, or phone (min 2 chars)…"
+                  placeholder="Αναζήτηση με όνομα, email ή τηλέφωνο (min. 2 χαρακτ.)…"
                   value={guestSearch}
                   onChange={(e) => setGuestSearch(e.target.value)}
                   disabled={!propertyId}
                 />
                 {!propertyId ? (
                   <p className="text-[11px] text-muted-foreground">
-                    Select a property in step 1 to search CRM guests.
+                    Επιλέξτε κατάλυμα στο βήμα 1 για αναζήτηση επισκεπτών CRM.
                   </p>
                 ) : null}
                 {guestSearchLoading ? (
-                  <p className="text-xs text-muted-foreground">Searching…</p>
+                  <p className="text-xs text-muted-foreground">Αναζήτηση…</p>
                 ) : null}
                 {guestSearchResults.length > 0 ? (
                   <ul className="max-h-40 overflow-y-auto rounded-md border border-border">
@@ -547,7 +550,7 @@ export function ManualBookingPage() {
                         >
                           <span className="font-medium">{g.displayName}</span>
                           <span className="text-xs text-muted-foreground">
-                            {[g.email, g.phone].filter(Boolean).join(" · ") || "No contact"}
+                            {[g.email, g.phone].filter(Boolean).join(" · ") || "Χωρίς στοιχεία επικοινωνίας"}
                           </span>
                         </button>
                       </li>
@@ -557,17 +560,17 @@ export function ManualBookingPage() {
                 {selectedGuestId ? (
                   <div className="flex items-center justify-between rounded-md border border-border bg-surface-subtle/50 px-3 py-2 text-sm">
                     <span>
-                      Linked CRM guest ·{" "}
-                      <span className="font-medium">{guest.name || "Selected"}</span>
+                      Συνδεδεμένος επισκέπτης CRM ·{" "}
+                      <span className="font-medium">{guest.name || "Επιλεγμένος"}</span>
                     </span>
                     <Button type="button" variant="ghost" size="sm" onClick={clearGuestSelection}>
-                      Clear
+                      {elCommon.remove}
                     </Button>
                   </div>
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mb-guest-name">Guest name</Label>
+                <Label htmlFor="mb-guest-name">Όνομα επισκέπτη</Label>
                 <Input
                   id="mb-guest-name"
                   value={guest.name}
@@ -578,7 +581,7 @@ export function ManualBookingPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mb-guest-email">Guest email</Label>
+                <Label htmlFor="mb-guest-email">Email επισκέπτη</Label>
                 <Input
                   id="mb-guest-email"
                   type="email"
@@ -590,7 +593,7 @@ export function ManualBookingPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mb-guest-phone">Phone (optional)</Label>
+                <Label htmlFor="mb-guest-phone">{`${elCommon.phone} (${elCommon.optional.toLowerCase()})`}</Label>
                 <Input
                   id="mb-guest-phone"
                   value={guest.phone}
@@ -603,21 +606,21 @@ export function ManualBookingPage() {
               <div className="flex flex-wrap gap-2">
                 {!convertingHold ? (
                   <Button variant="outline" onClick={() => setStep(3)}>
-                    Back
+                    {elCommon.back}
                   </Button>
                 ) : null}
                 <Button
                   disabled={submitting || !guest.name || !guest.email}
                   onClick={() => void createBooking(false)}
                 >
-                  Create pending
+                  Δημιουργία (σε αναμονή)
                 </Button>
                 <Button
                   variant="secondary"
                   disabled={submitting || !guest.name || !guest.email}
                   onClick={() => void createBooking(true)}
                 >
-                  Create &amp; confirm
+                  Δημιουργία &amp; επιβεβαίωση
                 </Button>
               </div>
             </>
@@ -626,12 +629,12 @@ export function ManualBookingPage() {
           {step === 5 && booking && (
             <>
               <p className="text-sm">
-                Booking <span className="font-mono text-xs">{booking.id.slice(0, 8)}</span> is{" "}
-                <strong>{booking.status}</strong>.
+                Η κράτηση <span className="font-mono text-xs">{booking.id.slice(0, 8)}</span> είναι{" "}
+                <strong>{statusLabelEl(booking.status)}</strong>.
               </p>
               <Button asChild>
                 <Link href={`/dashboard/bookings?bookingId=${encodeURIComponent(booking.id)}`}>
-                  Open reservation
+                  Άνοιγμα κράτησης
                 </Link>
               </Button>
             </>

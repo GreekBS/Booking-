@@ -19,6 +19,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { elCommon, elNav } from "@/lib/i18n";
 
 export type AdminNavItem = {
   href: string;
@@ -37,51 +38,51 @@ export type AdminNavSection = {
 export const adminNavSections: AdminNavSection[] = [
   {
     id: "overview",
-    label: "Overview",
+    label: elNav.overview,
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/dashboard", label: elNav.dashboard, icon: LayoutDashboard, exact: true },
     ],
   },
   {
     id: "operations",
-    label: "Operations",
+    label: elNav.operations,
     items: [
-      { href: "/dashboard/bookings", label: "Bookings", icon: BookOpen },
-      { href: "/dashboard/availability", label: "Availability", icon: CalendarDays },
-      { href: "/dashboard/guests", label: "Guests", icon: Users },
-      { href: "/dashboard/housekeeping", label: "Housekeeping", icon: ClipboardList },
+      { href: "/dashboard/bookings", label: elNav.bookings, icon: BookOpen },
+      { href: "/dashboard/availability", label: elNav.availability, icon: CalendarDays },
+      { href: "/dashboard/guests", label: elNav.guests, icon: Users },
+      { href: "/dashboard/housekeeping", label: elNav.housekeeping, icon: ClipboardList },
     ],
   },
   {
     id: "revenue",
-    label: "Revenue",
+    label: elNav.revenue,
     items: [
-      { href: "/dashboard/pricing", label: "Pricing", icon: DollarSign },
-      { href: "/dashboard/payments", label: "Payments", icon: Wallet },
-      { href: "/dashboard/fiscal-documents", label: "Fiscal Documents", icon: FileText },
+      { href: "/dashboard/pricing", label: elNav.pricing, icon: DollarSign },
+      { href: "/dashboard/payments", label: elNav.payments, icon: Wallet },
+      { href: "/dashboard/fiscal-documents", label: elNav.fiscalDocuments, icon: FileText },
     ],
   },
   {
     id: "distribution",
-    label: "Distribution",
-    items: [{ href: "/dashboard/channels", label: "Channels", icon: Network }],
+    label: elNav.distribution,
+    items: [{ href: "/dashboard/channels", label: elNav.channels, icon: Network }],
   },
   {
     id: "property",
-    label: "Property",
+    label: elNav.property,
     items: [
-      { href: "/dashboard/properties", label: "Properties", icon: Building2 },
-      { href: "/dashboard/units", label: "Units", icon: DoorOpen },
-      { href: "/dashboard/amenities", label: "Amenities", icon: Sparkles },
-      { href: "/dashboard/policies", label: "Policies", icon: Shield },
+      { href: "/dashboard/properties", label: elNav.properties, icon: Building2 },
+      { href: "/dashboard/units", label: elNav.units, icon: DoorOpen },
+      { href: "/dashboard/amenities", label: elNav.amenities, icon: Sparkles },
+      { href: "/dashboard/policies", label: elNav.policies, icon: Shield },
     ],
   },
   {
     id: "administration",
-    label: "Administration",
+    label: elNav.administration,
     items: [
-      { href: "/dashboard/members", label: "Members", icon: UserCog },
-      { href: "/dashboard/settings", label: "Settings", icon: Settings },
+      { href: "/dashboard/members", label: elNav.members, icon: UserCog },
+      { href: "/dashboard/settings", label: elNav.settings, icon: Settings },
     ],
   },
 ];
@@ -146,7 +147,7 @@ export function AdminSidebar({
             "font-display text-[1.35rem] font-semibold tracking-tight text-sidebar-primary",
             collapsed && "text-lg",
           )}
-          aria-label="Talos dashboard"
+          aria-label={elNav.talosDashboard}
         >
           {collapsed ? "T" : "TALOS"}
         </Link>
@@ -154,7 +155,7 @@ export function AdminSidebar({
 
       <nav
         className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-2.5 py-4"
-        aria-label="Operator navigation"
+        aria-label={elNav.operatorNavigation}
       >
         {adminNavSections.map((section) => (
           <div key={section.id}>
@@ -205,14 +206,14 @@ export function AdminSidebar({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
               collapsed && "justify-center px-2",
             )}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? elNav.expandSidebar : elNav.collapseSidebar}
           >
             {collapsed ? (
               <PanelLeft className="h-4 w-4" />
             ) : (
               <>
                 <PanelLeftClose className="h-4 w-4" />
-                <span>Collapse</span>
+                <span>{elCommon.collapse}</span>
               </>
             )}
           </button>

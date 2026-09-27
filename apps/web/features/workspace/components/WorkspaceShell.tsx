@@ -83,7 +83,7 @@ export function WorkspaceShell({
         aria-hidden={isDocked ? false : !open}
         role={isDocked ? "complementary" : "dialog"}
         aria-modal={isDocked ? undefined : open}
-        aria-label={mode === "date-edit" ? "Date editor" : "Workspace"}
+        aria-label={mode === "date-edit" ? "Επεξεργαστής ημερομηνιών" : "Χώρος εργασίας"}
         onClick={(event) => event.stopPropagation()}
       >
         {resizable && <WorkspaceResizeHandle onResizeStart={onResizeStart} />}

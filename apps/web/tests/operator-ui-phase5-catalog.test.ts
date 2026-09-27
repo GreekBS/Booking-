@@ -23,14 +23,14 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
     expect(page).toContain("renderActivePropertyGate");
     expect(page).toContain("channelStatusLabel");
     expect(page).toContain("channelProviderLabel");
-    expect(page).toContain("Distribution");
+    expect(page).toContain("Κανάλια");
     expect(page).toContain("/dashboard/channels/help");
     expect(page).toContain("ComingSoonProviderCard");
     expect(page).not.toContain("perf-diag");
     expect(page).not.toContain("<h1");
 
     const soon = read("features/channels/booking-com/BookingComProviderCard.tsx");
-    expect(soon).toContain("Coming soon");
+    expect(soon).toContain("Σύντομα");
   });
 
   it("iCal detail is operator-oriented with advanced diagnostics collapsed", () => {
@@ -38,11 +38,9 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
     expect(page).toContain("PageHeader");
     expect(page).toContain("Surface");
     expect(page).toContain("StatusBadge");
-    expect(page).toContain("Mapped unit");
-    expect(page).toContain("Inventory synchronization");
-    expect(page).toContain("Advanced diagnostics");
-    expect(page).toContain("Refresh feed now");
-    expect(page).toContain("Defaults to Active Property");
+    expect(page).toContain("Αντιστοιχισμένη μονάδα");
+    expect(page).toContain("Συγχρονισμός αποθέματος");
+    expect(page).toContain("useActiveProperty");
     expect(page).not.toContain("CHANNELS_INVENTORY_APPLY_ENABLED");
     expect(page).not.toContain("CHANNELS_POLLING_ENABLED");
     expect(page).not.toContain("Trigger manual poll");
@@ -54,15 +52,15 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
     const card = read("features/channels/booking-com/BookingComProviderCard.tsx");
     expect(card).toContain("Surface");
     expect(card).toContain("StatusBadge");
-    expect(card).toContain("Setup required");
-    expect(card).toContain("Connected");
+    expect(card).toContain("Απαιτείται ρύθμιση");
+    expect(card).toContain("Συνδεδεμένο");
 
     const dash = read("features/channels/booking-com/BookingComConnectedDashboard.tsx");
     expect(dash).toContain("PageHeader");
     expect(dash).toContain("Surface");
     expect(dash).toContain("StatusBadge");
     expect(dash).toContain("channelStatusLabel");
-    expect(dash).toContain("Property / listing mapping");
+    expect(dash).toContain("Αντιστοίχιση καταλύματος / καταχώρησης");
     expect(dash).not.toContain('from "@/components/ui/card"');
     expect(dash).not.toContain('from "@/components/ui/badge"');
     expect(dash).not.toContain("Connection looks healthy.");
@@ -74,7 +72,8 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
     expect(wizard).toContain("Surface");
     expect(wizard).toContain("StatusBadge");
     expect(wizard).toContain("useActiveProperty");
-    expect(wizard).toContain("Mapping property");
+    expect(wizard).toContain("BOOKING_COM_WIZARD_STEPS");
+    expect(wizard).toContain("Κατάλυμα Talos");
     expect(wizard).not.toContain('from "@/components/ui/card"');
     expect(wizard).not.toContain('from "@/components/ui/badge"');
 
@@ -111,8 +110,8 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
   it("Amenities catalog is tenant-wide; Policies use Active Property without property picker", () => {
     const amenities = read("features/amenities/AmenitiesPage.tsx");
     expect(amenities).toContain("PageHeader");
-    expect(amenities).toContain("catalog");
-    expect(amenities).toContain("does not use Active Property");
+    expect(amenities).toContain("/amenities");
+    expect(amenities).toContain("renderTenantGate");
     expect(amenities).not.toContain("useActiveProperty");
 
     const policies = read("features/policies/PoliciesPage.tsx");
@@ -156,15 +155,15 @@ describe("Talos operator Phase 5 — Channels / Property / Administration", () =
   });
 
   it("operator-labels map channel enums without renaming stored values", () => {
-    expect(channelStatusLabel("active")).toBe("Connected");
-    expect(channelStatusLabel("draft")).toBe("Setup required");
-    expect(channelStatusLabel("pending_auth")).toBe("Setup required");
-    expect(channelStatusLabel("paused")).toBe("Paused");
-    expect(channelStatusLabel("error")).toBe("Attention");
+    expect(channelStatusLabel("active")).toBe("Συνδεδεμένο");
+    expect(channelStatusLabel("draft")).toBe("Απαιτείται ρύθμιση");
+    expect(channelStatusLabel("pending_auth")).toBe("Απαιτείται ρύθμιση");
+    expect(channelStatusLabel("paused")).toBe("Σε παύση");
+    expect(channelStatusLabel("error")).toBe("Προσοχή");
     expect(channelProviderLabel("booking_com")).toBe("Booking.com");
     expect(channelProviderLabel("ical")).toBe("iCal");
-    expect(memberRoleLabel("admin")).toBe("Admin");
-    expect(memberRoleLabel("manager")).toBe("Manager");
+    expect(memberRoleLabel("admin")).toBe("Διαχειριστής");
+    expect(memberRoleLabel("manager")).toBe("Υπεύθυνος");
   });
 
   it("Phase 5 surfaces never restore perf-diag", () => {

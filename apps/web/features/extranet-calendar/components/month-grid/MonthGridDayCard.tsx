@@ -41,10 +41,10 @@ function statusShortLabel(
   cellType: ReturnType<typeof resolveCellState>["type"],
   label: string,
 ): string {
-  if (cellType === "booked") return label.split(" · ")[0] ?? "Booked";
-  if (cellType === "held") return "Hold";
+  if (cellType === "booked") return label.split(" · ")[0] ?? "Κρατημένο";
+  if (cellType === "held") return "Δέσμευση";
   if (cellType === "available") return "";
-  if (cellType === "closed") return "Closed";
+  if (cellType === "closed") return "Κλειστό";
   return label.length > 18 ? `${label.slice(0, 18)}…` : label;
 }
 

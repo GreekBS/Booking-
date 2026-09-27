@@ -63,7 +63,7 @@ function ExtranetCalendarContent() {
       const catalog = await fetchPropertyUnitCatalog(tenantId);
       setProperties(catalog.properties);
     } catch (err) {
-      setCatalogError(err instanceof Error ? err.message : "Failed to load properties");
+      setCatalogError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλυμάτων");
     } finally {
       setCatalogLoading(false);
     }
@@ -194,9 +194,9 @@ function ExtranetCalendarContent() {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <EmptyState
-          title="Create your first property"
-          description="Add a property to start managing rooms on the availability calendar."
-          action={{ label: "Go to properties", href: "/dashboard/properties", onClick: () => {} }}
+          title="Δημιουργήστε το πρώτο σας κατάλυμα"
+          description="Προσθέστε κατάλυμα για να διαχειριστείτε δωμάτια στο ημερολόγιο διαθεσιμότητας."
+          action={{ label: "Μετάβαση στα καταλύματα", href: "/dashboard/properties", onClick: () => {} }}
         />
       </div>
     );

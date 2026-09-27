@@ -17,39 +17,39 @@ export function BookingPricingSection({
   proposedPreview,
 }: BookingPricingSectionProps) {
   return (
-    <WorkspaceSection title="Reservation pricing">
+    <WorkspaceSection title="Τιμολόγηση κράτησης">
       <p className="text-[11px] text-muted-foreground">
-        Quote / commercial stay price. Folio settlement is shown separately below.
+        Εμπορική τιμή διαμονής (προσφορά). Ο λογαριασμός (folio) εμφανίζεται ξεχωριστά παρακάτω.
       </p>
       {quote ? (
         <>
           {proposedPreview ? (
             <p className="mb-2 text-xs text-muted-foreground">
-              Proposed total after stay change:{" "}
+              Προτεινόμενο σύνολο μετά από αλλαγή διαμονής:{" "}
               {formatMoney(proposedPreview.totalAmount, proposedPreview.currency)}
             </p>
           ) : null}
           <WorkspaceDetailList>
             <WorkspaceDetailRow
-              label="Nightly total"
+              label="Σύνολο νυχτών"
               value={formatMoney(quote.subtotalAmount, quote.currency)}
             />
             <WorkspaceDetailRow
-              label="Fees"
+              label="Τέλη"
               value={formatMoney(quote.feesAmount, quote.currency)}
             />
             <WorkspaceDetailRow
-              label="Taxes (quote)"
+              label="Φόροι (προσφορά)"
               value={formatMoney(quote.taxesAmount, quote.currency)}
             />
             {discountTotal !== null ? (
               <WorkspaceDetailRow
-                label="Discounts"
+                label="Εκπτώσεις"
                 value={`−${formatMoney(String(discountTotal), quote.currency)}`}
               />
             ) : null}
             <WorkspaceDetailRow
-              label="Reservation total"
+              label="Σύνολο κράτησης"
               value={formatMoney(quote.totalAmount, quote.currency)}
               bold
             />
@@ -57,7 +57,7 @@ export function BookingPricingSection({
           {quote.lineItems.length > 0 ? (
             <div className="overflow-hidden rounded-md border border-border">
               <div className="border-b border-border bg-surface-subtle px-3 py-2 text-xs font-medium text-muted-foreground">
-                Nightly breakdown
+                Ανάλυση ανά νύχτα
               </div>
               <div className="max-h-40 overflow-y-auto">
                 {quote.lineItems.map((line) => (
@@ -76,7 +76,7 @@ export function BookingPricingSection({
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Quote unavailable</p>
+        <p className="text-sm text-muted-foreground">Η προσφορά δεν είναι διαθέσιμη</p>
       )}
     </WorkspaceSection>
   );

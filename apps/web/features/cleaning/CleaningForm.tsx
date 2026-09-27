@@ -56,7 +56,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
       setExecution(next.activeExecution);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load cleaning");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καθαρισμού");
     } finally {
       setLoading(false);
     }
@@ -72,10 +72,10 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
     try {
       const result = await startCleaning(tenantId, unitId);
       setExecution(result.execution);
-      toastSuccess(result.created ? "Cleaning started" : "Cleaning resumed");
+      toastSuccess(result.created ? "Ξεκίνησε ο καθαρισμός" : "Συνεχίστηκε ο καθαρισμός");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Could not start cleaning");
+      toastError(err instanceof Error ? err.message : "Δεν ήταν δυνατή η έναρξη καθαρισμού");
     } finally {
       setBusy(false);
     }
@@ -94,7 +94,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
       await updateCleaningItem(tenantId, execution.id, itemId, checked);
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Could not update item");
+      toastError(err instanceof Error ? err.message : "Δεν ήταν δυνατή η ενημέρωση στοιχείου");
       await load();
     }
   }
@@ -110,11 +110,11 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
     if (!file || !tenantId || !execution) return;
 
     if (file.size > MAX_PHOTO_BYTES) {
-      toastError("Photo is larger than 10MB");
+      toastError("Η φωτογραφία είναι μεγαλύτερη από 10MB");
       return;
     }
     if (execution.photos.length >= MAX_PHOTOS) {
-      toastError(`A cleaning can hold at most ${MAX_PHOTOS} photos`);
+      toastError(`Ένας καθαρισμός δέχεται το πολύ ${MAX_PHOTOS} φωτογραφίες`);
       return;
     }
 
@@ -126,10 +126,10 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
         file,
         pendingItemRef.current,
       );
-      toastSuccess("Photo added");
+      toastSuccess("Προστέθηκε φωτογραφία");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Photo upload failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία μεταφόρτωσης φωτογραφίας");
     } finally {
       pendingItemRef.current = null;
       setBusy(false);
@@ -143,7 +143,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
       await deleteCleaningPhoto(tenantId, execution.id, photoId);
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Could not remove photo");
+      toastError(err instanceof Error ? err.message : "Δεν ήταν δυνατή η αφαίρεση φωτογραφίας");
     } finally {
       setBusy(false);
     }
@@ -160,12 +160,12 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
       setDone(true);
       toastSuccess(
         result.housekeeping?.status === "CLEAN"
-          ? "Cleaning complete — unit marked clean"
-          : "Cleaning complete",
+          ? "Ολοκληρώθηκε ο καθαρισμός — η μονάδα σημειώθηκε καθαρή"
+          : "Ολοκληρώθηκε ο καθαρισμός",
       );
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Could not complete cleaning");
+      toastError(err instanceof Error ? err.message : "Δεν ήταν δυνατή η ολοκλήρωση καθαρισμού");
     } finally {
       setBusy(false);
     }
@@ -174,7 +174,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
   if (tenantLoading || loading) return <Skeleton className="h-96 w-full" />;
   if (tenantError) return <ErrorState message={tenantError} />;
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
-  if (!context) return <ErrorState message="Unit not found" />;
+  if (!context) return <ErrorState message="Η μονάδα δεν βρέθηκε" />;
 
   const readiness = context.readiness;
   const blockers = readiness?.blockers ?? [];
@@ -202,7 +202,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
         <h1 className="text-2xl font-semibold leading-tight">{context.unitName}</h1>
         <p className="text-sm text-muted-foreground">{context.propertyName}</p>
         <p className="text-sm">
-          Status:{" "}
+          Κατάσταση:{" "}
           <span
             className={
               context.housekeepingStatus === "DIRTY"
@@ -210,38 +210,38 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                 : "font-semibold text-emerald-700"
             }
           >
-            {context.housekeepingStatus === "DIRTY" ? "Dirty" : "Clean"}
+            {context.housekeepingStatus === "DIRTY" ? "Βρώμικο" : "Καθαρό"}
           </span>
         </p>
       </header>
 
       {done || (execution && execution.status === "COMPLETED") ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-          <p className="font-medium text-emerald-900">Cleaning complete</p>
+          <p className="font-medium text-emerald-900">Ολοκληρώθηκε ο καθαρισμός</p>
           <p className="mt-1 text-sm text-emerald-800">
-            The housekeeping task is closed and this unit is marked clean.
+            Η εργασία καθαριότητας έκλεισε και η μονάδα σημειώθηκε καθαρή.
           </p>
           <Link
             href={`/dashboard/housekeeping/history?unitId=${context.unitId}`}
             className="mt-3 inline-block text-sm underline"
           >
-            View cleaning history
+            Ιστορικό καθαρισμών
           </Link>
         </div>
       ) : null}
 
       {!context.canPerform ? (
         <div className="rounded-lg border bg-muted/40 p-4 text-sm">
-          You can view this unit but you are not authorized to record cleanings
-          for this property.
+          Μπορείτε να δείτε αυτή τη μονάδα, αλλά δεν έχετε δικαίωμα καταγραφής καθαρισμών
+          για αυτό το κατάλυμα.
         </div>
       ) : null}
 
       {!execution && context.selection.kind === "NO_WORK" ? (
         <div className="rounded-lg border bg-muted/40 p-4">
-          <p className="font-medium">Nothing to clean</p>
+          <p className="font-medium">Δεν υπάρχει κάτι προς καθαρισμό</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            This unit is already clean and has no open housekeeping task.
+            Η μονάδα είναι ήδη καθαρή και δεν έχει ανοιχτή εργασία καθαριότητας.
           </p>
         </div>
       ) : null}
@@ -250,16 +250,16 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
         <div className="space-y-3 rounded-lg border p-4">
           <p className="text-sm text-muted-foreground">
             {context.task
-              ? `Linked task: ${context.task.title}`
-              : "A housekeeping task will be opened for this cleaning."}
+              ? `Συνδεδεμένη εργασία: ${context.task.title}`
+              : "Θα ανοίξει εργασία καθαριότητας για αυτόν τον καθαρισμό."}
           </p>
           {context.template ? (
             <p className="text-sm text-muted-foreground">
-              Checklist: {context.template.name} · {context.template.itemCount} items
+              Λίστα ελέγχου: {context.template.name} · {context.template.itemCount} στοιχεία
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No checklist configured for this property.
+              Δεν έχει ρυθμιστεί λίστα ελέγχου για αυτό το κατάλυμα.
             </p>
           )}
           <Button
@@ -268,7 +268,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
             disabled={busy}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Start cleaning
+            Έναρξη καθαρισμού
           </Button>
         </div>
       ) : null}
@@ -277,11 +277,11 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
         <>
           <section className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Checklist
+              Λίστα ελέγχου
             </h2>
             {execution.items.length === 0 ? (
               <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                No checklist items — add photos and complete when the unit is ready.
+                Δεν υπάρχουν στοιχεία — προσθέστε φωτογραφίες και ολοκληρώστε όταν η μονάδα είναι έτοιμη.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -315,7 +315,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                           ) : null}
                           {item.photoRequired ? (
                             <span className="mt-1 block text-xs font-medium text-amber-700">
-                              Photo required ({itemPhotos.length})
+                              Απαιτείται φωτογραφία ({itemPhotos.length})
                             </span>
                           ) : null}
                         </span>
@@ -329,7 +329,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                           onClick={() => openPhotoPicker(item.id)}
                         >
                           <Camera className="h-4 w-4" />
-                          Add photo for this item
+                          Προσθήκη φωτογραφίας για αυτό το στοιχείο
                         </Button>
                       ) : null}
                     </li>
@@ -341,8 +341,8 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
 
           <section className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Photos ({photoCount}/{MAX_PHOTOS})
-              {minimumPhotos > 0 ? ` · ${minimumPhotos} required` : ""}
+              Φωτογραφίες ({photoCount}/{MAX_PHOTOS})
+              {minimumPhotos > 0 ? ` · ${minimumPhotos} απαιτούνται` : ""}
             </h2>
             {execution.photos.length > 0 ? (
               <ul className="grid grid-cols-3 gap-2">
@@ -352,16 +352,16 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                       {photo.url && photo.url.startsWith("http") ? (
                         <img
                           src={photo.url}
-                          alt="Cleaning evidence"
+                          alt="Απόδειξη καθαρισμού"
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <span>Photo</span>
+                        <span>Φωτο</span>
                       )}
                     </div>
                     <button
                       type="button"
-                      aria-label="Remove photo"
+                      aria-label="Αφαίρεση φωτογραφίας"
                       className="absolute right-1 top-1 rounded-full bg-background/90 p-1.5 shadow"
                       disabled={busy || !context.canPerform}
                       onClick={() => void handleDeletePhoto(photo.id)}
@@ -380,21 +380,21 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
               onClick={() => openPhotoPicker(null)}
             >
               <Camera className="h-4 w-4" />
-              Add photo
+              Προσθήκη φωτογραφίας
             </Button>
             <p className="text-xs text-muted-foreground">
-              JPEG, PNG or WebP · up to 10MB each
+              JPEG, PNG ή WebP · έως 10MB η καθεμία
             </p>
           </section>
 
           <section className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Note (optional)
+              Σημείωση (προαιρετικό)
             </h2>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Anything the next shift should know"
+              placeholder="Ό,τι πρέπει να γνωρίζει η επόμενη βάρδια"
               rows={3}
             />
           </section>
@@ -422,7 +422,7 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                 ) : (
                   <Check className="h-5 w-5" />
                 )}
-                Complete cleaning
+                Ολοκλήρωση καθαρισμού
               </Button>
             </div>
           </div>

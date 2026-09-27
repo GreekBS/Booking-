@@ -10,7 +10,7 @@ export function BookingTimelineSection({ booking }: BookingSectionProps) {
   const steps = buildBookingTimeline(booking.status);
 
   return (
-    <WorkspaceSection title="Timeline">
+    <WorkspaceSection title="Χρονολόγιο">
       <ol className="relative space-y-0">
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1;

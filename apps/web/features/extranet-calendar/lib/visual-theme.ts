@@ -84,14 +84,14 @@ export const OVERLAY_META_CLASS =
 
 /** Compact legend swatch helpers */
 export const LEGEND_SWATCHES = [
-  { key: "available", label: "Available", className: "border border-border bg-surface" },
-  { key: "booked", label: "Booked", className: "bg-ops-booking" },
-  { key: "hold", label: "Hold", className: "border-2 border-dashed border-ops-hold bg-ops-hold-subtle" },
-  { key: "manual", label: "Blocked", className: "bg-ops-blocked" },
-  { key: "maintenance", label: "Maintenance", className: "bg-ops-maintenance" },
-  { key: "cleaning", label: "Cleaning", className: "bg-ops-cleaning" },
-  { key: "owner", label: "Owner", className: "bg-ops-owner" },
-  { key: "closed", label: "Closed", className: "bg-ops-closed" },
+  { key: "available", label: "Διαθέσιμο", className: "border border-border bg-surface" },
+  { key: "booked", label: "Κρατημένο", className: "bg-ops-booking" },
+  { key: "hold", label: "Δέσμευση", className: "border-2 border-dashed border-ops-hold bg-ops-hold-subtle" },
+  { key: "manual", label: "Κλειδωμένο", className: "bg-ops-blocked" },
+  { key: "maintenance", label: "Συντήρηση", className: "bg-ops-maintenance" },
+  { key: "cleaning", label: "Καθαρισμός", className: "bg-ops-cleaning" },
+  { key: "owner", label: "Ιδιοκτήτης", className: "bg-ops-owner" },
+  { key: "closed", label: "Κλειστό", className: "bg-ops-closed" },
 ] as const;
 
 export function formatMonthYearUppercase(label: string): string {

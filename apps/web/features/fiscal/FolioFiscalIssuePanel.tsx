@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { fiscalDocumentKindLabelEl } from "@/lib/i18n";
 
 interface FolioLine {
   id: string;
@@ -101,7 +102,7 @@ export function FolioFiscalIssuePanel(props: {
 
   async function previewAndIssue() {
     if (!tenantId || !seriesId) {
-      toastError("Select a fiscal series");
+      toastError("Επιλέξτε σειρά παραστατικών");
       return;
     }
     const lineSelections = props.lines
@@ -113,7 +114,7 @@ export function FolioFiscalIssuePanel(props: {
       .filter((s) => Number(s.allocateAmount) > 0);
 
     if (!lineSelections.length) {
-      toastError("Select Folio lines with remaining coverage");
+      toastError("Επιλέξτε γραμμές folio με υπόλοιπο κάλυψης");
       return;
     }
 
@@ -139,11 +140,11 @@ export function FolioFiscalIssuePanel(props: {
         method: "POST",
         body: JSON.stringify({ issuanceIdempotencyKey: key }),
       });
-      toastSuccess("Issued locally — pending fiscalization integration");
+      toastSuccess("Εκδόθηκε τοπικά — εκκρεμεί ενσωμάτωση myDATA");
       await load();
       setSelected({});
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Fiscal issue failed");
+      toastError(e instanceof Error ? e.message : "Η έκδοση παραστατικού απέτυχε");
     } finally {
       setBusy(false);
     }
@@ -152,14 +153,14 @@ export function FolioFiscalIssuePanel(props: {
   return (
     <div className="rounded-lg border p-4 space-y-4">
       <div>
-        <h3 className="font-medium">Fiscal documents</h3>
+        <h3 className="font-medium">Παραστατικά</h3>
         <p className="text-sm text-muted-foreground">
-          Preview &amp; issue locally. Does not send to AADE.
+          Προεπισκόπηση και τοπική έκδοση. Δεν αποστέλλεται στην ΑΑΔΕ.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Document kind</Label>
+          <Label>Είδος παραστατικού</Label>
           <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
             <SelectTrigger>
               <SelectValue />
@@ -167,17 +168,17 @@ export function FolioFiscalIssuePanel(props: {
             <SelectContent>
               {KINDS.map((k) => (
                 <SelectItem key={k} value={k}>
-                  {k}
+                  {fiscalDocumentKindLabelEl(k)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Series</Label>
+          <Label>Σειρά παραστατικών</Label>
           <Select value={seriesId} onValueChange={setSeriesId}>
             <SelectTrigger>
-              <SelectValue placeholder="Select series" />
+              <SelectValue placeholder="Επιλέξτε σειρά" />
             </SelectTrigger>
             <SelectContent>
               {eligibleSeries.map((s) => (
@@ -190,10 +191,10 @@ export function FolioFiscalIssuePanel(props: {
         </div>
         {kind === "SERVICE_INVOICE" && (
           <div className="space-y-2 sm:col-span-2">
-            <Label>B2B recipient</Label>
+            <Label>Παραλήπτης B2B</Label>
             <Select value={customerId} onValueChange={setCustomerId}>
               <SelectTrigger>
-                <SelectValue placeholder="Customer billing profile" />
+                <SelectValue placeholder="Προφίλ χρέωσης πελάτη" />
               </SelectTrigger>
               <SelectContent>
                 {customers
@@ -209,7 +210,7 @@ export function FolioFiscalIssuePanel(props: {
         )}
       </div>
       <div className="space-y-2">
-        <Label>Folio lines</Label>
+        <Label>Γραμμές folio</Label>
         <div className="space-y-2 max-h-56 overflow-y-auto">
           {props.lines.map((l) => {
             const rem = remainingByLine.get(l.id) ?? l.amount.replace("-", "");
@@ -236,8 +237,8 @@ export function FolioFiscalIssuePanel(props: {
                 <span className="flex-1">
                   <span className="font-medium">{l.description}</span>
                   <span className="block text-muted-foreground">
-                    {l.lineType} · remaining {rem} {l.currency}
-                    {climate ? " · climate fee" : ""}
+                    {l.lineType} · υπόλοιπο {rem} {l.currency}
+                    {climate ? " · τέλος κλιματικής ανθεκτικότητας" : ""}
                   </span>
                 </span>
               </label>
@@ -246,7 +247,7 @@ export function FolioFiscalIssuePanel(props: {
         </div>
       </div>
       <Button onClick={() => void previewAndIssue()} disabled={busy}>
-        {busy ? "Working…" : "Issue selected lines locally"}
+        {busy ? "Εργασία…" : "Έκδοση επιλεγμένων γραμμών τοπικά"}
       </Button>
     </div>
   );

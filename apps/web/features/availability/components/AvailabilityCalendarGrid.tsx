@@ -51,7 +51,7 @@ export function AvailabilityCalendarGrid({
       ref={gridRef}
       tabIndex={0}
       className="-mx-4 overflow-auto rounded-lg border bg-card outline-none md:-mx-6 lg:-mx-8 max-h-[calc(100vh-12rem)] focus-visible:ring-2 focus-visible:ring-primary/30"
-      aria-label="Availability calendar grid. Use arrow keys to navigate, Enter to open, T for today, Escape to clear."
+      aria-label="Πλέγμα ημερολογίου διαθεσιμότητας. Βέλη για πλοήγηση, Enter άνοιγμα, T σήμερα, Escape καθαρισμός."
     >
       <div className="relative flex min-h-full flex-col" style={{ minWidth: gridMinWidth }}>
         <CalendarTimelineHeader dates={dates} today={today} />

@@ -127,7 +127,7 @@ export function buildCalendarSpans(
         {
           label: `Hold · expires ${new Date(hold.expiresAt).toLocaleString()}`,
           preview: holdCountdownShort(hold.expiresAt),
-          subPreview: "Hold",
+          subPreview: "Δέσμευση",
           expiresAt: hold.expiresAt,
           status: hold.status,
         },

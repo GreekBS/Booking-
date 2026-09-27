@@ -20,6 +20,7 @@ import {
 } from "@/lib/admin/active-property";
 import { ErrorState } from "@/components/admin/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { elCommon } from "@/lib/i18n";
 
 export {
   ACTIVE_PROPERTY_STORAGE_PREFIX,
@@ -94,7 +95,9 @@ export function ActivePropertyProvider({
     } catch (err) {
       setProperties([]);
       setPropertyId(null);
-      setError(err instanceof Error ? err.message : "Failed to load properties");
+      setError(
+        err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλυμάτων",
+      );
     } finally {
       setReady(true);
     }
@@ -171,8 +174,8 @@ export function renderActivePropertyGate(
   if (!state.tenantId) {
     return (
       <ErrorState
-        title="No tenant context"
-        message="No active tenant. Super admins must impersonate a tenant from Platform Admin first."
+        title={elCommon.noTenantContext}
+        message="Δεν υπάρχει ενεργός οργανισμός. Οι διαχειριστές πλατφόρμας πρέπει να επιλέξουν οργανισμό από τη Διαχείριση πλατφόρμας."
       />
     );
   }
@@ -182,8 +185,8 @@ export function renderActivePropertyGate(
   if (state.properties.length === 0 || !state.propertyId) {
     return (
       <ErrorState
-        title="No property"
-        message="No accessible properties for this tenant. Create a property to continue."
+        title={elCommon.noProperty}
+        message="Δεν υπάρχουν προσβάσιμα καταλύματα για αυτόν τον οργανισμό. Δημιουργήστε κατάλυμα για να συνεχίσετε."
       />
     );
   }

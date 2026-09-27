@@ -3,36 +3,20 @@
  * Stored values are never renamed — presentation only.
  */
 
-const CHANNEL_STATUS_LABELS: Record<string, string> = {
-  draft: "Setup required",
-  pending_auth: "Setup required",
-  active: "Connected",
-  paused: "Paused",
-  error: "Attention",
-  disconnected: "Disconnected",
-};
-
-const CHANNEL_PROVIDER_LABELS: Record<string, string> = {
-  booking_com: "Booking.com",
-  ical: "iCal",
-  airbnb: "Airbnb",
-  expedia: "Expedia",
-};
-
-const MEMBER_ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
-  manager: "Manager",
-  owner: "Owner",
-};
+import {
+  elChannelProvider,
+  elChannelStatus,
+  elMemberRole,
+} from "@/lib/i18n";
 
 export function channelStatusLabel(status: string): string {
-  return CHANNEL_STATUS_LABELS[status] ?? status.replace(/_/g, " ");
+  return elChannelStatus[status] ?? status.replace(/_/g, " ");
 }
 
 export function channelProviderLabel(provider: string): string {
-  return CHANNEL_PROVIDER_LABELS[provider] ?? provider.replace(/_/g, " ");
+  return elChannelProvider[provider] ?? provider.replace(/_/g, " ");
 }
 
 export function memberRoleLabel(role: string): string {
-  return MEMBER_ROLE_LABELS[role] ?? role.replace(/_/g, " ");
+  return elMemberRole[role] ?? role.replace(/_/g, " ");
 }

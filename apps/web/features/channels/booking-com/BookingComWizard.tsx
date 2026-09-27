@@ -44,6 +44,7 @@ import {
   type BookingComValidationResult,
   type BookingComWizardStepId,
 } from "./types";
+import { elCommon } from "@/lib/i18n";
 
 type Props = { connectionId: string };
 
@@ -189,7 +190,7 @@ export function BookingComWizard({ connectionId }: Props) {
   if (tenantGate) return tenantGate;
   if (loading) return <Skeleton className="h-96 w-full" />;
   if (error || !view) {
-    return <ErrorState message={error ?? "Setup unavailable"} onRetry={() => void load()} />;
+    return <ErrorState message={error ?? "Η ρύθμιση δεν είναι διαθέσιμη"} onRetry={() => void load()} />;
   }
 
   const partner = view.partnerAccess;
@@ -199,16 +200,16 @@ export function BookingComWizard({ connectionId }: Props) {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Connect Booking.com"
-        description="Guided setup — you can leave and continue later."
+        title="Σύνδεση Booking.com"
+        description="Καθοδηγούμενη ρύθμιση — μπορείτε να φύγετε και να συνεχίσετε αργότερα."
         actions={
           <Button variant="outline" asChild>
-            <Link href="/dashboard/channels">Back to channels</Link>
+            <Link href="/dashboard/channels">Πίσω στα κανάλια</Link>
           </Button>
         }
       />
 
-      <nav aria-label="Setup progress" className="overflow-x-auto">
+      <nav aria-label="Πρόοδος ρύθμισης" className="overflow-x-auto">
         <ol className="flex min-w-max gap-2 pb-1">
           {BOOKING_COM_WIZARD_STEPS.map((s, i) => (
             <li key={s.id}>
@@ -248,11 +249,11 @@ export function BookingComWizard({ connectionId }: Props) {
 
       <Surface>
         <SurfaceHeader
-          title={`Step ${stepIndex + 1}: ${step.title}`}
+          title={`Βήμα ${stepIndex + 1}: ${step.title}`}
           action={
             <ContextualHelpLink
               anchor={step.helpAnchor}
-              label="Help for this step"
+              label="Βοήθεια για αυτό το βήμα"
             />
           }
         />
@@ -267,10 +268,10 @@ export function BookingComWizard({ connectionId }: Props) {
             <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="talos-property">Talos property</Label>
+                  <Label htmlFor="talos-property">Κατάλυμα Talos</Label>
                   <Select value={propertyId} onValueChange={setPropertyId}>
-                    <SelectTrigger id="talos-property" aria-label="Mapping property">
-                      <SelectValue placeholder="Select property to map" />
+                    <SelectTrigger id="talos-property" aria-label="Κατάλυμα αντιστοίχισης">
+                      <SelectValue placeholder="Επιλέξτε κατάλυμα για αντιστοίχιση" />
                     </SelectTrigger>
                     <SelectContent>
                       {properties.map((p) => (
@@ -282,18 +283,18 @@ export function BookingComWizard({ connectionId }: Props) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hotel-id">Booking.com hotel ID</Label>
+                  <Label htmlFor="hotel-id">Hotel ID Booking.com</Label>
                   <Input
                     id="hotel-id"
                     value={hotelId}
                     onChange={(e) => setHotelId(e.target.value)}
-                    placeholder="e.g. 8135188"
+                    placeholder="π.χ. 8135188"
                   />
                 </div>
               </div>
               {hotelName ? (
                 <p className="text-sm text-muted-foreground">
-                  Remote hotel: <span className="font-medium text-foreground">{hotelName}</span>
+                  Απομακρυσμένο ξενοδοχείο: <span className="font-medium text-foreground">{hotelName}</span>
                 </p>
               ) : null}
               <div className="flex flex-wrap gap-2">
@@ -322,8 +323,8 @@ export function BookingComWizard({ connectionId }: Props) {
                           setRemoteRates(discovered.discovery?.ratePlans ?? []);
                           setActionMessage(
                             discovered.discovery?.hotel
-                              ? "Remote property discovered."
-                              : "Discovery returned no hotel for this ID.",
+                              ? "Βρέθηκε απομακρυσμένο κατάλυμα."
+                              : "Δεν βρέθηκε ξενοδοχείο για αυτό το ID.",
                           );
                         }
                       } catch (err) {
@@ -334,7 +335,7 @@ export function BookingComWizard({ connectionId }: Props) {
                     })()
                   }
                 >
-                  Discover property
+                  Αναζήτηση καταλύματος
                 </Button>
                 <Button
                   disabled={busy || !propertyId || !hotelId.trim()}
@@ -352,7 +353,7 @@ export function BookingComWizard({ connectionId }: Props) {
                           )?.mappingId,
                         });
                         await softRefresh();
-                        setActionMessage("Property mapping saved.");
+                        setActionMessage("Η αντιστοίχιση καταλύματος αποθηκεύτηκε.");
                       } catch (err) {
                         setActionError(formatBookingComApiError(err));
                       } finally {
@@ -361,7 +362,7 @@ export function BookingComWizard({ connectionId }: Props) {
                     })()
                   }
                 >
-                  Save property match
+                  Αποθήκευση property match
                 </Button>
               </div>
             </div>
@@ -370,12 +371,12 @@ export function BookingComWizard({ connectionId }: Props) {
           {step.id === "rooms" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Match each Talos room to one Booking.com room type. Primary labels use names;
-                IDs stay secondary.
+                Αντιστοιχίστε κάθε δωμάτιο Talos με έναν τύπο δωματίου Booking.com. Κύρια ετικέτα: όνομα·
+                Τα IDs παραμένουν δευτερεύοντα.
               </p>
               <div className="space-y-3">
                 {units.length === 0 ? (
-                  <p className="text-sm text-amber-800">Select a property with units first.</p>
+                  <p className="text-sm text-amber-800">Επιλέξτε πρώτα κατάλυμα με μονάδες.</p>
                 ) : (
                   units.map((unit) => (
                     <div
@@ -387,7 +388,7 @@ export function BookingComWizard({ connectionId }: Props) {
                         <p className="font-mono text-[11px] text-muted-foreground">{unit.id}</p>
                         <StatusBadge
                           status={roomDrafts[unit.id] ? "active" : "draft"}
-                          label={roomDrafts[unit.id] ? "Mapped" : "Not mapped"}
+                          label={roomDrafts[unit.id] ? "Αντιστοιχισμένο" : "Μη αντιστοιχισμένο"}
                         />
                       </div>
                       <span className="hidden text-center text-muted-foreground sm:block" aria-hidden>
@@ -395,7 +396,7 @@ export function BookingComWizard({ connectionId }: Props) {
                       </span>
                       <div className="space-y-1">
                         <Label className="sr-only" htmlFor={`room-${unit.id}`}>
-                          Booking.com room for {unit.name}
+                          Δωμάτιο Booking.com για {unit.name}
                         </Label>
                         {remoteRooms.length > 0 ? (
                           <Select
@@ -405,7 +406,7 @@ export function BookingComWizard({ connectionId }: Props) {
                             }
                           >
                             <SelectTrigger id={`room-${unit.id}`}>
-                              <SelectValue placeholder="Select room type" />
+                              <SelectValue placeholder="Επιλέξτε τύπο δωματίου" />
                             </SelectTrigger>
                             <SelectContent>
                               {remoteRooms.map((r) => (
@@ -428,7 +429,7 @@ export function BookingComWizard({ connectionId }: Props) {
                                 [unit.id]: e.target.value,
                               }))
                             }
-                            placeholder="Booking.com room type ID"
+                            placeholder="ID τύπου δωματίου Booking.com"
                           />
                         )}
                       </div>
@@ -462,7 +463,7 @@ export function BookingComWizard({ connectionId }: Props) {
                         });
                       }
                       await softRefresh();
-                      setActionMessage("Room mappings saved.");
+                      setActionMessage("Οι αντιστοιχίσεις δωματίων αποθηκεύτηκαν.");
                     } catch (err) {
                       setActionError(formatBookingComApiError(err));
                     } finally {
@@ -471,16 +472,16 @@ export function BookingComWizard({ connectionId }: Props) {
                   })()
                 }
               >
-                Save room mappings
+                Αποθήκευση room mappings
               </Button>
-              <ContextualHelpLink anchor="map-rooms" label="How room mapping works" />
+              <ContextualHelpLink anchor="map-rooms" label="Πώς λειτουργεί η αντιστοίχιση δωματίων" />
             </div>
           ) : null}
 
           {step.id === "rates" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                V1 supports Standard pricing only. Unsupported models are blocked at validation.
+                Η V1 υποστηρίζει μόνο Standard τιμολόγηση. Μη υποστηριζόμενα μοντέλα αποκλείονται στην επικύρωση.
               </p>
               {units.map((unit) => {
                 const rp = unitRatePlans[unit.id];
@@ -494,12 +495,12 @@ export function BookingComWizard({ connectionId }: Props) {
                     <p className="font-medium">
                       {unit.name}
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        Rate: {rp?.name ?? "Standard"}
+                        Τιμοκατάλογος: {rp?.name ?? "Standard"}
                       </span>
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <Label>Booking.com rate plan</Label>
+                        <Label>Τιμοκατάλογος Booking.com</Label>
                         {remoteRates.length > 0 ? (
                           <Select
                             value={draft.remoteRateId}
@@ -514,7 +515,7 @@ export function BookingComWizard({ connectionId }: Props) {
                             }
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select rate plan" />
+                              <SelectValue placeholder="Επιλέξτε τιμοκατάλογο" />
                             </SelectTrigger>
                             <SelectContent>
                               {remoteRates.map((r) => (
@@ -536,12 +537,12 @@ export function BookingComWizard({ connectionId }: Props) {
                                 },
                               }))
                             }
-                            placeholder="Rate plan ID"
+                            placeholder="ID τιμοκαταλόγου"
                           />
                         )}
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-muted-foreground">Room type (from step 4)</Label>
+                        <Label className="text-muted-foreground">Τύπος δωματίου (από βήμα 4)</Label>
                         <Input value={roomTypeId ?? ""} disabled readOnly />
                       </div>
                     </div>
@@ -592,7 +593,7 @@ export function BookingComWizard({ connectionId }: Props) {
                         });
                       }
                       await softRefresh();
-                      setActionMessage("Rate and roomrate mappings saved.");
+                      setActionMessage("Οι αντιστοιχίσεις τιμών/roomrate αποθηκεύτηκαν.");
                     } catch (err) {
                       setActionError(formatBookingComApiError(err));
                     } finally {
@@ -601,9 +602,9 @@ export function BookingComWizard({ connectionId }: Props) {
                   })()
                 }
               >
-                Save rate mappings
+                Αποθήκευση rate mappings
               </Button>
-              <ContextualHelpLink anchor="map-rates" label="How rate plans are mapped" />
+              <ContextualHelpLink anchor="map-rates" label="Πώς αντιστοιχίζονται οι τιμοκατάλογοι" />
             </div>
           ) : null}
 
@@ -628,8 +629,8 @@ export function BookingComWizard({ connectionId }: Props) {
                       setValidation(result);
                       setActionMessage(
                         result.ok
-                          ? "Validation passed. You can continue to synchronization."
-                          : "Validation found blocking issues.",
+                          ? "Η επικύρωση πέρασε. Μπορείτε να συνεχίσετε στον συγχρονισμό."
+                          : "Η επικύρωση βρήκε αποκλειστικά θέματα.",
                       );
                     } catch (err) {
                       setActionError(formatBookingComApiError(err));
@@ -639,13 +640,13 @@ export function BookingComWizard({ connectionId }: Props) {
                   })()
                 }
               >
-                Run validation
+                Εκτέλεση επικύρωσης
               </Button>
               {validation ? (
                 <div className="space-y-2">
                   <StatusBadge
                     status={validation.ok ? "active" : "error"}
-                    label={validation.ok ? "Ready" : "Blocked"}
+                    label={validation.ok ? "Έτοιμο" : "Αποκλεισμένο"}
                   />
                   {validation.blocking.map((issue) => (
                     <p
@@ -664,7 +665,7 @@ export function BookingComWizard({ connectionId }: Props) {
                     </p>
                   ))}
                   {validation.ok && validation.blocking.length === 0 ? (
-                    <p className="text-sm text-emerald-800">All required checks passed.</p>
+                    <p className="text-sm text-emerald-800">Όλοι οι απαιτούμενοι έλεγχοι πέρασαν.</p>
                   ) : null}
                 </div>
               ) : null}
@@ -674,16 +675,16 @@ export function BookingComWizard({ connectionId }: Props) {
           {step.id === "sync" ? (
             <div className="space-y-3 text-sm text-muted-foreground">
               <p>
-                After confirmation, Talos becomes the source for availability, Standard rates,
-                and restrictions on Booking.com.
+                Μετά την επιβεβαίωση, το Talos γίνεται πηγή για διαθεσιμότητα, Standard τιμές
+                και περιορισμούς στο Booking.com.
               </p>
-              <p>Booking.com reservations continue to flow into Talos.</p>
+              <p>Οι κρατήσεις Booking.com συνεχίζουν να εισέρχονται στο Talos.</p>
               <p className="font-medium text-foreground">
-                Talos does not import Booking.com prices into your Talos rate plans.
+                Το Talos δεν εισάγει τιμές Booking.com στους τιμοκαταλόγους Talos.
               </p>
               <ContextualHelpLink
                 anchor="review-sync"
-                label="What happens during first synchronization?"
+                label="Τι συμβαίνει στον πρώτο συγχρονισμό;"
               />
             </div>
           ) : null}
@@ -692,8 +693,8 @@ export function BookingComWizard({ connectionId }: Props) {
             <div className="space-y-3">
               {!partner.fixtureTransportEnabled && !partner.liveConnectivityAvailable ? (
                 <p className="rounded-md border px-3 py-2 text-sm" role="status">
-                  Initial sync preview requires Booking.com partner activation (or local
-                  fixture transport). {partner.operatorMessage}
+                  Η προεπισκόπηση αρχικού συγχρονισμού απαιτεί ενεργοποίηση συνεργάτη Booking.com (ή
+                  τοπικό fixture transport). {partner.operatorMessage}
                 </p>
               ) : (
                 <Button
@@ -716,7 +717,7 @@ export function BookingComWizard({ connectionId }: Props) {
                         if (!result.available) {
                           setActionMessage(result.message ?? partner.operatorMessage);
                         } else {
-                          setActionMessage("Preview ready — review before confirming.");
+                          setActionMessage("Η προεπισκόπηση είναι έτοιμη — ελέγξτε πριν την επιβεβαίωση.");
                         }
                       } catch (err) {
                         setActionError(formatBookingComApiError(err));
@@ -726,41 +727,41 @@ export function BookingComWizard({ connectionId }: Props) {
                     })()
                   }
                 >
-                  Generate sync preview
+                  Δημιουργία προεπισκόπησης συγχρονισμού
                 </Button>
               )}
               {preview?.diff ? (
                 <dl className="grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-muted-foreground">Date horizon</dt>
+                    <dt className="text-muted-foreground">Χρονικός ορίζοντας</dt>
                     <dd>
                       {preview.diff.dateHorizonFrom} → {preview.diff.dateHorizonTo}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Rooms affected</dt>
+                    <dt className="text-muted-foreground">Δωμάτια</dt>
                     <dd>{preview.diff.roomsAffected}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Roomrates affected</dt>
+                    <dt className="text-muted-foreground">Roomrates</dt>
                     <dd>{preview.diff.roomratesAffected}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Availability changes</dt>
+                    <dt className="text-muted-foreground">Αλλαγές διαθεσιμότητας</dt>
                     <dd>{preview.diff.availabilityChanges}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Opens / closes</dt>
+                    <dt className="text-muted-foreground">Ανοίγματα / κλεισίματα</dt>
                     <dd>
                       {preview.diff.opens} / {preview.diff.closes}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Price changes</dt>
+                    <dt className="text-muted-foreground">Αλλαγές τιμών</dt>
                     <dd>{preview.diff.priceChanges}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Min / max stay</dt>
+                    <dt className="text-muted-foreground">Ελάχ. / μέγ. διαμονή</dt>
                     <dd>
                       {preview.diff.minStayChanges} / {preview.diff.maxStayChanges}
                     </dd>
@@ -775,7 +776,7 @@ export function BookingComWizard({ connectionId }: Props) {
               ) : null}
               {preview?.diff?.samples?.length ? (
                 <details className="rounded-md border p-3 text-sm">
-                  <summary className="cursor-pointer font-medium">Before → after samples</summary>
+                  <summary className="cursor-pointer font-medium">Δείγματα πριν → μετά</summary>
                   <ul className="mt-2 space-y-1 font-mono text-[11px]">
                     {preview.diff.samples.slice(0, 8).map((s, i) => (
                       <li key={i}>
@@ -792,9 +793,9 @@ export function BookingComWizard({ connectionId }: Props) {
           {step.id === "confirm" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Confirmation uses a preview token. If your Talos or mapping configuration
-                changed, stale preview confirmation is rejected and you must generate a new
-                preview.
+                Η επιβεβαίωση χρησιμοποιεί token προεπισκόπησης. Αν άλλαξε η ρύθμιση Talos ή
+                αντιστοίχισης, η παλιά επιβεβαίωση απορρίπτεται και πρέπει να δημιουργήσετε νέα
+                προεπισκόπηση.
               </p>
               <Button
                 disabled={
@@ -823,7 +824,7 @@ export function BookingComWizard({ connectionId }: Props) {
                         setActionMessage(result.message ?? partner.operatorMessage);
                       } else {
                         setActionMessage(
-                          `Initial sync accepted (enqueued ${result.enqueued ?? 0}).`,
+                          `Ο αρχικός συγχρονισμός έγινε αποδεκτός (στην ουρά: ${result.enqueued ?? 0}).`,
                         );
                         await softRefresh();
                       }
@@ -836,7 +837,7 @@ export function BookingComWizard({ connectionId }: Props) {
                   })()
                 }
               >
-                Confirm synchronization
+                Επιβεβαίωση συγχρονισμού
               </Button>
             </div>
           ) : null}
@@ -844,8 +845,8 @@ export function BookingComWizard({ connectionId }: Props) {
           {step.id === "activate" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Activation requires valid mappings and a confirmed initial sync. Talos will
-                not pretend Booking.com is live if partner access is still pending.
+                Η ενεργοποίηση απαιτεί έγκυρες αντιστοιχίσεις και επιβεβαιωμένο αρχικό συγχρονισμό.
+                Το Talos δεν θα δείξει το Booking.com ως ζωντανό αν εκκρεμεί πρόσβαση συνεργάτη.
               </p>
               <Button
                 disabled={busy || !view.setup?.initialSyncReady}
@@ -859,7 +860,7 @@ export function BookingComWizard({ connectionId }: Props) {
                         connectionId,
                         view.connection.semanticConfigVersion,
                       );
-                      setActionMessage("Connection activated.");
+                      setActionMessage("Η σύνδεση ενεργοποιήθηκε.");
                       router.push(`/dashboard/channels/${connectionId}`);
                     } catch (err) {
                       setActionError(formatChannelApiError(err));
@@ -869,11 +870,11 @@ export function BookingComWizard({ connectionId }: Props) {
                   })()
                 }
               >
-                Activate connection
+                Ενεργοποίηση σύνδεσης
               </Button>
               {!view.setup?.initialSyncReady ? (
                 <p className="text-xs text-muted-foreground">
-                  Complete preview confirmation before activation.
+                  Ολοκληρώστε την επιβεβαίωση προεπισκόπησης πριν την ενεργοποίηση.
                 </p>
               ) : null}
             </div>
@@ -887,7 +888,7 @@ export function BookingComWizard({ connectionId }: Props) {
           disabled={!canGoBack || busy}
           onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
         >
-          Back
+          {elCommon.back}
         </Button>
         <Button
           disabled={
@@ -897,7 +898,7 @@ export function BookingComWizard({ connectionId }: Props) {
           }
           onClick={() => setStepIndex((i) => Math.min(BOOKING_COM_WIZARD_STEPS.length - 1, i + 1))}
         >
-          Continue
+          Συνέχεια
         </Button>
       </div>
     </div>
@@ -908,13 +909,13 @@ function BeforeStep() {
   return (
     <div className="space-y-3 text-sm text-muted-foreground">
       <p>
-        This integration syncs <strong className="text-foreground">Reservations</strong> from
-        Booking.com into Talos, and pushes{" "}
-        <strong className="text-foreground">Availability</strong>,{" "}
-        <strong className="text-foreground">Rates</strong>, and{" "}
-        <strong className="text-foreground">Restrictions</strong> from Talos to Booking.com.
+        Αυτή η ενσωμάτωση συγχρονίζει <strong className="text-foreground">κρατήσεις</strong> από
+        Booking.com στο Talos και στέλνει{" "}
+        <strong className="text-foreground">διαθεσιμότητα</strong>,{" "}
+        <strong className="text-foreground">τιμές</strong> και{" "}
+        <strong className="text-foreground">περιορισμούς</strong> από Talos στο Booking.com.
       </p>
-      <p>You need a Talos property with rooms and Standard rates, plus Booking.com Extranet access.</p>
+      <p>Χρειάζεστε κατάλυμα Talos με δωμάτια και Standard τιμές, καθώς και πρόσβαση στο Extranet του Booking.com.</p>
       <ScreenshotSlot id="BOOKING-HELP-01" />
     </div>
   );
@@ -932,15 +933,15 @@ function ConnectStep({
   return (
     <div className="space-y-3 text-sm text-muted-foreground">
       <ol className="list-decimal space-y-2 pl-5">
-        <li>Open Booking.com Extranet → Account → Channel Manager.</li>
-        <li>Select or request Talos.</li>
-        <li>Request connection types: Reservations and Rates &amp; Availability.</li>
+        <li>Ανοίξτε Booking.com Extranet → Λογαριασμός → Channel Manager.</li>
+        <li>Επιλέξτε ή ζητήστε το Talos.</li>
+        <li>Ζητήστε τύπους σύνδεσης: Reservations και Rates &amp; Availability.</li>
       </ol>
       {!live ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950" role="status">
           {partnerMessage}
           {fixture
-            ? " Local fixture transport lets you rehearse setup without a live Booking.com connection."
+            ? " Το τοπικό fixture transport επιτρέπει πρόβα ρύθμισης χωρίς ζωντανή σύνδεση Booking.com."
             : null}
         </p>
       ) : null}

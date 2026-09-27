@@ -32,13 +32,13 @@ export function CellHoverCardContent({
       </div>
       <div className="rounded-sm bg-muted/50 px-2 py-1 capitalize">{info.stateLabel}</div>
       {info.priceLine && (
-        <Row label="Price" value={info.priceLine} />
+        <Row label="Τιμή" value={info.priceLine} />
       )}
       {info.restrictionsLine && (
-        <Row label="Rules" value={info.restrictionsLine} />
+        <Row label="Κανόνες" value={info.restrictionsLine} />
       )}
       {info.summaryLine && (
-        <Row label="Summary" value={info.summaryLine} />
+        <Row label="Σύνοψη" value={info.summaryLine} />
       )}
     </div>
   );

@@ -42,7 +42,7 @@ interface HoldDetailDrawerProps {
 
 function formatCountdown(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
-  if (ms <= 0) return "Expired";
+  if (ms <= 0) return "Έληξε";
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -102,7 +102,7 @@ export function HoldDetailDrawer({
   }, [open, data?.expiresAt]);
 
   const holdSource = useMemo(() => {
-    if (!data?.sessionRef) return "Storefront session";
+    if (!data?.sessionRef) return "Σύνολο καταστήματος";
     return data.sessionRef;
   }, [data?.sessionRef]);
 
@@ -111,11 +111,11 @@ export function HoldDetailDrawer({
     setActionLoading(true);
     try {
       await releaseHold(tenantId, data.id);
-      toastSuccess("Hold released");
+      toastSuccess("Η δέσμευση απελευθερώθηκε");
       onReleased();
       onOpenChange(false);
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to release hold");
+      toastError(err instanceof Error ? err.message : "Αποτυχία απελευθέρωσης δέσμευσης");
     } finally {
       setActionLoading(false);
     }
@@ -126,13 +126,13 @@ export function HoldDetailDrawer({
     setActionLoading(true);
     try {
       const quote = await createQuoteFromHold(tenantId, data.id);
-      toastSuccess("Quote created — continue in New Booking");
+      toastSuccess("Δημιουργήθηκε προσφορά — συνεχίστε στη Νέα κράτηση");
       onOpenChange(false);
       router.push(
         `/dashboard/bookings/new?quoteId=${encodeURIComponent(quote.id)}`,
       );
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to create quote");
+      toastError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας προσφοράς");
     } finally {
       setActionLoading(false);
     }
@@ -154,7 +154,7 @@ export function HoldDetailDrawer({
                   <Timer className="h-5 w-5 text-amber-700 dark:text-amber-300" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-lg">Active hold</SheetTitle>
+                  <SheetTitle className="text-lg">Ενεργή δέσμευση</SheetTitle>
                   <SheetDescription className="mt-1 flex flex-wrap items-center gap-2">
                     <StatusBadge status={data.status} />
                     {unitLabel && <span>{unitLabel}</span>}
@@ -164,34 +164,34 @@ export function HoldDetailDrawer({
 
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800/80 dark:text-amber-200/80">
-                  Time remaining
+                  Υπολειπόμενος χρόνος
                 </p>
                 <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-amber-900 dark:text-amber-100">
                   {countdown || "—"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Expires {new Date(data.expiresAt).toLocaleString()}
+                  Λήγει {new Date(data.expiresAt).toLocaleString()}
                 </p>
               </div>
             </SheetHeader>
 
             <div className="mt-6 flex-1 space-y-5 pb-24 text-sm">
-              <DrawerSection title="Stay">
+              <DrawerSection title="Διαμονή">
                 <DrawerDetailList>
                   <DrawerDetailRow
-                    label="Arrival"
+                    label="Άφιξη"
                     value={data.checkIn}
                   />
                   <DrawerDetailRow
-                    label="Departure"
+                    label="Αναχώρηση"
                     value={data.checkOut}
                   />
                   <DrawerDetailRow
-                    label="Nights"
+                    label="Νύχτες"
                     value={String(nightsBetween(data.checkIn, data.checkOut))}
                   />
                   <DrawerDetailRow
-                    label="Guests"
+                    label="Επισκέπτες"
                     value={data.guestCount > 0 ? String(data.guestCount) : "—"}
                   />
                 </DrawerDetailList>
@@ -199,20 +199,20 @@ export function HoldDetailDrawer({
 
               <DrawerDivider />
 
-              <DrawerSection title="Location">
+              <DrawerSection title="Τοποθεσία">
                 <DrawerDetailList>
-                  <DrawerDetailRow label="Property" value={propertyLabel ?? "—"} />
-                  <DrawerDetailRow label="Unit" value={unitLabel ?? "—"} />
+                  <DrawerDetailRow label="Κατάλυμα" value={propertyLabel ?? "—"} />
+                  <DrawerDetailRow label="Μονάδα" value={unitLabel ?? "—"} />
                 </DrawerDetailList>
               </DrawerSection>
 
               <DrawerDivider />
 
-              <DrawerSection title="Reference">
+              <DrawerSection title="Αναφορά">
                 <DrawerDetailList>
-                  <DrawerDetailRow label="Hold ID" value={data.id.slice(0, 12)} mono />
-                  <DrawerDetailRow label="Quote ref" value={data.sessionRef ?? "—"} mono />
-                  <DrawerDetailRow label="Source" value={holdSource} />
+                  <DrawerDetailRow label="ID δέσμευσης" value={data.id.slice(0, 12)} mono />
+                  <DrawerDetailRow label="Αναφ. προσφοράς" value={data.sessionRef ?? "—"} mono />
+                  <DrawerDetailRow label="Πηγή" value={holdSource} />
                 </DrawerDetailList>
               </DrawerSection>
             </div>
@@ -223,20 +223,20 @@ export function HoldDetailDrawer({
                 disabled={actionLoading || data.status !== "active"}
                 onClick={() => void handleRelease()}
               >
-                Release hold
+                Απελευθέρωση δέσμευσης
               </Button>
               <Button
                 variant="secondary"
                 disabled={actionLoading || data.status !== "active"}
                 onClick={() => void handleConvert()}
               >
-                Convert to booking
+                Μετατροπή σε κράτηση
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/dashboard/bookings/new">New booking</Link>
+                <Link href="/dashboard/bookings/new">Νέα κράτηση</Link>
               </Button>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Close
+                Κλείσιμο
               </Button>
             </DrawerActions>
           </>

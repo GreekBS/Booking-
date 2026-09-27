@@ -18,9 +18,9 @@ import type { RackUnit } from "../../types";
 import { cn } from "@/lib/utils";
 
 const OVERLAY_BUTTONS: Array<{ key: keyof OverlayToggles; label: string }> = [
-  { key: "price", label: "Price" },
-  { key: "minStay", label: "Min" },
-  { key: "maxStay", label: "Max" },
+  { key: "price", label: "Τιμή" },
+  { key: "minStay", label: "Ελάχ." },
+  { key: "maxStay", label: "Μέγ." },
   { key: "cta", label: "CTA" },
   { key: "ctd", label: "CTD" },
 ];
@@ -70,13 +70,13 @@ export function CalendarOpsBar({
   showLegend = true,
 }: CalendarOpsBarProps) {
   const freshnessLabel = (() => {
-    if (isRefreshing) return "Refreshing…";
+    if (isRefreshing) return "Ανανέωση…";
     if (!lastUpdatedAt) return null;
     const sec = Math.floor((Date.now() - lastUpdatedAt) / 1000);
-    if (sec < 10) return "Just updated";
-    if (sec < 60) return `Updated ${sec}s ago`;
+    if (sec < 10) return "Μόλις ενημερώθηκε";
+    if (sec < 60) return `Ενημερώθηκε πριν ${sec} δ`;
     const min = Math.floor(sec / 60);
-    return `Updated ${min}m ago`;
+    return `Ενημερώθηκε πριν ${min} λ`;
   })();
 
   return (
@@ -86,7 +86,7 @@ export function CalendarOpsBar({
     >
       <div className="flex flex-wrap items-center gap-2 px-3 py-1.5">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-          <Link href="/dashboard" title="Back to dashboard" aria-label="Back to dashboard">
+          <Link href="/dashboard" title="Πίσω στον πίνακα" aria-label="Πίσω στον πίνακα">
             <LayoutDashboard className="h-4 w-4" />
           </Link>
         </Button>
@@ -95,9 +95,9 @@ export function CalendarOpsBar({
 
         <div className="min-w-0 shrink-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            Availability
+            Διαθεσιμότητα
           </p>
-          <p className="truncate text-sm font-semibold tracking-tight text-foreground">Calendar</p>
+          <p className="truncate text-sm font-semibold tracking-tight text-foreground">Ημερολόγιο</p>
         </div>
 
         {propertyName ? (
@@ -112,7 +112,7 @@ export function CalendarOpsBar({
         <div
           className="flex items-center gap-0.5"
           role="group"
-          aria-label="Period navigation"
+          aria-label="Πλοήγηση περιόδου"
         >
           <Button
             type="button"
@@ -120,8 +120,8 @@ export function CalendarOpsBar({
             size="icon"
             className="h-8 w-8"
             onClick={onPrevPeriod}
-            aria-label="Previous month"
-            title="Previous month"
+            aria-label="Προηγούμενος μήνας"
+            title="Προηγούμενος μήνας"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -137,15 +137,15 @@ export function CalendarOpsBar({
             size="icon"
             className="h-8 w-8"
             onClick={onNextPeriod}
-            aria-label="Next month"
-            title="Next month"
+            aria-label="Επόμενος μήνας"
+            title="Επόμενος μήνας"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
         <Button variant="outline" size="sm" className="h-8 px-2.5 text-sm" onClick={onToday}>
-          Today
+          Σήμερα
         </Button>
 
         <Select
@@ -155,9 +155,9 @@ export function CalendarOpsBar({
         >
           <SelectTrigger
             className="h-8 w-[min(200px,42vw)] text-sm font-medium"
-            aria-label="Select unit"
+            aria-label="Επιλογή μονάδας"
           >
-            <SelectValue placeholder="Select unit" />
+            <SelectValue placeholder="Επιλέξτε μονάδα" />
           </SelectTrigger>
           <SelectContent>
             {units.map((unit) => (
@@ -175,7 +175,7 @@ export function CalendarOpsBar({
             className="h-8 px-2.5 text-sm lg:hidden"
             onClick={onOpenManualEdit}
           >
-            Edit dates
+            Επεξεργασία ημερομηνιών
           </Button>
         ) : null}
 
@@ -186,7 +186,7 @@ export function CalendarOpsBar({
             className="h-8 px-2.5 text-xs"
             onClick={() => onDensityChange("compact")}
           >
-            Compact
+            Συμπαγές
           </Button>
           <Button
             variant={density === "comfortable" ? "secondary" : "outline"}
@@ -194,7 +194,7 @@ export function CalendarOpsBar({
             className="h-8 px-2.5 text-xs"
             onClick={() => onDensityChange("comfortable")}
           >
-            Comfortable
+            Άνετο
           </Button>
         </div>
 
@@ -204,7 +204,7 @@ export function CalendarOpsBar({
             <div
               className="hidden items-center gap-0.5 md:flex"
               role="group"
-              aria-label="Cell overlays"
+              aria-label="Επικαλύψεις κελιών"
             >
               {OVERLAY_BUTTONS.map(({ key, label }) => (
                 <Button
@@ -239,10 +239,10 @@ export function CalendarOpsBar({
             className="h-8 gap-1.5 px-2.5 text-sm"
             onClick={onRefresh}
             disabled={isRefreshing}
-            title="Refresh (R)"
+            title="Ανανέωση (R)"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
-            <span className="hidden md:inline">Refresh</span>
+            <span className="hidden md:inline">Ανανέωση</span>
           </Button>
         </div>
       </div>
@@ -250,7 +250,7 @@ export function CalendarOpsBar({
       {showLegend ? (
         <div
           className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/70 bg-surface-subtle/40 px-3 py-1"
-          aria-label="Calendar legend"
+          aria-label="Υπόμνημα ημερολογίου"
         >
           {LEGEND_SWATCHES.map((item) => (
             <span

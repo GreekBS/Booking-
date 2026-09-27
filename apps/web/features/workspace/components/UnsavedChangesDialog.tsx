@@ -28,18 +28,18 @@ export function UnsavedChangesDialog() {
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+          <AlertDialogTitle>Μη αποθηκευμένες αλλαγές</AlertDialogTitle>
           <AlertDialogDescription>
-            You have unsaved changes. Save them before leaving, or discard your changes.
+            Έχετε μη αποθηκευμένες αλλαγές. Αποθηκεύστε πριν φύγετε ή απορρίψτε τις αλλαγές.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 sm:gap-0">
-          <AlertDialogCancel onClick={cancelNavigation}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={cancelNavigation}>Ακύρωση</AlertDialogCancel>
           <Button type="button" variant="outline" onClick={confirmDiscard}>
-            Discard
+            Απόρριψη
           </Button>
           <AlertDialogAction disabled={saveDisabled} onClick={() => void confirmSave()}>
-            Save
+            Αποθήκευση
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

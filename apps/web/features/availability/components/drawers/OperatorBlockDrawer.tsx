@@ -21,6 +21,7 @@ import {
   DrawerDivider,
   DrawerSection,
 } from "./DrawerPrimitives";
+import { elCommon } from "@/lib/i18n";
 
 type CalendarBlock = CalendarRecord["blocks"][number];
 
@@ -81,22 +82,22 @@ export function OperatorBlockDrawer({
         </SheetHeader>
 
         <div className="mt-6 flex-1 space-y-5 pb-24 text-sm">
-          <DrawerSection title="Details">
+          <DrawerSection title="Λεπτομέρειες">
             <DrawerDetailList>
-              <DrawerDetailRow label="Type" value={<span className="capitalize">{typeLabel}</span>} />
-              <DrawerDetailRow label="Reason" value={block.reason?.trim() || "—"} />
-              <DrawerDetailRow label="Created by" value="Not recorded" />
-              <DrawerDetailRow label="Created at" value="Not recorded" />
+              <DrawerDetailRow label="Τύπος" value={<span className="capitalize">{typeLabel}</span>} />
+              <DrawerDetailRow label="Αιτία" value={block.reason?.trim() || "—"} />
+              <DrawerDetailRow label="Δημιουργήθηκε από" value="Δεν καταγράφηκε" />
+              <DrawerDetailRow label="Δημιουργήθηκε" value="Δεν καταγράφηκε" />
             </DrawerDetailList>
           </DrawerSection>
 
           <DrawerDivider />
 
-          <DrawerSection title="Dates">
+          <DrawerSection title="Ημερομηνίες">
             <DrawerDetailList>
-              <DrawerDetailRow label="Check-in" value={block.checkIn} />
-              <DrawerDetailRow label="Check-out" value={block.checkOut} />
-              <DrawerDetailRow label="Duration" value={`${nights} night${nights !== 1 ? "s" : ""}`} />
+              <DrawerDetailRow label={elCommon.checkIn} value={block.checkIn} />
+              <DrawerDetailRow label={elCommon.checkOut} value={block.checkOut} />
+              <DrawerDetailRow label="Διάρκεια" value={`${nights} ${nights === 1 ? "νύχτα" : "νύχτες"}`} />
             </DrawerDetailList>
           </DrawerSection>
 
@@ -106,20 +107,20 @@ export function OperatorBlockDrawer({
             <DrawerDetailList>
               <DrawerDetailRow label="Property" value={propertyLabel ?? "—"} />
               <DrawerDetailRow label="Unit" value={unitLabel ?? "—"} />
-              <DrawerDetailRow label="Block ID" value={block.id.slice(0, 12)} mono />
+              <DrawerDetailRow label="ID block" value={block.id.slice(0, 12)} mono />
             </DrawerDetailList>
           </DrawerSection>
         </div>
 
         <DrawerActions>
           <Button variant="secondary" onClick={() => onEdit(block)}>
-            Edit
+            Επεξεργασία
           </Button>
           <Button variant="destructive" onClick={() => onDelete(block)}>
-            Delete
+            Διαγραφή
           </Button>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Close
+            Κλείσιμο
           </Button>
         </DrawerActions>
       </SheetContent>

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { elCommon, statusLabelEl } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface ActivePropertySelectorProps {
@@ -56,7 +57,7 @@ export function ActivePropertySelector({
         className={cn(visibility, "max-w-[220px]", className)}
         disabled
       >
-        Properties unavailable
+        Τα καταλύματα δεν είναι διαθέσιμα
       </Button>
     );
   }
@@ -70,7 +71,7 @@ export function ActivePropertySelector({
         disabled
       >
         <Building2 className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">No properties</span>
+        <span className="truncate">Δεν υπάρχουν καταλύματα</span>
       </Button>
     );
   }
@@ -88,7 +89,7 @@ export function ActivePropertySelector({
               : "max-w-[280px] px-3 py-2",
             className,
           )}
-          aria-label="Active property"
+          aria-label={elCommon.activeProperty}
         >
           <span
             className={cn(
@@ -98,19 +99,19 @@ export function ActivePropertySelector({
           >
             {!compact && (
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Property
+                {elCommon.property}
               </span>
             )}
             <span className="flex w-full items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
               <span className="truncate text-sm font-semibold text-foreground">
-                {property?.name ?? "Select property"}
+                {property?.name ?? elCommon.selectProperty}
               </span>
               <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
             </span>
             {!compact && property?.status ? (
-              <span className="truncate pl-5 text-[11px] capitalize text-muted-foreground">
-                {property.status.replace(/_/g, " ")}
+              <span className="truncate pl-5 text-[11px] text-muted-foreground">
+                {statusLabelEl(property.status)}
               </span>
             ) : null}
           </span>
@@ -118,7 +119,7 @@ export function ActivePropertySelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          Active property
+          {elCommon.activeProperty}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {properties.map((p) => {
@@ -134,8 +135,8 @@ export function ActivePropertySelector({
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{p.name}</p>
-                <p className="truncate text-xs capitalize text-muted-foreground">
-                  {p.status.replace(/_/g, " ")}
+                <p className="truncate text-xs text-muted-foreground">
+                  {statusLabelEl(p.status)}
                 </p>
               </div>
               {selected ? (

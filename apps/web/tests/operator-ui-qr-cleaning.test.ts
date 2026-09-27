@@ -111,8 +111,8 @@ describe("operator-ui QR cleaning V1", () => {
     expect(form).toContain("image/jpeg,image/png,image/webp");
     expect(form).toContain("10 * 1024 * 1024");
     expect(form).toContain("MAX_PHOTOS = 12");
-    expect(form).toContain("Complete cleaning");
-    expect(form).toContain("Start cleaning");
+    expect(form).toContain("Ολοκλήρωση καθαρισμού");
+    expect(form).toContain("Έναρξη καθαρισμού");
     // Touch targets sized for gloved, one-handed use.
     expect(form).toContain("min-h-12");
     expect(form).toContain("min-h-14");
@@ -122,7 +122,7 @@ describe("operator-ui QR cleaning V1", () => {
   it("Units page offers generate / print / rotate for the unit QR", () => {
     const units = read("features/units/UnitsPage.tsx");
     expect(units).toContain("UnitQrSheet");
-    expect(units).toContain("Cleaning QR");
+    expect(units).toContain("QR καθαριότητας");
 
     const sheet = read("features/cleaning/UnitQrSheet.tsx");
     expect(sheet).toContain("generateUnitQr");
@@ -130,7 +130,7 @@ describe("operator-ui QR cleaning V1", () => {
     expect(sheet).toContain("QRCodeSVG");
     expect(sheet).toContain("/dashboard/units/qr/");
     // Hash-only storage: an existing code can never be redisplayed.
-    expect(sheet).toContain("cannot be displayed again");
+    expect(sheet).toContain("δεν εμφανίζονται ξανά");
   });
 
   it("print page is print-friendly and never silently rotates", () => {
@@ -138,7 +138,7 @@ describe("operator-ui QR cleaning V1", () => {
     expect(print).toContain("@media print");
     expect(print).toContain("qr-print-hide");
     expect(print).toContain("window.print()");
-    expect(print).toContain("Rotate &amp; print new code");
+    expect(print).toContain("Αντικατάσταση &amp; εκτύπωση νέου");
     expect(
       existsSync(
         join(root, "app/(dashboard)/dashboard/units/qr/[unitId]/print/page.tsx"),
@@ -154,7 +154,7 @@ describe("operator-ui QR cleaning V1", () => {
     const editor = read("features/cleaning/CleaningChecklistEditor.tsx");
     expect(editor).toContain("saveCleaningTemplate");
     expect(editor).toContain("minimumCompletionPhotos");
-    expect(editor).toContain("Photo required");
+    expect(editor).toContain("Απαιτείται φωτογραφία");
     expect(editor).toContain("useActiveProperty");
 
     const history = read("features/cleaning/CleaningHistoryPage.tsx");

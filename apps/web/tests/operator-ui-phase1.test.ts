@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-
 const root = join(__dirname, "..");
 
 function read(rel: string): string {
@@ -30,12 +29,12 @@ describe("Talos operator Phase 1 design system", () => {
     const sidebar = read("components/admin/admin-sidebar.tsx");
     expect(sidebar).toContain("TALOS");
     expect(sidebar).not.toContain("HCP Admin");
-    expect(sidebar).toContain('label: "Overview"');
-    expect(sidebar).toContain('label: "Operations"');
-    expect(sidebar).toContain('label: "Revenue"');
-    expect(sidebar).toContain('label: "Distribution"');
-    expect(sidebar).toContain('label: "Property"');
-    expect(sidebar).toContain('label: "Administration"');
+    expect(sidebar).toContain(`label: elNav.overview`);
+    expect(sidebar).toContain(`label: elNav.operations`);
+    expect(sidebar).toContain(`label: elNav.revenue`);
+    expect(sidebar).toContain(`label: elNav.distribution`);
+    expect(sidebar).toContain(`label: elNav.property`);
+    expect(sidebar).toContain(`label: elNav.administration`);
     expect(sidebar).toContain("/dashboard/fiscal-documents");
     expect(sidebar).toContain("/dashboard/bookings");
   });
@@ -48,20 +47,20 @@ describe("Talos operator Phase 1 design system", () => {
 
     const selector = read("components/admin/active-property-selector.tsx");
     expect(selector).toContain("alwaysVisible");
-    expect(selector).toContain('aria-label="Active property"');
+    expect(selector).toContain("elCommon.activeProperty");
     // Must not be desktop-only only
     expect(selector).toContain("alwaysVisible ? \"inline-flex\"");
   });
 
   it("rebuilds dashboard as operations board without duplicate activity", () => {
     const dash = read("features/dashboard/DashboardOverview.tsx");
-    expect(dash).toContain("Today");
+    expect(dash).toContain("elCommon.today");
     expect(dash).toContain("arrivalsToday");
     expect(dash).toContain("departuresToday");
     expect(dash).toContain("inHouseToday");
-    expect(dash).toContain("Recent reservations");
-    expect(dash).toContain("Attention");
-    expect(dash).toContain("New booking");
+    expect(dash).toContain("Πρόσφατες κρατήσεις");
+    expect(dash).toContain("Προσοχή");
+    expect(dash).toContain("Νέα κράτηση");
     expect(dash).not.toContain("Recent activity");
     expect(dash).not.toContain("New property");
     expect(dash).toContain("bookingId=");

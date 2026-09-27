@@ -126,7 +126,7 @@ export function FiscalSettingsSection() {
 
   useEffect(() => {
     void load().catch((err) =>
-      toastError(err instanceof Error ? err.message : "Failed to load fiscal profiles"),
+      toastError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης φορολογικών προφίλ"),
     );
   }, [load]);
 
@@ -195,10 +195,10 @@ export function FiscalSettingsSection() {
           address: biz.address,
         }),
       });
-      toastSuccess("Business fiscal profile saved");
+      toastSuccess("Το επιχειρησιακό φορολογικό προφίλ αποθηκεύτηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Save failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
@@ -220,10 +220,10 @@ export function FiscalSettingsSection() {
           address: customer.address,
         }),
       });
-      toastSuccess("Customer billing profile saved");
+      toastSuccess("Το προφίλ χρέωσης πελάτη αποθηκεύτηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Save failed");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
@@ -238,15 +238,15 @@ export function FiscalSettingsSection() {
     <>
       <Surface>
         <SurfaceHeader
-          title="Business fiscal profile"
-          description="Configure establishment location. VAT jurisdiction is derived from the verified statutory catalog (AADE E.2113/2025) — operators cannot self-declare GR-ISLAND-REDUCED. No invoices or myDATA yet."
+          title="Επιχειρησιακό φορολογικό προφίλ"
+          description="Ρύθμιση τοποθεσίας εγκατάστασης. Η ΦΠΑ προκύπτει από τον επίσημο κατάλογο (ΑΑΔΕ Ε.2113/2025) — όχι αυτοδήλωση GR-ISLAND-REDUCED. Χωρίς τιμολόγια/myDATA ακόμα."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Fiscal profile property</Label>
+            <Label>Κατάλυμα φορολογικού προφίλ</Label>
             <Select value={propertyId} onValueChange={setPropertyId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select property" />
+                <SelectValue placeholder="Επιλέξτε κατάλυμα" />
               </SelectTrigger>
               <SelectContent>
                 {properties.map((p) => (
@@ -263,28 +263,28 @@ export function FiscalSettingsSection() {
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label>Legal name</Label>
+            <Label>Επωνυμία</Label>
             <Input
               value={biz.legalName}
               onChange={(e) => setBiz({ ...biz, legalName: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Trade name</Label>
+            <Label>Διακριτικός τίτλος</Label>
             <Input
               value={biz.tradeName}
               onChange={(e) => setBiz({ ...biz, tradeName: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>AFM / VAT</Label>
+            <Label>ΑΦΜ / ΦΠΑ</Label>
             <Input
               value={biz.vatNumber}
               onChange={(e) => setBiz({ ...biz, vatNumber: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Establishment location</Label>
+            <Label>Τοποθεσία εγκατάστασης</Label>
             <Select
               value={biz.establishmentLocationId}
               onValueChange={(v) => {
@@ -307,20 +307,18 @@ export function FiscalSettingsSection() {
               <SelectContent>
                 {locations.map((loc) => (
                   <SelectItem key={loc.locationId} value={loc.locationId}>
-                    {loc.displayNameEn}
-                    {loc.eligibleForReducedVat ? " (eligible catalog)" : ""}
+                    {loc.displayNameEl || loc.displayNameEn}
+                    {loc.eligibleForReducedVat ? " (επιλέξιμος κατάλογος)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Derived VAT jurisdiction (read-only)</Label>
+            <Label>Προκύπτουσα ΦΠΑ δικαιοδοσία (μόνο ανάγνωση)</Label>
             <Input value={biz.fiscalJurisdiction} readOnly />
             <p className="text-[11px] text-muted-foreground">
-              Updated on save from location + service conditions. Reduced rate
-              requires establishment in the eligible area and physical service
-              execution there.
+              Ενημερώνεται κατά την αποθήκευση από τοποθεσία και συνθήκες παροχής. Μειωμένο συντελεστή απαιτεί εγκατάσταση σε επιλέξιμη περιοχή και φυσική εκτέλεση εκεί.
             </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -354,7 +352,7 @@ export function FiscalSettingsSection() {
             </label>
           </div>
           <div className="space-y-1.5">
-            <Label>Accommodation type</Label>
+            <Label>Τύπος καταλύματος</Label>
             <Select
               value={biz.accommodationType}
               onValueChange={(v) => setBiz({ ...biz, accommodationType: v })}
@@ -367,16 +365,16 @@ export function FiscalSettingsSection() {
                 <SelectItem value="furnished_rooms_apartments">
                   Furnished rooms/apartments
                 </SelectItem>
-                <SelectItem value="short_term_rental">Short-term rental</SelectItem>
-                <SelectItem value="villa_self_catering">Villa / self-catering</SelectItem>
+                <SelectItem value="short_term_rental">Βραχυχρόνια μίσθωση</SelectItem>
+                <SelectItem value="villa_self_catering">Βίλα / self-catering</SelectItem>
                 <SelectItem value="tourist_furnished_house">
-                  Tourist furnished house
+                  Τουριστική επιπλωμένη κατοικία
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Property classification</Label>
+            <Label>Ταξινόμηση καταλύματος</Label>
             <Select
               value={biz.propertyClassification}
               onValueChange={(v) => setBiz({ ...biz, propertyClassification: v })}
@@ -392,7 +390,7 @@ export function FiscalSettingsSection() {
                 <SelectItem value="furnished_rooms_apartments">
                   Furnished rooms/apartments
                 </SelectItem>
-                <SelectItem value="short_term_rental">Short-term rental</SelectItem>
+                <SelectItem value="short_term_rental">Βραχυχρόνια μίσθωση</SelectItem>
                 <SelectItem value="short_term_rental_detached_gt_80sqm">
                   STR detached &gt;80 m²
                 </SelectItem>
@@ -407,7 +405,7 @@ export function FiscalSettingsSection() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Address line 1</Label>
+            <Label>Διεύθυνση (γραμμή 1)</Label>
             <Input
               value={biz.address.line1}
               onChange={(e) =>
@@ -425,7 +423,7 @@ export function FiscalSettingsSection() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Postal code</Label>
+            <Label>Τ.Κ.</Label>
             <Input
               value={biz.address.postalCode}
               onChange={(e) =>
@@ -438,7 +436,7 @@ export function FiscalSettingsSection() {
           </div>
           <div className="sm:col-span-2">
             <Button disabled={saving || !propertyId} onClick={() => void saveBusiness()}>
-              Save business fiscal profile
+              Αποθήκευση business fiscal profile
             </Button>
           </div>
         </div>
@@ -446,12 +444,12 @@ export function FiscalSettingsSection() {
 
       <Surface>
         <SurfaceHeader
-          title="Customer billing profiles"
-          description="Invoice recipient may differ from Booking guest. Individuals are not required to have an AFM."
+          title="Προφίλ χρέωσης πελατών"
+          description="Ο παραλήπτης τιμολογίου μπορεί να διαφέρει από τον επισκέπτη κράτησης. Φυσικά πρόσωπα χωρίς υποχρεωτικό ΑΦΜ."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Type</Label>
+            <Label>Τύπος</Label>
             <Select
               value={customer.type}
               onValueChange={(v) =>
@@ -468,14 +466,14 @@ export function FiscalSettingsSection() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Legal name</Label>
+            <Label>Επωνυμία</Label>
             <Input
               value={customer.legalName}
               onChange={(e) => setCustomer({ ...customer, legalName: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>AFM / VAT (optional for individuals)</Label>
+            <Label>ΑΦΜ / ΦΠΑ (optional for individuals)</Label>
             <Input
               value={customer.vatNumber}
               onChange={(e) => setCustomer({ ...customer, vatNumber: e.target.value })}
@@ -489,7 +487,7 @@ export function FiscalSettingsSection() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Address line 1</Label>
+            <Label>Διεύθυνση (γραμμή 1)</Label>
             <Input
               value={customer.address.line1}
               onChange={(e) =>
@@ -513,7 +511,7 @@ export function FiscalSettingsSection() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Postal code</Label>
+            <Label>Τ.Κ.</Label>
             <Input
               value={customer.address.postalCode}
               onChange={(e) =>

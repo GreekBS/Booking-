@@ -101,7 +101,7 @@ export function PoliciesPage() {
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load property policies");
+        setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης πολιτικών καταλύματος");
         setPropertyDetail(null);
       } finally {
         if (!cancelled) setLoading(false);
@@ -144,7 +144,7 @@ export function PoliciesPage() {
         body: JSON.stringify({ policies: policyForm }),
       });
       invalidatePropertiesCache(tenantId);
-      toastSuccess("Property policies saved");
+      toastSuccess("Οι πολιτικές καταλύματος αποθηκεύτηκαν");
       const res = await fetchAllProperties(tenantId, 1, 100);
       const detail = res.data.find((p) => p.id === propertyId) ?? null;
       setPropertyDetail(detail);
@@ -167,9 +167,9 @@ export function PoliciesPage() {
         tenantId,
         body: JSON.stringify(rules),
       });
-      toastSuccess("Stay rules saved");
+      toastSuccess("Οι κανόνες διαμονής αποθηκεύτηκαν");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save stay rules";
+      const message = err instanceof Error ? err.message : "Αποτυχία αποθήκευσης κανόνων διαμονής";
       setError(message);
       toastError(message);
     } finally {
@@ -191,12 +191,12 @@ export function PoliciesPage() {
   return (
     <div>
       <PageHeader
-        title="Policies"
-        description="Check-in/out and cancellation for the active property, plus unit stay rules under that property."
+        title="Πολιτικές"
+        description="Ώρες άφιξης/αναχώρησης και ακύρωση για το ενεργό κατάλυμα, συν κανόνες διαμονής ανά μονάδα."
         meta={
           activeProperty?.name ? (
             <span className="text-xs text-muted-foreground">
-              Active property ·{" "}
+              Ενεργό κατάλυμα ·{" "}
               <span className="font-medium text-foreground">{activeProperty.name}</span>
             </span>
           ) : null
@@ -213,19 +213,19 @@ export function PoliciesPage() {
         <Skeleton className="h-96 w-full" />
       ) : !propertyDetail ? (
         <EmptyState
-          title="Property not found"
-          description="Could not load policies for the active property. Switch property in the header or try again."
+          title="Το κατάλυμα δεν βρέθηκε"
+          description="Αποτυχία φόρτωσης πολιτικών για το ενεργό κατάλυμα. Αλλάξτε κατάλυμα στην κεφαλίδα ή δοκιμάστε ξανά."
         />
       ) : (
         <div className="space-y-5">
           <Surface>
             <SurfaceHeader
-              title="Property policies"
-              description="Applies to the active property. Change Active Property in the header to edit another property."
+              title="Πολιτικές καταλύματος"
+              description="Ισχύει για το ενεργό κατάλυμα. Αλλάξτε ενεργό κατάλυμα στην κεφαλίδα για επεξεργασία άλλου."
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="policy-check-in">Check-in time</Label>
+                <Label htmlFor="policy-check-in">Ώρα άφιξης</Label>
                 <Input
                   id="policy-check-in"
                   value={policyForm.checkInTime}
@@ -235,7 +235,7 @@ export function PoliciesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="policy-check-out">Check-out time</Label>
+                <Label htmlFor="policy-check-out">Ώρα αναχώρησης</Label>
                 <Input
                   id="policy-check-out"
                   value={policyForm.checkOutTime}
@@ -245,20 +245,20 @@ export function PoliciesPage() {
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Cancellation policy</Label>
+                <Label>Πολιτική ακύρωσης</Label>
                 <Select
                   value={policyForm.cancellationPolicyType}
                   onValueChange={(v) =>
                     setPolicyForm({ ...policyForm, cancellationPolicyType: v })
                   }
                 >
-                  <SelectTrigger aria-label="Cancellation policy">
+                  <SelectTrigger aria-label="Πολιτική ακύρωσης">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="flexible">Flexible</SelectItem>
-                    <SelectItem value="moderate">Moderate</SelectItem>
-                    <SelectItem value="strict">Strict</SelectItem>
+                    <SelectItem value="flexible">Ευέλικτη</SelectItem>
+                    <SelectItem value="moderate">Μέτρια</SelectItem>
+                    <SelectItem value="strict">Αυστηρή</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -268,30 +268,30 @@ export function PoliciesPage() {
                 disabled={savingPolicies}
                 onClick={() => void savePropertyPolicies()}
               >
-                {savingPolicies ? "Saving…" : "Save property policies"}
+                {savingPolicies ? "Saving…" : "Αποθήκευση πολιτικών"}
               </Button>
             </div>
           </Surface>
 
           <Surface>
             <SurfaceHeader
-              title="Stay rules"
-              description="Unit-scoped availability rules for units on the active property."
+              title="Κανόνες διαμονής"
+              description="Κανόνες διαθεσιμότητας ανά μονάδα στο ενεργό κατάλυμα."
             />
             {units.length === 0 ? (
               <EmptyState
                 compact
-                title="No units"
-                description="Add a unit on this property before configuring stay rules."
-                action={{ label: "View units", href: "/dashboard/units" }}
+                title="Δεν υπάρχουν μονάδες"
+                description="Προσθέστε μονάδα σε αυτό το κατάλυμα πριν τους κανόνες διαμονής."
+                action={{ label: "Προβολή μονάδων", href: "/dashboard/units" }}
               />
             ) : (
               <>
                 <div className="mb-4 space-y-2">
                   <Label>Unit</Label>
                   <Select value={unitId} onValueChange={setUnitId}>
-                    <SelectTrigger className="w-full sm:w-[280px]" aria-label="Select unit">
-                      <SelectValue placeholder="Select unit" />
+                    <SelectTrigger className="w-full sm:w-[280px]" aria-label="Επιλογή μονάδας">
+                      <SelectValue placeholder="Επιλέξτε μονάδα" />
                     </SelectTrigger>
                     <SelectContent>
                       {units.map((u) => (
@@ -304,7 +304,7 @@ export function PoliciesPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="rules-min-nights">Minimum stay (nights)</Label>
+                    <Label htmlFor="rules-min-nights">Ελάχιστη διαμονή (νύχτες)</Label>
                     <Input
                       id="rules-min-nights"
                       type="number"
@@ -316,7 +316,7 @@ export function PoliciesPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="rules-max-nights">Maximum stay (nights)</Label>
+                    <Label htmlFor="rules-max-nights">Μέγιστη διαμονή (νύχτες)</Label>
                     <Input
                       id="rules-max-nights"
                       type="number"
@@ -333,7 +333,7 @@ export function PoliciesPage() {
                     disabled={savingRules || !unitId}
                     onClick={() => void saveStayRules()}
                   >
-                    {savingRules ? "Saving…" : "Save stay rules"}
+                    {savingRules ? "Saving…" : "Αποθήκευση κανόνων διαμονής"}
                   </Button>
                 </div>
               </>

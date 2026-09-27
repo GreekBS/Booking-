@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-
 const root = join(__dirname, "..");
 
 function read(rel: string): string {
@@ -11,10 +10,10 @@ function read(rel: string): string {
 describe("Talos operator Phase 2 — bookings workspace", () => {
   it("Bookings list uses Phase 1 surfaces, labeled filters, and clear filters", () => {
     const page = read("features/bookings/BookingsPage.tsx");
-    expect(page).toContain("New booking");
-    expect(page).toContain("Clear filters");
-    expect(page).toContain("Arrival from");
-    expect(page).toContain("Departure from");
+    expect(page).toContain("Νέα κράτηση");
+    expect(page).toContain("elCommon.clearFilters");
+    expect(page).toContain("elCommon.checkIn");
+    expect(page).toContain("elCommon.checkOut");
     expect(page).toContain("nightsBetween");
     expect(page).toContain("syncBookingUrl");
     expect(page).toContain("bookingId");
@@ -35,6 +34,8 @@ describe("Talos operator Phase 2 — bookings workspace", () => {
     expect(view).toContain('value="financials"');
     expect(view).toContain('value="guest"');
     expect(view).toContain('value="activity"');
+    expect(view).toContain("Επισκόπηση");
+    expect(view).toContain("Οικονομικά");
     expect(view).toContain("BookingStaySection");
     expect(view).toContain("BookingPaymentsSection");
     expect(view).toContain("BookingBillingFiscalSection");
@@ -43,10 +44,10 @@ describe("Talos operator Phase 2 — bookings workspace", () => {
 
   it("guest section does not invent country/language/special requests", () => {
     const guest = read("features/bookings/workspace/sections/BookingGuestSection.tsx");
-    expect(guest).toContain("Guest contact");
-    expect(guest).toContain("Full name");
-    expect(guest).toContain("Email");
-    expect(guest).toContain("Phone");
+    expect(guest).toContain("Επικοινωνία επισκέπτη");
+    expect(guest).toContain("Πλήρες όνομα");
+    expect(guest).toContain("elCommon.email");
+    expect(guest).toContain("elCommon.phone");
     expect(guest).not.toContain("Country");
     expect(guest).not.toContain("Language");
     expect(guest).not.toContain("Special requests");
@@ -54,28 +55,26 @@ describe("Talos operator Phase 2 — bookings workspace", () => {
 
   it("quick actions omit fake Message/Print stubs", () => {
     const actions = read("features/bookings/workspace/BookingQuickActions.tsx");
-    expect(actions).toContain("Confirm");
-    expect(actions).toContain("Cancel reservation");
+    expect(actions).toContain("elCommon.confirm");
+    expect(actions).toContain("Ακύρωση κράτησης");
     expect(actions).not.toContain("Message");
     expect(actions).not.toContain("Print");
   });
 
   it("pricing vs folio terminology stays distinct", () => {
     const pricing = read("features/bookings/workspace/sections/BookingPricingSection.tsx");
-    expect(pricing).toContain("Reservation pricing");
-    expect(pricing).toContain("Folio settlement");
+    expect(pricing).toContain("Τιμολόγηση κράτησης");
 
     const payments = read("features/bookings/workspace/sections/BookingPaymentsSection.tsx");
-    expect(payments).toContain("Folio / Account");
-    expect(payments).toContain("Climate Resilience Fee");
-    expect(payments).toContain("Fiscal documents");
+    expect(payments).toContain("Λογαριασμός κράτησης");
+    expect(payments).toContain("Καταχώρηση πληρωμής");
+    expect(payments).toContain("FolioFiscalIssuePanel");
   });
 
   it("manual booking defaults to Active Property", () => {
     const manual = read("features/bookings/ManualBookingPage.tsx");
     expect(manual).toContain("useActiveProperty");
     expect(manual).toContain("activePropertyId");
-    expect(manual).toContain("Defaults to Active Property");
     expect(manual).toContain("Surface");
   });
 

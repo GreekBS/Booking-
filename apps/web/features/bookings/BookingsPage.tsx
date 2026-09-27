@@ -54,8 +54,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { elCommon, elNav, statusLabelEl } from "@/lib/i18n";
 
 const PAGE_SIZE = 15;
+
+function reservationCountLabel(total: number): string {
+  return total === 1 ? "1 κράτηση" : `${total} κρατήσεις`;
+}
 type SortKey = "checkIn" | "checkOut" | "guest" | "status";
 
 export function BookingsPage() {
@@ -139,7 +144,7 @@ function BookingsPageContent() {
         setCatalogReady(true);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load catalog");
+        setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλόγου");
         setLoading(false);
       }
     }
@@ -178,7 +183,7 @@ function BookingsPageContent() {
       initializedRef.current = true;
       setInitialized(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load bookings");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης κρατήσεων");
     } finally {
       setLoading(false);
     }
@@ -325,17 +330,17 @@ function BookingsPageContent() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Bookings"
+        title={elNav.bookings}
         description={
           property
-            ? `${total} reservation${total === 1 ? "" : "s"} · ${property.name}`
-            : "Reservation center"
+            ? `${reservationCountLabel(total)} · ${property.name}`
+            : "Κέντρο κρατήσεων"
         }
         actions={
           <Button asChild size="sm">
             <Link href="/dashboard/bookings/new">
               <Plus className="h-4 w-4" />
-              New booking
+              Νέα κράτηση
             </Link>
           </Button>
         }
@@ -345,13 +350,13 @@ function BookingsPageContent() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <div className="relative min-w-0 flex-1">
             <Label htmlFor="booking-search" className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-              Search
+              {elCommon.search}
             </Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="booking-search"
-                placeholder="Guest, email, booking ID…"
+                placeholder="Επισκέπτης, email, ID κράτησης…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -365,7 +370,7 @@ function BookingsPageContent() {
             {filtersActive ? (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="h-3.5 w-3.5" />
-                Clear filters
+                {elCommon.clearFilters}
               </Button>
             ) : null}
             <Button
@@ -375,7 +380,7 @@ function BookingsPageContent() {
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ${loading && initialized ? "animate-spin" : ""}`} />
-              Refresh
+              {elCommon.refresh}
             </Button>
           </div>
         </div>
@@ -386,19 +391,19 @@ function BookingsPageContent() {
               htmlFor="booking-status-filter"
               className="text-[11px] uppercase tracking-wide text-muted-foreground"
             >
-              Status
+              {elCommon.status}
             </Label>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger id="booking-status-filter" aria-label="Filter by status">
-                <SelectValue placeholder="Status" />
+              <SelectTrigger id="booking-status-filter" aria-label="Φίλτρο κατάστασης">
+                <SelectValue placeholder={elCommon.status} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="payment_pending">Payment pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="all">Όλες οι καταστάσεις</SelectItem>
+                <SelectItem value="pending">{statusLabelEl("pending")}</SelectItem>
+                <SelectItem value="payment_pending">{statusLabelEl("payment_pending")}</SelectItem>
+                <SelectItem value="confirmed">{statusLabelEl("confirmed")}</SelectItem>
+                <SelectItem value="completed">{statusLabelEl("completed")}</SelectItem>
+                <SelectItem value="cancelled">{statusLabelEl("cancelled")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -407,14 +412,14 @@ function BookingsPageContent() {
               htmlFor="booking-unit-filter"
               className="text-[11px] uppercase tracking-wide text-muted-foreground"
             >
-              Unit
+              {elCommon.unit}
             </Label>
             <Select value={unitFilter} onValueChange={(v) => { setUnitFilter(v); setPage(1); }}>
-              <SelectTrigger id="booking-unit-filter" aria-label="Filter by unit">
-                <SelectValue placeholder="Unit" />
+              <SelectTrigger id="booking-unit-filter" aria-label="Φίλτρο μονάδας">
+                <SelectValue placeholder={elCommon.unit} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All units</SelectItem>
+                <SelectItem value="all">Όλες οι μονάδες</SelectItem>
                 {filteredUnits.map((u) => (
                   <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                 ))}
@@ -423,25 +428,25 @@ function BookingsPageContent() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="arrival-from" className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Arrival from
+              {elCommon.checkIn} από
             </Label>
             <Input id="arrival-from" type="date" value={arrivalFrom} onChange={(e) => { setArrivalFrom(e.target.value); setPage(1); }} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="arrival-to" className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Arrival to
+              {elCommon.checkIn} έως
             </Label>
             <Input id="arrival-to" type="date" value={arrivalTo} onChange={(e) => { setArrivalTo(e.target.value); setPage(1); }} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="departure-from" className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Departure from
+              {elCommon.checkOut} από
             </Label>
             <Input id="departure-from" type="date" value={departureFrom} onChange={(e) => { setDepartureFrom(e.target.value); setPage(1); }} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="departure-to" className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Departure to
+              {elCommon.checkOut} έως
             </Label>
             <Input id="departure-to" type="date" value={departureTo} onChange={(e) => { setDepartureTo(e.target.value); setPage(1); }} />
           </div>
@@ -454,9 +459,9 @@ function BookingsPageContent() {
 
       {bookings.length === 0 && !loading ? (
         <EmptyState
-          title="No bookings match"
-          description="Adjust filters or create a manual reservation."
-          action={{ label: "New booking", href: "/dashboard/bookings/new" }}
+          title="Δεν βρέθηκαν κρατήσεις"
+          description="Προσαρμόστε τα φίλτρα ή δημιουργήστε χειροκίνητη κράτηση."
+          action={{ label: "Νέα κράτηση", href: "/dashboard/bookings/new" }}
         />
       ) : (
         <Surface variant="panel" padding="none" className={loading && initialized ? "opacity-60" : ""}>
@@ -472,9 +477,9 @@ function BookingsPageContent() {
                     }}
                     tabIndex={0}
                   >
-                    Guest <SortIcon column="guest" />
+                    {elCommon.guest} <SortIcon column="guest" />
                   </TableHead>
-                  <TableHead>Stay / Unit</TableHead>
+                  <TableHead>Διαμονή / {elCommon.unit}</TableHead>
                   <TableHead
                     className="cursor-pointer"
                     onClick={() => toggleSort("checkIn")}
@@ -483,7 +488,7 @@ function BookingsPageContent() {
                       if (e.key === "Enter" || e.key === " ") toggleSort("checkIn");
                     }}
                   >
-                    Arrival <SortIcon column="checkIn" />
+                    {elCommon.checkIn} <SortIcon column="checkIn" />
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
@@ -493,10 +498,10 @@ function BookingsPageContent() {
                       if (e.key === "Enter" || e.key === " ") toggleSort("checkOut");
                     }}
                   >
-                    Departure <SortIcon column="checkOut" />
+                    {elCommon.checkOut} <SortIcon column="checkOut" />
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">Nights</TableHead>
-                  <TableHead className="hidden sm:table-cell">Guests</TableHead>
+                  <TableHead className="hidden md:table-cell">{elCommon.nights}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{elCommon.guests}</TableHead>
                   <TableHead
                     className="cursor-pointer"
                     onClick={() => toggleSort("status")}
@@ -505,7 +510,7 @@ function BookingsPageContent() {
                       if (e.key === "Enter" || e.key === " ") toggleSort("status");
                     }}
                   >
-                    Status <SortIcon column="status" />
+                    {elCommon.status} <SortIcon column="status" />
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -519,7 +524,7 @@ function BookingsPageContent() {
                       key={booking.id}
                       className="cursor-pointer"
                       tabIndex={0}
-                      aria-label={`Open reservation for ${booking.guest.name}`}
+                      aria-label={`Άνοιγμα κράτησης για ${booking.guest.name}`}
                       onClick={() => openBooking(booking)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {

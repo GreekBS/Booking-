@@ -14,8 +14,8 @@ describe("operator-ui housekeeping HT-4", () => {
     expect(page).toContain("fetchHousekeepingToday");
     expect(page).toContain("HousekeepingSignal");
     expect(page).toContain("/dashboard/housekeeping");
-    expect(page).toContain("Dirty");
-    expect(page).toContain("Overdue tasks");
+    expect(page).toContain("βρώμικ");
+    expect(page).toContain("εκπρόθεσμ");
     expect(page).toContain("useActiveProperty");
   });
 
@@ -27,10 +27,10 @@ describe("operator-ui housekeeping HT-4", () => {
     );
     expect(section).toContain("listTasks");
     expect(section).toContain("bookingId");
-    expect(section).toContain("View all tasks");
-    expect(section).toContain("Create task");
-    expect(section).toContain("View in Housekeeping");
-    expect(section).toContain("No open operational tasks");
+    expect(section).toContain("Όλες οι εργασίες");
+    expect(section).toContain("Δημιουργία εργασίας");
+    expect(section).toContain("Λειτουργικές εργασίες");
+    expect(section).toContain("Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες");
     expect(section).toContain("min-h-8");
   });
 

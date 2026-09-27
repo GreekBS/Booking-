@@ -102,10 +102,10 @@ export function resolveCellState(
   }
 
   if (rules && rules.checkInDays.length > 0 && !rules.checkInDays.includes(dayOfWeekUtc(date))) {
-    return { type: "closed", label: "Closed to arrival" };
+    return { type: "closed", label: "Κλειστή άφιξη" };
   }
 
-  return { type: "available", label: "Available" };
+  return { type: "available", label: "Διαθέσιμο" };
 }
 
 /** Background layer only — availability/restrictions, not occupancy fill. */
@@ -117,10 +117,10 @@ export function resolveBackgroundCellState(
   const hasOccupancy = isOccupied(calendar, date);
 
   if (rules && rules.checkInDays.length > 0 && !rules.checkInDays.includes(dayOfWeekUtc(date))) {
-    return { type: "closed", label: "Closed to arrival", hasOccupancy };
+    return { type: "closed", label: "Κλειστή άφιξη", hasOccupancy };
   }
 
-  return { type: "available", label: "Available", hasOccupancy };
+  return { type: "available", label: "Διαθέσιμο", hasOccupancy };
 }
 
 export function backgroundCellClassName(

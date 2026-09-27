@@ -8,16 +8,16 @@ import type { OperatorChannelConnection } from "../types";
 import type { BookingComCapabilities, BookingComOperatorPhase } from "./types";
 
 const PHASE_LABEL: Record<BookingComOperatorPhase, string> = {
-  not_connected: "Not connected",
-  setup_required: "Setup required",
-  awaiting_access: "Awaiting access",
-  mapping_required: "Mapping required",
-  ready_for_sync_preview: "Ready for sync preview",
-  ready_to_activate: "Ready to activate",
-  connected: "Connected",
-  paused: "Paused",
-  degraded: "Needs attention",
-  disconnected: "Disconnected",
+  not_connected: "Μη συνδεδεμένο",
+  setup_required: "Απαιτείται ρύθμιση",
+  awaiting_access: "Αναμονή πρόσβασης",
+  mapping_required: "Απαιτούνται αντιστοιχίσεις",
+  ready_for_sync_preview: "Έτοιμο για προεπισκόπηση sync",
+  ready_to_activate: "Έτοιμο για ενεργοποίηση",
+  connected: "Συνδεδεμένο",
+  paused: "Σε παύση",
+  degraded: "Χρειάζεται προσοχή",
+  disconnected: "Αποσυνδεδεμένο",
 };
 
 function phaseStatusKey(phase: BookingComOperatorPhase): string {
@@ -72,7 +72,7 @@ export function BookingComProviderCard({
         <div>
           <h3 className="text-base font-semibold">Booking.com</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Reservations in · availability, rates &amp; restrictions out
+            Κρατήσεις εισερχόμενες · διαθεσιμότητα, τιμές και περιορισμοί εξερχόμενα
           </p>
         </div>
         <StatusBadge status={phaseStatusKey(phase)} label={PHASE_LABEL[phase]} />
@@ -92,7 +92,7 @@ export function BookingComProviderCard({
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Connect your Booking.com hotel to sync reservations and availability.
+            Συνδέστε ξενοδοχείο Booking.com για συγχρονισμό κρατήσεων και διαθεσιμότητας.
           </p>
         )}
         <div className="mt-auto flex flex-wrap gap-2 pt-1">
@@ -100,17 +100,17 @@ export function BookingComProviderCard({
             <Button asChild>
               <Link href={href}>
                 {phase === "connected" || phase === "paused" || phase === "degraded"
-                  ? "Open dashboard"
-                  : "Continue setup"}
+                  ? "Άνοιγμα πίνακα"
+                  : "Συνέχεια ρύθμισης"}
               </Link>
             </Button>
           ) : (
             <Button disabled={starting} onClick={onStart}>
-              {starting ? "Starting…" : "Connect Booking.com"}
+              {starting ? "Έναρξη…" : "Σύνδεση Booking.com"}
             </Button>
           )}
           <Button variant="outline" asChild>
-            <Link href="/dashboard/channels/help/booking-com">Help guide</Link>
+            <Link href="/dashboard/channels/help/booking-com">Οδηγός βοήθειας</Link>
           </Button>
         </div>
       </div>
@@ -129,7 +129,7 @@ export function ComingSoonProviderCard({
     <Surface variant="subtle" className="opacity-90">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-base font-semibold">{name}</h3>
-        <StatusBadge status="draft" label="Coming soon" />
+        <StatusBadge status="draft" label="Σύντομα" />
       </div>
       <p className="mt-2 text-sm text-muted-foreground">{description}</p>
     </Surface>

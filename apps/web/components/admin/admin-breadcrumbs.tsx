@@ -11,13 +11,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { elCommon, elNav } from "@/lib/i18n";
 import { adminNavItems } from "./admin-sidebar";
 
 function labelForSegment(segment: string, path: string) {
   const nav = adminNavItems.find((item) => item.href === path);
   if (nav) return nav.label;
-  if (segment === "new") return "New";
-  return segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  if (segment === "new") return elCommon.new;
+  return segment.replace(/-/g, " ");
 }
 
 export function AdminBreadcrumbs() {
@@ -29,7 +30,7 @@ export function AdminBreadcrumbs() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+            <BreadcrumbPage>{elNav.dashboard}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

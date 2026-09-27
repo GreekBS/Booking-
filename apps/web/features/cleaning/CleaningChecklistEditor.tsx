@@ -52,7 +52,7 @@ export function CleaningChecklistEditor() {
     error: propertyError,
   } = useActiveProperty();
 
-  const [name, setName] = useState("Standard turnover");
+  const [name, setName] = useState("Τυπική αναχώρηση");
   const [minimumCompletionPhotos, setMinimumCompletionPhotos] = useState(0);
   const [items, setItems] = useState<DraftItem[]>([emptyItem()]);
   const [version, setVersion] = useState<number | null>(null);
@@ -84,7 +84,7 @@ export function CleaningChecklistEditor() {
       }
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load checklist");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης λίστας ελέγχου");
     } finally {
       setLoading(false);
     }
@@ -124,7 +124,7 @@ export function CleaningChecklistEditor() {
       .filter((item) => item.label.length > 0);
 
     if (payload.length === 0) {
-      toastError("Add at least one checklist item");
+      toastError("Προσθέστε τουλάχιστον ένα στοιχείο");
       return;
     }
 
@@ -137,10 +137,10 @@ export function CleaningChecklistEditor() {
         items: payload,
       });
       setVersion(saved.version);
-      toastSuccess("Checklist saved");
+      toastSuccess("Η λίστα αποθηκεύτηκε");
       await load();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to save checklist");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης λίστας");
     } finally {
       setSaving(false);
     }
@@ -162,29 +162,29 @@ export function CleaningChecklistEditor() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Cleaning checklist"
+        title="Λίστα ελέγχου καθαρισμού"
         description={
           property
-            ? `Checklist used by QR cleanings at ${property.name}${
+            ? `Λίστα για καθαρισμούς QR στο ${property.name}${
                 version ? ` · v${version}` : ""
               }`
-            : "Checklist used by QR cleanings"
+            : "Λίστα για καθαρισμούς QR"
         }
         actions={
           <Button onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Saving..." : "Save checklist"}
+            {saving ? "Αποθήκευση…" : "Αποθήκευση λίστας"}
           </Button>
         }
       />
 
       <Surface variant="panel">
         <SurfaceHeader
-          title="Settings"
-          description="Applies to every cleaning started from a QR scan at this property."
+          title="Ρυθμίσεις"
+          description="Ισχύει για κάθε καθαρισμό που ξεκινά από σάρωση QR σε αυτό το κατάλυμα."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="checklist-name">Checklist name</Label>
+            <Label htmlFor="checklist-name">Όνομα λίστας</Label>
             <Input
               id="checklist-name"
               value={name}
@@ -193,7 +193,7 @@ export function CleaningChecklistEditor() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="checklist-min-photos">Minimum photos to complete</Label>
+            <Label htmlFor="checklist-min-photos">Ελάχιστες φωτογραφίες για ολοκλήρωση</Label>
             <Input
               id="checklist-min-photos"
               type="number"
@@ -213,7 +213,7 @@ export function CleaningChecklistEditor() {
       <Surface variant="panel">
         <SurfaceHeader
           title={`Items (${items.length}/${MAX_ITEMS})`}
-          description="Required items must be checked, and photo-required items need at least one photo, before a cleaning can be completed."
+          description="Τα υποχρεωτικά στοιχεία πρέπει να τσεκαριστούν και τα στοιχεία με φωτογραφία να έχουν τουλάχιστον μία, πριν την ολοκλήρωση."
         />
         <ul className="space-y-3">
           {items.map((item, index) => (
@@ -223,13 +223,13 @@ export function CleaningChecklistEditor() {
                   <Input
                     value={item.label}
                     maxLength={255}
-                    placeholder="e.g. Strip and remake all beds"
+                    placeholder="π.χ. Αλλαγή σεντονιών σε όλα τα κρεβάτια"
                     onChange={(e) => updateItem(index, { label: e.target.value })}
                   />
                   <Input
                     value={item.description}
                     maxLength={2000}
-                    placeholder="Optional guidance"
+                    placeholder="Προαιρετική καθοδήγηση"
                     onChange={(e) =>
                       updateItem(index, { description: e.target.value })
                     }
@@ -243,7 +243,7 @@ export function CleaningChecklistEditor() {
                           updateItem(index, { required: e.target.checked })
                         }
                       />
-                      Required
+                      Υποχρεωτικό
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -253,7 +253,7 @@ export function CleaningChecklistEditor() {
                           updateItem(index, { photoRequired: e.target.checked })
                         }
                       />
-                      Photo required
+                      Απαιτείται φωτογραφία
                     </label>
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export function CleaningChecklistEditor() {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label="Move up"
+                    aria-label="Μετακίνηση πάνω"
                     onClick={() => moveItem(index, -1)}
                   >
                     <ArrowUp className="h-4 w-4" />
@@ -271,7 +271,7 @@ export function CleaningChecklistEditor() {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label="Move down"
+                    aria-label="Μετακίνηση κάτω"
                     onClick={() => moveItem(index, 1)}
                   >
                     <ArrowDown className="h-4 w-4" />
@@ -280,7 +280,7 @@ export function CleaningChecklistEditor() {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label="Remove item"
+                    aria-label="Αφαίρεση στοιχείου"
                     onClick={() =>
                       setItems((prev) => prev.filter((_, i) => i !== index))
                     }
@@ -300,7 +300,7 @@ export function CleaningChecklistEditor() {
           onClick={() => setItems((prev) => [...prev, emptyItem()])}
         >
           <Plus className="h-4 w-4" />
-          Add item
+          Προσθήκη στοιχείου
         </Button>
       </Surface>
     </div>

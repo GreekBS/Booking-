@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { elCommon, statusLabelEl } from "@/lib/i18n";
 
 interface Detail {
   documentNumber: string | null;
@@ -71,7 +72,7 @@ async function downloadFiscalPdf(tenantId: string, documentId: string): Promise<
     headers: { "x-tenant-id": tenantId },
   });
   if (!res.ok) {
-    throw new Error("Download failed");
+    throw new Error("Η λήψη απέτυχε");
   }
   const blob = await res.blob();
   const cd = res.headers.get("content-disposition") ?? "";
@@ -104,7 +105,7 @@ export function FiscalDocumentDetailPage() {
 
   useEffect(() => {
     void load().catch((e) => {
-      const msg = e instanceof Error ? e.message : "Load failed";
+      const msg = e instanceof Error ? e.message : "Αποτυχία φόρτωσης";
       setLoadError(msg);
       toastError(msg);
     });
@@ -120,10 +121,10 @@ export function FiscalDocumentDetailPage() {
         method: "POST",
         body: JSON.stringify({ issuanceIdempotencyKey: key }),
       });
-      toastSuccess("Issued locally");
+      toastSuccess("Εκδόθηκε τοπικά");
       await load();
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Issue failed");
+      toastError(e instanceof Error ? e.message : "Αποτυχία έκδοσης");
     } finally {
       setIssuing(false);
     }
@@ -132,7 +133,7 @@ export function FiscalDocumentDetailPage() {
   if (loadError && !detail) {
     return (
       <div>
-        <PageHeader title="Fiscal document" />
+        <PageHeader title="Παραστατικό" />
         <ErrorState message={loadError} onRetry={() => void load()} />
       </div>
     );
@@ -156,29 +157,35 @@ export function FiscalDocumentDetailPage() {
   return (
     <div>
       <PageHeader
-        title={detail.documentNumber ?? "Draft document"}
-        description={`${fiscalDocumentKindLabel(d.documentKind)} · immutable snapshots`}
+        title={detail.documentNumber ?? "Πρόχειρο παραστατικό"}
+        description={`${fiscalDocumentKindLabel(d.documentKind)} · αμετάβλητα στιγμιότυπα`}
         meta={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
               status={d.status}
-              label={isIssued ? "Issued" : isDraft ? "Draft" : detail.localStatusLabel}
+              label={
+                isIssued
+                  ? statusLabelEl("ISSUED")
+                  : isDraft
+                    ? statusLabelEl("DRAFT")
+                    : detail.localStatusLabel
+              }
             />
             <span className="text-xs text-muted-foreground">
               {isIssued
-                ? `Issued ${formatOperatorDate(d.issuedAt)}`
-                : "Not issued — values still draft"}
+                ? `Εκδόθηκε ${formatOperatorDate(d.issuedAt)}`
+                : "Δεν έχει εκδοθεί — οι τιμές είναι ακόμα πρόχειρες"}
             </span>
           </div>
         }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
-              <Link href="/dashboard/fiscal-documents">Back</Link>
+              <Link href="/dashboard/fiscal-documents">{elCommon.back}</Link>
             </Button>
             {isDraft ? (
               <Button onClick={() => void issue()} disabled={issuing}>
-                {issuing ? "Issuing…" : "Issue locally"}
+                {issuing ? "Έκδοση…" : "Τοπική έκδοση"}
               </Button>
             ) : null}
             {isIssued && tenantId ? (
@@ -200,16 +207,16 @@ export function FiscalDocumentDetailPage() {
                     })();
                   }}
                 >
-                  Print view
+                  Προβολή εκτύπωσης
                 </Button>
                 <Button
                   onClick={() => {
                     void downloadFiscalPdf(tenantId, d.id).catch((e) =>
-                      toastError(e instanceof Error ? e.message : "Download failed"),
+                      toastError(e instanceof Error ? e.message : "Η λήψη απέτυχε"),
                     );
                   }}
                 >
-                  Download PDF
+                  {elCommon.download} PDF
                 </Button>
               </>
             ) : null}
@@ -219,16 +226,16 @@ export function FiscalDocumentDetailPage() {
 
       <Surface variant="subtle" className="mb-5" padding="sm">
         <p className="text-xs text-muted-foreground">
-          Issued documents are immutable. Corrections use cancellation, credit, or reissue where
-          the domain supports them. No AADE / MARK transmission in this phase.
+          Τα εκδοθέντα παραστατικά είναι αμετάβλητα. Διορθώσεις μέσω ακύρωσης, πιστωτικού ή
+          επανέκδοσης όπου το υποστηρίζει το σύστημα. Δεν υπάρχει αποστολή AADE / MARK σε αυτή τη φάση.
         </p>
       </Surface>
 
       <div className="mb-5 grid gap-4 lg:grid-cols-2">
         <Surface>
           <SurfaceHeader
-            title="Issuer snapshot"
-            description="Frozen at draft/issue — not the live business profile."
+            title="Στιγμιότυπο εκδότη"
+            description="Κατάσταση κατά πρόχειρο/έκδοση — όχι live προφίλ."
           />
           <div className="space-y-1 text-sm">
             <p className="font-medium">{d.issuerSnapshot?.legalName ?? "—"}</p>
@@ -245,8 +252,8 @@ export function FiscalDocumentDetailPage() {
         </Surface>
         <Surface>
           <SurfaceHeader
-            title="Customer snapshot"
-            description="Frozen billing party — not a live CustomerBillingProfile re-read."
+            title="Στιγμιότυπο πελάτη"
+            description="Κατάσταση χρεώσης — όχι live ανάγνωση προφίλ."
           />
           <div className="space-y-1 text-sm">
             <p className="font-medium">{d.customerSnapshot?.legalName ?? "—"}</p>
@@ -261,18 +268,18 @@ export function FiscalDocumentDetailPage() {
         <div className="border-b border-border px-4 py-3">
           <SurfaceHeader
             className="mb-0"
-            title="Fiscal lines"
-            description="Stored line amounts. Levy / Climate Resilience Fee is separate from VAT."
+            title="Γραμμές παραστατικού"
+            description="Αποθηκευμένα ποσά. Εισφορά κλιματικής ανθεκτικότητας ξεχωριστά από ΦΠΑ."
           />
         </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Net</TableHead>
-              <TableHead className="text-right">VAT</TableHead>
-              <TableHead className="text-right">Levy / CRF</TableHead>
-              <TableHead className="text-right">Gross</TableHead>
+              <TableHead>Περιγραφή</TableHead>
+              <TableHead className="text-right">Καθαρή αξία</TableHead>
+              <TableHead className="text-right">ΦΠΑ</TableHead>
+              <TableHead className="text-right">Τέλος / CRF</TableHead>
+              <TableHead className="text-right">Μικτά</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -299,31 +306,31 @@ export function FiscalDocumentDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Surface>
-          <SurfaceHeader title="Tax summary" description="From stored document totals." />
+          <SurfaceHeader title="Φορολογική σύνοψη" description="Από αποθηκευμένα σύνολα παραστατικού." />
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Net</dt>
+              <dt className="text-muted-foreground">Καθαρή αξία</dt>
               <dd className="tabular-nums font-medium">
                 {formatOperatorMoney(d.totals.netTotal, currency)}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">VAT</dt>
+              <dt className="text-muted-foreground">ΦΠΑ</dt>
               <dd className="tabular-nums font-medium">
                 {formatOperatorMoney(d.totals.vatTotal, currency)}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">
-                Climate Resilience Fee / levy
-                <span className="block text-[10px] font-normal">(not VAT)</span>
+                Τέλος κλιματικής ανθεκτικότητας
+                <span className="block text-[10px] font-normal">(όχι ΦΠΑ)</span>
               </dt>
               <dd className="tabular-nums font-medium">
                 {formatOperatorMoney(d.totals.levyTotal, currency)}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-t border-border pt-2">
-              <dt className="font-semibold">Gross</dt>
+              <dt className="font-semibold">Μικτά</dt>
               <dd className="text-base font-semibold tabular-nums">
                 {formatOperatorMoney(d.totals.grossTotal, currency)}
               </dd>
@@ -332,10 +339,10 @@ export function FiscalDocumentDetailPage() {
         </Surface>
 
         <Surface>
-          <SurfaceHeader title="Provenance" />
+          <SurfaceHeader title="Προέλευση" />
           <div className="space-y-2 text-sm">
             <p>
-              <span className="text-muted-foreground">Booking: </span>
+              <span className="text-muted-foreground">Κράτηση: </span>
               {d.sourceBookingId ? (
                 <Link
                   href={`/dashboard/bookings?bookingId=${d.sourceBookingId}`}
@@ -349,18 +356,18 @@ export function FiscalDocumentDetailPage() {
             </p>
             {d.correlation ? (
               <p>
-                <span className="text-muted-foreground">Credit of </span>
+                <span className="text-muted-foreground">Πιστωτικό για </span>
                 <span className="font-mono text-xs">{d.correlation.originalDocumentId}</span>
                 {": "}
                 {d.correlation.reason}
               </p>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              Greek mapping (config only): {detail.greekMapping.myDataInvoiceType} —{" "}
+              Ελληνική αντιστοίχιση (μόνο ρύθμιση): {detail.greekMapping.myDataInvoiceType} —{" "}
               {detail.greekMapping.labelEn}
             </p>
             <p className="pt-1 text-xs text-muted-foreground">
-              Issued locally — pending fiscalization integration. No AADE/MARK.
+              Τοπική έκδοση — εκκρεμεί ενσωμάτωση φορολογικής υποβολής. Χωρίς AADE/MARK.
             </p>
           </div>
         </Surface>

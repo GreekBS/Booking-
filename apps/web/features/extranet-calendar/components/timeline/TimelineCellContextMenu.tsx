@@ -62,14 +62,14 @@ export function TimelineCellContextMenu({
               disabled={!canBlock}
               onSelect={() => openWorkspaceForCell(unit, date)}
             >
-              View selection
+              Προβολή επιλογής
               <ContextMenuShortcut>↵</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem
               disabled={!canBlock}
               onSelect={() => void createBlockForCell(unit, date, "manual")}
             >
-              Block dates
+              Κλείδωμα ημερομηνιών
               <ContextMenuShortcut>B</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuSeparator />
@@ -77,25 +77,25 @@ export function TimelineCellContextMenu({
               disabled={!canBlock}
               onSelect={() => void createBlockForCell(unit, date, "maintenance")}
             >
-              Maintenance
+              Συντήρηση
               <ContextMenuShortcut>M</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem
               disabled={!canBlock}
               onSelect={() => void createBlockForCell(unit, date, "cleaning")}
             >
-              Cleaning
+              Καθαρισμός
               <ContextMenuShortcut>C</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem
               disabled={!canBlock}
               onSelect={() => void createBlockForCell(unit, date, "owner")}
             >
-              Owner stay
+              Διαμονή ιδιοκτήτη
               <ContextMenuShortcut>O</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => openMinStayForCell(unit.unitId, date)}>
-              Set minimum stay
+              Ορισμός ελάχ. διαμονής
             </ContextMenuItem>
           </>
         )}
@@ -103,12 +103,12 @@ export function TimelineCellContextMenu({
         {hasBooking && (
           <>
             <ContextMenuItem onSelect={() => openWorkspaceForCell(unit, date)}>
-              View booking
+              Προβολή κράτησης
               <ContextMenuShortcut>↵</ContextMenuShortcut>
             </ContextMenuItem>
             {booking?.status === "pending" && (
               <ContextMenuItem onSelect={() => void confirmBookingById(state.bookingId!)}>
-                Confirm booking
+                Επιβεβαίωση κράτησης
               </ContextMenuItem>
             )}
             {booking && booking.status !== "cancelled" && booking.status !== "completed" && (
@@ -116,7 +116,7 @@ export function TimelineCellContextMenu({
                 className="text-destructive focus:text-destructive"
                 onSelect={() => void cancelBookingById(state.bookingId!)}
               >
-                Cancel booking
+                Ακύρωση κράτησης
               </ContextMenuItem>
             )}
           </>
@@ -125,11 +125,11 @@ export function TimelineCellContextMenu({
         {hasHold && (
           <>
             <ContextMenuItem onSelect={() => openWorkspaceForCell(unit, date)}>
-              View hold
+              Προβολή δέσμευσης
               <ContextMenuShortcut>↵</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => void releaseHoldById(unit, state.holdId!)}>
-              Release hold
+              Απελευθέρωση δέσμευσης
             </ContextMenuItem>
           </>
         )}
@@ -137,11 +137,11 @@ export function TimelineCellContextMenu({
         {hasBlock && (
           <>
             <ContextMenuItem onSelect={() => openWorkspaceForCell(unit, date)}>
-              View block
+              Προβολή block
               <ContextMenuShortcut>↵</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => void releaseBlockById(unit, state.blockId!)}>
-              Release block
+              Απελευθέρωση block
             </ContextMenuItem>
           </>
         )}

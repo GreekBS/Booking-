@@ -16,11 +16,11 @@ export function SetNightlyPriceFields({
   onPriceChange,
   currency,
   idPrefix = "nightly-price",
-  helperText = "Applies to every night in the selected range",
+  helperText = "Ισχύει για κάθε νύχτα στο επιλεγμένο εύρος",
 }: SetNightlyPriceFieldsProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={`${idPrefix}-amount`}>Nightly price</Label>
+      <Label htmlFor={`${idPrefix}-amount`}>Νυχτερινή τιμή</Label>
       <div className="flex items-center gap-2">
         <Input
           id={`${idPrefix}-amount`}

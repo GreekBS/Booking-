@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { elCommon, elNav } from "@/lib/i18n";
 
 const PAGE_SIZE = 15;
 
@@ -87,7 +88,7 @@ export function GuestsPage() {
         setTotal(result.total);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load guests");
+          setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης επισκεπτών");
           setGuests([]);
           setTotal(0);
         }
@@ -106,10 +107,10 @@ export function GuestsPage() {
 
   const scopeLabel =
     entireTenant && canEntireTenant
-      ? "Entire tenant"
+      ? "Όλος ο οργανισμός"
       : property?.name
-        ? `Active property · ${property.name}`
-        : "Active property";
+        ? `Ενεργό κατάλυμα · ${property.name}`
+        : elCommon.activeProperty;
 
   const propertyGate = renderActivePropertyGate({
     tenantLoading,
@@ -126,14 +127,19 @@ export function GuestsPage() {
   }
   if (tenantError) return <ErrorState message={tenantError} />;
   if (!tenantId) {
-    return <ErrorState title="No tenant context" message="Select a tenant to view guests." />;
+    return (
+      <ErrorState
+        title={elCommon.noTenantContext}
+        message="Επιλέξτε οργανισμό για προβολή επισκεπτών."
+      />
+    );
   }
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Guests"
-        description="CRM guest directory with stay metrics from reservations you can see."
+        title={elNav.guests}
+        description="Κατάλογος επισκεπτών CRM με μετρήσεις διαμονής από κρατήσεις που βλέπετε."
         meta={
           <span className="text-xs text-muted-foreground">
             {scopeLabel}
@@ -142,7 +148,7 @@ export function GuestsPage() {
               href="/dashboard/bookings/new"
               className="text-primary underline-offset-2 hover:underline"
             >
-              New reservation
+              Νέα κράτηση
             </Link>
           </span>
         }
@@ -151,10 +157,10 @@ export function GuestsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           className="max-w-md"
-          placeholder="Search by name, email, or phone…"
+          placeholder="Αναζήτηση με όνομα, email ή τηλέφωνο…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search guests"
+          aria-label="Αναζήτηση επισκεπτών"
         />
         {canEntireTenant ? (
           <Button
@@ -165,7 +171,7 @@ export function GuestsPage() {
             onClick={() => setEntireTenant((v) => !v)}
             aria-pressed={entireTenant}
           >
-            {entireTenant ? "Entire tenant" : "Active property only"}
+            {entireTenant ? "Όλος ο οργανισμός" : "Μόνο ενεργό κατάλυμα"}
           </Button>
         ) : null}
       </div>
@@ -175,11 +181,11 @@ export function GuestsPage() {
           <div className="border-b border-border px-4 py-3">
             <SurfaceHeader
               className="mb-0"
-              title="Guest directory"
+              title="Κατάλογος επισκεπτών"
               description={
                 entireTenant && canEntireTenant
-                  ? "All guests with reservation activity across the tenant."
-                  : "Guests with reservation activity at the active property."
+                  ? "Όλοι οι επισκέπτες με κρατήσεις σε όλο τον οργανισμό."
+                  : "Επισκέπτες με κρατήσεις στο ενεργό κατάλυμα."
               }
             />
           </div>
@@ -198,17 +204,17 @@ export function GuestsPage() {
             <div className="p-4">
               <EmptyState
                 compact
-                title={filtersActive ? "No matching guests" : "No guests yet"}
+                title={filtersActive ? "Δεν βρέθηκαν επισκέπτες" : "Δεν υπάρχουν επισκέπτες ακόμα"}
                 description={
                   filtersActive
-                    ? "Try a different search or scope."
-                    : "Guests appear after linked reservations. Create a booking or import channel reservations."
+                    ? "Δοκιμάστε άλλη αναζήτηση ή εύρος."
+                    : "Οι επισκέπτες εμφανίζονται μετά από συνδεδεμένες κρατήσεις. Δημιουργήστε κράτηση ή εισάγετε κρατήσεις καναλιών."
                 }
                 action={
                   filtersActive
                     ? undefined
                     : {
-                        label: "New reservation",
+                        label: "Νέα κράτηση",
                         href: "/dashboard/bookings/new",
                       }
                 }
@@ -219,13 +225,13 @@ export function GuestsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Guest</TableHead>
-                    <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                    <TableHead className="text-right">Stays</TableHead>
-                    <TableHead className="hidden md:table-cell">Last stay</TableHead>
-                    <TableHead className="hidden lg:table-cell">Next stay</TableHead>
-                    <TableHead className="hidden md:table-cell">Tags</TableHead>
-                    <TableHead className="w-[72px] text-right">Actions</TableHead>
+                    <TableHead>{elCommon.guest}</TableHead>
+                    <TableHead className="hidden sm:table-cell">Επικοινωνία</TableHead>
+                    <TableHead className="text-right">Διαμονές</TableHead>
+                    <TableHead className="hidden md:table-cell">Τελευταία διαμονή</TableHead>
+                    <TableHead className="hidden lg:table-cell">Επόμενη διαμονή</TableHead>
+                    <TableHead className="hidden md:table-cell">Ετικέτες</TableHead>
+                    <TableHead className="w-[72px] text-right">{elCommon.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -272,7 +278,7 @@ export function GuestsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-                          <Link href={`/dashboard/guests/${guest.id}`}>Open</Link>
+                          <Link href={`/dashboard/guests/${guest.id}`}>{elCommon.open}</Link>
                         </Button>
                       </TableCell>
                     </TableRow>

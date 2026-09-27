@@ -90,7 +90,7 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
           GRID_CANVAS_CLASS,
         )}
         tabIndex={0}
-        aria-label="Availability month calendar. Click a day to inspect or drag to select a range."
+        aria-label="Μηνιαίο ημερολόγιο διαθεσιμότητας. Κλικ για προβολή ή σύρσιμο για επιλογή εύρους."
       >
         <div className="mx-auto w-full max-w-[1200px] px-3 py-4 sm:px-4">
           {emptyVariant ? (

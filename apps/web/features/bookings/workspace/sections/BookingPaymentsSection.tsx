@@ -30,6 +30,18 @@ import {
 } from "@/features/workspace/components/WorkspaceSection";
 import type { BookingSectionProps } from "../types";
 import { FolioFiscalIssuePanel } from "@/features/fiscal/FolioFiscalIssuePanel";
+import { elCommon, elNav } from "@/lib/i18n";
+
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  CASH: "Μετρητά",
+  CARD: "Κάρτα",
+  BANK_TRANSFER: "Τραπεζική κατάθεση",
+};
+
+const COLLECTION_SOURCE_LABEL: Record<string, string> = {
+  PROPERTY: elCommon.property,
+  DIRECT: "Άμεση",
+};
 
 interface FolioLineDto {
   id: string;
@@ -142,7 +154,7 @@ export function BookingPaymentsSection({
       setFolios(summary.folios ?? []);
       setPayments(summary.payments ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load folio");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης λογαριασμού");
       setFolios([]);
       setPayments([]);
     } finally {
@@ -179,7 +191,7 @@ export function BookingPaymentsSection({
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Tax evaluation failed");
+      setError(err instanceof Error ? err.message : "Αποτυχία υπολογισμού φόρων");
     } finally {
       setEvaluating(false);
     }
@@ -213,7 +225,7 @@ export function BookingPaymentsSection({
       setPayAmount("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
+      setError(err instanceof Error ? err.message : "Αποτυχία καταχώρησης πληρωμής");
     } finally {
       setRecording(false);
     }
@@ -223,23 +235,23 @@ export function BookingPaymentsSection({
 
   return (
     <div className="space-y-6">
-      <WorkspaceSection title="Payments">
+      <WorkspaceSection title={elNav.payments}>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading payments…</p>
+          <p className="text-sm text-muted-foreground">Φόρτωση πληρωμών…</p>
         ) : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {!loading && payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No payments recorded.</p>
+          <p className="text-sm text-muted-foreground">Δεν έχουν καταχωρηθεί πληρωμές.</p>
         ) : null}
         {payments.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="h-9 text-xs">Received</TableHead>
-                  <TableHead className="h-9 text-xs">Method</TableHead>
-                  <TableHead className="h-9 text-right text-xs">Amount</TableHead>
-                  <TableHead className="h-9 text-xs">Status</TableHead>
+                  <TableHead className="h-9 text-xs">Λήψη</TableHead>
+                  <TableHead className="h-9 text-xs">Τρόπος</TableHead>
+                  <TableHead className="h-9 text-right text-xs">{elCommon.amount}</TableHead>
+                  <TableHead className="h-9 text-xs">{elCommon.status}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -249,7 +261,8 @@ export function BookingPaymentsSection({
                       {new Date(p.receivedAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="py-2 text-xs text-muted-foreground">
-                      {p.method} · {p.collectionSource}
+                      {PAYMENT_METHOD_LABEL[p.method] ?? p.method} ·{" "}
+                      {COLLECTION_SOURCE_LABEL[p.collectionSource] ?? p.collectionSource}
                     </TableCell>
                     <TableCell className="py-2 text-right text-xs tabular-nums">
                       {formatMoney(p.amount, p.currency)}
@@ -265,10 +278,10 @@ export function BookingPaymentsSection({
         ) : null}
 
         <div className="mt-3 space-y-3 rounded-md border border-border bg-surface-subtle/40 p-3">
-          <p className="text-sm font-medium">Record payment</p>
+          <p className="text-sm font-medium">Καταχώρηση πληρωμής</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="pay-amount">Amount</Label>
+              <Label htmlFor="pay-amount">{elCommon.amount}</Label>
               <Input
                 id="pay-amount"
                 inputMode="decimal"
@@ -278,7 +291,7 @@ export function BookingPaymentsSection({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pay-method">Method</Label>
+              <Label htmlFor="pay-method">Τρόπος πληρωμής</Label>
               <Select
                 value={payMethod}
                 onValueChange={(v) => setPayMethod(v as typeof payMethod)}
@@ -287,14 +300,14 @@ export function BookingPaymentsSection({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CASH">Cash</SelectItem>
-                  <SelectItem value="CARD">Card</SelectItem>
-                  <SelectItem value="BANK_TRANSFER">Bank transfer</SelectItem>
+                  <SelectItem value="CASH">Μετρητά</SelectItem>
+                  <SelectItem value="CARD">Κάρτα</SelectItem>
+                  <SelectItem value="BANK_TRANSFER">Τραπεζική κατάθεση</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pay-source">Collection source</Label>
+              <Label htmlFor="pay-source">Πηγή είσπραξης</Label>
               <Select
                 value={collectionSource}
                 onValueChange={(v) =>
@@ -305,8 +318,8 @@ export function BookingPaymentsSection({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PROPERTY">Property</SelectItem>
-                  <SelectItem value="DIRECT">Direct</SelectItem>
+                  <SelectItem value="PROPERTY">{elCommon.property}</SelectItem>
+                  <SelectItem value="DIRECT">Άμεση</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -320,7 +333,7 @@ export function BookingPaymentsSection({
                 onChange={(e) => setAllocatePrimary(e.target.checked)}
               />
               <Label htmlFor="pay-allocate" className="font-normal">
-                Allocate to primary folio
+                Κατανομή στον κύριο λογαριασμό
               </Label>
             </div>
           </div>
@@ -329,21 +342,21 @@ export function BookingPaymentsSection({
             disabled={recording || !payAmount.trim()}
             onClick={() => void recordPayment()}
           >
-            Record payment
+            Καταχώρηση πληρωμής
           </Button>
         </div>
       </WorkspaceSection>
 
-      <WorkspaceSection title="Folio / Account">
+      <WorkspaceSection title="Λογαριασμός κράτησης">
         <p className="text-[11px] text-muted-foreground">
-          Settlement truth — charges, VAT, levies, payments, and outstanding balance.
-          Climate Resilience Fee is a levy, not VAT.
+          Πραγματικός συμψηφισμός — χρεώσεις, ΦΠΑ, τέλη, πληρωμές και υπόλοιπο. Το κλιματικό
+          τέλος ανθεκτικότητας είναι τέλος, όχι ΦΠΑ.
         </p>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading folio…</p>
+          <p className="text-sm text-muted-foreground">Φόρτωση λογαριασμού…</p>
         ) : null}
         {!loading && !error && folios.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No folio yet.</p>
+          <p className="text-sm text-muted-foreground">Δεν υπάρχει ακόμα λογαριασμός.</p>
         ) : null}
         {!loading &&
           folios.map((folio) => {
@@ -369,16 +382,16 @@ export function BookingPaymentsSection({
                     disabled={evaluating}
                     onClick={() => void evaluateTaxes(folio.id)}
                   >
-                    Evaluate taxes
+                    Υπολογισμός φόρων
                   </Button>
                 </div>
                 <div className="overflow-x-auto rounded-md border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="h-9 text-xs">Description</TableHead>
-                        <TableHead className="h-9 text-xs">Type</TableHead>
-                        <TableHead className="h-9 text-right text-xs">Amount</TableHead>
+                        <TableHead className="h-9 text-xs">{elCommon.description}</TableHead>
+                        <TableHead className="h-9 text-xs">{elCommon.type}</TableHead>
+                        <TableHead className="h-9 text-right text-xs">{elCommon.amount}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -406,19 +419,19 @@ export function BookingPaymentsSection({
                 </div>
                 <WorkspaceDetailList>
                   <WorkspaceDetailRow
-                    label="Net (charges)"
+                    label="Καθαρές χρεώσεις"
                     value={formatMoney(net, folio.balance.currency)}
                   />
                   <WorkspaceDetailRow
-                    label="VAT"
+                    label="ΦΠΑ"
                     value={formatMoney(vat, folio.balance.currency)}
                   />
                   <WorkspaceDetailRow
-                    label="Other levies (e.g. climate fee)"
+                    label="Λοιπά τέλη (π.χ. κλιματικό)"
                     value={formatMoney(levies, folio.balance.currency)}
                   />
                   <WorkspaceDetailRow
-                    label="Gross / folio total"
+                    label="Μικτό / σύνολο λογαριασμού"
                     value={formatMoney(
                       folio.balance.folioTotal,
                       folio.balance.currency,
@@ -426,12 +439,12 @@ export function BookingPaymentsSection({
                     bold
                   />
                   <WorkspaceDetailRow
-                    label="Paid (net settled)"
+                    label="Εισπραχθέντα (καθαρά)"
                     value={formatMoney(netSettled, folio.balance.currency)}
                   />
                   {folio.balance.allocatedPaidAmount ? (
                     <WorkspaceDetailRow
-                      label="Allocated (gross)"
+                      label="Κατανεμημένα (μικτά)"
                       value={formatMoney(
                         folio.balance.allocatedPaidAmount,
                         folio.balance.currency,
@@ -439,11 +452,11 @@ export function BookingPaymentsSection({
                     />
                   ) : null}
                   <WorkspaceDetailRow
-                    label="Refunded"
+                    label="Επιστροφές"
                     value={formatMoney(refunded, folio.balance.currency)}
                   />
                   <WorkspaceDetailRow
-                    label="Outstanding"
+                    label="Υπόλοιπο"
                     value={formatMoney(
                       folio.balance.outstandingBalance,
                       folio.balance.currency,
@@ -451,14 +464,14 @@ export function BookingPaymentsSection({
                     bold
                   />
                   <WorkspaceDetailRow
-                    label="Overpayment"
+                    label="Υπερπληρωμή"
                     value={formatMoney(overpay, folio.balance.currency)}
                   />
                 </WorkspaceDetailList>
 
                 <div className="rounded-md border border-border p-3">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Fiscal documents
+                    Παραστατικά
                   </p>
                   <FolioFiscalIssuePanel
                     folioId={folio.id}
@@ -475,8 +488,8 @@ export function BookingPaymentsSection({
                     }))}
                   />
                   <p className="mt-2 text-[11px] text-muted-foreground">
-                    Local issuance only — not sent to AADE. Issued documents keep
-                    immutable customer/issuer snapshots.
+                    Τοπική έκδοση μόνο — δεν αποστέλλεται στην AADE. Τα εκδοθέντα παραστατικά
+                    διατηρούν αμετάβλητα στιγμιότυπα πελάτη/εκδότη.
                   </p>
                 </div>
               </div>

@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { BookingSectionProps } from "../types";
+import { elCommon } from "@/lib/i18n";
 
 interface CustomerProfile {
   id: string;
@@ -93,7 +94,7 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
         };
       });
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Failed to load billing profiles");
+      toastError(e instanceof Error ? e.message : "Αποτυχία φόρτωσης προφίλ χρέωσης");
     } finally {
       setLoading(false);
     }
@@ -151,7 +152,7 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
         method: "PUT",
         body: JSON.stringify(body),
       });
-      toastSuccess("Billing / fiscal details saved");
+      toastSuccess("Αποθηκεύτηκαν τα στοιχεία χρέωσης / φορολογίας");
       setForm({
         id: saved.id,
         type: saved.type,
@@ -172,36 +173,36 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
       );
       setProfiles(res.profiles ?? []);
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Save failed");
+      toastError(e instanceof Error ? e.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <WorkspaceSection title="Billing / Fiscal identity">
+    <WorkspaceSection title="Ταυτότητα χρέωσης / φορολογίας">
       <p className="mb-3 text-xs text-muted-foreground">
-        Tenant customer billing profile for invoicing — separate from guest stay
-        contact. Issued fiscal documents keep immutable snapshots.
+        Προφίλ πελάτη οργανισμού για τιμολόγηση — ξεχωριστά από την επικοινωνία διαμονής
+        επισκέπτη. Τα εκδοθέντα παραστατικά διατηρούν αμετάβλητα στιγμιότυπα.
       </p>
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{elCommon.loading}</p>
       ) : (
         <div className="space-y-4 max-w-xl">
           <div className="space-y-1.5">
-            <Label>Saved profile</Label>
+            <Label>Αποθηκευμένο προφίλ</Label>
             <Select
               value={form.id || "__new__"}
               onValueChange={(v) => selectProfile(v)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select or create" />
+                <SelectValue placeholder="Επιλογή ή δημιουργία" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__new__">New profile</SelectItem>
+                <SelectItem value="__new__">Νέο προφίλ</SelectItem>
                 {profiles.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.legalName} ({p.type})
+                    {p.legalName} ({p.type === "BUSINESS" ? "Επιχείρηση" : "Ιδιώτης"})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -209,7 +210,7 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Customer type</Label>
+            <Label>Τύπος πελάτη</Label>
             <Select
               value={form.type}
               onValueChange={(v) =>
@@ -223,15 +224,15 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="INDIVIDUAL">Individual</SelectItem>
-                <SelectItem value="BUSINESS">Business / Company</SelectItem>
+                <SelectItem value="INDIVIDUAL">Ιδιώτης</SelectItem>
+                <SelectItem value="BUSINESS">Επιχείρηση / Εταιρεία</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
             <Label>
-              {form.type === "BUSINESS" ? "Legal / company name" : "Full / legal name"}
+              {form.type === "BUSINESS" ? "Επωνυμία / εταιρεία" : "Πλήρες / νόμιμο όνομα"}
             </Label>
             <Input
               value={form.legalName}
@@ -241,15 +242,19 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>VAT / Tax ID (AFM)</Label>
+              <Label>ΑΦΜ / ΦΠΑ ID</Label>
               <Input
                 value={form.vatNumber}
                 onChange={(e) => setForm((f) => ({ ...f, vatNumber: e.target.value }))}
-                placeholder={form.type === "BUSINESS" && form.country === "GR" ? "Required for GR business" : "Optional"}
+                placeholder={
+                  form.type === "BUSINESS" && form.country === "GR"
+                    ? "Υποχρεωτικό για επιχείρηση GR"
+                    : elCommon.optional
+                }
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Country</Label>
+              <Label>Χώρα</Label>
               <Input
                 value={form.country}
                 maxLength={2}
@@ -265,14 +270,14 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Address line 1</Label>
+            <Label>Διεύθυνση (γραμμή 1)</Label>
             <Input
               value={form.line1}
               onChange={(e) => setForm((f) => ({ ...f, line1: e.target.value }))}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Address line 2</Label>
+            <Label>Διεύθυνση (γραμμή 2)</Label>
             <Input
               value={form.line2}
               onChange={(e) => setForm((f) => ({ ...f, line2: e.target.value }))}
@@ -280,21 +285,21 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>City</Label>
+              <Label>Πόλη</Label>
               <Input
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Region / state</Label>
+              <Label>Περιφέρεια / νομός</Label>
               <Input
                 value={form.region}
                 onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Postal code</Label>
+              <Label>Τ.Κ.</Label>
               <Input
                 value={form.postalCode}
                 onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))}
@@ -303,7 +308,7 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label>{elCommon.email}</Label>
             <Input
               type="email"
               value={form.email}
@@ -312,13 +317,13 @@ export function BookingBillingFiscalSection(_props: BookingSectionProps) {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            These details are used when issuing SERVICE_INVOICE / SERVICE_CREDIT.
-            Retail receipts may use a minimal customer name. Changing a profile does
-            not alter already issued documents.
+            Τα στοιχεία χρησιμοποιούνται κατά την έκδοση SERVICE_INVOICE / SERVICE_CREDIT.
+            Τα λιανικά αποδεικτικά μπορεί να χρησιμοποιούν ελάχιστο όνομα πελάτη. Η αλλαγή
+            προφίλ δεν τροποποιεί ήδη εκδοθέντα παραστατικά.
           </p>
 
           <Button onClick={() => void save()} disabled={saving || !form.legalName.trim()}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? elCommon.saving : elCommon.save}
           </Button>
         </div>
       )}

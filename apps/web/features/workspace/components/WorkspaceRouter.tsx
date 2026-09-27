@@ -48,7 +48,7 @@ export function WorkspaceRouter({
   }
 
   return (
-    <p className="text-sm text-muted-foreground">No details available for this item.</p>
+    <p className="text-sm text-muted-foreground">Δεν υπάρχουν διαθέσιμες λεπτομέρειες.</p>
   );
 }
 

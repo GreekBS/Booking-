@@ -33,17 +33,18 @@ import {
 } from "./booking-com-api";
 import { ContextualHelpLink } from "./ContextualHelpLink";
 import type { BookingComOperatorView } from "./types";
+import { elCommon, elNav } from "@/lib/i18n";
 
 type Props = { connectionId: string };
 
 const RECONCILE_OUTCOME_LABEL: Record<string, string> = {
-  MAPPING_DRIFT: "Mapping needs review",
-  PROVIDER_UNAVAILABLE: "Booking.com unavailable",
-  REMOTE_DRIFT: "Availability differences found",
-  LOCAL_AHEAD: "Local inventory ahead",
-  MISSING_RESERVATION: "Reservation needs review",
-  OK: "In sync",
-  HEALTHY: "Healthy",
+  MAPPING_DRIFT: "Απαιτείται έλεγος αντιστοίχισης",
+  PROVIDER_UNAVAILABLE: "Το Booking.com δεν είναι διαθέσιμο",
+  REMOTE_DRIFT: "Βρέθηκαν διαφορές διαθεσιμότητας",
+  LOCAL_AHEAD: "Τοπικό απόθεμα μπροστά",
+  MISSING_RESERVATION: "Απαιτείται έλεγος κράτησης",
+  OK: "Σε συγχρονισμό",
+  HEALTHY: "Υγιές",
 };
 
 function reconcileOutcomeLabel(outcome: string): string {
@@ -53,34 +54,34 @@ function reconcileOutcomeLabel(outcome: string): string {
 function friendlyIssue(connection: BookingComOperatorView): string[] {
   const messages: string[] = [];
   if (connection.connection.lastError) {
-    messages.push("Booking.com connection needs attention.");
+    messages.push("Η σύνδεση Booking.com χρειάζεται προσοχή.");
   }
   if (!connection.counts.propertyMapped) {
-    messages.push("Property is not mapped.");
+    messages.push("Το κατάλυμα δεν είναι αντιστοιχισμένο.");
   }
   if (connection.counts.roomsMapped === 0) {
-    messages.push("1 or more rooms still need mapping.");
+    messages.push("Ένα ή περισσότερα δωμάτια χρειάζονται ακόμα αντιστοίχιση.");
   }
   for (const run of connection.reconciliation.slice(0, 3)) {
     if (run.outcome === "MAPPING_DRIFT") {
-      messages.push("1 room or rate is no longer mapped cleanly.");
+      messages.push("Ένα δωμάτιο ή τιμοκατάλογος δεν αντιστοιχίζεται πλέον σωστά.");
     }
     if (run.outcome === "PROVIDER_UNAVAILABLE") {
-      messages.push("Booking.com could not be reached.");
+      messages.push("Δεν ήταν δυνατή η επικοινωνία με το Booking.com.");
     }
     if (run.outcome === "REMOTE_DRIFT" || run.outcome === "LOCAL_AHEAD") {
       messages.push(
         run.autoHealEnqueued
-          ? "Availability synchronization found differences. Talos queued a retry."
-          : "Availability synchronization needs review.",
+          ? "Ο συγχρονισμός διαθεσιμότητας βρήκε διαφορές. Το Talos έθεσε επανάληψη στην ουρά."
+          : "Ο συγχρονισμός διαθεσιμότητας χρειάζεται έλεγο.",
       );
     }
     if (run.outcome === "MISSING_RESERVATION") {
-      messages.push("A reservation requires manual review.");
+      messages.push("Μια κράτηση απαιτεί χειροκίνητο έλεγο.");
     }
   }
   if (messages.length === 0 && connection.phase === "connected") {
-    messages.push("No open issues reported.");
+    messages.push("Δεν αναφέρονται ανοιχτά θέματα.");
   }
   return [...new Set(messages)];
 }
@@ -144,7 +145,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
   if (tenantGate) return tenantGate;
   if (loading) return <Skeleton className="h-96 w-full" />;
   if (error || !view) {
-    return <ErrorState message={error ?? "Unavailable"} onRetry={() => void load()} />;
+    return <ErrorState message={error ?? "Μη διαθέσιμο"} onRetry={() => void load()} />;
   }
 
   const version = view.connection.semanticConfigVersion;
@@ -157,7 +158,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
     <div className="space-y-5">
       <PageHeader
         title={view.connection.displayName}
-        description="Booking.com — reservations in, availability and rates out."
+        description="Booking.com — κρατήσεις εισερχόμενες, διαθεσιμότητα και τιμές εξερχόμενες."
         meta={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
@@ -165,16 +166,16 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
               label={view.phaseLabel || channelStatusLabel(view.connection.status)}
             />
             <span className="text-xs text-muted-foreground">Booking.com</span>
-            <ContextualHelpLink anchor="health" label="Health guide" />
+            <ContextualHelpLink anchor="health" label="Οδηγός υγείας" />
           </div>
         }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href="/dashboard/channels">Channels</Link>
+              <Link href="/dashboard/channels">{elNav.channels}</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/dashboard/channels/${connectionId}/setup`}>Manage mappings</Link>
+              <Link href={`/dashboard/channels/${connectionId}/setup`}>Διαχείριση αντιστοιχίσεων</Link>
             </Button>
           </div>
         }
@@ -200,44 +201,44 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Surface>
-          <SurfaceHeader title="Connection" />
+          <SurfaceHeader title="Σύνδεση" />
           <div className="space-y-1 text-sm">
             <p>
-              Status:{" "}
+              {elCommon.status}:{" "}
               <span className="capitalize">
                 {channelStatusLabel(view.connection.status)}
               </span>
             </p>
             <p>Hotel ID: {view.setup?.hotelId ?? "—"}</p>
-            <p>Property mapped: {view.counts.propertyMapped ? "Yes" : "No"}</p>
+            <p>Κατάλυμα αντιστοιχισμένο: {view.counts.propertyMapped ? elCommon.yes : elCommon.no}</p>
           </div>
         </Surface>
         <Surface>
-          <SurfaceHeader title="Property / listing mapping" />
+          <SurfaceHeader title="Αντιστοίχιση καταλύματος / καταχώρησης" />
           <div className="space-y-1 text-sm">
-            <p>Rooms mapped: {view.counts.roomsMapped}</p>
-            <p>Rate plans mapped: {view.counts.ratesMapped}</p>
-            <p>Room–rate links: {view.counts.roomratesMapped}</p>
+            <p>Δωμάτια αντιστοιχισμένα: {view.counts.roomsMapped}</p>
+            <p>Τιμοκατάλογοι αντιστοιχισμένοι: {view.counts.ratesMapped}</p>
+            <p>Σύνδεσμοι δωματίου–τιμής: {view.counts.roomratesMapped}</p>
           </div>
         </Surface>
         <Surface>
-          <SurfaceHeader title="Reservations" />
+          <SurfaceHeader title="Κρατήσεις" />
           <p className="text-sm text-muted-foreground">
-            Health follows the Booking.com → Talos receive path. Live retrieval requires
-            partner access.
+            Η υγεία ακολουθεί τη διαδρομή λήψης Booking.com → Talos. Η ζωντανή ανάκτηση
+            απαιτεί πρόσβαση συνεργάτη.
           </p>
         </Surface>
         <Surface>
-          <SurfaceHeader title="Inventory synchronization" />
+          <SurfaceHeader title="Συγχρονισμός αποθέματος" />
           <p className="text-sm text-muted-foreground">
-            Availability and rates use the durable outbound pipeline. Failures retry
-            automatically where safe.
+            Η διαθεσιμότητα και οι τιμές χρησιμοποιούν την ανθεκτική εξερχόμενη ροή. Τα
+            σφάλματα επαναλαμβάνονται αυτόματα όπου είναι ασφαλές.
           </p>
         </Surface>
       </div>
 
       <Surface>
-        <SurfaceHeader title="Status" description="Issues requiring attention" />
+        <SurfaceHeader title="Κατάσταση" description="Θέματα που χρειάζονται προσοχή" />
         <div className="space-y-2">
           {issues.map((msg) => (
             <p key={msg} className="text-sm">
@@ -246,17 +247,17 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
           ))}
           {view.reconciliation[0] ? (
             <p className="text-xs text-muted-foreground">
-              Last check: {reconcileOutcomeLabel(view.reconciliation[0].outcome)} ·{" "}
+              Τελευταίος έλεγχος: {reconcileOutcomeLabel(view.reconciliation[0].outcome)} ·{" "}
               {new Date(view.reconciliation[0].completedAt).toLocaleString()}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground">No reconciliation runs yet.</p>
+            <p className="text-xs text-muted-foreground">Δεν έχουν εκτελεστεί ακόμα συμφιλιώσεις.</p>
           )}
         </div>
       </Surface>
 
       <Surface>
-        <SurfaceHeader title="Actions" />
+        <SurfaceHeader title="Ενέργειες" />
         <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
@@ -274,7 +275,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
                   if (!result.available) {
                     setActionMessage(result.message ?? view.partnerAccess.operatorMessage);
                   } else {
-                    setActionMessage("Reconciliation completed.");
+                    setActionMessage("Η συμφοίωση ολοκληρώθηκε.");
                     await load();
                   }
                 } catch (err) {
@@ -285,7 +286,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
               })()
             }
           >
-            Reconcile
+            Συμφοίωση
           </Button>
           {view.connection.status === "active" ? (
             <Button
@@ -296,7 +297,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
                   setBusy(true);
                   try {
                     await pauseChannelConnection(tenantId!, connectionId, version);
-                    setActionMessage("Connection paused.");
+                    setActionMessage("Η σύνδεση τέθηκε σε παύση.");
                     await load();
                   } catch (err) {
                     setActionError(formatBookingComApiError(err));
@@ -306,7 +307,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
                 })()
               }
             >
-              Pause
+              Παύση
             </Button>
           ) : null}
           {view.connection.status === "paused" ? (
@@ -317,7 +318,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
                   setBusy(true);
                   try {
                     await resumeChannelConnection(tenantId!, connectionId, version);
-                    setActionMessage("Connection resumed.");
+                    setActionMessage("Η σύνδεση συνεχίστηκε.");
                     await load();
                   } catch (err) {
                     setActionError(formatBookingComApiError(err));
@@ -327,7 +328,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
                 })()
               }
             >
-              Resume
+              Συνέχιση
             </Button>
           ) : null}
           <Button
@@ -335,10 +336,10 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
             disabled={busy || view.connection.status === "disconnected"}
             onClick={() => setConfirmDisconnect(true)}
           >
-            Disconnect
+            Αποσύνδεση
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/dashboard/channels/help/booking-com">Help</Link>
+            <Link href="/dashboard/channels/help/booking-com">Βοήθεια</Link>
           </Button>
         </div>
       </Surface>
@@ -346,21 +347,22 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
       <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect Booking.com?</AlertDialogTitle>
+            <AlertDialogTitle>Αποσύνδεση Booking.com;</AlertDialogTitle>
             <AlertDialogDescription>
-              This ends the live channel link and stops sync. Booking history, external
-              reservation links, audit evidence, and reconciliation history are kept.
+              Τερματίζει τη ζωντανή σύνδεση καναλιού και σταματά τον συγχρονισμό. Διατηρούνται
+              ιστορικό κρατήσεων, εξωτερικοί σύνδεσμοι κρατήσεων, στοιχεία ελέγχου και ιστορικό
+              συμφιλιώσεων.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
                 void (async () => {
                   setBusy(true);
                   try {
                     await disconnectChannelConnection(tenantId!, connectionId, version);
-                    setActionMessage("Connection disconnected.");
+                    setActionMessage("Η σύνδεση αποσυνδέθηκε.");
                     setConfirmDisconnect(false);
                     await load();
                   } catch (err) {
@@ -371,7 +373,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
                 })()
               }
             >
-              Disconnect
+              Αποσύνδεση
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -33,18 +33,18 @@ export function buildCellOverlayItems(
     const nightly = getNightlyRate(ratePlan, date);
     if (nightly) {
       const season = nightly.seasonName ? ` (${nightly.seasonName})` : "";
-      const dow = nightly.hasDowModifier ? " · day-of-week rate" : "";
+      const dow = nightly.hasDowModifier ? " · τιμή ημέρας" : "";
       items.push({
         key: "price",
         display: nightly.amount,
-        title: `Nightly rate: ${nightly.amount} ${nightly.currency}${season}${dow}`,
+        title: `Νυχτερινή τιμή: ${nightly.amount} ${nightly.currency}${season}${dow}`,
         tone: "price",
       });
     } else {
       items.push({
         key: "price",
         display: "—",
-        title: "Nightly rate unavailable",
+        title: "Η νυχτερινή τιμή δεν είναι διαθέσιμη",
         tone: "restriction",
       });
     }
@@ -54,7 +54,7 @@ export function buildCellOverlayItems(
     items.push({
       key: "minStay",
       display: `${rules.minNights}n`,
-      title: `Minimum stay: ${rules.minNights} night${rules.minNights !== 1 ? "s" : ""}`,
+      title: `Ελάχιστη διαμονή: ${rules.minNights} ${rules.minNights === 1 ? "νύχτα" : "νύχτες"}`,
       tone: "restriction",
     });
   }
@@ -63,7 +63,7 @@ export function buildCellOverlayItems(
     items.push({
       key: "maxStay",
       display: `${rules.maxNights}n`,
-      title: `Maximum stay: ${rules.maxNights} night${rules.maxNights !== 1 ? "s" : ""}`,
+      title: `Μέγιστη διαμονή: ${rules.maxNights} ${rules.maxNights === 1 ? "νύχτα" : "νύχτες"}`,
       tone: "restriction",
     });
   }
@@ -73,7 +73,7 @@ export function buildCellOverlayItems(
     items.push({
       key: "cta",
       display: allowed ? "↓" : "CTA",
-      title: allowed ? "Check-in allowed" : "Closed to arrival",
+      title: allowed ? "Επιτρέπεται άφιξη" : "Κλειστή άφιξη",
       tone: allowed ? "open" : "closed",
     });
   }
@@ -83,7 +83,7 @@ export function buildCellOverlayItems(
     items.push({
       key: "ctd",
       display: allowed ? "↑" : "CTD",
-      title: allowed ? "Check-out allowed" : "Closed to departure",
+      title: allowed ? "Επιτρέπεται αναχώρηση" : "Κλειστή αναχώρηση",
       tone: allowed ? "open" : "closed",
     });
   }

@@ -17,9 +17,9 @@ export interface ExclusiveDateRange {
 }
 
 export function validateExclusiveDateRange(range: ExclusiveDateRange): string | null {
-  if (!range.checkIn) return "Check-in is required";
-  if (!range.checkOut) return "Check-out is required";
-  if (range.checkOut <= range.checkIn) return "Check-out must be after check-in";
+  if (!range.checkIn) return "Απαιτείται check-in";
+  if (!range.checkOut) return "Απαιτείται check-out";
+  if (range.checkOut <= range.checkIn) return "Το check-out πρέπει να είναι μετά το check-in";
   return null;
 }
 
@@ -53,7 +53,7 @@ export async function openDatesForDateRange(params: {
   if (rangeError) throw new Error(rangeError);
 
   if (!params.calendar) {
-    throw new Error("Calendar not loaded yet");
+    throw new Error("Το ημερολόγιο δεν έχει φορτωθεί ακόμα");
   }
 
   const blocks = params.calendar.blocks.filter(
@@ -77,11 +77,11 @@ export async function updateUnitMinStay(params: {
   rules: AvailabilityRulesRecord | undefined;
 }): Promise<AvailabilityRulesRecord> {
   if (!Number.isInteger(params.minNights) || params.minNights < 1) {
-    throw new Error("Minimum stay must be a positive integer");
+    throw new Error("Η ελάχ. διαμονή πρέπει να είναι θετικός ακέραιος");
   }
 
   if (!params.rules) {
-    throw new Error("Availability rules not loaded for this unit");
+    throw new Error("Δεν φορτώθηκαν κανόνες διαθεσιμότητας για αυτή τη μονάδα");
   }
 
   return updateAvailabilityRules(params.tenantId, params.unitId, {

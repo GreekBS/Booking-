@@ -116,7 +116,7 @@ export function TodayOperationsPanel({ groups, today }: TodayOperationsPanelProp
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
         </Button>
         <span className="hidden text-[10px] text-muted-foreground sm:inline">
-          Day-level inventory operations from loaded calendar data
+          Λειτουργίες ημέρας από τα φορτωμένα δεδομένα ημερολογίου
         </span>
       </div>
 
@@ -129,33 +129,33 @@ export function TodayOperationsPanel({ groups, today }: TodayOperationsPanelProp
         <div className="overflow-hidden">
           <div className="grid gap-3 border-t border-border bg-surface-subtle/30 px-3 py-2 sm:grid-cols-2 lg:grid-cols-5">
             <Section
-              title="Arrivals"
+              title="Αφίξεις"
               items={snapshot.arrivals}
-              emptyLabel="None today"
+              emptyLabel="Καμία σήμερα"
               onSelect={openWorkspaceForTodayItem}
             />
             <Section
-              title="Departures"
+              title="Αναχωρήσεις"
               items={snapshot.departures}
-              emptyLabel="None today"
+              emptyLabel="Καμία σήμερα"
               onSelect={openWorkspaceForTodayItem}
             />
             <Section
-              title="In-house"
+              title="Εντός καταλύματος"
               items={snapshot.inHouse}
-              emptyLabel="None tonight"
+              emptyLabel="Καμία απόψε"
               onSelect={openWorkspaceForTodayItem}
             />
             <Section
-              title="Holds"
+              title="Δεσμεύσεις"
               items={snapshot.holds}
-              emptyLabel="No active holds"
+              emptyLabel="Καμία ενεργή δέσμευση"
               onSelect={openWorkspaceForTodayItem}
             />
             <Section
               title="Blocks"
               items={snapshot.blocks}
-              emptyLabel="No blocks today"
+              emptyLabel="Κανένα block σήμερα"
               onSelect={openWorkspaceForTodayItem}
             />
           </div>

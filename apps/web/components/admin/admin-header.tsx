@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { elCommon } from "@/lib/i18n";
 import { AdminBreadcrumbs } from "./admin-breadcrumbs";
 import { ActivePropertySelector } from "./active-property-selector";
 
@@ -47,7 +48,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         size="icon"
         className="shrink-0 lg:hidden"
         onClick={onMenuClick}
-        aria-label="Open navigation"
+        aria-label={elCommon.openNavigation}
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -66,9 +67,9 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           <Select value={tenantId ?? undefined} onValueChange={(value) => void switchTenant(value)}>
             <SelectTrigger
               className="hidden h-9 w-[160px] border-border bg-surface text-xs sm:flex"
-              aria-label="Switch tenant"
+              aria-label={elCommon.switchTenant}
             >
-              <SelectValue placeholder="Tenant" />
+              <SelectValue placeholder={elCommon.tenant} />
             </SelectTrigger>
             <SelectContent>
               {profile!.memberships.map((m) => (
@@ -84,7 +85,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           variant="ghost"
           size="icon"
           className="hidden sm:inline-flex"
-          aria-label="Notifications (coming soon)"
+          aria-label={elCommon.notificationsComingSoon}
           disabled
         >
           <Bell className="h-4 w-4" />
@@ -100,7 +101,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <Button
               variant="ghost"
               className="relative h-9 w-9 rounded-full"
-              aria-label="Account menu"
+              aria-label={`${elCommon.account} — μενού`}
             >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary-subtle text-xs font-semibold text-primary">
@@ -112,7 +113,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{user?.name ?? "User"}</p>
+                <p className="text-sm font-medium">{user?.name ?? "Χρήστης"}</p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
@@ -120,15 +121,15 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:hidden">
-                  Workspace
+                  {elCommon.tenant}
                 </DropdownMenuLabel>
                 <div className="px-2 pb-2 sm:hidden">
                   <Select
                     value={tenantId ?? undefined}
                     onValueChange={(value) => void switchTenant(value)}
                   >
-                    <SelectTrigger className="h-9 w-full text-xs" aria-label="Switch tenant">
-                      <SelectValue placeholder="Tenant" />
+                    <SelectTrigger className="h-9 w-full text-xs" aria-label={elCommon.switchTenant}>
+                      <SelectValue placeholder={elCommon.tenant} />
                     </SelectTrigger>
                     <SelectContent>
                       {profile!.memberships.map((m) => (
@@ -144,7 +145,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
               <LogOut className="mr-2 h-4 w-4" />
-              Sign out
+              {elCommon.signOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

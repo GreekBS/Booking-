@@ -33,6 +33,7 @@ import {
 import Link from "next/link";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { elCommon, statusLabelEl } from "@/lib/i18n";
 
 interface PropertyDetailPageProps {
   propertyId: string;
@@ -94,7 +95,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         amenityIds: prop.amenityIds,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load property");
+      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλύματος");
     } finally {
       setLoading(false);
     }
@@ -117,8 +118,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
       });
       invalidatePropertiesCache(tenantId);
       setProperty(updated);
-      setMessage("Saved successfully");
-      toastSuccess("Saved successfully");
+      setMessage("Αποθηκεύτηκε επιτυχώς");
+      toastSuccess("Αποθηκεύτηκε επιτυχώς");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
       toastError(err instanceof Error ? err.message : "Failed to save");
@@ -131,7 +132,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
     if (!tenantId) return;
     await adminFetch(`/properties/${propertyId}`, { method: "DELETE", tenantId });
     invalidatePropertiesCache(tenantId);
-    toastSuccess("Property archived");
+    toastSuccess("Το κατάλυμα αρχειοθετήθηκε");
     router.push("/dashboard/properties");
   }
 
@@ -143,13 +144,13 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
   if (tenantGate) return tenantGate;
   if (loading) return <Skeleton className="h-96 w-full" />;
   if (error && !property) return <ErrorState message={error} onRetry={() => void loadProperty()} />;
-  if (!property) return <ErrorState message="Property not found" />;
+  if (!property) return <ErrorState message="Το κατάλυμα δεν βρέθηκε" />;
 
   return (
     <div className="space-y-4">
       <PageHeader
         title={property.name}
-        description={`/${property.slug} · property detail`}
+        description={`/${property.slug} · λεπτομέρειες καταλύματος`}
         actions={
           <div className="flex items-center gap-2">
             <StatusBadge status={property.status} />
@@ -169,42 +170,42 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
 
       <Tabs defaultValue="general">
         <TabsList className="mb-4 flex-wrap">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="units">Units</TabsTrigger>
-          <TabsTrigger value="amenities">Amenities</TabsTrigger>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
-          <TabsTrigger value="location">Location</TabsTrigger>
-          <TabsTrigger value="status">Status</TabsTrigger>
+          <TabsTrigger value="general">Γενικά</TabsTrigger>
+          <TabsTrigger value="units">Μονάδες</TabsTrigger>
+          <TabsTrigger value="amenities">Παροχές</TabsTrigger>
+          <TabsTrigger value="policies">Πολιτικές</TabsTrigger>
+          <TabsTrigger value="location">Τοποθεσία</TabsTrigger>
+          <TabsTrigger value="status">Κατάσταση</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="General information"
-              description="Name, type, timezone, and public description."
+              title="Γενικές πληροφορίες"
+              description="Όνομα, τύπος, ζώνη ώρας και δημόσια περιγραφή."
             />
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label>{elCommon.name}</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Type</Label>
+                  <Label>{elCommon.type}</Label>
                   <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="villa">Villa</SelectItem>
-                      <SelectItem value="apartment">Apartment</SelectItem>
-                      <SelectItem value="hotel">Hotel</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="villa">Βίλα</SelectItem>
+                      <SelectItem value="apartment">Διαμέρισμα</SelectItem>
+                      <SelectItem value="hotel">Ξενοδοχείο</SelectItem>
+                      <SelectItem value="other">Άλλο</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Timezone</Label>
+                  <Label>Ζώνη ώρας</Label>
                   <Input
                     value={form.timezone}
                     onChange={(e) => setForm({ ...form, timezone: e.target.value })}
@@ -212,7 +213,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>Περιγραφή</Label>
                 <Textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -230,7 +231,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                   })
                 }
               >
-                {saving ? "Saving..." : "Save general"}
+                {saving ? "Αποθήκευση…" : "Αποθήκευση γενικών"}
               </Button>
             </div>
           </Surface>
@@ -241,11 +242,11 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
             <div className="border-b border-border px-4 py-3">
               <SurfaceHeader
                 className="mb-0"
-                title="Units"
-                description="Rooms for this property. Manage capacity and status from Units."
+                title="Μονάδες"
+                description="Δωμάτια για αυτό το κατάλυμα. Διαχείρισμός από τις Μονάδες."
                 action={
                   <Button size="sm" asChild>
-                    <Link href={`/dashboard/units?propertyId=${propertyId}`}>Manage units</Link>
+                    <Link href={`/dashboard/units?propertyId=${propertyId}`}>Διαχείριση μονάδων</Link>
                   </Button>
                 }
               />
@@ -254,10 +255,10 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Guests</TableHead>
-                    <TableHead>Bedrooms</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{elCommon.name}</TableHead>
+                    <TableHead>{elCommon.guests}</TableHead>
+                    <TableHead>Υπνοδωμάτια</TableHead>
+                    <TableHead>{elCommon.status}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -280,8 +281,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         <TabsContent value="amenities">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="Amenities"
-              description="Features shown on the listing. Save after changing selection."
+              title="Παροχές"
+              description="Χαρακτηριστικά στην καταχώρηση. Αποθηκεύστε μετά την αλλαγή επιλογής."
             />
             <div className="space-y-4">
               <div className="grid gap-2 sm:grid-cols-2">
@@ -311,14 +312,14 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
               </div>
               {amenities.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No amenities yet.{" "}
+                  Δεν υπάρχουν ακόμα παροχές.{" "}
                   <Link href="/dashboard/amenities" className="underline">
-                    Create amenities
+                    Δημιουργία παροχών
                   </Link>
                 </p>
               ) : null}
               <Button disabled={saving} onClick={() => void save({ amenityIds: form.amenityIds })}>
-                Save amenities
+                Αποθήκευση παροχών
               </Button>
             </div>
           </Surface>
@@ -327,26 +328,26 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         <TabsContent value="policies">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="Policies"
-              description="Check-in/out times and cancellation stance for guests."
+              title="Πολιτικές"
+              description="Ώρες άφιξης/αναχώρησης και πολιτική ακύρωσης."
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Check-in time</Label>
+                <Label>Ώρα άφιξης</Label>
                 <Input
                   value={form.checkInTime}
                   onChange={(e) => setForm({ ...form, checkInTime: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Check-out time</Label>
+                <Label>Ώρα αναχώρησης</Label>
                 <Input
                   value={form.checkOutTime}
                   onChange={(e) => setForm({ ...form, checkOutTime: e.target.value })}
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Cancellation policy</Label>
+                <Label>Πολιτική ακύρωσης</Label>
                 <Select
                   value={form.cancellationPolicyType}
                   onValueChange={(v) => setForm({ ...form, cancellationPolicyType: v })}
@@ -355,9 +356,9 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="flexible">Flexible</SelectItem>
-                    <SelectItem value="moderate">Moderate</SelectItem>
-                    <SelectItem value="strict">Strict</SelectItem>
+                    <SelectItem value="flexible">Ευέλικτη</SelectItem>
+                    <SelectItem value="moderate">Μέτρια</SelectItem>
+                    <SelectItem value="strict">Αυστηρή</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -373,7 +374,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                   })
                 }
               >
-                Save policies
+                Αποθήκευση πολιτικών
               </Button>
             </div>
           </Surface>
@@ -382,37 +383,37 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         <TabsContent value="location">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="Location"
-              description="Address fields used on the listing and guest communications."
+              title="Τοποθεσία"
+              description="Διεύθυνση για καταχώρηση και επικοινωνία με επισκέπτες."
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label>Address</Label>
+                <Label>Διεύθυνση</Label>
                 <Input
                   value={form.addressLine}
                   onChange={(e) => setForm({ ...form, addressLine: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>City</Label>
+                <Label>Πόλη</Label>
                 <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Region</Label>
+                <Label>Περιοχή</Label>
                 <Input
                   value={form.region}
                   onChange={(e) => setForm({ ...form, region: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Postal code</Label>
+                <Label>Τ.Κ.</Label>
                 <Input
                   value={form.postalCode}
                   onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Country (ISO)</Label>
+                <Label>Χώρα (ISO)</Label>
                 <Input
                   maxLength={2}
                   value={form.country}
@@ -433,7 +434,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                   })
                 }
               >
-                Save location
+                Αποθήκευση τοποθεσίας
               </Button>
             </div>
           </Surface>
@@ -442,20 +443,20 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         <TabsContent value="status">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="Publication status"
-              description="Active properties are visible on the storefront. Draft properties are admin-only."
+              title="Κατάσταση δημοσίευσης"
+              description="Ενεργά καταλύματα στο storefront. Πρόχειρα μόνο για διαχειριστές."
             />
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>Κατάσταση</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                   <SelectTrigger className="max-w-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="draft">{statusLabelEl("draft")}</SelectItem>
+                    <SelectItem value="active">{statusLabelEl("active")}</SelectItem>
+                    <SelectItem value="inactive">{statusLabelEl("inactive")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -464,7 +465,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 <span className="text-sm text-muted-foreground">Slug: /{property.slug}</span>
               </div>
               <Button disabled={saving} onClick={() => void save({ status: form.status })}>
-                {saving ? "Saving..." : "Update status"}
+                {saving ? elCommon.saving : "Ενημέρωση κατάστασης"}
               </Button>
             </div>
           </Surface>
@@ -474,8 +475,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
       <ConfirmDialog
         open={archiveOpen}
         onOpenChange={setArchiveOpen}
-        title="Archive property"
-        description="This will archive the property and remove it from active listings."
+        title="Αρχειοθέτηση καταλύματος"
+        description="Το κατάλυμα θα αρχειοθετηθεί και θα αφαιρεθεί από ενεργές καταχωρήσεις."
         confirmLabel="Archive"
         destructive
         onConfirm={archiveProperty}
