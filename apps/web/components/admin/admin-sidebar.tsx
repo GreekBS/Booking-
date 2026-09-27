@@ -130,7 +130,7 @@ export function AdminSidebar({
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        "flex h-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
         collapsed ? "w-[72px]" : "w-[248px]",
       )}
     >
@@ -154,7 +154,7 @@ export function AdminSidebar({
       </div>
 
       <nav
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-2.5 py-4"
+        className="sidebar-nav-scroll min-h-0 flex-1 space-y-5 py-4 pl-2.5 pr-1.5"
         aria-label={elNav.operatorNavigation}
       >
         {adminNavSections.map((section) => (

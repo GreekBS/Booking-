@@ -37,6 +37,13 @@ describe("Talos operator Phase 1 design system", () => {
     expect(sidebar).toContain(`label: elNav.administration`);
     expect(sidebar).toContain("/dashboard/fiscal-documents");
     expect(sidebar).toContain("/dashboard/bookings");
+    expect(sidebar).toContain("sidebar-nav-scroll");
+    expect(sidebar).toContain("overflow-hidden");
+
+    const css = read("app/globals.css");
+    expect(css).toContain(".sidebar-nav-scroll");
+    expect(css).toContain("scrollbar-width: thin");
+    expect(css).toContain("::-webkit-scrollbar");
   });
 
   it("exposes Active Property on mobile header", () => {

@@ -50,7 +50,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetContent
               side="left"
-              className="w-[248px] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground [&>button]:text-sidebar-foreground"
+              className="flex w-[248px] flex-col overflow-hidden border-sidebar-border bg-sidebar p-0 text-sidebar-foreground [&>button]:text-sidebar-foreground"
             >
               <AdminSidebar
                 pathname={pathname}
