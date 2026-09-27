@@ -344,7 +344,13 @@ function HousekeepingPageContent() {
             >
               Όλες οι εργασίες
             </Button>
-            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="border border-border/80 bg-surface text-foreground shadow-sm hover:bg-surface-subtle"
+              onClick={() => setCreateOpen(true)}
+            >
               Δημιουργία εργασίας
             </Button>
             <Button type="button" variant="outline" size="sm" asChild>

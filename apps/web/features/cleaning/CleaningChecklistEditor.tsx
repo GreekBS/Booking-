@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
@@ -43,6 +44,7 @@ function emptyItem(): DraftItem {
  * they started with.
  */
 export function CleaningChecklistEditor() {
+  const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
@@ -138,7 +140,7 @@ export function CleaningChecklistEditor() {
       });
       setVersion(saved.version);
       toastSuccess("Η λίστα αποθηκεύτηκε");
-      await load();
+      router.push("/dashboard/housekeeping");
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης λίστας");
     } finally {

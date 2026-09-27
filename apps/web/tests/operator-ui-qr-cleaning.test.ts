@@ -156,6 +156,10 @@ describe("operator-ui QR cleaning V1", () => {
     expect(editor).toContain("minimumCompletionPhotos");
     expect(editor).toContain("Απαιτείται φωτογραφία");
     expect(editor).toContain("useActiveProperty");
+    expect(editor).toContain('router.push("/dashboard/housekeeping")');
+    expect(editor).toMatch(
+      /await saveCleaningTemplate[\s\S]*router\.push\("\/dashboard\/housekeeping"\)/,
+    );
 
     const history = read("features/cleaning/CleaningHistoryPage.tsx");
     expect(history).toContain("listCleaningHistory");

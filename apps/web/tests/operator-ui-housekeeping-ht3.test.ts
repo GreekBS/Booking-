@@ -25,6 +25,9 @@ describe("operator-ui housekeeping HT-3", () => {
     expect(page).toContain("Σε εξέλιξη");
     expect(page).toContain("Έτοιμα για άφιξη");
     expect(page).toContain("Δημιουργία εργασίας");
+    expect(page).toContain('variant="secondary"');
+    expect(page).toContain("bg-surface");
+    expect(page).toContain('variant={effectiveView === "today" ? "default" : "outline"}');
     expect(page).toContain("min-h-10");
     expect(page).toContain("md:hidden");
     expect(page).toContain("Η σήμανση ως καθαρό δεν ολοκληρώνει ανοιχτή εργασία καθαριότητας");
