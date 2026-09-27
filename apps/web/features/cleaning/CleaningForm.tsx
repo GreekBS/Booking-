@@ -350,7 +350,6 @@ export function CleaningForm({ unitId, scannedFrom }: CleaningFormProps) {
                   <li key={photo.id} className="relative">
                     <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md border bg-muted text-xs text-muted-foreground">
                       {photo.url && photo.url.startsWith("http") ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={photo.url}
                           alt="Cleaning evidence"

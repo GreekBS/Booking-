@@ -99,6 +99,36 @@ Storage keys are derived server-side from
 `tenantId/propertyId/unitId/executionId/photoId.ext` — never from user input —
 and the filesystem driver additionally refuses keys that escape its root.
 
+### 5.1 Production private bucket configuration (closure gate)
+
+Required **server-only** environment variables (never `NEXT_PUBLIC_*`):
+
+| Variable | Required | Notes |
+|---|---|---|
+| `SUPABASE_URL` | yes | Project API URL, e.g. `https://<project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes | Service role JWT — server only |
+| `CLEANING_PHOTOS_BUCKET` | no | Defaults to `cleaning-photos` |
+
+Do **not** set `CLEANING_PHOTOS_DRIVER=fs` on Vercel Production.
+
+Bucket requirements:
+
+- Name: `cleaning-photos` (or the configured `CLEANING_PHOTOS_BUCKET`)
+- Visibility: **private** (no public read)
+- Application ACL still gates every signed URL; the raw storage key alone must
+  never grant access
+- Uploads/deletes use the service role on the server; clients only ever receive
+  short-lived signed URLs after Talos auth + property ACL
+- Completed executions reject photo removal (evidence immutability)
+
+**Production verification status (2026-09-27):** Vercel Production env does
+**not** yet contain `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`. Until those
+are set and a private `cleaning-photos` bucket exists, Production resolves to
+`UnconfiguredCleaningObjectStorage` and QR Cleaning V1 remains PARTIAL for
+storage closure. Demo/fs path verification against the authorized demo DB is
+PASS (23/23), including ACL, limits, photoRequired, minimum photos, and atomic
+completion.
+
 ### 6. Access control reuses the Housekeeping ACL verbatim
 
 No new permissions were introduced. Reads resolve through `resolveTaskListScope`;
