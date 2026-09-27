@@ -1,6 +1,11 @@
 /**
- * CleaningLocation V1 integration (requires TEST_DATABASE_URL).
- * Covers bulk isolation, concurrency, rename id stability, board shape.
+ * CleaningLocation V1 integration against PostgreSQL.
+ *
+ * Runs when TEST_DATABASE_URL is set, OR when ALLOW_TALOS_DEMO_DB_INTEGRATION=true
+ * (authorized Talos single demo/dev DB workflow via test:integration:demo).
+ *
+ * Creates only uniquely identified cl-v1-* tenants and cleans those records up.
+ * Does not touch PILOT-ICAL, workers, schedulers, or channel providers.
  */
 import { it, expect, afterAll, beforeAll } from "vitest";
 import { randomUUID } from "node:crypto";
@@ -9,14 +14,22 @@ import {
   PrismaCleaningLocationRepository,
   PrismaCleaningLocationQrAccessRepository,
 } from "../../src";
-import { prisma, clearTenantContext } from "./helpers";
+import {
+  prisma,
+  clearTenantContext,
+  withTenantTransaction,
+  verifyCleaningLocationRlsPoliciesActive,
+} from "./helpers";
 import { runIntegration } from "./integrationGate";
 
 const TENANT = randomUUID();
+const TENANT_B = randomUUID();
 const PROP_EMPTY = randomUUID();
 const PROP_VILLA = randomUUID();
+const PROP_B = randomUUID();
 const UNIT_VILLA = randomUUID();
 const USER = randomUUID();
+const SLUG = `cl-v1-${TENANT.slice(0, 8)}`;
 
 runIntegration("CleaningLocation V1", () => {
   const locations = new PrismaCleaningLocationRepository();
@@ -31,59 +44,128 @@ runIntegration("CleaningLocation V1", () => {
         name: "CL V1",
       },
     });
-    await prisma.tenant.create({
-      data: {
-        id: TENANT,
-        name: "CL V1 Tenant",
-        slug: `cl-v1-${TENANT.slice(0, 8)}`,
-      },
-    });
-    await prisma.property.createMany({
+    await prisma.tenant.createMany({
       data: [
         {
-          id: PROP_EMPTY,
-          tenantId: TENANT,
-          name: "Hotel Empty",
-          slug: `he-${PROP_EMPTY.slice(0, 8)}`,
-          timezone: "Europe/Athens",
+          id: TENANT,
+          name: "CL V1 Tenant",
+          slug: SLUG,
         },
         {
-          id: PROP_VILLA,
-          tenantId: TENANT,
-          name: "Villa One",
-          slug: `vo-${PROP_VILLA.slice(0, 8)}`,
-          timezone: "Europe/Athens",
+          id: TENANT_B,
+          name: "CL V1 Tenant B",
+          slug: `cl-v1-b-${TENANT_B.slice(0, 8)}`,
         },
       ],
     });
-    await prisma.unit.create({
-      data: {
-        id: UNIT_VILLA,
-        tenantId: TENANT,
-        propertyId: PROP_VILLA,
-        name: "Olivia",
-        slug: `ol-${UNIT_VILLA.slice(0, 8)}`,
-        maxGuests: 6,
-      },
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.property.createMany({
+        data: [
+          {
+            id: PROP_EMPTY,
+            tenantId: TENANT,
+            name: "Hotel Empty",
+            slug: `he-${PROP_EMPTY.slice(0, 8)}`,
+            timezone: "Europe/Athens",
+          },
+          {
+            id: PROP_VILLA,
+            tenantId: TENANT,
+            name: "Villa One",
+            slug: `vo-${PROP_VILLA.slice(0, 8)}`,
+            timezone: "Europe/Athens",
+          },
+        ],
+      });
+      await tx.unit.create({
+        data: {
+          id: UNIT_VILLA,
+          tenantId: TENANT,
+          propertyId: PROP_VILLA,
+          name: "Olivia",
+          slug: `ol-${UNIT_VILLA.slice(0, 8)}`,
+          maxGuests: 6,
+        },
+      });
+    });
+    await withTenantTransaction(TENANT_B, async (tx) => {
+      await tx.property.create({
+        data: {
+          id: PROP_B,
+          tenantId: TENANT_B,
+          name: "Other Tenant Prop",
+          slug: `ob-${PROP_B.slice(0, 8)}`,
+          timezone: "Europe/Athens",
+        },
+      });
     });
   });
 
   afterAll(async () => {
-    await clearTenantContext(prisma);
-    await prisma.cleaningLocationQrAccess.deleteMany({ where: { tenantId: TENANT } });
-    await prisma.cleaningLocationStatus.deleteMany({ where: { tenantId: TENANT } });
-    await prisma.cleaningLocation.deleteMany({ where: { tenantId: TENANT } });
-    await prisma.unit.deleteMany({ where: { tenantId: TENANT } });
-    await prisma.property.deleteMany({ where: { tenantId: TENANT } });
-    await prisma.tenant.deleteMany({ where: { id: TENANT } });
-    await prisma.user.deleteMany({ where: { id: USER } });
-    await prisma.$disconnect();
+    try {
+      await withTenantTransaction(TENANT, async (tx) => {
+        await tx.cleaningPhoto.deleteMany({ where: { tenantId: TENANT } });
+        await tx.cleaningExecutionItem.deleteMany({
+          where: { tenantId: TENANT },
+        });
+        await tx.cleaningExecution.deleteMany({ where: { tenantId: TENANT } });
+        await tx.task.deleteMany({ where: { tenantId: TENANT } });
+        await tx.unitQrAccess.deleteMany({ where: { tenantId: TENANT } });
+        await tx.cleaningLocationQrAccess.deleteMany({
+          where: { tenantId: TENANT },
+        });
+        await tx.cleaningLocationStatus.deleteMany({
+          where: { tenantId: TENANT },
+        });
+        await tx.cleaningLocation.deleteMany({ where: { tenantId: TENANT } });
+        await tx.unit.deleteMany({ where: { tenantId: TENANT } });
+        await tx.property.deleteMany({ where: { tenantId: TENANT } });
+      });
+      await withTenantTransaction(TENANT_B, async (tx) => {
+        await tx.property.deleteMany({ where: { tenantId: TENANT_B } });
+      });
+    } finally {
+      await clearTenantContext(prisma);
+      await prisma.tenant.deleteMany({
+        where: { id: { in: [TENANT, TENANT_B] } },
+      });
+      await prisma.user.deleteMany({ where: { id: USER } });
+      await prisma.$disconnect();
+    }
   });
 
-  it("bulk creates N locations without creating Units", async () => {
-    const unitsBefore = await prisma.unit.count({
-      where: { tenantId: TENANT, deletedAt: null },
-    });
+  it("has FORCE RLS on CleaningLocation V1 tables", async () => {
+    expect(await verifyCleaningLocationRlsPoliciesActive()).toBe(true);
+
+    const forced = await prisma.$queryRaw<
+      Array<{ relname: string; relforcerowsecurity: boolean }>
+    >`
+      SELECT c.relname, c.relforcerowsecurity
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname IN (
+          'cleaning_locations',
+          'cleaning_location_statuses',
+          'cleaning_location_qr_access'
+        )
+    `;
+    expect(forced).toHaveLength(3);
+    expect(forced.every((r) => r.relforcerowsecurity === true)).toBe(true);
+  });
+
+  it("bulk creates N locations without Unit / RatePlan / channel / calendar side effects", async () => {
+    const commercialBefore = await withTenantTransaction(TENANT, async (tx) => ({
+      units: await tx.unit.count({
+        where: { tenantId: TENANT, deletedAt: null },
+      }),
+      ratePlans: await tx.ratePlan.count({ where: { tenantId: TENANT } }),
+      mappings: await tx.channelListingMapping.count({
+        where: { tenantId: TENANT },
+      }),
+      blocks: await tx.unitCalendarBlock.count({ where: { tenantId: TENANT } }),
+    }));
+
     const created = await locations.bulkCreate({
       tenantId: TENANT,
       propertyId: PROP_EMPTY,
@@ -96,10 +178,31 @@ runIntegration("CleaningLocation V1", () => {
     );
     expect(created.every((c) => c.commercialUnitId === null)).toBe(true);
 
-    const unitsAfter = await prisma.unit.count({
-      where: { tenantId: TENANT, deletedAt: null },
-    });
-    expect(unitsAfter).toBe(unitsBefore);
+    const statuses = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningLocationStatus.findMany({
+        where: { tenantId: TENANT, propertyId: PROP_EMPTY },
+      }),
+    );
+    expect(statuses).toHaveLength(30);
+    expect(statuses.every((s) => s.status === "CLEAN" && s.source === "INIT")).toBe(
+      true,
+    );
+    expect(statuses.every((s) => s.updatedByUserId === null)).toBe(true);
+
+    const commercialAfter = await withTenantTransaction(TENANT, async (tx) => ({
+      units: await tx.unit.count({
+        where: { tenantId: TENANT, deletedAt: null },
+      }),
+      ratePlans: await tx.ratePlan.count({ where: { tenantId: TENANT } }),
+      mappings: await tx.channelListingMapping.count({
+        where: { tenantId: TENANT },
+      }),
+      blocks: await tx.unitCalendarBlock.count({ where: { tenantId: TENANT } }),
+    }));
+    expect(commercialAfter.units).toBe(commercialBefore.units);
+    expect(commercialAfter.ratePlans).toBe(commercialBefore.ratePlans);
+    expect(commercialAfter.mappings).toBe(commercialBefore.mappings);
+    expect(commercialAfter.blocks).toBe(commercialBefore.blocks);
 
     await expect(
       locations.bulkCreate({
@@ -113,14 +216,16 @@ runIntegration("CleaningLocation V1", () => {
 
   it("concurrent bulk init does not duplicate", async () => {
     const prop = randomUUID();
-    await prisma.property.create({
-      data: {
-        id: prop,
-        tenantId: TENANT,
-        name: "Concurrent Prop",
-        slug: `cp-${prop.slice(0, 8)}`,
-        timezone: "Europe/Athens",
-      },
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.property.create({
+        data: {
+          id: prop,
+          tenantId: TENANT,
+          name: "Concurrent Prop",
+          slug: `cp-${prop.slice(0, 8)}`,
+          timezone: "Europe/Athens",
+        },
+      });
     });
 
     const results = await Promise.allSettled([
@@ -147,7 +252,7 @@ runIntegration("CleaningLocation V1", () => {
     expect(count).toBe(10);
   });
 
-  it("rename keeps id and does not rotate QR", async () => {
+  it("rename keeps id and does not rotate QR; rotate revokes previous", async () => {
     const [first] = await locations.listActiveByProperty(TENANT, PROP_EMPTY);
     expect(first).toBeTruthy();
 
@@ -155,7 +260,7 @@ runIntegration("CleaningLocation V1", () => {
       tenantId: TENANT,
       propertyId: PROP_EMPTY,
       cleaningLocationId: first!.id,
-      tokenHash: `hash-${first!.id}`,
+      tokenHash: `hash-${first!.id}`.padEnd(64, "a").slice(0, 64),
       rotate: false,
     });
     expect(issued.issued).toBe(true);
@@ -168,24 +273,139 @@ runIntegration("CleaningLocation V1", () => {
     expect(renamed.id).toBe(first!.id);
     expect(renamed.name).toBe("Junior Suite");
 
-    const activeQr = await qr.findActiveByLocation(TENANT, first!.id);
-    expect(activeQr?.id).toBe(issued.record.id);
-    expect(activeQr?.tokenHash).toBe(`hash-${first!.id}`);
+    const activeAfterRename = await qr.findActiveByLocation(TENANT, first!.id);
+    expect(activeAfterRename?.id).toBe(issued.record.id);
+    expect(activeAfterRename?.tokenHash).toBe(issued.record.tokenHash);
+
+    const rotated = await qr.issue({
+      tenantId: TENANT,
+      propertyId: PROP_EMPTY,
+      cleaningLocationId: first!.id,
+      tokenHash: `rot-${first!.id}`.padEnd(64, "b").slice(0, 64),
+      rotate: true,
+    });
+    expect(rotated.record.id).not.toBe(issued.record.id);
+    expect(rotated.record.status).toBe("ACTIVE");
+
+    const oldRow = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningLocationQrAccess.findFirst({
+        where: { id: issued.record.id },
+      }),
+    );
+    expect(oldRow?.status).toBe("REVOKED");
+    expect(oldRow?.revokedAt).toBeTruthy();
+
+    const actives = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningLocationQrAccess.count({
+        where: {
+          tenantId: TENANT,
+          cleaningLocationId: first!.id,
+          status: "ACTIVE",
+        },
+      }),
+    );
+    expect(actives).toBe(1);
   });
 
-  it("board returns summary rows without N+1 token fields", async () => {
+  it("board returns summary rows without plaintext tokens", async () => {
     const board = await locations.getBoard(TENANT, PROP_EMPTY);
     expect(board.length).toBeGreaterThanOrEqual(30);
     expect(board.every((row) => typeof row.hasActiveQr === "boolean")).toBe(true);
     expect(board.some((row) => "token" in row)).toBe(false);
+    const names = board.map((r) => r.name);
+    const juniorIdx = names.indexOf("Junior Suite");
+    expect(juniorIdx).toBeGreaterThanOrEqual(0);
   });
 
-  it("villa-style add with commercialUnitId link does not create extra units", async () => {
-    const unitsBefore = await prisma.unit.count({
-      where: { tenantId: TENANT, propertyId: PROP_VILLA, deletedAt: null },
+  it("archive retains history and removes from active board", async () => {
+    const added = await locations.add({
+      tenantId: TENANT,
+      propertyId: PROP_EMPTY,
+      name: "Archive Me",
+      actorUserId: USER,
     });
-    expect(unitsBefore).toBe(1);
 
+    const taskId = randomUUID();
+    const executionId = randomUUID();
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.task.create({
+        data: {
+          id: taskId,
+          tenantId: TENANT,
+          propertyId: PROP_EMPTY,
+          cleaningLocationId: added.id,
+          category: "HOUSEKEEPING",
+          title: "CL V1 hist",
+          status: "COMPLETED",
+          priority: "NORMAL",
+          createdByUserId: USER,
+        },
+      });
+      await tx.cleaningExecution.create({
+        data: {
+          id: executionId,
+          tenantId: TENANT,
+          propertyId: PROP_EMPTY,
+          cleaningLocationId: added.id,
+          taskId,
+          status: "COMPLETED",
+          startedByUserId: USER,
+          completedByUserId: USER,
+          completedAt: new Date(),
+        },
+      });
+      await tx.cleaningPhoto.create({
+        data: {
+          id: randomUUID(),
+          tenantId: TENANT,
+          propertyId: PROP_EMPTY,
+          cleaningLocationId: added.id,
+          taskId,
+          executionId,
+          storageKey: `cl-v1/${TENANT}/${executionId}/photo.jpg`,
+          contentType: "image/jpeg",
+          sizeBytes: 1024,
+          uploadedByUserId: USER,
+        },
+      });
+    });
+
+    const archived = await locations.archive({
+      tenantId: TENANT,
+      locationId: added.id,
+    });
+    expect(archived.status).toBe("archived");
+    expect(archived.id).toBe(added.id);
+
+    const board = await locations.getBoard(TENANT, PROP_EMPTY);
+    expect(board.some((r) => r.locationId === added.id)).toBe(false);
+
+    const histExec = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningExecution.findFirst({
+        where: { id: executionId, tenantId: TENANT },
+      }),
+    );
+    expect(histExec?.cleaningLocationId).toBe(added.id);
+    const histPhoto = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningPhoto.findFirst({
+        where: { executionId, tenantId: TENANT },
+      }),
+    );
+    expect(histPhoto?.cleaningLocationId).toBe(added.id);
+  });
+
+  it("tenant isolation: other tenant cannot see locations", async () => {
+    const foreign = await locations.listActiveByProperty(TENANT_B, PROP_EMPTY);
+    expect(foreign).toHaveLength(0);
+
+    const boardB = await locations.getBoard(TENANT_B, PROP_EMPTY);
+    expect(boardB).toHaveLength(0);
+
+    const own = await locations.countActiveByProperty(TENANT, PROP_EMPTY);
+    expect(own).toBeGreaterThanOrEqual(30);
+  });
+
+  it("legacy Unit QR remains resolvable via commercialUnitId link", async () => {
     const loc = await locations.add({
       tenantId: TENANT,
       propertyId: PROP_VILLA,
@@ -195,12 +415,33 @@ runIntegration("CleaningLocation V1", () => {
     });
     expect(loc.commercialUnitId).toBe(UNIT_VILLA);
 
-    const unitsAfter = await prisma.unit.count({
-      where: { tenantId: TENANT, propertyId: PROP_VILLA, deletedAt: null },
-    });
+    const unitsAfter = await withTenantTransaction(TENANT, async (tx) =>
+      tx.unit.count({
+        where: { tenantId: TENANT, propertyId: PROP_VILLA, deletedAt: null },
+      }),
+    );
     expect(unitsAfter).toBe(1);
 
-    // Villa already has a location — bulk must reject
+    const legacyHash = `legacy-${UNIT_VILLA}`.padEnd(64, "c").slice(0, 64);
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.unitQrAccess.create({
+        data: {
+          id: randomUUID(),
+          tenantId: TENANT,
+          propertyId: PROP_VILLA,
+          unitId: UNIT_VILLA,
+          tokenHash: legacyHash,
+          status: "ACTIVE",
+        },
+      });
+    });
+
+    const linked = await locations.findActiveByCommercialUnit(
+      TENANT,
+      UNIT_VILLA,
+    );
+    expect(linked?.id).toBe(loc.id);
+
     await expect(
       locations.bulkCreate({
         tenantId: TENANT,
@@ -209,5 +450,109 @@ runIntegration("CleaningLocation V1", () => {
         actorUserId: USER,
       }),
     ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("CleaningExecution and CleaningPhoto associate to CleaningLocation", async () => {
+    const [loc] = await locations.listActiveByProperty(TENANT, PROP_VILLA);
+    expect(loc).toBeTruthy();
+
+    const taskId = randomUUID();
+    const executionId = randomUUID();
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.task.create({
+        data: {
+          id: taskId,
+          tenantId: TENANT,
+          propertyId: PROP_VILLA,
+          cleaningLocationId: loc!.id,
+          category: "HOUSEKEEPING",
+          title: "CL V1 clean",
+          status: "IN_PROGRESS",
+          priority: "NORMAL",
+          createdByUserId: USER,
+        },
+      });
+      await tx.cleaningExecution.create({
+        data: {
+          id: executionId,
+          tenantId: TENANT,
+          propertyId: PROP_VILLA,
+          cleaningLocationId: loc!.id,
+          taskId,
+          status: "IN_PROGRESS",
+          startedByUserId: USER,
+        },
+      });
+      await tx.cleaningPhoto.create({
+        data: {
+          id: randomUUID(),
+          tenantId: TENANT,
+          propertyId: PROP_VILLA,
+          cleaningLocationId: loc!.id,
+          taskId,
+          executionId,
+          storageKey: `cl-v1/${TENANT}/${executionId}/a.jpg`,
+          contentType: "image/jpeg",
+          sizeBytes: 2048,
+          uploadedByUserId: USER,
+        },
+      });
+    });
+
+    const execs = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningExecution.findMany({
+        where: { tenantId: TENANT, cleaningLocationId: loc!.id },
+      }),
+    );
+    expect(execs.length).toBeGreaterThanOrEqual(1);
+    const photos = await withTenantTransaction(TENANT, async (tx) =>
+      tx.cleaningPhoto.findMany({
+        where: { tenantId: TENANT, cleaningLocationId: loc!.id },
+      }),
+    );
+    expect(photos.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("existing migrated Olive history remains readable (read-only)", async () => {
+    // Catalog discovery may need DATABASE_URL (bypass/session) while counts
+    // run under talos_runtime + withTenantTransaction.
+    const { PrismaClient } = await import("@prisma/client");
+    const catalogUrl =
+      process.env.DATABASE_URL?.trim() ||
+      process.env.RUNTIME_DATABASE_URL?.trim() ||
+      "";
+    const catalog = new PrismaClient({
+      datasources: { db: { url: catalogUrl } },
+    });
+    try {
+      const olive = await catalog.property.findFirst({
+        where: { name: "Olive", deletedAt: null },
+        select: { id: true, tenantId: true },
+      });
+      if (!olive) return;
+      const linked = await withTenantTransaction(olive.tenantId, async (tx) =>
+        tx.cleaningLocation.count({
+          where: {
+            tenantId: olive.tenantId,
+            propertyId: olive.id,
+            status: "active",
+            commercialUnitId: { not: null },
+          },
+        }),
+      );
+      expect(linked).toBeGreaterThanOrEqual(1);
+      const execCount = await withTenantTransaction(olive.tenantId, async (tx) =>
+        tx.cleaningExecution.count({
+          where: {
+            tenantId: olive.tenantId,
+            propertyId: olive.id,
+            cleaningLocationId: { not: null },
+          },
+        }),
+      );
+      expect(execCount).toBeGreaterThanOrEqual(1);
+    } finally {
+      await catalog.$disconnect();
+    }
   });
 });

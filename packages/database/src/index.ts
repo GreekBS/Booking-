@@ -26,6 +26,7 @@ export {
   resolveIntegrationTestDatabaseUrl,
   applyIntegrationTestDatabaseEnv,
   resolveWorkerDatabaseUrl,
+  ALLOW_TALOS_DEMO_DB_INTEGRATION_ENV,
   WORKER_DATABASE_URL_ENV,
   TALOS_WORKER_RUNTIME_MODE_ENV,
 } from "./safety/databaseTargetGuard";

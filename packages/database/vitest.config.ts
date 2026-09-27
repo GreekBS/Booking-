@@ -6,9 +6,11 @@ import { applyIntegrationTestDatabaseEnv } from "./src/safety/databaseTargetGuar
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
-// Load packages/database/.env once (may contain Production during local incidents),
-// then remap to TEST_DATABASE_URL only — or clear so suites skip without mutating.
+// Load packages/database/.env and apps/web/.env.local (demo workflow),
+// then remap via TEST_DATABASE_URL or ALLOW_TALOS_DEMO_DB_INTEGRATION —
+// otherwise clear so suites skip without mutating an unintended DB.
 loadEnv({ path: path.join(root, ".env") });
+loadEnv({ path: path.join(root, "../../apps/web/.env.local") });
 applyIntegrationTestDatabaseEnv();
 
 export default defineConfig({

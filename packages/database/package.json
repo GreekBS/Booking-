@@ -19,6 +19,7 @@
     "db:studio": "tsx scripts/guarded-prisma.ts studio",
     "test": "vitest run",
     "test:integration": "vitest run tests/integration",
+    "test:integration:demo": "tsx scripts/run-cleaning-locations-v1-verification.ts",
     "test:safety": "vitest run tests/safety",
     "test:last-sa-isolated": "tsx scripts/run-last-sa-isolated-proof.ts",
     "lint": "eslint src --max-warnings 0 && tsc --noEmit"

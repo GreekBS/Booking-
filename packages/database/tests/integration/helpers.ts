@@ -1,4 +1,9 @@
-import { prisma, clearTenantContext, setTenantContext } from "../../src/client";
+import {
+  prisma,
+  clearTenantContext,
+  setTenantContext,
+  withTenantTransaction,
+} from "../../src/client";
 import { assertNotTalosProductionDatabase } from "../../src/safety/databaseTargetGuard";
 
 export async function truncateIntegrationTables(): Promise<void> {
@@ -91,4 +96,4 @@ export async function verifyCleaningLocationRlsPoliciesActive(): Promise<boolean
   return rows.length === 3 && rows.every((row) => row.rowsecurity === true);
 }
 
-export { prisma, setTenantContext, clearTenantContext };
+export { prisma, setTenantContext, clearTenantContext, withTenantTransaction };

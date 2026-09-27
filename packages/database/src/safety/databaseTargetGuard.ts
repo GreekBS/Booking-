@@ -15,6 +15,18 @@ export const PRODUCTION_DB_REFUSAL_MESSAGE =
 const ALLOW_PRODUCTION_MUTATION_ENV = "ALLOW_TALOS_PRODUCTION_DB_MUTATION";
 
 /**
+ * Explicit opt-in: run integration suites against the configured Talos
+ * development/demo DB when TEST_DATABASE_URL is absent.
+ *
+ * Talos currently has one demo/development database for migrations and
+ * controlled integration verification. This flag must be set deliberately
+ * (dedicated npm script / authorized verification) so ordinary `pnpm test`
+ * never mutates DATABASE_URL by accident.
+ */
+export const ALLOW_TALOS_DEMO_DB_INTEGRATION_ENV =
+  "ALLOW_TALOS_DEMO_DB_INTEGRATION";
+
+/**
  * Extract Supabase project reference from a PostgreSQL connection URL.
  * Supports pooler usernames shaped as `postgres.<project-ref>`.
  * Returns null when the URL is missing/invalid or has no identifiable project ref.
@@ -68,22 +80,43 @@ export function assertNotTalosProductionDatabase(
 }
 
 /**
- * Integration tests must use TEST_DATABASE_URL exclusively.
- * Never falls back to DATABASE_URL.
+ * Resolve the database URL for integration tests.
+ *
+ * Priority:
+ * 1. TEST_DATABASE_URL when set (preferred isolated target)
+ * 2. RUNTIME_DATABASE_URL / DATABASE_URL only when
+ *    ALLOW_TALOS_DEMO_DB_INTEGRATION=true (authorized Talos demo/dev workflow)
+ *
+ * Never silently falls back to DATABASE_URL without the opt-in flag.
+ * Production project refs still require ALLOW_TALOS_PRODUCTION_DB_MUTATION=true.
  *
  * @returns sanitized URL string, or null when tests should skip (missing config)
- * @throws when TEST_DATABASE_URL points at Talos Production
  */
 export function resolveIntegrationTestDatabaseUrl(
   env: NodeJS.ProcessEnv = process.env,
 ): string | null {
   const testUrl = env.TEST_DATABASE_URL?.trim() ?? "";
-  if (!testUrl) {
+  if (testUrl) {
+    assertNotTalosProductionDatabase(testUrl, "integration-test");
+    return testUrl;
+  }
+
+  const demoOptIn =
+    env[ALLOW_TALOS_DEMO_DB_INTEGRATION_ENV]?.trim() === "true";
+  if (!demoOptIn) {
     return null;
   }
 
-  assertNotTalosProductionDatabase(testUrl, "integration-test");
-  return testUrl;
+  const demoUrl =
+    env.RUNTIME_DATABASE_URL?.trim() ||
+    env.DATABASE_URL?.trim() ||
+    "";
+  if (!demoUrl) {
+    return null;
+  }
+
+  assertNotTalosProductionDatabase(demoUrl, "integration-test-demo-db");
+  return demoUrl;
 }
 
 /**
@@ -130,8 +163,8 @@ export function resolveWorkerDatabaseUrl(
 
 /**
  * After dotenv loads a possibly-Production DATABASE_URL, replace the process env
- * used by integration suites with TEST_DATABASE_URL only — or clear DB URLs so
- * suites skip without mutating Production.
+ * used by integration suites with the resolved integration URL — or clear DB URLs
+ * so suites skip without mutating an unintended target.
  */
 export function applyIntegrationTestDatabaseEnv(
   env: NodeJS.ProcessEnv = process.env,

@@ -48,17 +48,27 @@ describe("databaseTargetGuard", () => {
   });
 
   it("rejects Talos Production with a safe message (no secrets)", () => {
-    expect(() =>
-      assertNotTalosProductionDatabase(TALOS_PROD_URL, "unit-test"),
-    ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
-
+    const previous = process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
     try {
-      assertNotTalosProductionDatabase(TALOS_PROD_URL, "unit-test");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      expect(message).not.toContain("super-secret-password-value");
-      expect(message).not.toContain(TALOS_PROD_URL);
-      expect(message).not.toMatch(/postgresql:\/\//i);
+      delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      expect(() =>
+        assertNotTalosProductionDatabase(TALOS_PROD_URL, "unit-test"),
+      ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
+
+      try {
+        assertNotTalosProductionDatabase(TALOS_PROD_URL, "unit-test");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        expect(message).not.toContain("super-secret-password-value");
+        expect(message).not.toContain(TALOS_PROD_URL);
+        expect(message).not.toMatch(/postgresql:\/\//i);
+      }
+    } finally {
+      if (previous === undefined) {
+        delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      } else {
+        process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION = previous;
+      }
     }
   });
 
@@ -87,7 +97,7 @@ describe("databaseTargetGuard", () => {
     }
   });
 
-  it("resolveIntegrationTestDatabaseUrl never falls back to DATABASE_URL", () => {
+  it("resolveIntegrationTestDatabaseUrl never falls back to DATABASE_URL without opt-in", () => {
     const env = {
       DATABASE_URL: TALOS_PROD_URL,
       DIRECT_URL: TALOS_PROD_URL,
@@ -97,14 +107,24 @@ describe("databaseTargetGuard", () => {
   });
 
   it("resolveIntegrationTestDatabaseUrl rejects Production TEST_DATABASE_URL", () => {
-    const env = {
-      TEST_DATABASE_URL: TALOS_PROD_URL,
-      DATABASE_URL: LOCAL_URL,
-    } as NodeJS.ProcessEnv;
+    const previous = process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+    try {
+      delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      const env = {
+        TEST_DATABASE_URL: TALOS_PROD_URL,
+        DATABASE_URL: LOCAL_URL,
+      } as NodeJS.ProcessEnv;
 
-    expect(() => resolveIntegrationTestDatabaseUrl(env)).toThrow(
-      PRODUCTION_DB_REFUSAL_MESSAGE,
-    );
+      expect(() => resolveIntegrationTestDatabaseUrl(env)).toThrow(
+        PRODUCTION_DB_REFUSAL_MESSAGE,
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      } else {
+        process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION = previous;
+      }
+    }
   });
 
   it("resolveIntegrationTestDatabaseUrl accepts non-production TEST_DATABASE_URL", () => {
@@ -114,6 +134,43 @@ describe("databaseTargetGuard", () => {
     } as NodeJS.ProcessEnv;
 
     expect(resolveIntegrationTestDatabaseUrl(env)).toBe(LOCAL_URL);
+  });
+
+  it("resolveIntegrationTestDatabaseUrl uses demo DB only with ALLOW_TALOS_DEMO_DB_INTEGRATION", () => {
+    const envWithout = {
+      DATABASE_URL: LOCAL_URL,
+      RUNTIME_DATABASE_URL: LOCAL_URL,
+    } as NodeJS.ProcessEnv;
+    expect(resolveIntegrationTestDatabaseUrl(envWithout)).toBeNull();
+
+    const envWith = {
+      DATABASE_URL: LOCAL_URL,
+      RUNTIME_DATABASE_URL: OTHER_PROJECT_SAME_HOST,
+      ALLOW_TALOS_DEMO_DB_INTEGRATION: "true",
+    } as NodeJS.ProcessEnv;
+    expect(resolveIntegrationTestDatabaseUrl(envWith)).toBe(
+      OTHER_PROJECT_SAME_HOST,
+    );
+  });
+
+  it("resolveIntegrationTestDatabaseUrl demo opt-in still refuses Production without mutation allow", () => {
+    const previous = process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+    try {
+      delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      const env = {
+        DATABASE_URL: TALOS_PROD_URL,
+        ALLOW_TALOS_DEMO_DB_INTEGRATION: "true",
+      } as NodeJS.ProcessEnv;
+      expect(() => resolveIntegrationTestDatabaseUrl(env)).toThrow(
+        PRODUCTION_DB_REFUSAL_MESSAGE,
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      } else {
+        process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION = previous;
+      }
+    }
   });
 
   it("applyIntegrationTestDatabaseEnv clears Production DATABASE_URL when TEST is missing", () => {
@@ -163,11 +220,21 @@ describe("databaseTargetGuard", () => {
   });
 
   it("resolveWorkerDatabaseUrl production mode still requires mutation allow-list", () => {
-    expect(() =>
-      resolveWorkerDatabaseUrl({
-        WORKER_DATABASE_URL: TALOS_PROD_URL,
-        TALOS_WORKER_RUNTIME_MODE: "production",
-      } as NodeJS.ProcessEnv),
-    ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
+    const previous = process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+    try {
+      delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      expect(() =>
+        resolveWorkerDatabaseUrl({
+          WORKER_DATABASE_URL: TALOS_PROD_URL,
+          TALOS_WORKER_RUNTIME_MODE: "production",
+        } as NodeJS.ProcessEnv),
+      ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION;
+      } else {
+        process.env.ALLOW_TALOS_PRODUCTION_DB_MUTATION = previous;
+      }
+    }
   });
 });
