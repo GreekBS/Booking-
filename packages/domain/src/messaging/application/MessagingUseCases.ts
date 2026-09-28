@@ -35,7 +35,12 @@ import type {
 } from "../ports/IMessagingRepositories";
 import type {
   AssistantContext,
+  AssistantContextAmenity,
   IAssistantProvider,
+} from "../ports/IAssistantProvider";
+import {
+  createAssistantProviderFailureResult,
+  isAssistantProviderFailureReason,
 } from "../ports/IAssistantProvider";
 import {
   buildAssistantContext,
@@ -710,7 +715,8 @@ export interface IngestGuestMessageInput {
   body: string;
   externalMessageId?: string | null;
   stay?: AssistantStayInput | null;
-  amenityNames?: string[];
+  /** Authoritative Property amenities for this conversation's property. */
+  amenities?: AssistantContextAmenity[];
 }
 
 export interface IngestGuestMessageResult {
@@ -827,25 +833,10 @@ export class IngestGuestMessageUseCase {
           operation: "classify_and_draft",
         });
       } catch {
-        generated = {
-          classification: "UNKNOWN" as const,
-          replyText: null,
-          requiresEscalation: true,
-          escalationReason: "provider_error",
-          escalationSummary:
-            "AI provider failed — inbound message retained for manual reply.",
-          unansweredTopics: [],
-          knowledgeSourceIds: [] as string[],
-          safetyFlags: [] as string[],
-          guestLanguage: null,
-          provider: "error",
-          model: "none",
-          inputTokens: null,
-          outputTokens: null,
-          latencyMs: 0,
-          success: false,
+        generated = createAssistantProviderFailureResult({
           errorCode: "provider_exception",
-        };
+          provider: "error",
+        });
       }
 
       const grounding = assertGroundedAnswerable({
@@ -1051,7 +1042,7 @@ export class IngestGuestMessageUseCase {
         profile,
         knowledge,
         faqs,
-        amenityNames: input.amenityNames ?? [],
+        amenities: input.amenities ?? [],
         stay: input.stay ?? null,
         messages: history.slice(-ASSISTANT_HISTORY_LIMIT),
       }),
@@ -1133,7 +1124,7 @@ export class ResolveOwnerEscalationUseCase {
       /** Default: send when autopilot, draft-only for copilot. */
       send?: boolean;
       stay?: AssistantStayInput | null;
-      amenityNames?: string[];
+      amenities?: AssistantContextAmenity[];
     },
     actor: ActorContext,
     auditContext?: MessagingAuditContext,
@@ -1214,7 +1205,7 @@ export class ResolveOwnerEscalationUseCase {
         profile,
         knowledge,
         faqs,
-        amenityNames: input.amenityNames ?? [],
+        amenities: input.amenities ?? [],
         stay: input.stay ?? null,
         messages: history.slice(-ASSISTANT_HISTORY_LIMIT),
       });
@@ -1303,7 +1294,8 @@ export class ResolveOwnerEscalationUseCase {
       }
 
       const saveToKnowledgeOffered =
-        escalation.classification === "UNKNOWN";
+        escalation.classification === "UNKNOWN" &&
+        !isAssistantProviderFailureReason(escalation.reason);
 
       const resolved = await this.escalations.resolve(
         input.tenantId,

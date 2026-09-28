@@ -84,6 +84,7 @@ export {
   PrismaOwnerEscalationRepository,
   PrismaAiUsageRepository,
 } from "./repositories/messaging/MessagingRepositories";
+export { PrismaPropertyAmenityReader } from "./repositories/messaging/PropertyAmenityReader";
 export { PrismaTaskRepository } from "./repositories/operations/TaskRepository";
 export { PrismaUnitHousekeepingStatusRepository } from "./repositories/operations/UnitHousekeepingStatusRepository";
 export { PrismaHousekeepingTurnoverStore } from "./repositories/operations/HousekeepingTurnoverStore";

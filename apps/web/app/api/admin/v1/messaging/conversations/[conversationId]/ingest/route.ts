@@ -3,6 +3,7 @@ import { ingestGuestMessageBodySchema } from "@hcp/validators";
 import {
   getConversationThreadUseCase,
   ingestGuestMessageUseCase,
+  loadPropertyAmenities,
 } from "@/lib/di/container";
 import {
   requireTenantContext,
@@ -16,7 +17,6 @@ import {
   serializeMessage,
   serializeSuggestion,
 } from "@/lib/admin/messaging-serializers";
-import { loadPropertyAmenityNames } from "@/lib/messaging/property-amenity-names";
 
 interface RouteParams {
   params: Promise<{ conversationId: string }>;
@@ -37,9 +37,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return mapResultError(threadPreview.getError());
     }
     const propertyId = threadPreview.getValue().conversation.propertyId;
-    const amenityNames =
-      body.amenityNames ??
-      (await loadPropertyAmenityNames(actor.tenantId, propertyId));
+    const amenities =
+      body.amenities ??
+      (await loadPropertyAmenities(actor.tenantId, propertyId));
 
     const result = await ingestGuestMessageUseCase.execute(
       {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         body: body.body,
         externalMessageId: body.externalMessageId,
         stay: body.stay,
-        amenityNames,
+        amenities,
       },
       toPermissionActor(actor),
       { ipAddress: getClientIp(request) },

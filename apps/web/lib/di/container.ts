@@ -522,6 +522,7 @@ import {
   PrismaAiSuggestionRepository,
   PrismaOwnerEscalationRepository,
   PrismaAiUsageRepository,
+  PrismaPropertyAmenityReader,
   PrismaTaskRepository,
   PrismaUnitHousekeepingStatusRepository,
   PrismaHousekeepingTurnoverStore,
@@ -633,7 +634,7 @@ import { stubInvitationNotifier } from "@/lib/notifications/stubInvitationNotifi
 import { createProductionChannelProviderRegistry } from "@/lib/channels/enabled-providers";
 import { PollingFeatureGatedPollJobHandler } from "@/lib/channels/PollingFeatureGatedPollJobHandler";
 import { isChannelsPollingEnabled } from "@/lib/channels/polling-enabled";
-import { GeminiAssistantProvider } from "@/lib/ai/GeminiAssistantProvider";
+import { createAssistantProvider } from "@/lib/ai/createAssistantProvider";
 
 
 
@@ -1318,7 +1319,15 @@ const propertyAssistantConfigRepository =
 const aiSuggestionRepository = new PrismaAiSuggestionRepository();
 const ownerEscalationRepository = new PrismaOwnerEscalationRepository();
 const aiUsageRepository = new PrismaAiUsageRepository();
-const geminiAssistantProvider = new GeminiAssistantProvider();
+export const propertyAmenityReader = new PrismaPropertyAmenityReader();
+const assistantProvider = createAssistantProvider();
+
+export async function loadPropertyAmenities(
+  tenantId: string,
+  propertyId: string,
+) {
+  return propertyAmenityReader.listForProperty(tenantId, propertyId);
+}
 
 export const getPropertyAssistantConfigUseCase =
   new GetPropertyAssistantConfigUseCase(
@@ -1388,7 +1397,7 @@ export const ingestGuestMessageUseCase = new IngestGuestMessageUseCase(
   ownerEscalationRepository,
   aiUsageRepository,
   propertyRepository,
-  geminiAssistantProvider,
+  assistantProvider,
   idGenerator,
   permissionChecker,
   auditLogRepository,
@@ -1407,7 +1416,7 @@ export const resolveOwnerEscalationUseCase = new ResolveOwnerEscalationUseCase(
   aiSuggestionRepository,
   aiUsageRepository,
   propertyRepository,
-  geminiAssistantProvider,
+  assistantProvider,
   idGenerator,
   permissionChecker,
   auditLogRepository,

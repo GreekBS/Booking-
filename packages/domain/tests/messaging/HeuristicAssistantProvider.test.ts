@@ -81,7 +81,7 @@ function ctx(k: PropertyGuestKnowledgeRecord | null = knowledge) {
     profile,
     knowledge: k,
     faqs: [],
-    amenityNames: [],
+    amenities: [],
     stay: {
       guestDisplayName: "Alex Guest",
       guestFirstName: "Alex",

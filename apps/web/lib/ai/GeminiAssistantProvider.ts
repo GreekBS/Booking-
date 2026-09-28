@@ -3,24 +3,24 @@ import type {
   AssistantGenerateResult,
   IAssistantProvider,
 } from "@hcp/domain";
-import { HeuristicAssistantProvider } from "@hcp/domain";
+import { createAssistantProviderFailureResult } from "@hcp/domain";
 
 /**
- * Gemini Flash Free Tier adapter. Falls back to HeuristicAssistantProvider when
- * GEMINI_API_KEY is missing or the HTTP call fails.
+ * Gemini Flash Free Tier adapter behind IAssistantProvider.
  *
- * Model is selected via GEMINI_MODEL (default: gemini-2.0-flash).
+ * Fail-closed: never substitutes HeuristicAssistantProvider. Missing key,
+ * timeouts, HTTP errors, and invalid JSON all return a provider-failure
+ * result (no guest draft, no Autopilot send).
+ *
+ * Model via GEMINI_MODEL (default: gemini-2.0-flash).
  */
 export class GeminiAssistantProvider implements IAssistantProvider {
-  private readonly fallback = new HeuristicAssistantProvider();
   private readonly apiKey: string | null;
   private readonly model: string;
 
   constructor(options?: { apiKey?: string | null; model?: string }) {
     this.apiKey =
-      options?.apiKey ??
-      process.env.GEMINI_API_KEY?.trim() ??
-      null;
+      options?.apiKey ?? process.env.GEMINI_API_KEY?.trim() ?? null;
     this.model =
       options?.model?.trim() ||
       process.env.GEMINI_MODEL?.trim() ||
@@ -31,38 +31,56 @@ export class GeminiAssistantProvider implements IAssistantProvider {
     req: AssistantGenerateRequest,
   ): Promise<AssistantGenerateResult> {
     if (!this.apiKey) {
-      return this.fallback.generate(req);
+      return createAssistantProviderFailureResult({
+        errorCode: "gemini_api_key_missing",
+        provider: "gemini",
+        model: this.model,
+        operation: req.operation,
+        ownerRawReply: req.ownerRawReply,
+      });
     }
+
     const started = Date.now();
     try {
       const prompt = buildPrompt(req);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12_000);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-      clearTimeout(timer);
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+
       if (!res.ok) {
-        const fallback = await this.fallback.generate(req);
-        return {
-          ...fallback,
+        const errorCode =
+          res.status === 429
+            ? "gemini_rate_limited"
+            : res.status >= 500
+              ? `gemini_http_${res.status}`
+              : `http_${res.status}`;
+        return createAssistantProviderFailureResult({
+          errorCode,
           provider: "gemini",
           model: this.model,
-          success: false,
-          errorCode: `http_${res.status}`,
           latencyMs: Date.now() - started,
-        };
+          operation: req.operation,
+          ownerRawReply: req.ownerRawReply,
+        });
       }
+
       const json = (await res.json()) as {
         candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
         usageMetadata?: {
@@ -75,16 +93,16 @@ export class GeminiAssistantProvider implements IAssistantProvider {
         "";
       const parsed = parseAssistantJson(text);
       if (!parsed) {
-        const fallback = await this.fallback.generate(req);
-        return {
-          ...fallback,
+        return createAssistantProviderFailureResult({
+          errorCode: "gemini_invalid_structured_output",
           provider: "gemini",
           model: this.model,
           latencyMs: Date.now() - started,
-          inputTokens: json.usageMetadata?.promptTokenCount ?? null,
-          outputTokens: json.usageMetadata?.candidatesTokenCount ?? null,
-        };
+          operation: req.operation,
+          ownerRawReply: req.ownerRawReply,
+        });
       }
+
       return {
         classification: parsed.classification,
         replyText: parsed.replyText,
@@ -103,29 +121,42 @@ export class GeminiAssistantProvider implements IAssistantProvider {
         success: true,
         errorCode: null,
       };
-    } catch {
-      const fallback = await this.fallback.generate(req);
-      return {
-        ...fallback,
+    } catch (error) {
+      const aborted =
+        error instanceof Error &&
+        (error.name === "AbortError" || /aborted/i.test(error.message));
+      return createAssistantProviderFailureResult({
+        errorCode: aborted ? "gemini_timeout" : "gemini_unavailable",
         provider: "gemini",
         model: this.model,
-        success: false,
-        errorCode: "gemini_unavailable",
         latencyMs: Date.now() - started,
-      };
+        operation: req.operation,
+        ownerRawReply: req.ownerRawReply,
+      });
     }
   }
 }
 
 function buildPrompt(req: AssistantGenerateRequest): string {
   const ctx = {
-    property: req.context.property,
+    property: {
+      ...req.context.property,
+      amenities: req.context.property.amenities.map((a) => ({
+        id: a.id,
+        name: a.name,
+        knowledgeSourceId: `amenity:${a.id}`,
+      })),
+    },
     knowledge: req.context.knowledge,
-    faqs: req.context.faqs,
+    faqs: req.context.faqs.map((f) => ({
+      ...f,
+      knowledgeSourceId: `faq:${f.id}`,
+    })),
     style: req.context.style,
     stay: req.context.stay,
     recentMessages: req.context.recentMessages,
   };
+
   if (req.operation === "polish_owner_decision") {
     return `You are Talos Property AI receptionist. Polish the owner's raw decision into a guest-facing reply.
 Rules:
@@ -144,11 +175,13 @@ Context: ${JSON.stringify(ctx)}`;
 
   return `You are Talos Property AI receptionist. Classify the guest message using ONLY the provided context.
 Rules:
-- Property-specific facts MUST cite knowledgeSourceIds from context (e.g. guest_knowledge.wifi_password, faq:{id}, policy.check_in_time).
+- Property-specific facts MUST cite knowledgeSourceIds from context (e.g. amenity:{id}, guest_knowledge.wifi_password, faq:{id}, policy.check_in_time).
+- Amenity presence answers "do you have X?" only — never invent passwords, codes, or location instructions from amenities alone.
+- Wi-Fi password requires guest_knowledge.wifi_password (and optionally wifi_ssid). Amenity Wi-Fi alone is insufficient for password questions.
 - If missing authoritative info → classification UNKNOWN, replyText null, requiresEscalation true.
 - Early check-in / late checkout / discounts / special services needing approval → REQUIRES_OWNER_DECISION.
 - Refunds/cancellations/payment/inventory mutations → BLOCKED.
-- Never invent Wi-Fi, parking, rules, or local recommendations.
+- Never invent Wi-Fi credentials, parking directions, rules, or local recommendations.
 
 Return ONLY JSON:
 {"classification":"ANSWERABLE"|"UNKNOWN"|"REQUIRES_OWNER_DECISION"|"BLOCKED","replyText":string|null,"requiresEscalation":boolean,"escalationReason":string|null,"escalationSummary":string|null,"unansweredTopics":string[],"knowledgeSourceIds":string[],"safetyFlags":string[],"guestLanguage":"en"|"el"|null}
@@ -183,8 +216,7 @@ function parseAssistantJson(text: string): {
     }
     return {
       classification: classification as AssistantGenerateResult["classification"],
-      replyText:
-        typeof raw.replyText === "string" ? raw.replyText : null,
+      replyText: typeof raw.replyText === "string" ? raw.replyText : null,
       requiresEscalation: Boolean(raw.requiresEscalation),
       escalationReason:
         typeof raw.escalationReason === "string" ? raw.escalationReason : null,

@@ -1,12 +1,15 @@
 import type {
   AssistantGenerateRequest,
   AssistantGenerateResult,
+  AssistantContextAmenity,
   IAssistantProvider,
 } from "../ports/IAssistantProvider";
+import { amenitySourceId } from "../ports/IAssistantProvider";
 import type { AssistantClassification } from "../domain/MessagingTypes";
 
 /**
- * Deterministic receptionist for demos/tests and Gemini-unavailable fallback.
+ * Deterministic receptionist for explicit test/demo provider selection only.
+ * Must never be silently substituted when Gemini fails.
  * Grounds answers only in provided context — never invents Property facts.
  */
 export class HeuristicAssistantProvider implements IAssistantProvider {
@@ -154,13 +157,66 @@ export class HeuristicAssistantProvider implements IAssistantProvider {
       });
     }
 
-    // Wi-Fi
+    // Wi-Fi — availability may come from amenities; password only from knowledge.
     if (/(wifi|wi[\s-]*fi|password|κωδικό|κωδικος|ιντερνετ)/i.test(text)) {
+      const wifiAmenity = findAmenity(req.context.property.amenities, [
+        "wifi",
+        "wi-fi",
+        "wi fi",
+        "internet",
+        "ίντερνετ",
+        "ιντερνετ",
+      ]);
+      const asksPassword =
+        /(password|κωδικ|passcode|συνθηματ)/i.test(text);
+
+      if (asksPassword) {
+        if (k?.wifiPassword) {
+          const parts: string[] = [];
+          if (k.wifiSsid)
+            parts.push(
+              lang === "el" ? `Δίκτυο: ${k.wifiSsid}` : `Network: ${k.wifiSsid}`,
+            );
+          parts.push(
+            lang === "el"
+              ? `Κωδικός: ${k.wifiPassword}`
+              : `Password: ${k.wifiPassword}`,
+          );
+          return result(started, {
+            classification: "ANSWERABLE",
+            replyText:
+              lang === "el"
+                ? `Φυσικά! Στοιχεία Wi‑Fi:\n${parts.join("\n")}`
+                : `Of course! Wi‑Fi details:\n${parts.join("\n")}`,
+            requiresEscalation: false,
+            escalationReason: null,
+            escalationSummary: null,
+            unansweredTopics: [],
+            knowledgeSourceIds: [
+              ...(wifiAmenity ? [amenitySourceId(wifiAmenity.id)] : []),
+              ...(k.wifiSsid ? ["guest_knowledge.wifi_ssid"] : []),
+              "guest_knowledge.wifi_password",
+            ],
+            safetyFlags: [],
+            guestLanguage: lang,
+          });
+        }
+        // Amenity presence alone must never invent a password.
+        return unknown(started, req, lang, "wifi_password");
+      }
+
       if (k?.wifiSsid || k?.wifiPassword) {
         const parts: string[] = [];
-        if (k.wifiSsid) parts.push(lang === "el" ? `Δίκτυο: ${k.wifiSsid}` : `Network: ${k.wifiSsid}`);
+        if (k.wifiSsid)
+          parts.push(
+            lang === "el" ? `Δίκτυο: ${k.wifiSsid}` : `Network: ${k.wifiSsid}`,
+          );
         if (k.wifiPassword)
-          parts.push(lang === "el" ? `Κωδικός: ${k.wifiPassword}` : `Password: ${k.wifiPassword}`);
+          parts.push(
+            lang === "el"
+              ? `Κωδικός: ${k.wifiPassword}`
+              : `Password: ${k.wifiPassword}`,
+          );
         return result(started, {
           classification: "ANSWERABLE",
           replyText:
@@ -172,6 +228,7 @@ export class HeuristicAssistantProvider implements IAssistantProvider {
           escalationSummary: null,
           unansweredTopics: [],
           knowledgeSourceIds: [
+            ...(wifiAmenity ? [amenitySourceId(wifiAmenity.id)] : []),
             ...(k.wifiSsid ? ["guest_knowledge.wifi_ssid"] : []),
             ...(k.wifiPassword ? ["guest_knowledge.wifi_password"] : []),
           ],
@@ -179,11 +236,105 @@ export class HeuristicAssistantProvider implements IAssistantProvider {
           guestLanguage: lang,
         });
       }
+
+      if (wifiAmenity) {
+        return result(started, {
+          classification: "ANSWERABLE",
+          replyText:
+            lang === "el"
+              ? `Ναι, το κατάλυμα διαθέτει ${wifiAmenity.name}.`
+              : `Yes, the property has ${wifiAmenity.name}.`,
+          requiresEscalation: false,
+          escalationReason: null,
+          escalationSummary: null,
+          unansweredTopics: [],
+          knowledgeSourceIds: [amenitySourceId(wifiAmenity.id)],
+          safetyFlags: [],
+          guestLanguage: lang,
+        });
+      }
+
       return unknown(started, req, lang, "wifi");
     }
 
-    // Parking
+    // Pool — amenity presence answers availability only.
+    if (/(pool|πισίνα|πισινα)/i.test(text)) {
+      const poolAmenity = findAmenity(req.context.property.amenities, [
+        "pool",
+        "swimming",
+        "πισίνα",
+        "πισινα",
+      ]);
+      if (poolAmenity) {
+        return result(started, {
+          classification: "ANSWERABLE",
+          replyText:
+            lang === "el"
+              ? `Ναι, το κατάλυμα διαθέτει ${poolAmenity.name}.`
+              : `Yes, the property has ${poolAmenity.name}.`,
+          requiresEscalation: false,
+          escalationReason: null,
+          escalationSummary: null,
+          unansweredTopics: [],
+          knowledgeSourceIds: [amenitySourceId(poolAmenity.id)],
+          safetyFlags: [],
+          guestLanguage: lang,
+        });
+      }
+      if (k?.poolInfo?.trim()) {
+        return result(started, {
+          classification: "ANSWERABLE",
+          replyText:
+            lang === "el"
+              ? `Σχετικά με την πισίνα: ${k.poolInfo}`
+              : `Regarding the pool: ${k.poolInfo}`,
+          requiresEscalation: false,
+          escalationReason: null,
+          escalationSummary: null,
+          unansweredTopics: [],
+          knowledgeSourceIds: ["guest_knowledge.pool_info"],
+          safetyFlags: [],
+          guestLanguage: lang,
+        });
+      }
+      return unknown(started, req, lang, "pool");
+    }
+
+    // Parking — presence vs instructions.
     if (/(park|parking|χώρο στάθμευσης|παρκαρ|στάθμευση)/i.test(text)) {
+      const asksWhere =
+        /(where|πώς|πως|που|πού|exact|οδηγ|instructions|should i)/i.test(text);
+      const parkingAmenity = findAmenity(req.context.property.amenities, [
+        "parking",
+        "garage",
+        "πάρκιν",
+        "παρκαρ",
+        "στάθμευση",
+      ]);
+
+      if (asksWhere) {
+        if (k?.parkingInfo?.trim()) {
+          return result(started, {
+            classification: "ANSWERABLE",
+            replyText:
+              lang === "el"
+                ? `Σχετικά με το πάρκινγκ: ${k.parkingInfo}`
+                : `Regarding parking: ${k.parkingInfo}`,
+            requiresEscalation: false,
+            escalationReason: null,
+            escalationSummary: null,
+            unansweredTopics: [],
+            knowledgeSourceIds: [
+              ...(parkingAmenity ? [amenitySourceId(parkingAmenity.id)] : []),
+              "guest_knowledge.parking_info",
+            ],
+            safetyFlags: [],
+            guestLanguage: lang,
+          });
+        }
+        return unknown(started, req, lang, "parking_instructions");
+      }
+
       if (k?.parkingInfo?.trim()) {
         return result(started, {
           classification: "ANSWERABLE",
@@ -195,11 +346,32 @@ export class HeuristicAssistantProvider implements IAssistantProvider {
           escalationReason: null,
           escalationSummary: null,
           unansweredTopics: [],
-          knowledgeSourceIds: ["guest_knowledge.parking_info"],
+          knowledgeSourceIds: [
+            ...(parkingAmenity ? [amenitySourceId(parkingAmenity.id)] : []),
+            "guest_knowledge.parking_info",
+          ],
           safetyFlags: [],
           guestLanguage: lang,
         });
       }
+
+      if (parkingAmenity) {
+        return result(started, {
+          classification: "ANSWERABLE",
+          replyText:
+            lang === "el"
+              ? `Ναι, το κατάλυμα διαθέτει ${parkingAmenity.name}.`
+              : `Yes, the property has ${parkingAmenity.name}.`,
+          requiresEscalation: false,
+          escalationReason: null,
+          escalationSummary: null,
+          unansweredTopics: [],
+          knowledgeSourceIds: [amenitySourceId(parkingAmenity.id)],
+          safetyFlags: [],
+          guestLanguage: lang,
+        });
+      }
+
       return unknown(started, req, lang, "parking");
     }
 
@@ -318,4 +490,17 @@ function stripOwnerDirective(raw: string): string {
     .replace(/^(ναι|yes)[,.]?\s*(πες του ότι|tell (him|them|her) (that )?)/i, "")
     .replace(/πες του ότι\s*/i, "")
     .trim();
+}
+
+function findAmenity(
+  amenities: AssistantContextAmenity[],
+  needles: string[],
+): AssistantContextAmenity | null {
+  for (const amenity of amenities) {
+    const name = amenity.name.toLowerCase();
+    if (needles.some((n) => name.includes(n.toLowerCase()))) {
+      return amenity;
+    }
+  }
+  return null;
 }

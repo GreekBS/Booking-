@@ -57,12 +57,17 @@ const assistantStaySchema = z.object({
   bookingStatus: z.string().max(64).nullable().optional(),
 });
 
+const assistantAmenitySchema = z.object({
+  id: uuid,
+  name: z.string().min(1).max(100),
+});
+
 export const ingestGuestMessageBodySchema = z.object({
   body: z.string().min(1).max(8000),
   externalMessageId: z.string().max(255).nullable().optional(),
   stay: assistantStaySchema.nullable().optional(),
-  /** Optional override; API may also load amenity names server-side. */
-  amenityNames: z.array(z.string().max(100)).max(100).optional(),
+  /** Optional override; API loads Property amenities server-side when omitted. */
+  amenities: z.array(assistantAmenitySchema).max(200).optional(),
 });
 
 export const upsertAssistantProfileBodySchema = z.object({
@@ -130,7 +135,7 @@ export const resolveEscalationBodySchema = z.object({
   ownerReply: z.string().min(1).max(8000),
   send: z.boolean().optional(),
   stay: assistantStaySchema.nullable().optional(),
-  amenityNames: z.array(z.string().max(100)).max(100).optional(),
+  amenities: z.array(assistantAmenitySchema).max(200).optional(),
 });
 
 export const saveEscalationKnowledgeBodySchema = z.object({

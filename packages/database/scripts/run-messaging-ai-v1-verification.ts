@@ -19,6 +19,7 @@ async function main(): Promise<void> {
     Property,
     HeuristicAssistantProvider,
     UnavailableAssistantProvider,
+    isAssistantProviderFailureReason,
     PermissionChecker,
     CreateConversationUseCase,
     IngestGuestMessageUseCase,
@@ -40,6 +41,7 @@ async function main(): Promise<void> {
     PrismaAiSuggestionRepository,
     PrismaOwnerEscalationRepository,
     PrismaAiUsageRepository,
+    PrismaPropertyAmenityReader,
     assertNotTalosProductionDatabase,
     isTalosProductionDatabaseUrl,
   } = await import("../src/index.js");
@@ -73,6 +75,7 @@ async function main(): Promise<void> {
   const suggestions = new PrismaAiSuggestionRepository();
   const escalations = new PrismaOwnerEscalationRepository();
   const usage = new PrismaAiUsageRepository();
+  const amenityReader = new PrismaPropertyAmenityReader();
   const permissionChecker = new PermissionChecker();
   const assistant = new HeuristicAssistantProvider();
 
@@ -381,6 +384,96 @@ async function main(): Promise<void> {
     results.F_noAuto = f.autoSent === false;
     results.F_failedSuggestion = f.suggestion?.status === "failed";
     results.F_escalated = !!f.escalation;
+    results.F_providerFailureReason = isAssistantProviderFailureReason(
+      f.escalation?.reason,
+    );
+    results.F_noHeuristicBody = f.suggestion?.suggestedBody == null;
+
+    // G — amenities: pool presence + wifi amenity without password + isolation
+    const poolAmenityId = randomUUID();
+    const wifiAmenityId = randomUUID();
+    await clearTenantContext(prisma);
+    await prisma.amenity.createMany({
+      data: [
+        { id: poolAmenityId, tenantId: TENANT_A, name: "Pool" },
+        { id: wifiAmenityId, tenantId: TENANT_A, name: "Wi-Fi" },
+      ],
+    });
+    await withTenantTransaction(TENANT_A, async (tx) => {
+      await tx.propertyAmenity.createMany({
+        data: [
+          { propertyId: PROP_A, amenityId: poolAmenityId },
+          { propertyId: PROP_A, amenityId: wifiAmenityId },
+        ],
+      });
+    });
+
+    const amenitiesA = await amenityReader.listForProperty(TENANT_A, PROP_A);
+    const amenitiesWrongTenant = await amenityReader.listForProperty(
+      TENANT_B,
+      PROP_A,
+    );
+    const amenitiesWrongProperty = await amenityReader.listForProperty(
+      TENANT_A,
+      PROP_B,
+    );
+    results.G_amenitiesLoaded = amenitiesA.some((a) => a.name === "Pool");
+    results.G_crossTenantAmenities = amenitiesWrongTenant.length;
+    results.G_crossPropertyAmenities = amenitiesWrongProperty.length;
+
+    const convPool = (
+      await createConversation.execute(
+        { tenantId: TENANT_A, propertyId: PROP_A, subject: "G pool" },
+        actorA,
+      )
+    ).getValue();
+    const poolAsk = (
+      await ingest.execute(
+        {
+          tenantId: TENANT_A,
+          conversationId: convPool.id,
+          body: "Do you have a pool?",
+          amenities: amenitiesA,
+        },
+        actorA,
+      )
+    ).getValue();
+    results.G_poolAnswerable = poolAsk.suggestion?.classification === "ANSWERABLE";
+    results.G_poolAutoSent = poolAsk.autoSent === true;
+    results.G_poolGrounded =
+      poolAsk.suggestion?.knowledgeSourceIds.some((id) =>
+        id.startsWith("amenity:"),
+      ) === true;
+
+    // Clear wifi password knowledge; amenity alone must not invent password.
+    await upsertKnowledge.execute(
+      {
+        tenantId: TENANT_A,
+        propertyId: PROP_A,
+        patch: { wifiSsid: null, wifiPassword: null },
+      },
+      actorA,
+    );
+    const convWifi = (
+      await createConversation.execute(
+        { tenantId: TENANT_A, propertyId: PROP_A, subject: "G wifi pw" },
+        actorA,
+      )
+    ).getValue();
+    const wifiAsk = (
+      await ingest.execute(
+        {
+          tenantId: TENANT_A,
+          conversationId: convWifi.id,
+          body: "What is the wifi password?",
+          amenities: amenitiesA,
+        },
+        actorA,
+      )
+    ).getValue();
+    results.G_wifiNoPasswordUnknown =
+      wifiAsk.suggestion?.classification === "UNKNOWN";
+    results.G_wifiNoPasswordNoAuto = wifiAsk.autoSent === false;
 
     results.unitsUnchanged = (await prisma.unit.count()) === unitCountBefore + 2;
     results.ratePlansUnchanged =
@@ -402,6 +495,16 @@ async function main(): Promise<void> {
       results.E_crossTenantKnowledgeCount === 0 &&
       results.F_inboundDurable === true &&
       results.F_failedSuggestion === true &&
+      results.F_providerFailureReason === true &&
+      results.F_noHeuristicBody === true &&
+      results.G_amenitiesLoaded === true &&
+      results.G_crossTenantAmenities === 0 &&
+      results.G_crossPropertyAmenities === 0 &&
+      results.G_poolAnswerable === true &&
+      results.G_poolAutoSent === true &&
+      results.G_poolGrounded === true &&
+      results.G_wifiNoPasswordUnknown === true &&
+      results.G_wifiNoPasswordNoAuto === true &&
       results.rlsEnabled === true &&
       results.rlsForced === true &&
       results.ratePlansUnchanged === true &&

@@ -5,10 +5,16 @@ import type {
   PropertyFaqItemRecord,
   PropertyGuestKnowledgeRecord,
 } from "../domain/MessagingTypes";
-import type { AssistantContext } from "../ports/IAssistantProvider";
+import type {
+  AssistantContext,
+  AssistantContextAmenity,
+} from "../ports/IAssistantProvider";
+import { amenitySourceId } from "../ports/IAssistantProvider";
 
 export const DEFAULT_RECENT_MESSAGE_LIMIT = 20;
 export const DEFAULT_MAX_MESSAGE_BODY_LENGTH = 2000;
+
+export { amenitySourceId };
 
 export interface AssistantPropertySnapshot {
   id: string;
@@ -56,7 +62,8 @@ export interface BuildAssistantContextInput {
   profile: PropertyAssistantProfileRecord;
   knowledge: PropertyGuestKnowledgeRecord | null;
   faqs: PropertyFaqItemRecord[];
-  amenityNames?: string[];
+  /** Authoritative Property amenities (tenant+property scoped). */
+  amenities?: AssistantContextAmenity[];
   stay?: AssistantStayInput | null;
   messages: MessageRecord[];
   recentMessageLimit?: number;
@@ -70,6 +77,13 @@ export function buildAssistantContext(
   const limit = input.recentMessageLimit ?? DEFAULT_RECENT_MESSAGE_LIMIT;
   const maxBody = input.maxMessageBodyLength ?? DEFAULT_MAX_MESSAGE_BODY_LENGTH;
   const k = input.knowledge;
+
+  const amenities = (input.amenities ?? [])
+    .map((a) => ({
+      id: a.id.trim(),
+      name: a.name.trim(),
+    }))
+    .filter((a) => a.id.length > 0 && a.name.length > 0);
 
   return {
     property: {
@@ -86,7 +100,7 @@ export function buildAssistantContext(
         postalCode: input.property.postalCode,
         country: input.property.country,
       },
-      amenityNames: (input.amenityNames ?? []).filter((n) => n.trim().length > 0),
+      amenities,
     },
     knowledge: k
       ? {

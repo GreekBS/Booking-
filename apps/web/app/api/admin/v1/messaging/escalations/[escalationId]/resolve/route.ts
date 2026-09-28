@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { resolveEscalationBodySchema } from "@hcp/validators";
-import { resolveOwnerEscalationUseCase } from "@/lib/di/container";
+import {
+  loadPropertyAmenities,
+  listOpenEscalationsUseCase,
+  resolveOwnerEscalationUseCase,
+} from "@/lib/di/container";
 import {
   requireTenantContext,
   toPermissionActor,
@@ -22,6 +26,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const actor = await requireTenantContext(tenantId);
     const { escalationId } = await params;
     const body = resolveEscalationBodySchema.parse(await request.json());
+    const permissionActor = toPermissionActor(actor);
+
+    let amenities = body.amenities;
+    if (!amenities) {
+      const open = await listOpenEscalationsUseCase.execute(
+        { tenantId: actor.tenantId, entireTenant: true },
+        permissionActor,
+      );
+      const match = open.isSuccess
+        ? open.getValue().find((e) => e.id === escalationId)
+        : undefined;
+      amenities = match
+        ? await loadPropertyAmenities(actor.tenantId, match.propertyId)
+        : [];
+    }
 
     const result = await resolveOwnerEscalationUseCase.execute(
       {
@@ -30,10 +49,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ownerReply: body.ownerReply,
         send: body.send,
         stay: body.stay,
-        // Amenity names optional for V1; client may pass or leave empty.
-        amenityNames: body.amenityNames ?? [],
+        amenities,
       },
-      toPermissionActor(actor),
+      permissionActor,
       { ipAddress: getClientIp(request) },
     );
 
