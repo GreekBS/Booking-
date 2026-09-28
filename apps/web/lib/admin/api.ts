@@ -1471,3 +1471,185 @@ export async function listCleaningHistory(
   if (query.limit) params.set("limit", String(query.limit));
   return adminFetch(`/cleaning/history?${params.toString()}`, { tenantId });
 }
+
+function messagingScopeQuery(params: {
+  propertyId?: string;
+  entireTenant?: boolean;
+}): string {
+  const qs = new URLSearchParams();
+  if (params.entireTenant) qs.set("entireTenant", "true");
+  else if (params.propertyId) qs.set("propertyId", params.propertyId);
+  return qs.toString();
+}
+
+export async function listConversations(
+  tenantId: string,
+  params: { propertyId?: string; entireTenant?: boolean } = {},
+): Promise<{ data: import("./types").ConversationRecord[] }> {
+  const qs = messagingScopeQuery(params);
+  return adminFetch(`/messaging/conversations${qs ? `?${qs}` : ""}`, {
+    tenantId,
+  });
+}
+
+export async function createConversation(
+  tenantId: string,
+  body: {
+    propertyId: string;
+    guestId?: string | null;
+    bookingId?: string | null;
+    subject?: string | null;
+    channel?: string;
+  },
+): Promise<import("./types").ConversationRecord> {
+  return adminFetch("/messaging/conversations", {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getConversationThread(
+  tenantId: string,
+  conversationId: string,
+): Promise<import("./types").ConversationThreadRecord> {
+  return adminFetch(`/messaging/conversations/${conversationId}`, {
+    tenantId,
+  });
+}
+
+export async function sendOperatorMessage(
+  tenantId: string,
+  conversationId: string,
+  body: {
+    body: string;
+    aiSuggestionId?: string | null;
+    suggestionStatus?: string;
+  },
+): Promise<import("./types").MessageRecord> {
+  return adminFetch(`/messaging/conversations/${conversationId}/messages`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function ingestGuestMessage(
+  tenantId: string,
+  conversationId: string,
+  body: {
+    body: string;
+    externalMessageId?: string | null;
+    stay?: Record<string, unknown> | null;
+    amenityNames?: string[];
+  },
+): Promise<{
+  conversation: import("./types").ConversationRecord;
+  inboundMessage: import("./types").MessageRecord;
+  suggestion: import("./types").AiSuggestionRecord | null;
+  sentMessage: import("./types").MessageRecord | null;
+  escalation: import("./types").OwnerEscalationRecord | null;
+  autoSent: boolean;
+}> {
+  return adminFetch(`/messaging/conversations/${conversationId}/ingest`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function listOpenEscalations(
+  tenantId: string,
+  params: { propertyId?: string; entireTenant?: boolean } = {},
+): Promise<{ data: import("./types").OwnerEscalationRecord[] }> {
+  const qs = messagingScopeQuery(params);
+  return adminFetch(`/messaging/escalations${qs ? `?${qs}` : ""}`, {
+    tenantId,
+  });
+}
+
+export async function resolveEscalation(
+  tenantId: string,
+  escalationId: string,
+  body: {
+    ownerReply: string;
+    send?: boolean;
+    stay?: Record<string, unknown> | null;
+    amenityNames?: string[];
+  },
+): Promise<{
+  escalation: import("./types").OwnerEscalationRecord;
+  draftText: string;
+  sentMessage: import("./types").MessageRecord | null;
+  saveToKnowledgeOffered: boolean;
+}> {
+  return adminFetch(`/messaging/escalations/${escalationId}/resolve`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function saveEscalationKnowledge(
+  tenantId: string,
+  escalationId: string,
+  body: {
+    confirm: true;
+    patch: Partial<import("./types").PropertyGuestKnowledgeRecord>;
+  },
+): Promise<{ knowledge: import("./types").PropertyGuestKnowledgeRecord | null }> {
+  return adminFetch(`/messaging/escalations/${escalationId}/save-knowledge`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getPropertyAssistantConfig(
+  tenantId: string,
+  propertyId: string,
+): Promise<import("./types").PropertyAssistantConfigRecord> {
+  return adminFetch(`/properties/${propertyId}/assistant`, { tenantId });
+}
+
+export async function upsertPropertyAssistantProfile(
+  tenantId: string,
+  propertyId: string,
+  body: Partial<import("./types").PropertyAssistantProfileRecord>,
+): Promise<import("./types").PropertyAssistantProfileRecord> {
+  return adminFetch(`/properties/${propertyId}/assistant`, {
+    method: "PATCH",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+export async function upsertPropertyGuestKnowledge(
+  tenantId: string,
+  propertyId: string,
+  patch: Partial<import("./types").PropertyGuestKnowledgeRecord>,
+): Promise<import("./types").PropertyGuestKnowledgeRecord> {
+  return adminFetch(`/properties/${propertyId}/assistant/knowledge`, {
+    method: "PUT",
+    tenantId,
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function replacePropertyFaqs(
+  tenantId: string,
+  propertyId: string,
+  faqs: Array<{
+    id?: string;
+    question: string;
+    answer: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }>,
+): Promise<{ data: import("./types").PropertyFaqItemRecord[] }> {
+  return adminFetch(`/properties/${propertyId}/assistant/faqs`, {
+    method: "PUT",
+    tenantId,
+    body: JSON.stringify({ faqs }),
+  });
+}

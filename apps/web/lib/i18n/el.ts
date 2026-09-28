@@ -123,6 +123,7 @@ export const elNav = {
   bookings: "Κρατήσεις",
   availability: "Διαθεσιμότητα",
   guests: "Επισκέπτες",
+  messages: "Μηνύματα",
   housekeeping: "Καθαριότητα",
   revenue: "Έσοδα",
   pricing: "Τιμές",

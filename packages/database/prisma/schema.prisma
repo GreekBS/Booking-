@@ -300,6 +300,14 @@ model Tenant {
   cleaningLocations              CleaningLocation[]
   cleaningLocationStatuses       CleaningLocationStatus[]
   cleaningLocationQrAccess       CleaningLocationQrAccess[]
+  propertyAssistantProfiles      PropertyAssistantProfile[]
+  propertyGuestKnowledge         PropertyGuestKnowledge[]
+  propertyFaqItems               PropertyFaqItem[]
+  conversations                  Conversation[]
+  messages                       Message[]
+  aiSuggestions                  AiSuggestion[]
+  ownerEscalations               OwnerEscalation[]
+  aiUsageRecords                 AiUsageRecord[]
 
   @@map("tenants")
 }
@@ -329,6 +337,8 @@ model User {
   completedCleanings          CleaningExecution[]      @relation("CleaningCompletedBy")
   checkedCleaningItems        CleaningExecutionItem[]  @relation("CleaningItemCheckedBy")
   uploadedCleaningPhotos      CleaningPhoto[]          @relation("CleaningPhotoUploader")
+  messagesCreated             Message[]                @relation("MessageCreator")
+  escalationsAnswered         OwnerEscalation[]        @relation("EscalationAnswerer")
 
   @@map("users")
 }
@@ -456,6 +466,14 @@ model Property {
   cleaningLocations          CleaningLocation[]
   cleaningLocationStatuses   CleaningLocationStatus[]
   cleaningLocationQrAccess   CleaningLocationQrAccess[]
+  assistantProfile           PropertyAssistantProfile?
+  guestKnowledge             PropertyGuestKnowledge?
+  faqItems                   PropertyFaqItem[]
+  conversations              Conversation[]
+  messages                   Message[]
+  aiSuggestions              AiSuggestion[]
+  ownerEscalations           OwnerEscalation[]
+  aiUsageRecords             AiUsageRecord[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -822,6 +840,8 @@ model Booking {
   payments       Payment[]
   folios         Folio[]
   tasks          Task[]
+  conversations  Conversation[]
+  escalations    OwnerEscalation[]
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -1168,6 +1188,8 @@ model Guest {
   notes           GuestNote[]
   tagAssignments  GuestTagAssignment[]
   tasks           Task[]
+  conversations   Conversation[]
+  escalations     OwnerEscalation[]
 
   @@index([tenantId, emailNormalized])
   @@index([tenantId, phoneNormalized])
@@ -2171,4 +2193,244 @@ model CleaningLocationQrAccess {
 
   @@index([tenantId, propertyId], map: "cleaning_location_qr_access_tenant_property_idx")
   @@map("cleaning_location_qr_access")
+}
+
+// ---------------------------------------------------------------------------
+// Messaging + AI Guest Receptionist V1
+// DB columns are VARCHAR + CHECK (see migration 20260928140000).
+// Domain package owns the typed unions; Prisma stores plain strings.
+// ---------------------------------------------------------------------------
+
+model PropertyAssistantProfile {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  propertyId         String   @unique @map("property_id") @db.Uuid
+  enabled            Boolean  @default(false)
+  mode               String   @default("off") @db.VarChar(16)
+  tone               String   @default("warm") @db.VarChar(32)
+  formality          String   @default("neutral") @db.VarChar(16)
+  emojiPolicy        String   @default("sparing") @map("emoji_policy") @db.VarChar(16)
+  useGuestFirstName  Boolean  @default(true) @map("use_guest_first_name")
+  replyLength        String   @default("medium") @map("reply_length") @db.VarChar(16)
+  signOff            String?  @map("sign_off") @db.VarChar(120)
+  preferGuestLanguage Boolean @default(true) @map("prefer_guest_language")
+  defaultLocale      String   @default("el") @map("default_locale") @db.VarChar(16)
+  customVoiceNotes   String?  @map("custom_voice_notes") @db.VarChar(500)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("property_assistant_profiles")
+}
+
+model PropertyGuestKnowledge {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  propertyId           String   @unique @map("property_id") @db.Uuid
+  guestFacingSummary   String?  @map("guest_facing_summary") @db.Text
+  earlyCheckInPolicy   String?  @map("early_check_in_policy") @db.Text
+  lateCheckoutPolicy   String?  @map("late_checkout_policy") @db.Text
+  directions           String?  @db.Text
+  parkingInfo          String?  @map("parking_info") @db.Text
+  accessInstructions   String?  @map("access_instructions") @db.Text
+  wifiSsid             String?  @map("wifi_ssid") @db.VarChar(255)
+  wifiPassword         String?  @map("wifi_password") @db.VarChar(255)
+  poolInfo             String?  @map("pool_info") @db.Text
+  hvacInstructions     String?  @map("hvac_instructions") @db.Text
+  applianceNotes       String?  @map("appliance_notes") @db.Text
+  amenityNotes         String?  @map("amenity_notes") @db.Text
+  houseRules           String?  @map("house_rules") @db.Text
+  smokingPolicy        String?  @map("smoking_policy") @db.Text
+  petsPolicy           String?  @map("pets_policy") @db.Text
+  quietHours           String?  @map("quiet_hours") @db.Text
+  transportInfo        String?  @map("transport_info") @db.Text
+  taxiInfo             String?  @map("taxi_info") @db.Text
+  beaches              String?  @db.Text
+  restaurants          String?  @db.Text
+  supermarkets         String?  @db.Text
+  recommendations      String?  @db.Text
+  guestFacingPhone     String?  @map("guest_facing_phone") @db.VarChar(64)
+  guestFacingEmail     String?  @map("guest_facing_email") @db.VarChar(255)
+  emergencyContact     String?  @map("emergency_contact") @db.Text
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("property_guest_knowledge")
+}
+
+model PropertyFaqItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  question   String   @db.VarChar(500)
+  answer     String   @db.Text
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, propertyId, sortOrder])
+  @@map("property_faq_items")
+}
+
+model Conversation {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  propertyId       String    @map("property_id") @db.Uuid
+  guestId          String?   @map("guest_id") @db.Uuid
+  bookingId        String?   @map("booking_id") @db.Uuid
+  channel          String    @default("talos_direct") @db.VarChar(32)
+  externalThreadId String?   @map("external_thread_id") @db.VarChar(255)
+  status           String    @default("open") @db.VarChar(32)
+  subject          String?   @db.VarChar(255)
+  lastMessageAt    DateTime? @map("last_message_at") @db.Timestamptz
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property     Property          @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  guest        Guest?            @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  booking      Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  suggestions  AiSuggestion[]
+  escalations  OwnerEscalation[]
+  usageRecords AiUsageRecord[]
+
+  @@index([tenantId, propertyId, lastMessageAt(sort: Desc)])
+  @@index([tenantId, status])
+  @@map("conversations")
+}
+
+model Message {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  propertyId        String   @map("property_id") @db.Uuid
+  conversationId    String   @map("conversation_id") @db.Uuid
+  direction         String   @db.VarChar(16)
+  senderType        String   @map("sender_type") @db.VarChar(16)
+  body              String   @db.Text
+  deliveryStatus    String   @default("local_only") @map("delivery_status") @db.VarChar(16)
+  externalMessageId String?  @map("external_message_id") @db.VarChar(255)
+  createdByUserId   String?  @map("created_by_user_id") @db.Uuid
+  aiSuggestionId    String?  @map("ai_suggestion_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property       Property           @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  conversation   Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdBy      User?              @relation("MessageCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  aiSuggestion   AiSuggestion?      @relation("MessageFromSuggestion", fields: [aiSuggestionId], references: [id], onDelete: SetNull)
+  sourceOfSuggestions AiSuggestion[] @relation("SuggestionSourceMessage")
+  triggerEscalations  OwnerEscalation[] @relation("EscalationTrigger")
+  resultingEscalations OwnerEscalation[] @relation("EscalationResultMessage")
+
+  @@index([conversationId, createdAt])
+  @@index([tenantId, propertyId])
+  @@map("messages")
+}
+
+model AiSuggestion {
+  id                  String   @id @default(uuid()) @db.Uuid
+  tenantId            String   @map("tenant_id") @db.Uuid
+  propertyId          String   @map("property_id") @db.Uuid
+  conversationId      String   @map("conversation_id") @db.Uuid
+  sourceMessageId     String?  @map("source_message_id") @db.Uuid
+  provider            String   @db.VarChar(32)
+  model               String   @db.VarChar(64)
+  classification      String   @db.VarChar(32)
+  status              String   @default("ready") @db.VarChar(16)
+  suggestedBody       String?  @map("suggested_body") @db.Text
+  escalationReason    String?  @map("escalation_reason") @db.Text
+  escalationSummary   String?  @map("escalation_summary") @db.Text
+  knowledgeSourceIds  String[] @default([]) @map("knowledge_source_ids")
+  safetyFlags         String[] @default([]) @map("safety_flags")
+  guestLanguage       String?  @map("guest_language") @db.VarChar(16)
+  contextFingerprint  String?  @map("context_fingerprint") @db.VarChar(128)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMessage  Message?        @relation("SuggestionSourceMessage", fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  sentMessages   Message[]       @relation("MessageFromSuggestion")
+  escalations    OwnerEscalation[] @relation("EscalationSuggestion")
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([tenantId, propertyId])
+  @@map("ai_suggestions")
+}
+
+model OwnerEscalation {
+  id                     String    @id @default(uuid()) @db.Uuid
+  tenantId               String    @map("tenant_id") @db.Uuid
+  propertyId             String    @map("property_id") @db.Uuid
+  conversationId         String    @map("conversation_id") @db.Uuid
+  triggerMessageId       String    @unique @map("trigger_message_id") @db.Uuid
+  bookingId              String?   @map("booking_id") @db.Uuid
+  guestId                String?   @map("guest_id") @db.Uuid
+  classification         String    @db.VarChar(32)
+  reason                 String?   @db.Text
+  summaryForOwner        String    @map("summary_for_owner") @db.Text
+  status                 String    @default("open") @db.VarChar(16)
+  ownerRawReply          String?   @map("owner_raw_reply") @db.Text
+  answeredByUserId       String?   @map("answered_by_user_id") @db.Uuid
+  answeredAt             DateTime? @map("answered_at") @db.Timestamptz
+  resultingSuggestionId  String?   @map("resulting_suggestion_id") @db.Uuid
+  resultingMessageId     String?   @map("resulting_message_id") @db.Uuid
+  saveToKnowledgeOffered Boolean   @default(false) @map("save_to_knowledge_offered")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant              Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property            Property       @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  conversation        Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  triggerMessage      Message        @relation("EscalationTrigger", fields: [triggerMessageId], references: [id], onDelete: Cascade)
+  booking             Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  guest               Guest?         @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  answeredBy          User?          @relation("EscalationAnswerer", fields: [answeredByUserId], references: [id], onDelete: SetNull)
+  resultingSuggestion AiSuggestion?  @relation("EscalationSuggestion", fields: [resultingSuggestionId], references: [id], onDelete: SetNull)
+  resultingMessage    Message?       @relation("EscalationResultMessage", fields: [resultingMessageId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, propertyId, status])
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@map("owner_escalations")
+}
+
+model AiUsageRecord {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  propertyId         String?  @map("property_id") @db.Uuid
+  conversationId     String?  @map("conversation_id") @db.Uuid
+  provider           String   @db.VarChar(32)
+  model              String   @db.VarChar(64)
+  operation          String   @db.VarChar(32)
+  classification     String?  @db.VarChar(32)
+  autoAnswered       Boolean  @default(false) @map("auto_answered")
+  escalated          Boolean  @default(false)
+  inputTokens        Int?     @map("input_tokens")
+  outputTokens       Int?     @map("output_tokens")
+  latencyMs          Int?     @map("latency_ms")
+  success            Boolean
+  errorCode          String?  @map("error_code") @db.VarChar(64)
+  estimatedCostMinor Int?     @map("estimated_cost_minor")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property     Property?     @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, propertyId, createdAt(sort: Desc)])
+  @@map("ai_usage_records")
 }

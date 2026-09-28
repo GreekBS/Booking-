@@ -154,6 +154,11 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         actions={
           <div className="flex items-center gap-2">
             <StatusBadge status={property.status} />
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/dashboard/properties/${propertyId}/assistant`}>
+                AI Assistant
+              </Link>
+            </Button>
             <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
               Archive
             </Button>

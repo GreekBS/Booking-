@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { elCommon, elNav } from "@/lib/i18n";
@@ -50,6 +51,7 @@ export const adminNavSections: AdminNavSection[] = [
       { href: "/dashboard/bookings", label: elNav.bookings, icon: BookOpen },
       { href: "/dashboard/availability", label: elNav.availability, icon: CalendarDays },
       { href: "/dashboard/guests", label: elNav.guests, icon: Users },
+      { href: "/dashboard/messages", label: elNav.messages, icon: MessageSquare },
       { href: "/dashboard/housekeeping", label: elNav.housekeeping, icon: ClipboardList },
     ],
   },

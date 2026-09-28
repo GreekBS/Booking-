@@ -751,3 +751,171 @@ export interface CleaningHistoryRecord {
   itemsChecked: number;
   photoCount: number;
 }
+
+export type MessagingChannel =
+  | "talos_direct"
+  | "whatsapp"
+  | "email"
+  | "booking_com"
+  | "airbnb"
+  | "expedia"
+  | "other";
+
+export type ConversationStatus =
+  | "open"
+  | "waiting_guest"
+  | "waiting_operator"
+  | "resolved"
+  | "archived";
+
+export type AssistantMode = "off" | "copilot" | "autopilot";
+
+export interface ConversationRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  guestId: string | null;
+  bookingId: string | null;
+  channel: MessagingChannel | string;
+  externalThreadId: string | null;
+  status: ConversationStatus | string;
+  subject: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessageRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  conversationId: string;
+  direction: "inbound" | "outbound" | string;
+  senderType: "guest" | "operator" | "assistant" | "system" | string;
+  body: string;
+  deliveryStatus: string;
+  externalMessageId: string | null;
+  createdByUserId: string | null;
+  aiSuggestionId: string | null;
+  createdAt: string;
+}
+
+export interface AiSuggestionRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  conversationId: string;
+  sourceMessageId: string | null;
+  provider: string;
+  model: string;
+  classification: string;
+  status: string;
+  suggestedBody: string | null;
+  escalationReason: string | null;
+  escalationSummary: string | null;
+  knowledgeSourceIds: string[];
+  safetyFlags: string[];
+  guestLanguage: string | null;
+  contextFingerprint: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OwnerEscalationRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  conversationId: string;
+  triggerMessageId: string;
+  bookingId: string | null;
+  guestId: string | null;
+  classification: string;
+  reason: string | null;
+  summaryForOwner: string;
+  status: string;
+  ownerRawReply: string | null;
+  answeredByUserId: string | null;
+  answeredAt: string | null;
+  resultingSuggestionId: string | null;
+  resultingMessageId: string | null;
+  saveToKnowledgeOffered: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationThreadRecord {
+  conversation: ConversationRecord;
+  messages: MessageRecord[];
+  suggestions: AiSuggestionRecord[];
+  openEscalations: OwnerEscalationRecord[];
+}
+
+export interface PropertyAssistantProfileRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  enabled: boolean;
+  mode: AssistantMode | string;
+  tone: string;
+  formality: string;
+  emojiPolicy: string;
+  useGuestFirstName: boolean;
+  replyLength: string;
+  signOff: string | null;
+  preferGuestLanguage: boolean;
+  defaultLocale: string;
+  customVoiceNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PropertyGuestKnowledgeRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  guestFacingSummary: string | null;
+  earlyCheckInPolicy: string | null;
+  lateCheckoutPolicy: string | null;
+  directions: string | null;
+  parkingInfo: string | null;
+  accessInstructions: string | null;
+  wifiSsid: string | null;
+  wifiPassword: string | null;
+  poolInfo: string | null;
+  hvacInstructions: string | null;
+  applianceNotes: string | null;
+  amenityNotes: string | null;
+  houseRules: string | null;
+  smokingPolicy: string | null;
+  petsPolicy: string | null;
+  quietHours: string | null;
+  transportInfo: string | null;
+  taxiInfo: string | null;
+  beaches: string | null;
+  restaurants: string | null;
+  supermarkets: string | null;
+  recommendations: string | null;
+  guestFacingPhone: string | null;
+  guestFacingEmail: string | null;
+  emergencyContact: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PropertyFaqItemRecord {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  question: string;
+  answer: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PropertyAssistantConfigRecord {
+  profile: PropertyAssistantProfileRecord;
+  knowledge: PropertyGuestKnowledgeRecord | null;
+  faqs: PropertyFaqItemRecord[];
+}

@@ -190,6 +190,19 @@ import {
   UnassignGuestTagUseCase,
   LinkBookingToGuestUseCase,
 
+  GetPropertyAssistantConfigUseCase,
+  UpsertPropertyAssistantProfileUseCase,
+  UpsertPropertyGuestKnowledgeUseCase,
+  ReplacePropertyFaqsUseCase,
+  CreateConversationUseCase,
+  ListConversationsUseCase,
+  GetConversationThreadUseCase,
+  SendOperatorMessageUseCase,
+  IngestGuestMessageUseCase,
+  ListOpenEscalationsUseCase,
+  ResolveOwnerEscalationUseCase,
+  SaveEscalationToKnowledgeUseCase,
+
   GetQuoteUseCase,
 
   ListBookingsUseCase,
@@ -503,6 +516,12 @@ import {
   PrismaGuestRepository,
   PrismaGuestNoteRepository,
   PrismaGuestTagRepository,
+  PrismaConversationRepository,
+  PrismaMessageRepository,
+  PrismaPropertyAssistantConfigRepository,
+  PrismaAiSuggestionRepository,
+  PrismaOwnerEscalationRepository,
+  PrismaAiUsageRepository,
   PrismaTaskRepository,
   PrismaUnitHousekeepingStatusRepository,
   PrismaHousekeepingTurnoverStore,
@@ -614,6 +633,7 @@ import { stubInvitationNotifier } from "@/lib/notifications/stubInvitationNotifi
 import { createProductionChannelProviderRegistry } from "@/lib/channels/enabled-providers";
 import { PollingFeatureGatedPollJobHandler } from "@/lib/channels/PollingFeatureGatedPollJobHandler";
 import { isChannelsPollingEnabled } from "@/lib/channels/polling-enabled";
+import { GeminiAssistantProvider } from "@/lib/ai/GeminiAssistantProvider";
 
 
 
@@ -1290,6 +1310,117 @@ export const linkBookingToGuestUseCase = new LinkBookingToGuestUseCase(
   guestRepository,
   permissionChecker,
 );
+
+const conversationRepository = new PrismaConversationRepository();
+const messageRepository = new PrismaMessageRepository();
+const propertyAssistantConfigRepository =
+  new PrismaPropertyAssistantConfigRepository();
+const aiSuggestionRepository = new PrismaAiSuggestionRepository();
+const ownerEscalationRepository = new PrismaOwnerEscalationRepository();
+const aiUsageRepository = new PrismaAiUsageRepository();
+const geminiAssistantProvider = new GeminiAssistantProvider();
+
+export const getPropertyAssistantConfigUseCase =
+  new GetPropertyAssistantConfigUseCase(
+    propertyAssistantConfigRepository,
+    permissionChecker,
+    idGenerator,
+  );
+
+export const upsertPropertyAssistantProfileUseCase =
+  new UpsertPropertyAssistantProfileUseCase(
+    propertyAssistantConfigRepository,
+    permissionChecker,
+    idGenerator,
+    auditLogRepository,
+  );
+
+export const upsertPropertyGuestKnowledgeUseCase =
+  new UpsertPropertyGuestKnowledgeUseCase(
+    propertyAssistantConfigRepository,
+    permissionChecker,
+    idGenerator,
+    auditLogRepository,
+  );
+
+export const replacePropertyFaqsUseCase = new ReplacePropertyFaqsUseCase(
+  propertyAssistantConfigRepository,
+  permissionChecker,
+  idGenerator,
+  auditLogRepository,
+);
+
+export const createConversationUseCase = new CreateConversationUseCase(
+  conversationRepository,
+  permissionChecker,
+  idGenerator,
+  propertyRepository,
+  auditLogRepository,
+);
+
+export const listConversationsUseCase = new ListConversationsUseCase(
+  conversationRepository,
+  permissionChecker,
+);
+
+export const getConversationThreadUseCase = new GetConversationThreadUseCase(
+  conversationRepository,
+  messageRepository,
+  aiSuggestionRepository,
+  ownerEscalationRepository,
+  permissionChecker,
+);
+
+export const sendOperatorMessageUseCase = new SendOperatorMessageUseCase(
+  conversationRepository,
+  messageRepository,
+  aiSuggestionRepository,
+  permissionChecker,
+  idGenerator,
+  auditLogRepository,
+);
+
+export const ingestGuestMessageUseCase = new IngestGuestMessageUseCase(
+  conversationRepository,
+  messageRepository,
+  propertyAssistantConfigRepository,
+  aiSuggestionRepository,
+  ownerEscalationRepository,
+  aiUsageRepository,
+  propertyRepository,
+  geminiAssistantProvider,
+  idGenerator,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const listOpenEscalationsUseCase = new ListOpenEscalationsUseCase(
+  ownerEscalationRepository,
+  permissionChecker,
+);
+
+export const resolveOwnerEscalationUseCase = new ResolveOwnerEscalationUseCase(
+  ownerEscalationRepository,
+  conversationRepository,
+  messageRepository,
+  propertyAssistantConfigRepository,
+  aiSuggestionRepository,
+  aiUsageRepository,
+  propertyRepository,
+  geminiAssistantProvider,
+  idGenerator,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const saveEscalationToKnowledgeUseCase =
+  new SaveEscalationToKnowledgeUseCase(
+    ownerEscalationRepository,
+    propertyAssistantConfigRepository,
+    permissionChecker,
+    idGenerator,
+    auditLogRepository,
+  );
 
 export const createTaskUseCase = new CreateTaskUseCase(
   taskRepository,
