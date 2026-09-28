@@ -30,8 +30,17 @@ export interface IConversationRepository {
       lastMessageAt?: Date;
       guestId?: string | null;
       bookingId?: string | null;
+      guestChannelIdentity?: string | null;
+      cswOpenUntil?: Date | null;
+      lastGuestInboundAt?: Date | null;
+      routingStatus?: "ok" | "ambiguous" | "unmatched";
+      externalThreadId?: string | null;
     },
   ): Promise<ConversationRecord>;
+  findOpenWhatsAppByIdentity(
+    tenantId: string,
+    guestChannelIdentity: string,
+  ): Promise<ConversationRecord[]>;
 }
 
 export interface IMessageRepository {
@@ -41,6 +50,18 @@ export interface IMessageRepository {
     conversationId: string,
   ): Promise<MessageRecord[]>;
   findById(tenantId: string, id: string): Promise<MessageRecord | null>;
+  findByExternalMessageId(
+    tenantId: string,
+    externalMessageId: string,
+  ): Promise<MessageRecord | null>;
+  updateDelivery(
+    tenantId: string,
+    id: string,
+    patch: {
+      deliveryStatus: MessageRecord["deliveryStatus"];
+      externalMessageId?: string | null;
+    },
+  ): Promise<MessageRecord>;
 }
 
 export interface IPropertyAssistantConfigRepository {

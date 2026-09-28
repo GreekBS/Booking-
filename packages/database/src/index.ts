@@ -85,6 +85,16 @@ export {
   PrismaAiUsageRepository,
 } from "./repositories/messaging/MessagingRepositories";
 export { PrismaPropertyAmenityReader } from "./repositories/messaging/PropertyAmenityReader";
+export {
+  PrismaPlatformMessagingConnectionRepository,
+  PrismaMessagingSecretVault,
+  PrismaPropertyMessagingSettingsRepository,
+  PrismaBookingMessagingProfileRepository,
+  PrismaMessagingAutomationRunRepository,
+  PrismaMessagingUnmatchedInboundRepository,
+  MetaWhatsAppCloudApiAdapter,
+  FakeWhatsAppCloudApiAdapter,
+} from "./repositories/messaging/WhatsAppMessagingRepositories";
 export { PrismaTaskRepository } from "./repositories/operations/TaskRepository";
 export { PrismaUnitHousekeepingStatusRepository } from "./repositories/operations/UnitHousekeepingStatusRepository";
 export { PrismaHousekeepingTurnoverStore } from "./repositories/operations/HousekeepingTurnoverStore";

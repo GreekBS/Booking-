@@ -26,6 +26,10 @@ function mapConversation(row: any): ConversationRecord {
     bookingId: row.bookingId,
     channel: row.channel,
     externalThreadId: row.externalThreadId,
+    guestChannelIdentity: row.guestChannelIdentity ?? null,
+    cswOpenUntil: row.cswOpenUntil ?? null,
+    lastGuestInboundAt: row.lastGuestInboundAt ?? null,
+    routingStatus: row.routingStatus ?? "ok",
     status: row.status,
     subject: row.subject,
     lastMessageAt: row.lastMessageAt,
@@ -180,6 +184,10 @@ export class PrismaConversationRepository implements IConversationRepository {
           bookingId: input.bookingId,
           channel: input.channel,
           externalThreadId: input.externalThreadId,
+          guestChannelIdentity: input.guestChannelIdentity ?? null,
+          cswOpenUntil: input.cswOpenUntil ?? null,
+          lastGuestInboundAt: input.lastGuestInboundAt ?? null,
+          routingStatus: input.routingStatus ?? "ok",
           status: input.status,
           subject: input.subject,
           lastMessageAt: input.lastMessageAt,
@@ -232,6 +240,11 @@ export class PrismaConversationRepository implements IConversationRepository {
       lastMessageAt?: Date;
       guestId?: string | null;
       bookingId?: string | null;
+      guestChannelIdentity?: string | null;
+      cswOpenUntil?: Date | null;
+      lastGuestInboundAt?: Date | null;
+      routingStatus?: "ok" | "ambiguous" | "unmatched";
+      externalThreadId?: string | null;
     },
   ): Promise<ConversationRecord> {
     return withTenantTransaction(tenantId, async (tx) => {
@@ -244,9 +257,42 @@ export class PrismaConversationRepository implements IConversationRepository {
             : {}),
           ...(patch.guestId !== undefined ? { guestId: patch.guestId } : {}),
           ...(patch.bookingId !== undefined ? { bookingId: patch.bookingId } : {}),
+          ...(patch.guestChannelIdentity !== undefined
+            ? { guestChannelIdentity: patch.guestChannelIdentity }
+            : {}),
+          ...(patch.cswOpenUntil !== undefined
+            ? { cswOpenUntil: patch.cswOpenUntil }
+            : {}),
+          ...(patch.lastGuestInboundAt !== undefined
+            ? { lastGuestInboundAt: patch.lastGuestInboundAt }
+            : {}),
+          ...(patch.routingStatus !== undefined
+            ? { routingStatus: patch.routingStatus }
+            : {}),
+          ...(patch.externalThreadId !== undefined
+            ? { externalThreadId: patch.externalThreadId }
+            : {}),
         },
       });
       return mapConversation(row);
+    });
+  }
+
+  async findOpenWhatsAppByIdentity(
+    tenantId: string,
+    guestChannelIdentity: string,
+  ): Promise<ConversationRecord[]> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.conversation.findMany({
+        where: {
+          tenantId,
+          channel: "whatsapp",
+          guestChannelIdentity,
+          status: { in: ["open", "waiting_guest", "waiting_operator"] },
+        },
+        orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
+      });
+      return rows.map(mapConversation);
     });
   }
 }
@@ -291,6 +337,40 @@ export class PrismaMessageRepository implements IMessageRepository {
     return withTenantTransaction(tenantId, async (tx) => {
       const row = await tx.message.findFirst({ where: { id, tenantId } });
       return row ? mapMessage(row) : null;
+    });
+  }
+
+  async findByExternalMessageId(
+    tenantId: string,
+    externalMessageId: string,
+  ): Promise<MessageRecord | null> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.message.findFirst({
+        where: { tenantId, externalMessageId },
+      });
+      return row ? mapMessage(row) : null;
+    });
+  }
+
+  async updateDelivery(
+    tenantId: string,
+    id: string,
+    patch: {
+      deliveryStatus: MessageRecord["deliveryStatus"];
+      externalMessageId?: string | null;
+    },
+  ): Promise<MessageRecord> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.message.update({
+        where: { id },
+        data: {
+          deliveryStatus: patch.deliveryStatus,
+          ...(patch.externalMessageId !== undefined
+            ? { externalMessageId: patch.externalMessageId }
+            : {}),
+        },
+      });
+      return mapMessage(row);
     });
   }
 }

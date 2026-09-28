@@ -308,6 +308,9 @@ model Tenant {
   aiSuggestions                  AiSuggestion[]
   ownerEscalations               OwnerEscalation[]
   aiUsageRecords                 AiUsageRecord[]
+  propertyMessagingSettings      PropertyMessagingSettings[]
+  bookingMessagingProfiles       BookingMessagingProfile[]
+  messagingAutomationRuns        MessagingAutomationRun[]
 
   @@map("tenants")
 }
@@ -474,6 +477,9 @@ model Property {
   aiSuggestions              AiSuggestion[]
   ownerEscalations           OwnerEscalation[]
   aiUsageRecords             AiUsageRecord[]
+  messagingSettings          PropertyMessagingSettings?
+  bookingMessagingProfiles   BookingMessagingProfile[]
+  messagingAutomationRuns    MessagingAutomationRun[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -840,8 +846,10 @@ model Booking {
   payments       Payment[]
   folios         Folio[]
   tasks          Task[]
-  conversations  Conversation[]
-  escalations    OwnerEscalation[]
+  conversations            Conversation[]
+  escalations              OwnerEscalation[]
+  messagingProfile         BookingMessagingProfile?
+  messagingAutomationRuns  MessagingAutomationRun[]
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -1188,8 +1196,9 @@ model Guest {
   notes           GuestNote[]
   tagAssignments  GuestTagAssignment[]
   tasks           Task[]
-  conversations   Conversation[]
-  escalations     OwnerEscalation[]
+  conversations            Conversation[]
+  escalations              OwnerEscalation[]
+  bookingMessagingProfiles BookingMessagingProfile[]
 
   @@index([tenantId, emailNormalized])
   @@index([tenantId, phoneNormalized])
@@ -2284,18 +2293,22 @@ model PropertyFaqItem {
 }
 
 model Conversation {
-  id               String    @id @default(uuid()) @db.Uuid
-  tenantId         String    @map("tenant_id") @db.Uuid
-  propertyId       String    @map("property_id") @db.Uuid
-  guestId          String?   @map("guest_id") @db.Uuid
-  bookingId        String?   @map("booking_id") @db.Uuid
-  channel          String    @default("talos_direct") @db.VarChar(32)
-  externalThreadId String?   @map("external_thread_id") @db.VarChar(255)
-  status           String    @default("open") @db.VarChar(32)
-  subject          String?   @db.VarChar(255)
-  lastMessageAt    DateTime? @map("last_message_at") @db.Timestamptz
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  propertyId           String    @map("property_id") @db.Uuid
+  guestId              String?   @map("guest_id") @db.Uuid
+  bookingId            String?   @map("booking_id") @db.Uuid
+  channel              String    @default("talos_direct") @db.VarChar(32)
+  externalThreadId     String?   @map("external_thread_id") @db.VarChar(255)
+  guestChannelIdentity String?   @map("guest_channel_identity") @db.VarChar(64)
+  cswOpenUntil         DateTime? @map("csw_open_until") @db.Timestamptz
+  lastGuestInboundAt   DateTime? @map("last_guest_inbound_at") @db.Timestamptz
+  routingStatus        String    @default("ok") @map("routing_status") @db.VarChar(32)
+  status               String    @default("open") @db.VarChar(32)
+  subject              String?   @db.VarChar(255)
+  lastMessageAt        DateTime? @map("last_message_at") @db.Timestamptz
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   property     Property          @relation(fields: [propertyId], references: [id], onDelete: Restrict)
@@ -2305,10 +2318,165 @@ model Conversation {
   suggestions  AiSuggestion[]
   escalations  OwnerEscalation[]
   usageRecords AiUsageRecord[]
+  bookingMessagingProfiles BookingMessagingProfile[]
+  automationRuns           MessagingAutomationRun[]
 
   @@index([tenantId, propertyId, lastMessageAt(sort: Desc)])
   @@index([tenantId, status])
+  @@index([tenantId, channel, guestChannelIdentity])
   @@map("conversations")
+}
+
+model PlatformMessagingConnection {
+  id                       String   @id @default(uuid()) @db.Uuid
+  channel                  String   @default("whatsapp") @db.VarChar(32)
+  provider                 String   @default("meta_cloud") @db.VarChar(32)
+  externalAccountId        String?  @map("external_account_id") @db.VarChar(128)
+  phoneNumberId            String   @map("phone_number_id") @db.VarChar(64)
+  displayPhoneNumber       String?  @map("display_phone_number") @db.VarChar(32)
+  credentialRef            String?  @map("credential_ref") @db.VarChar(255)
+  webhookVerificationRef   String?  @map("webhook_verification_ref") @db.VarChar(255)
+  status                   String   @default("draft") @db.VarChar(32)
+  configJson               Json     @default("{}") @map("config_json")
+  lastError                String?  @map("last_error") @db.Text
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  unmatchedInbounds MessagingUnmatchedInbound[]
+
+  @@unique([phoneNumberId])
+  @@map("platform_messaging_connections")
+}
+
+model MessagingSecretRecord {
+  id         String    @id @default(uuid()) @db.Uuid
+  ownerKind  String    @map("owner_kind") @db.VarChar(16)
+  tenantId   String?   @map("tenant_id") @db.Uuid
+  kind       String    @db.VarChar(32)
+  ciphertext Bytes
+  keyVersion Int       @default(1) @map("key_version")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@index([tenantId, kind])
+  @@map("messaging_secret_records")
+}
+
+model PropertyMessagingSettings {
+  id                       String   @id @default(uuid()) @db.Uuid
+  tenantId                 String   @map("tenant_id") @db.Uuid
+  propertyId               String   @map("property_id") @db.Uuid
+  whatsappEnabled          Boolean  @default(false) @map("whatsapp_enabled")
+  welcomeEnabled           Boolean  @default(false) @map("welcome_enabled")
+  welcomeTemplateName      String?  @map("welcome_template_name") @db.VarChar(128)
+  welcomeTemplateLanguage  String   @default("en") @map("welcome_template_language") @db.VarChar(16)
+  arrivalEnabled           Boolean  @default(false) @map("arrival_enabled")
+  arrivalTemplateName      String?  @map("arrival_template_name") @db.VarChar(128)
+  arrivalTemplateLanguage  String   @default("en") @map("arrival_template_language") @db.VarChar(16)
+  arrivalTimingMode        String   @default("check_in_local_time") @map("arrival_timing_mode") @db.VarChar(32)
+  arrivalLocalTime         String   @default("09:00") @map("arrival_local_time") @db.VarChar(8)
+  arrivalOffsetDays        Int      @default(0) @map("arrival_offset_days")
+  arrivalOffsetHours       Int      @default(0) @map("arrival_offset_hours")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId])
+  @@index([tenantId])
+  @@map("property_messaging_settings")
+}
+
+model BookingMessagingProfile {
+  id                      String    @id @default(uuid()) @db.Uuid
+  tenantId                String    @map("tenant_id") @db.Uuid
+  propertyId              String    @map("property_id") @db.Uuid
+  bookingId               String    @map("booking_id") @db.Uuid
+  guestId                 String?   @map("guest_id") @db.Uuid
+  conversationId          String?   @map("conversation_id") @db.Uuid
+  whatsappPhone           String?   @map("whatsapp_phone") @db.VarChar(32)
+  whatsappPhoneNormalized String?   @map("whatsapp_phone_normalized") @db.VarChar(32)
+  guestChannelIdentity    String?   @map("guest_channel_identity") @db.VarChar(64)
+  contactSource           String    @default("manual") @map("contact_source") @db.VarChar(32)
+  contactConfirmedAt      DateTime? @map("contact_confirmed_at") @db.Timestamptz
+  messagingEnabled        Boolean   @default(false) @map("messaging_enabled")
+  identityStatus          String    @default("unbound") @map("identity_status") @db.VarChar(32)
+  cswOpenUntil            DateTime? @map("csw_open_until") @db.Timestamptz
+  lastGuestInboundAt      DateTime? @map("last_guest_inbound_at") @db.Timestamptz
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guest        Guest?        @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@unique([bookingId])
+  @@index([tenantId, guestChannelIdentity])
+  @@map("booking_messaging_profiles")
+}
+
+model MessagingAutomationRun {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  propertyId     String    @map("property_id") @db.Uuid
+  bookingId      String    @map("booking_id") @db.Uuid
+  conversationId String?   @map("conversation_id") @db.Uuid
+  trigger        String    @db.VarChar(32)
+  occurrenceKey  String    @map("occurrence_key") @db.VarChar(128)
+  status         String    @default("scheduled") @db.VarChar(32)
+  scheduledFor   DateTime? @map("scheduled_for") @db.Timestamptz
+  messageId      String?   @map("message_id") @db.Uuid
+  jobId          String?   @map("job_id") @db.Uuid
+  errorCode      String?   @map("error_code") @db.VarChar(64)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  message      Message?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@unique([bookingId, trigger, occurrenceKey])
+  @@index([tenantId, bookingId])
+  @@map("messaging_automation_runs")
+}
+
+model MessagingUnmatchedInbound {
+  id                   String   @id @default(uuid()) @db.Uuid
+  platformConnectionId String   @map("platform_connection_id") @db.Uuid
+  guestChannelIdentity String   @map("guest_channel_identity") @db.VarChar(64)
+  externalMessageId    String   @map("external_message_id") @db.VarChar(255)
+  bodyPreview          String?  @map("body_preview") @db.VarChar(280)
+  rawMetaJson          Json     @default("{}") @map("raw_meta_json")
+  status               String   @default("open") @db.VarChar(32)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  platformConnection PlatformMessagingConnection @relation(fields: [platformConnectionId], references: [id], onDelete: Cascade)
+
+  @@unique([externalMessageId])
+  @@index([guestChannelIdentity, createdAt(sort: Desc)])
+  @@map("messaging_unmatched_inbounds")
+}
+
+/// Platform WhatsApp identity → booking route index (no RLS; not tenant-readable PII store of messages).
+model MessagingWaIdentityRoute {
+  guestChannelIdentity String   @map("guest_channel_identity") @db.VarChar(64)
+  tenantId             String   @map("tenant_id") @db.Uuid
+  propertyId           String   @map("property_id") @db.Uuid
+  bookingId            String   @map("booking_id") @db.Uuid
+  profileId            String   @map("profile_id") @db.Uuid
+  conversationId       String?  @map("conversation_id") @db.Uuid
+  messagingEnabled     Boolean  @default(true) @map("messaging_enabled")
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@id([guestChannelIdentity, bookingId])
+  @@index([guestChannelIdentity])
+  @@map("messaging_wa_identity_routes")
 }
 
 model Message {
@@ -2333,6 +2501,7 @@ model Message {
   sourceOfSuggestions AiSuggestion[] @relation("SuggestionSourceMessage")
   triggerEscalations  OwnerEscalation[] @relation("EscalationTrigger")
   resultingEscalations OwnerEscalation[] @relation("EscalationResultMessage")
+  automationRuns      MessagingAutomationRun[]
 
   @@index([conversationId, createdAt])
   @@index([tenantId, propertyId])

@@ -12,6 +12,10 @@ export function serializeConversation(c: {
   bookingId: string | null;
   channel: string;
   externalThreadId: string | null;
+  guestChannelIdentity?: string | null;
+  cswOpenUntil?: Date | null;
+  lastGuestInboundAt?: Date | null;
+  routingStatus?: string;
   status: string;
   subject: string | null;
   lastMessageAt: Date | null;
@@ -26,6 +30,10 @@ export function serializeConversation(c: {
     bookingId: c.bookingId,
     channel: c.channel,
     externalThreadId: c.externalThreadId,
+    guestChannelIdentity: c.guestChannelIdentity ?? null,
+    cswOpenUntil: iso(c.cswOpenUntil),
+    lastGuestInboundAt: iso(c.lastGuestInboundAt),
+    routingStatus: c.routingStatus ?? "ok",
     status: c.status,
     subject: c.subject,
     lastMessageAt: iso(c.lastMessageAt),

@@ -111,6 +111,11 @@ class InMemoryConversationRepository implements IConversationRepository {
       lastMessageAt?: Date;
       guestId?: string | null;
       bookingId?: string | null;
+      guestChannelIdentity?: string | null;
+      cswOpenUntil?: Date | null;
+      lastGuestInboundAt?: Date | null;
+      routingStatus?: "ok" | "ambiguous" | "unmatched";
+      externalThreadId?: string | null;
     },
   ): Promise<ConversationRecord> {
     const row = this.find(tenantId, id);
@@ -121,8 +126,31 @@ class InMemoryConversationRepository implements IConversationRepository {
     if (patch.lastMessageAt) row.lastMessageAt = patch.lastMessageAt;
     if (patch.guestId !== undefined) row.guestId = patch.guestId;
     if (patch.bookingId !== undefined) row.bookingId = patch.bookingId;
+    if (patch.guestChannelIdentity !== undefined)
+      row.guestChannelIdentity = patch.guestChannelIdentity;
+    if (patch.cswOpenUntil !== undefined) row.cswOpenUntil = patch.cswOpenUntil;
+    if (patch.lastGuestInboundAt !== undefined)
+      row.lastGuestInboundAt = patch.lastGuestInboundAt;
+    if (patch.routingStatus !== undefined) row.routingStatus = patch.routingStatus;
+    if (patch.externalThreadId !== undefined)
+      row.externalThreadId = patch.externalThreadId;
     row.updatedAt = new Date();
     return { ...row };
+  }
+
+  async findOpenWhatsAppByIdentity(
+    tenantId: string,
+    guestChannelIdentity: string,
+  ): Promise<ConversationRecord[]> {
+    return this.rows
+      .filter(
+        (row) =>
+          row.tenantId === tenantId &&
+          row.channel === "whatsapp" &&
+          row.guestChannelIdentity === guestChannelIdentity &&
+          ["open", "waiting_guest", "waiting_operator"].includes(row.status),
+      )
+      .map((row) => ({ ...row }));
   }
 
   private find(tenantId: string, id: string): ConversationRecord | undefined {
@@ -157,6 +185,37 @@ class InMemoryMessageRepository implements IMessageRepository {
       (candidate) => candidate.tenantId === tenantId && candidate.id === id,
     );
     return row ? { ...row } : null;
+  }
+
+  async findByExternalMessageId(
+    tenantId: string,
+    externalMessageId: string,
+  ): Promise<MessageRecord | null> {
+    const row = this.rows.find(
+      (candidate) =>
+        candidate.tenantId === tenantId &&
+        candidate.externalMessageId === externalMessageId,
+    );
+    return row ? { ...row } : null;
+  }
+
+  async updateDelivery(
+    tenantId: string,
+    id: string,
+    patch: {
+      deliveryStatus: MessageRecord["deliveryStatus"];
+      externalMessageId?: string | null;
+    },
+  ): Promise<MessageRecord> {
+    const row = this.rows.find(
+      (candidate) => candidate.tenantId === tenantId && candidate.id === id,
+    );
+    if (!row) throw new Error("missing message");
+    row.deliveryStatus = patch.deliveryStatus;
+    if (patch.externalMessageId !== undefined) {
+      row.externalMessageId = patch.externalMessageId;
+    }
+    return { ...row };
   }
 }
 

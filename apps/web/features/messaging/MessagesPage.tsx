@@ -403,7 +403,16 @@ export function MessagesPage() {
             <div className="space-y-4">
               <SurfaceHeader
                 title={thread.conversation.subject || "Συνομιλία"}
-                description={`Κανάλι · ${thread.conversation.channel} · ${statusLabel(thread.conversation.status)}`}
+                description={`Κανάλι · ${thread.conversation.channel}${
+                  thread.conversation.bookingId
+                    ? ` · Booking ${thread.conversation.bookingId.slice(0, 8)}`
+                    : ""
+                } · ${statusLabel(thread.conversation.status)}${
+                  thread.conversation.routingStatus &&
+                  thread.conversation.routingStatus !== "ok"
+                    ? ` · routing:${thread.conversation.routingStatus}`
+                    : ""
+                }`}
               />
 
               <div className="max-h-[40vh] space-y-3 overflow-y-auto rounded-md border border-border p-3">

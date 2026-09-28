@@ -17,6 +17,7 @@ import { useBookingStayDraft } from "./hooks/useBookingStayDraft";
 import { useBookingStayPreview } from "./hooks/useBookingStayPreview";
 import { useBookingStaySave } from "./hooks/useBookingStaySave";
 import { BookingGuestSection } from "./sections/BookingGuestSection";
+import { BookingWhatsAppMessagingSection } from "./sections/BookingWhatsAppMessagingSection";
 import { BookingBillingFiscalSection } from "./sections/BookingBillingFiscalSection";
 import { BookingNotesSection } from "./sections/BookingNotesSection";
 import { BookingOperationsTasksSection } from "./sections/BookingOperationsTasksSection";
@@ -281,6 +282,7 @@ export function BookingWorkspaceView({
               active={active}
             />
             <BookingGuestSection {...sectionProps} />
+            <BookingWhatsAppMessagingSection {...sectionProps} />
             <BookingPricingSection {...pricingProps} />
           </TabsContent>
 
@@ -303,6 +305,7 @@ export function BookingWorkspaceView({
 
           <TabsContent value="guest" className="mt-0 space-y-5 focus-visible:outline-none">
             <BookingGuestSection {...sectionProps} />
+            <BookingWhatsAppMessagingSection {...sectionProps} />
             <BookingBillingFiscalSection {...sectionProps} />
           </TabsContent>
 

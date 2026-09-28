@@ -265,6 +265,14 @@ class MemConversations implements IConversationRepository {
     Object.assign(row, patch);
     return row;
   }
+  async findOpenWhatsAppByIdentity(tenantId: string, guestChannelIdentity: string) {
+    return this.rows.filter(
+      (r) =>
+        r.tenantId === tenantId &&
+        r.channel === "whatsapp" &&
+        r.guestChannelIdentity === guestChannelIdentity,
+    );
+  }
 }
 
 class MemMessages implements IMessageRepository {
@@ -280,6 +288,29 @@ class MemMessages implements IMessageRepository {
   }
   async findById(tenantId: string, id: string) {
     return this.rows.find((r) => r.tenantId === tenantId && r.id === id) ?? null;
+  }
+  async findByExternalMessageId(tenantId: string, externalMessageId: string) {
+    return (
+      this.rows.find(
+        (r) =>
+          r.tenantId === tenantId && r.externalMessageId === externalMessageId,
+      ) ?? null
+    );
+  }
+  async updateDelivery(
+    tenantId: string,
+    id: string,
+    patch: {
+      deliveryStatus: MessageRecord["deliveryStatus"];
+      externalMessageId?: string | null;
+    },
+  ) {
+    const row = this.rows.find((r) => r.tenantId === tenantId && r.id === id)!;
+    row.deliveryStatus = patch.deliveryStatus;
+    if (patch.externalMessageId !== undefined) {
+      row.externalMessageId = patch.externalMessageId;
+    }
+    return row;
   }
 }
 

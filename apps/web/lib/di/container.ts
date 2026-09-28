@@ -202,6 +202,9 @@ import {
   ListOpenEscalationsUseCase,
   ResolveOwnerEscalationUseCase,
   SaveEscalationToKnowledgeUseCase,
+  EnableBookingWhatsAppMessagingUseCase,
+  UpsertPropertyMessagingSettingsUseCase,
+  RouteWhatsAppInboundUseCase,
 
   GetQuoteUseCase,
 
@@ -523,6 +526,13 @@ import {
   PrismaOwnerEscalationRepository,
   PrismaAiUsageRepository,
   PrismaPropertyAmenityReader,
+  PrismaPlatformMessagingConnectionRepository,
+  PrismaMessagingSecretVault,
+  PrismaPropertyMessagingSettingsRepository,
+  PrismaBookingMessagingProfileRepository,
+  PrismaMessagingAutomationRunRepository,
+  PrismaMessagingUnmatchedInboundRepository,
+  MetaWhatsAppCloudApiAdapter,
   PrismaTaskRepository,
   PrismaUnitHousekeepingStatusRepository,
   PrismaHousekeepingTurnoverStore,
@@ -1312,7 +1322,7 @@ export const linkBookingToGuestUseCase = new LinkBookingToGuestUseCase(
   permissionChecker,
 );
 
-const conversationRepository = new PrismaConversationRepository();
+export const conversationRepository = new PrismaConversationRepository();
 const messageRepository = new PrismaMessageRepository();
 const propertyAssistantConfigRepository =
   new PrismaPropertyAssistantConfigRepository();
@@ -1430,6 +1440,53 @@ export const saveEscalationToKnowledgeUseCase =
     idGenerator,
     auditLogRepository,
   );
+
+const bookingMessagingProfileRepository =
+  new PrismaBookingMessagingProfileRepository();
+const propertyMessagingSettingsRepository =
+  new PrismaPropertyMessagingSettingsRepository();
+const messagingAutomationRunRepository =
+  new PrismaMessagingAutomationRunRepository();
+export const platformMessagingConnectionRepository =
+  new PrismaPlatformMessagingConnectionRepository();
+export const messagingSecretVault = new PrismaMessagingSecretVault();
+export const messagingUnmatchedInboundRepository =
+  new PrismaMessagingUnmatchedInboundRepository();
+export const whatsAppCloudApiAdapter = new MetaWhatsAppCloudApiAdapter();
+
+export const upsertPropertyMessagingSettingsUseCase =
+  new UpsertPropertyMessagingSettingsUseCase(
+    propertyMessagingSettingsRepository,
+    propertyRepository,
+    permissionChecker,
+    idGenerator,
+  );
+
+export const routeWhatsAppInboundUseCase = new RouteWhatsAppInboundUseCase(
+  bookingMessagingProfileRepository,
+  bookingRepository,
+);
+
+export const getBookingMessagingProfile = (tenantId: string, bookingId: string) =>
+  bookingMessagingProfileRepository.findByBookingId(tenantId, bookingId);
+
+export const listBookingAutomationRuns = (tenantId: string, bookingId: string) =>
+  messagingAutomationRunRepository.listByBooking(tenantId, bookingId);
+
+export const getPropertyMessagingSettings = (
+  tenantId: string,
+  propertyId: string,
+) => propertyMessagingSettingsRepository.get(tenantId, propertyId);
+
+// enableBookingWhatsAppMessagingUseCase wired after enqueueJobUseCase below.
+let enableBookingWhatsAppMessagingUseCaseRef: EnableBookingWhatsAppMessagingUseCase | null =
+  null;
+export function getEnableBookingWhatsAppMessagingUseCase() {
+  if (!enableBookingWhatsAppMessagingUseCaseRef) {
+    throw new Error("EnableBookingWhatsAppMessagingUseCase not initialized");
+  }
+  return enableBookingWhatsAppMessagingUseCaseRef;
+}
 
 export const createTaskUseCase = new CreateTaskUseCase(
   taskRepository,
@@ -2078,6 +2135,23 @@ jobHandlerRegistry.register(
 );
 
 export const enqueueJobUseCase = new EnqueueJobUseCase(jobScheduler);
+
+enableBookingWhatsAppMessagingUseCaseRef =
+  new EnableBookingWhatsAppMessagingUseCase(
+    bookingMessagingProfileRepository,
+    propertyMessagingSettingsRepository,
+    conversationRepository,
+    bookingRepository,
+    propertyRepository,
+    guestRepository,
+    messagingAutomationRunRepository,
+    enqueueJobUseCase,
+    permissionChecker,
+    idGenerator,
+    auditLogRepository,
+  );
+export const enableBookingWhatsAppMessagingUseCase =
+  enableBookingWhatsAppMessagingUseCaseRef;
 
 // P1-S6b: typed reconcile outbox handler MUST register before LoggingHandler catch-all.
 outboxHandlerRegistry.register(new IcalInventoryReconcileOutboxHandler(enqueueJobUseCase));

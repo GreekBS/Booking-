@@ -778,6 +778,10 @@ export interface ConversationRecord {
   bookingId: string | null;
   channel: MessagingChannel | string;
   externalThreadId: string | null;
+  guestChannelIdentity?: string | null;
+  cswOpenUntil?: string | null;
+  lastGuestInboundAt?: string | null;
+  routingStatus?: string;
   status: ConversationStatus | string;
   subject: string | null;
   lastMessageAt: string | null;

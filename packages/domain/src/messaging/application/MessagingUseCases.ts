@@ -48,6 +48,11 @@ import {
   type AssistantStayInput,
 } from "./AssistantContextBuilder";
 import { assertGroundedAnswerable, shouldAutoSend } from "./AssistantPolicy";
+import { assertWhatsAppSessionSendable } from "./WhatsAppMessagingUseCases";
+import {
+  extendCustomerServiceWindow,
+  isCustomerServiceWindowOpen,
+} from "../domain/WhatsAppMessagingTypes";
 import {
   canManageAssistantConfigOnProperty,
   canReadMessagingOnProperty,
@@ -478,6 +483,10 @@ export class CreateConversationUseCase {
         bookingId: input.bookingId ?? null,
         channel: input.channel ?? "talos_direct",
         externalThreadId: null,
+        guestChannelIdentity: null,
+        cswOpenUntil: null,
+        lastGuestInboundAt: null,
+        routingStatus: "ok",
         status: "open",
         subject: input.subject?.trim().slice(0, 255) || null,
         lastMessageAt: null,
@@ -663,6 +672,10 @@ export class SendOperatorMessageUseCase {
       ) {
         return Result.fail(new ForbiddenError());
       }
+      assertWhatsAppSessionSendable({
+        channel: conversation.channel,
+        cswOpenUntil: conversation.cswOpenUntil,
+      });
       const now = new Date();
       const message = await this.messages.append({
         id: this.idGenerator.generate(),
@@ -672,7 +685,7 @@ export class SendOperatorMessageUseCase {
         direction: "outbound",
         senderType: "operator",
         body,
-        deliveryStatus: "sent",
+        deliveryStatus: conversation.channel === "whatsapp" ? "pending" : "sent",
         externalMessageId: null,
         createdByUserId: actor.userId,
         aiSuggestionId: input.aiSuggestionId?.trim() || null,
@@ -796,8 +809,29 @@ export class IngestGuestMessageUseCase {
       let touched = await this.conversations.updateMeta(
         input.tenantId,
         conversation.id,
-        { lastMessageAt: now, status: "open" },
+        {
+          lastMessageAt: now,
+          status: "open",
+          ...(conversation.channel === "whatsapp"
+            ? {
+                lastGuestInboundAt: now,
+                cswOpenUntil: extendCustomerServiceWindow(now),
+                routingStatus: "ok" as const,
+              }
+            : {}),
+        },
       );
+
+      if (conversation.routingStatus === "ambiguous") {
+        return Result.ok({
+          conversation: touched,
+          inboundMessage,
+          suggestion: null,
+          sentMessage: null,
+          escalation: null,
+          autoSent: false,
+        });
+      }
 
       const profile = await this.config.getProfile(
         input.tenantId,
@@ -855,7 +889,9 @@ export class IngestGuestMessageUseCase {
           classification,
           generated.knowledgeSourceIds,
           generated.safetyFlags,
-        );
+        ) &&
+        (touched.channel !== "whatsapp" ||
+          isCustomerServiceWindowOpen(touched.cswOpenUntil));
 
       const suggestionId = this.ids.generate();
       let status: AiSuggestionStatus = "ready";
@@ -1241,8 +1277,21 @@ export class ResolveOwnerEscalationUseCase {
         polished.replyText?.trim() || ownerReply;
 
       const mode = resolveAssistantMode(profile);
-      const shouldSend =
+      let shouldSend =
         input.send ?? (mode === "autopilot" || mode === "off");
+      if (shouldSend) {
+        try {
+          assertWhatsAppSessionSendable({
+            channel: conversation.channel,
+            cswOpenUntil: conversation.cswOpenUntil,
+          });
+        } catch (error) {
+          if (input.send === true) {
+            return Result.fail(toError(error));
+          }
+          shouldSend = false;
+        }
+      }
 
       let sentMessage: MessageRecord | null = null;
       let resultingSuggestionId: string | null = null;

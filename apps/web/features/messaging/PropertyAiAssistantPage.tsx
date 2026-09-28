@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
+import { PropertyWhatsAppAutomationsPanel } from "./PropertyWhatsAppAutomationsPanel";
 
 const KNOWLEDGE_FIELDS: Array<{
   key: keyof PropertyGuestKnowledgeRecord;
@@ -516,6 +517,8 @@ export function PropertyAiAssistantPage({
           )}
         </div>
       </Surface>
+
+      <PropertyWhatsAppAutomationsPanel propertyId={propertyId} />
     </div>
   );
 }

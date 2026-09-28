@@ -140,6 +140,10 @@ export interface ConversationRecord {
   bookingId: string | null;
   channel: MessagingChannel;
   externalThreadId: string | null;
+  guestChannelIdentity: string | null;
+  cswOpenUntil: Date | null;
+  lastGuestInboundAt: Date | null;
+  routingStatus: "ok" | "ambiguous" | "unmatched";
   status: ConversationStatus;
   subject: string | null;
   lastMessageAt: Date | null;
