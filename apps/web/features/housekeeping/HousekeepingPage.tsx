@@ -375,8 +375,13 @@ function HousekeepingPageContent() {
 
       {error ? <ErrorState title="Αποτυχία φόρτωσης" message={error} /> : null}
 
-      {tenantId && propertyId ? (
-        <CleaningLocationsPanel tenantId={tenantId} propertyId={propertyId} />
+      {tenantId && propertyId && property ? (
+        <CleaningLocationsPanel
+          tenantId={tenantId}
+          propertyId={propertyId}
+          propertyType={property.type ?? "villa"}
+          propertyName={property.name}
+        />
       ) : null}
 
       {loading && !board && tasks.length === 0 ? (

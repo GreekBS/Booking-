@@ -2,6 +2,7 @@ import {
   ConflictError,
   ValidationError,
 } from "../../../shared/errors/DomainError";
+import type { PropertyType } from "../../../shared/types/index";
 import { HousekeepingStateMachine } from "../../domain/HousekeepingStateMachine";
 import type {
   UnitHousekeepingSource,
@@ -14,6 +15,31 @@ import {
   type CleaningLocationRecord,
   type CleaningLocationStatusRecord,
 } from "./CleaningLocationTypes";
+
+/** Housekeeping CleaningLocation UX mode derived from Property.type (V1). */
+export type CleaningLocationHousekeepingMode =
+  | "multi_room"
+  | "single_property";
+
+/**
+ * Hotel → multi room locations. Villa / apartment / other → one property-wide
+ * location. Does not affect Units, ARI, channels, or bookings.
+ */
+export function cleaningLocationModeForPropertyType(
+  type: PropertyType,
+): CleaningLocationHousekeepingMode {
+  return type === "hotel" ? "multi_room" : "single_property";
+}
+
+export function isHotelCleaningLocationMode(type: PropertyType): boolean {
+  return cleaningLocationModeForPropertyType(type) === "multi_room";
+}
+
+/** Operator-facing name for the whole-property cleaning location. */
+export function defaultSingleCleaningLocationName(propertyName: string): string {
+  const trimmed = propertyName.trim();
+  return normalizeCleaningLocationName(trimmed.length > 0 ? trimmed : "Κατάλυμα");
+}
 
 export function normalizeCleaningLocationName(raw: string): string {
   const name = raw.trim();

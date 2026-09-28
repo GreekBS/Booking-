@@ -26,12 +26,13 @@ describe("GET /api/admin/v1/catalog/properties-units", () => {
     propertyIds: null,
   };
 
-  const slimCatalog = {
+    const slimCatalog = {
     properties: [
       {
         id: "prop-1",
         name: "Villa",
         status: "active",
+        type: "villa",
         units: [
           {
             id: "unit-1",
@@ -71,7 +72,7 @@ describe("GET /api/admin/v1/catalog/properties-units", () => {
 
     const prop = body.properties[0];
     expect(Object.keys(prop).sort()).toEqual(
-      ["id", "name", "status", "units"].sort(),
+      ["id", "name", "status", "type", "units"].sort(),
     );
     expect(Object.keys(prop.units[0]).sort()).toEqual(
       ["id", "name", "propertyId", "status"].sort(),

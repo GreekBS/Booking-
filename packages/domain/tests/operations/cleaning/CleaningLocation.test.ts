@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   assertBulkCleaningLocationCount,
+  cleaningLocationModeForPropertyType,
   defaultBulkCleaningLocationName,
+  defaultSingleCleaningLocationName,
+  isHotelCleaningLocationMode,
   normalizeCleaningLocationName,
   renameCleaningLocation,
   createCleaningLocation,
@@ -37,6 +40,21 @@ describe("CleaningLocation domain helpers", () => {
     expect(defaultBulkCleaningLocationName(1)).toBe("1");
     expect(defaultBulkCleaningLocationName(12)).toBe("12");
     expect(() => defaultBulkCleaningLocationName(0)).toThrow(ValidationError);
+  });
+
+  it("maps Property.type to housekeeping CleaningLocation mode", () => {
+    expect(cleaningLocationModeForPropertyType("hotel")).toBe("multi_room");
+    expect(isHotelCleaningLocationMode("hotel")).toBe(true);
+    expect(cleaningLocationModeForPropertyType("villa")).toBe("single_property");
+    expect(cleaningLocationModeForPropertyType("apartment")).toBe("single_property");
+    expect(cleaningLocationModeForPropertyType("other")).toBe("single_property");
+    expect(isHotelCleaningLocationMode("villa")).toBe(false);
+  });
+
+  it("names the whole-property location from the Property name", () => {
+    expect(defaultSingleCleaningLocationName("  Cosy Villa  ")).toBe("Cosy Villa");
+    expect(defaultSingleCleaningLocationName("")).toBe("Κατάλυμα");
+    expect(defaultSingleCleaningLocationName("   ")).toBe("Κατάλυμα");
   });
 
   it("rename keeps the same location id and rejects archived locations", () => {

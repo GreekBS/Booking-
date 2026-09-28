@@ -1395,11 +1395,13 @@ export const resolveUnitQrUseCase = new ResolveUnitQrUseCase(
 export const bulkInitializeCleaningLocationsUseCase =
   new BulkInitializeCleaningLocationsUseCase(
     cleaningLocationRepository,
+    propertyRepository,
     permissionChecker,
     auditLogRepository,
   );
 export const addCleaningLocationUseCase = new AddCleaningLocationUseCase(
   cleaningLocationRepository,
+  propertyRepository,
   permissionChecker,
   auditLogRepository,
 );
@@ -1411,13 +1413,16 @@ export const renameCleaningLocationUseCase = new RenameCleaningLocationUseCase(
 export const archiveCleaningLocationUseCase =
   new ArchiveCleaningLocationUseCase(
     cleaningLocationRepository,
+    propertyRepository,
     permissionChecker,
     auditLogRepository,
   );
 export const listCleaningLocationsBoardUseCase =
   new ListCleaningLocationsBoardUseCase(
     cleaningLocationRepository,
+    propertyRepository,
     permissionChecker,
+    auditLogRepository,
   );
 export const getCleaningLocationQrUseCase = new GetCleaningLocationQrUseCase(
   cleaningLocationQrAccessRepository,

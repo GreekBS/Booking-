@@ -19,6 +19,7 @@ import {
   type ICleaningLocationRepository,
   type BulkCreateCleaningLocationsCommand,
   type AddCleaningLocationCommand,
+  type EnsureSingleCleaningLocationCommand,
   type RenameCleaningLocationCommand,
   type ArchiveCleaningLocationCommand,
   type MarkCleaningLocationStatusCommand,
@@ -257,6 +258,89 @@ export class PrismaCleaningLocationRepository
       }
 
       return created;
+    });
+  }
+
+  async ensureSingleActive(
+    command: EnsureSingleCleaningLocationCommand,
+  ): Promise<{ location: CleaningLocationRecord; created: boolean }> {
+    const now = command.now ?? new Date();
+    const name = normalizeCleaningLocationName(command.name);
+
+    return withTenantTransaction(command.tenantId, async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM properties
+        WHERE id = ${command.propertyId}::uuid
+          AND tenant_id = ${command.tenantId}::uuid
+        FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new NotFoundError("Property", command.propertyId);
+      }
+
+      const existing = await tx.cleaningLocation.findMany({
+        where: {
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          status: "active",
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        take: 1,
+      });
+      if (existing.length > 0) {
+        return {
+          location: mapLocation(existing[0]! as LocationRow),
+          created: false,
+        };
+      }
+
+      const record = createCleaningLocation({
+        id: randomUUID(),
+        tenantId: command.tenantId,
+        propertyId: command.propertyId,
+        name,
+        sortOrder: 0,
+        now,
+      });
+
+      await tx.cleaningLocation.create({
+        data: {
+          id: record.id,
+          tenantId: record.tenantId,
+          propertyId: record.propertyId,
+          name: record.name,
+          status: record.status,
+          sortOrder: record.sortOrder,
+          commercialUnitId: null,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          archivedAt: null,
+        },
+      });
+
+      const status = createCleaningLocationStatus({
+        cleaningLocationId: record.id,
+        tenantId: command.tenantId,
+        propertyId: command.propertyId,
+        status: "CLEAN",
+        source: "INIT",
+        updatedByUserId: null,
+        now,
+      });
+      await tx.cleaningLocationStatus.create({
+        data: {
+          cleaningLocationId: status.cleaningLocationId,
+          tenantId: status.tenantId,
+          propertyId: status.propertyId,
+          status: status.status,
+          source: status.source,
+          updatedByUserId: status.updatedByUserId,
+          updatedAt: status.updatedAt,
+          version: status.version,
+        },
+      });
+
+      return { location: record, created: true };
     });
   }
 

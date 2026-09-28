@@ -13,6 +13,19 @@ export interface BulkCreateCleaningLocationsCommand {
   now?: Date;
 }
 
+/**
+ * Idempotent single-location ensure for villa/apartment/other.
+ * Reuses any existing active location; creates one only when none exist.
+ * Concurrency-safe via property row lock (same as bulkCreate).
+ */
+export interface EnsureSingleCleaningLocationCommand {
+  tenantId: string;
+  propertyId: string;
+  name: string;
+  actorUserId: string;
+  now?: Date;
+}
+
 export interface AddCleaningLocationCommand {
   tenantId: string;
   propertyId: string;
@@ -70,6 +83,15 @@ export interface ICleaningLocationRepository {
   bulkCreate(
     command: BulkCreateCleaningLocationsCommand,
   ): Promise<CleaningLocationRecord[]>;
+
+  /**
+   * Ensure exactly one active location exists for single-property mode.
+   * If any active locations exist, returns the first (sortOrder/name) without
+   * creating duplicates. Never archives or merges existing rows.
+   */
+  ensureSingleActive(
+    command: EnsureSingleCleaningLocationCommand,
+  ): Promise<{ location: CleaningLocationRecord; created: boolean }>;
 
   add(command: AddCleaningLocationCommand): Promise<CleaningLocationRecord>;
 

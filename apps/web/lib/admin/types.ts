@@ -76,6 +76,8 @@ export interface CatalogPropertyRecord {
   id: string;
   name: string;
   status: string;
+  /** Property.type — drives Housekeeping CleaningLocation mode. */
+  type: string;
   units: CatalogUnitRecord[];
 }
 
@@ -601,6 +603,13 @@ export interface CleaningLocationBoardRow {
     priority: string;
   } | null;
   hasActiveQr: boolean;
+}
+
+export interface CleaningLocationsBoardResponse {
+  propertyType: "villa" | "apartment" | "hotel" | "other" | string;
+  mode: "multi_room" | "single_property";
+  requiresManualResolution: boolean;
+  data: CleaningLocationBoardRow[];
 }
 
 export interface CleaningLocationRecord {

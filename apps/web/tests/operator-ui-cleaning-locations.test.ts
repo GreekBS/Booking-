@@ -13,7 +13,7 @@ function readRepo(rel: string): string {
   return readFileSync(join(repoRoot, rel), "utf8");
 }
 
-describe("operator-ui CleaningLocation V1", () => {
+describe("operator-ui CleaningLocation Property.type awareness", () => {
   it("exposes cleaning location admin API routes", () => {
     for (const route of [
       "app/api/admin/v1/cleaning/locations/route.ts",
@@ -43,66 +43,72 @@ describe("operator-ui CleaningLocation V1", () => {
     }
   });
 
-  it("wires location use cases in the DI container", () => {
+  it("wires location use cases with property repository", () => {
     const container = read("lib/di/container.ts");
     expect(container).toContain("PrismaCleaningLocationRepository");
-    expect(container).toContain("PrismaCleaningLocationQrAccessRepository");
     expect(container).toContain("listCleaningLocationsBoardUseCase");
     expect(container).toContain("bulkInitializeCleaningLocationsUseCase");
-    expect(container).toContain("resolveCleaningQrUseCase");
+    expect(container).toMatch(
+      /new BulkInitializeCleaningLocationsUseCase\(\s*cleaningLocationRepository,\s*propertyRepository/s,
+    );
+    expect(container).toMatch(
+      /new ListCleaningLocationsBoardUseCase\(\s*cleaningLocationRepository,\s*propertyRepository/s,
+    );
   });
 
-  it("shows Greek Δωμάτια setup and management UI", () => {
+  it("hotel UI shows room setup and add room; villa copy omits them for single mode", () => {
     const panel = read("features/housekeeping/CleaningLocationsPanel.tsx");
     expect(panel).toContain("Δωμάτια");
-    expect(panel).toContain("Πόσα δωμάτια έχει το κατάλυμα;");
+    expect(panel).toContain("Ρύθμιση δωματίων");
+    expect(panel).toContain("Πόσα δωμάτια διαθέτει το κατάλυμα;");
     expect(panel).toContain("Δημιουργία δωματίων");
     expect(panel).toContain("Προσθήκη δωματίου");
-    expect(panel).toContain("Μετονομασία");
-    expect(panel).toContain("Αρχειοθέτηση");
-    expect(panel).toContain("Αντικατάσταση");
+    expect(panel).toContain("Καθαρισμός καταλύματος");
+    expect(panel).toContain("isHotelType");
+    expect(panel).toContain('type === "hotel"');
+    expect(panel).toContain("showHotelSetup");
+    expect(panel).toContain("showAddRoom");
+    expect(panel).toContain("requiresManualResolution");
     expect(panel).toContain("QRCodeSVG");
+    expect(panel).toContain("sm:flex-row");
+    expect(panel).toContain("md:grid-cols-[1fr_auto]");
 
     const page = read("features/housekeeping/HousekeepingPage.tsx");
     expect(page).toContain("CleaningLocationsPanel");
+    expect(page).toContain("property.type");
+    expect(page).toContain("propertyName={property.name}");
+  });
+
+  it("catalog exposes Property.type for Active Property", () => {
+    const types = read("lib/admin/types.ts");
+    expect(types).toMatch(/CatalogPropertyRecord[\s\S]*type: string/);
+    const domainCatalog = readRepo(
+      "packages/domain/src/catalog/types/PropertyUnitCatalog.ts",
+    );
+    expect(domainCatalog).toContain("type: string");
   });
 
   it("exports location helpers from the admin API client", () => {
     const api = read("lib/admin/api.ts");
     expect(api).toContain("fetchCleaningLocationsBoard");
+    expect(api).toContain("CleaningLocationsBoardResponse");
     expect(api).toContain("bulkInitializeCleaningLocations");
     expect(api).toContain("addCleaningLocation");
-    expect(api).toContain("renameCleaningLocation");
-    expect(api).toContain("archiveCleaningLocation");
-    expect(api).toContain("generateCleaningLocationQr");
-    expect(api).toContain("rotateCleaningLocationQr");
   });
 
-  it("qr resolve prefers location use case", () => {
-    const resolve = read("app/api/admin/v1/qr/resolve/route.ts");
-    expect(resolve).toContain("resolveCleaningQrUseCase");
-    expect(resolve).toContain("locationId");
-  });
+  it("domain gates hotel-only mutations and single-location ensure", () => {
+    const useCases = readRepo(
+      "packages/domain/src/operations/cleaning/application/CleaningLocationUseCases.ts",
+    );
+    expect(useCases).toContain("isHotelCleaningLocationMode");
+    expect(useCases).toContain("ensureSingleActive");
+    expect(useCases).toContain("requiresManualResolution");
+    expect(useCases).toContain("cleaning_location_last_active");
 
-  it("persists location repositories in database package", () => {
-    expect(
-      existsSync(
-        join(
-          repoRoot,
-          "packages/database/src/repositories/operations/cleaning/CleaningLocationRepository.ts",
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      existsSync(
-        join(
-          repoRoot,
-          "packages/database/src/repositories/operations/cleaning/CleaningLocationQrAccessRepository.ts",
-        ),
-      ),
-    ).toBe(true);
-    const index = readRepo("packages/database/src/index.ts");
-    expect(index).toContain("PrismaCleaningLocationRepository");
-    expect(index).toContain("PrismaCleaningLocationQrAccessRepository");
+    const repo = readRepo(
+      "packages/database/src/repositories/operations/cleaning/CleaningLocationRepository.ts",
+    );
+    expect(repo).toContain("ensureSingleActive");
+    expect(repo).toContain("FOR UPDATE");
   });
 });

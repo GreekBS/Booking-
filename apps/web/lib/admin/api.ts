@@ -1124,7 +1124,7 @@ import type {
   CleaningExecutionItemRecord,
   CleaningExecutionRecord,
   CleaningHistoryRecord,
-  CleaningLocationBoardRow,
+  CleaningLocationsBoardResponse,
   CleaningLocationQrRecord,
   CleaningLocationRecord,
   CleaningPhotoRecord,
@@ -1180,12 +1180,12 @@ export async function resolveQrToken(
 export async function fetchCleaningLocationsBoard(
   tenantId: string,
   propertyId: string,
-): Promise<CleaningLocationBoardRow[]> {
-  const res = await adminFetch<{ data: CleaningLocationBoardRow[] }>(
+): Promise<CleaningLocationsBoardResponse> {
+  const res = await adminFetch<CleaningLocationsBoardResponse>(
     `/cleaning/locations?propertyId=${encodeURIComponent(propertyId)}`,
     { tenantId },
   );
-  return res.data;
+  return res;
 }
 
 export async function bulkInitializeCleaningLocations(

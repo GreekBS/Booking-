@@ -555,4 +555,98 @@ runIntegration("CleaningLocation V1", () => {
       await catalog.$disconnect();
     }
   });
+
+  it("ensureSingleActive reuses existing location and is concurrency-safe", async () => {
+    const prop = randomUUID();
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.property.create({
+        data: {
+          id: prop,
+          tenantId: TENANT,
+          name: "Single Mode Villa",
+          slug: `sv-${prop.slice(0, 8)}`,
+          type: "villa",
+          timezone: "Europe/Athens",
+        },
+      });
+    });
+
+    const commercialBefore = await withTenantTransaction(TENANT, async (tx) => ({
+      units: await tx.unit.count({
+        where: { tenantId: TENANT, deletedAt: null },
+      }),
+      ratePlans: await tx.ratePlan.count({ where: { tenantId: TENANT } }),
+      mappings: await tx.channelListingMapping.count({
+        where: { tenantId: TENANT },
+      }),
+      blocks: await tx.unitCalendarBlock.count({ where: { tenantId: TENANT } }),
+    }));
+
+    const first = await locations.ensureSingleActive({
+      tenantId: TENANT,
+      propertyId: prop,
+      name: "Single Mode Villa",
+      actorUserId: USER,
+    });
+    expect(first.created).toBe(true);
+    expect(first.location.name).toBe("Single Mode Villa");
+
+    const second = await locations.ensureSingleActive({
+      tenantId: TENANT,
+      propertyId: prop,
+      name: "Should Not Duplicate",
+      actorUserId: USER,
+    });
+    expect(second.created).toBe(false);
+    expect(second.location.id).toBe(first.location.id);
+    expect(second.location.name).toBe("Single Mode Villa");
+
+    const concurrentProp = randomUUID();
+    await withTenantTransaction(TENANT, async (tx) => {
+      await tx.property.create({
+        data: {
+          id: concurrentProp,
+          tenantId: TENANT,
+          name: "Concurrent Single",
+          slug: `cs-${concurrentProp.slice(0, 8)}`,
+          type: "apartment",
+          timezone: "Europe/Athens",
+        },
+      });
+    });
+
+    const concurrent = await Promise.all([
+      locations.ensureSingleActive({
+        tenantId: TENANT,
+        propertyId: concurrentProp,
+        name: "Concurrent Single",
+        actorUserId: USER,
+      }),
+      locations.ensureSingleActive({
+        tenantId: TENANT,
+        propertyId: concurrentProp,
+        name: "Concurrent Single",
+        actorUserId: USER,
+      }),
+    ]);
+    expect(concurrent.map((r) => r.location.id).sort()[0]).toBe(
+      concurrent.map((r) => r.location.id).sort()[1],
+    );
+    expect(await locations.countActiveByProperty(TENANT, concurrentProp)).toBe(1);
+
+    const commercialAfter = await withTenantTransaction(TENANT, async (tx) => ({
+      units: await tx.unit.count({
+        where: { tenantId: TENANT, deletedAt: null },
+      }),
+      ratePlans: await tx.ratePlan.count({ where: { tenantId: TENANT } }),
+      mappings: await tx.channelListingMapping.count({
+        where: { tenantId: TENANT },
+      }),
+      blocks: await tx.unitCalendarBlock.count({ where: { tenantId: TENANT } }),
+    }));
+    expect(commercialAfter.units).toBe(commercialBefore.units);
+    expect(commercialAfter.ratePlans).toBe(commercialBefore.ratePlans);
+    expect(commercialAfter.mappings).toBe(commercialBefore.mappings);
+    expect(commercialAfter.blocks).toBe(commercialBefore.blocks);
+  });
 });

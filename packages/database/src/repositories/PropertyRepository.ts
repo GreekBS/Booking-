@@ -285,6 +285,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
         id: true,
         name: true,
         status: true,
+        type: true,
         units: {
           where: { deletedAt: null },
           orderBy: { name: "asc" },
@@ -303,6 +304,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
         id: p.id,
         name: p.name,
         status: p.status,
+        type: p.type,
         units: p.units.map((u) => ({
           id: u.id,
           propertyId: u.propertyId,

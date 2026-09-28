@@ -42,9 +42,14 @@ import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { cn } from "@/lib/utils";
 import { buildQrScanUrl } from "@/features/cleaning/UnitQrSheet";
 
+type PropertyTypeValue = "villa" | "apartment" | "hotel" | "other" | string;
+
 type CleaningLocationsPanelProps = {
   tenantId: string;
   propertyId: string;
+  /** Authoritative Active Property.type */
+  propertyType: PropertyTypeValue;
+  propertyName: string;
 };
 
 function readinessLabel(status: string): string {
@@ -56,11 +61,20 @@ function formatWhen(value: string | null): string {
   return new Date(value).toLocaleString("el-GR");
 }
 
+function isHotelType(type: PropertyTypeValue): boolean {
+  return type === "hotel";
+}
+
 export function CleaningLocationsPanel({
   tenantId,
   propertyId,
+  propertyType,
+  propertyName,
 }: CleaningLocationsPanelProps) {
+  const hotelMode = isHotelType(propertyType);
   const [rows, setRows] = useState<CleaningLocationBoardRow[] | null>(null);
+  const [requiresManualResolution, setRequiresManualResolution] =
+    useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -70,7 +84,7 @@ export function CleaningLocationsPanel({
   const [qrLoadingId, setQrLoadingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [bulkCount, setBulkCount] = useState("10");
+  const [bulkCount, setBulkCount] = useState("30");
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -82,14 +96,21 @@ export function CleaningLocationsPanel({
     setLoading(true);
     try {
       const next = await fetchCleaningLocationsBoard(tenantId, propertyId);
-      setRows(next);
+      setRows(next.data);
+      setRequiresManualResolution(next.requiresManualResolution);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης δωματίων");
+      setError(
+        err instanceof Error
+          ? err.message
+          : hotelMode
+            ? "Αποτυχία φόρτωσης δωματίων"
+            : "Αποτυχία φόρτωσης χώρου καθαρισμού",
+      );
     } finally {
       setLoading(false);
     }
-  }, [tenantId, propertyId]);
+  }, [tenantId, propertyId, hotelMode]);
 
   useEffect(() => {
     void load();
@@ -167,7 +188,7 @@ export function CleaningLocationsPanel({
     setBusy(true);
     try {
       await renameCleaningLocation(tenantId, renameId, name);
-      toastSuccess("Μετονομάστηκε το δωμάτιο");
+      toastSuccess(hotelMode ? "Μετονομάστηκε το δωμάτιο" : "Μετονομάστηκε");
       setRenameId(null);
       await load();
     } catch (err) {
@@ -182,7 +203,9 @@ export function CleaningLocationsPanel({
     setBusy(true);
     try {
       await archiveCleaningLocation(tenantId, archiveId);
-      toastSuccess("Αρχειοθετήθηκε το δωμάτιο");
+      toastSuccess(
+        hotelMode ? "Αρχειοθετήθηκε το δωμάτιο" : "Αρχειοθετήθηκε ο χώρος",
+      );
       setArchiveId(null);
       if (expandedId === archiveId) setExpandedId(null);
       await load();
@@ -226,15 +249,21 @@ export function CleaningLocationsPanel({
   }
 
   const list = rows ?? [];
+  const showHotelSetup = hotelMode && list.length === 0;
+  const showAddRoom = hotelMode && list.length > 0;
+  const sectionTitle = hotelMode ? "Δωμάτια" : "Καθαρισμός καταλύματος";
+  const sectionDescription = hotelMode
+    ? "Χώροι καθαρισμού με QR — ανεξάρτητα από εμπορικές μονάδες"
+    : "Ένας χώρος καθαρισμού για ολόκληρο το κατάλυμα — QR και ιστορικό";
 
   return (
     <>
       <Surface variant="panel">
         <SurfaceHeader
-          title="Δωμάτια"
-          description="Χώροι καθαρισμού με QR — ανεξάρτητα από εμπορικές μονάδες"
+          title={sectionTitle}
+          description={sectionDescription}
           action={
-            list.length > 0 ? (
+            showAddRoom ? (
               <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Προσθήκη δωματίου
@@ -243,15 +272,28 @@ export function CleaningLocationsPanel({
           }
         />
 
-        {list.length === 0 ? (
+        {requiresManualResolution ? (
+          <div
+            role="status"
+            className="mx-3 mb-2 rounded-md border border-warning/40 bg-warning-subtle px-3 py-2 text-sm text-warning-foreground sm:mx-4"
+          >
+            Το κατάλυμα δεν είναι πλέον ξενοδοχείο, αλλά υπάρχουν πολλαπλοί χώροι
+            καθαρισμού. Το ιστορικό διατηρείται. Αρχειοθετήστε τους επιπλέον χώρους
+            μέχρι να μείνει ένας — δεν δημιουργούνται νέοι χώροι αυτόματα.
+          </div>
+        ) : null}
+
+        {showHotelSetup ? (
           <div className="space-y-4 p-4">
             <EmptyState
-              title="Δεν έχουν οριστεί δωμάτια"
+              title="Ρύθμιση δωματίων"
               description="Ορίστε πόσα δωμάτια έχει το κατάλυμα για να δημιουργηθούν με αύξοντες αριθμούς (1, 2, 3…)."
             />
             <div className="flex max-w-md flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
-                <Label htmlFor="bulk-rooms">Πόσα δωμάτια έχει το κατάλυμα;</Label>
+                <Label htmlFor="bulk-rooms">
+                  Πόσα δωμάτια διαθέτει το κατάλυμα;
+                </Label>
                 <Input
                   id="bulk-rooms"
                   type="number"
@@ -267,12 +309,28 @@ export function CleaningLocationsPanel({
               </Button>
             </div>
           </div>
+        ) : list.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title="Δεν υπάρχει χώρος καθαρισμού"
+              description={
+                hotelMode
+                  ? "Ορίστε τα δωμάτια για να ξεκινήσετε."
+                  : `Θα δημιουργηθεί αυτόματα χώρος για «${propertyName || "το κατάλυμα"}». Ανανεώστε ή δοκιμάστε ξανά.`
+              }
+            />
+            <Button className="mt-3" size="sm" variant="outline" onClick={() => void load()}>
+              Ανανέωση
+            </Button>
+          </div>
         ) : (
           <ul className="divide-y border-t">
             {list.map((row) => {
               const open = expandedId === row.locationId;
               const qr = qrByLocation[row.locationId];
               const token = qr?.token ?? null;
+              const canArchive =
+                hotelMode || requiresManualResolution || list.length > 1;
               return (
                 <li key={row.locationId} className="px-3 py-2 sm:px-4">
                   <button
@@ -343,13 +401,15 @@ export function CleaningLocationsPanel({
                           >
                             Μετονομασία
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setArchiveId(row.locationId)}
-                          >
-                            Αρχειοθέτηση
-                          </Button>
+                          {canArchive ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setArchiveId(row.locationId)}
+                            >
+                              Αρχειοθέτηση
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
 
@@ -376,7 +436,8 @@ export function CleaningLocationsPanel({
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground">
-                            Δεν υπάρχει ακόμα κωδικός QR για αυτό το δωμάτιο.
+                            Δεν υπάρχει ακόμα κωδικός QR
+                            {hotelMode ? " για αυτό το δωμάτιο" : ""}.
                           </p>
                         )}
 
@@ -444,7 +505,9 @@ export function CleaningLocationsPanel({
       <Sheet open={Boolean(renameId)} onOpenChange={(open) => !open && setRenameId(null)}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Μετονομασία δωματίου</SheetTitle>
+            <SheetTitle>
+              {hotelMode ? "Μετονομασία δωματίου" : "Μετονομασία χώρου"}
+            </SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-1.5">
@@ -465,8 +528,8 @@ export function CleaningLocationsPanel({
       <ConfirmDialog
         open={Boolean(archiveId)}
         onOpenChange={(open) => !open && setArchiveId(null)}
-        title="Αρχειοθέτηση δωματίου"
-        description="Το δωμάτιο θα αφαιρεθεί από τον πίνακα. Το ιστορικό καθαρισμών διατηρείται."
+        title={hotelMode ? "Αρχειοθέτηση δωματίου" : "Αρχειοθέτηση χώρου"}
+        description="Θα αφαιρεθεί από τον πίνακα. Το ιστορικό καθαρισμών διατηρείται."
         confirmLabel="Αρχειοθέτηση"
         destructive
         onConfirm={() => void handleArchive()}

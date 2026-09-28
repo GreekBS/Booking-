@@ -25,12 +25,16 @@ export async function GET(request: NextRequest) {
     const result = await listCleaningLocationsBoardUseCase.execute(
       { tenantId: actor.tenantId, propertyId: query.propertyId },
       toPermissionActor(actor),
+      { ipAddress: getClientIp(request) },
     );
     if (result.isFailure) return mapResultError(result.getError());
 
-    const rows = result.getValue();
+    const board = result.getValue();
     return apiSuccess({
-      data: rows.map((row) => ({
+      propertyType: board.propertyType,
+      mode: board.mode,
+      requiresManualResolution: board.requiresManualResolution,
+      data: board.rows.map((row) => ({
         locationId: row.locationId,
         propertyId: row.propertyId,
         name: row.name,
