@@ -92,6 +92,8 @@ export {
   PrismaBookingMessagingProfileRepository,
   PrismaMessagingAutomationRunRepository,
   PrismaMessagingUnmatchedInboundRepository,
+  PrismaMessagingContactTokenRepository,
+  PrismaMessagingWaIdentityRouteWriter,
   MetaWhatsAppCloudApiAdapter,
   FakeWhatsAppCloudApiAdapter,
 } from "./repositories/messaging/WhatsAppMessagingRepositories";

@@ -205,6 +205,10 @@ import {
   EnableBookingWhatsAppMessagingUseCase,
   UpsertPropertyMessagingSettingsUseCase,
   RouteWhatsAppInboundUseCase,
+  SendBookingWelcomeEmailUseCase,
+  OnBookingConfirmedMessagingHook,
+  RevokeBookingMessagingContactTokensUseCase,
+  ActivateWhatsAppFromContactTokenUseCase,
 
   GetQuoteUseCase,
 
@@ -532,6 +536,8 @@ import {
   PrismaBookingMessagingProfileRepository,
   PrismaMessagingAutomationRunRepository,
   PrismaMessagingUnmatchedInboundRepository,
+  PrismaMessagingContactTokenRepository,
+  PrismaMessagingWaIdentityRouteWriter,
   MetaWhatsAppCloudApiAdapter,
   PrismaTaskRepository,
   PrismaUnitHousekeepingStatusRepository,
@@ -641,6 +647,7 @@ import {
 import nodePath from "node:path";
 import { BcryptPasswordHasher } from "@/lib/auth/BcryptPasswordHasher";
 import { stubInvitationNotifier } from "@/lib/notifications/stubInvitationNotifier";
+import { stubGuestWelcomeEmailSender } from "@/lib/notifications/stubGuestWelcomeEmailSender";
 import { createProductionChannelProviderRegistry } from "@/lib/channels/enabled-providers";
 import { PollingFeatureGatedPollJobHandler } from "@/lib/channels/PollingFeatureGatedPollJobHandler";
 import { isChannelsPollingEnabled } from "@/lib/channels/polling-enabled";
@@ -1453,6 +1460,44 @@ export const messagingSecretVault = new PrismaMessagingSecretVault();
 export const messagingUnmatchedInboundRepository =
   new PrismaMessagingUnmatchedInboundRepository();
 export const whatsAppCloudApiAdapter = new MetaWhatsAppCloudApiAdapter();
+export const messagingContactTokenRepository =
+  new PrismaMessagingContactTokenRepository();
+export const messagingWaIdentityRouteWriter =
+  new PrismaMessagingWaIdentityRouteWriter();
+
+export const sendBookingWelcomeEmailUseCase = new SendBookingWelcomeEmailUseCase(
+  bookingRepository,
+  propertyRepository,
+  bookingMessagingProfileRepository,
+  propertyMessagingSettingsRepository,
+  messagingContactTokenRepository,
+  platformMessagingConnectionRepository,
+  stubGuestWelcomeEmailSender,
+  opaqueTokenFactory,
+  permissionChecker,
+  idGenerator,
+  auditLogRepository,
+);
+
+export const onBookingConfirmedMessagingHook =
+  new OnBookingConfirmedMessagingHook(sendBookingWelcomeEmailUseCase);
+
+export const revokeBookingMessagingContactTokensUseCase =
+  new RevokeBookingMessagingContactTokensUseCase(
+    messagingContactTokenRepository,
+    messagingAutomationRunRepository,
+  );
+
+export const activateWhatsAppFromContactTokenUseCase =
+  new ActivateWhatsAppFromContactTokenUseCase(
+    messagingContactTokenRepository,
+    bookingMessagingProfileRepository,
+    conversationRepository,
+    bookingRepository,
+    messagingWaIdentityRouteWriter,
+    opaqueTokenFactory,
+    idGenerator,
+  );
 
 export const upsertPropertyMessagingSettingsUseCase =
   new UpsertPropertyMessagingSettingsUseCase(
@@ -1723,25 +1768,17 @@ export const createBookingUseCase = new CreateBookingUseCase(
 
 
 export const confirmBookingUseCase = new ConfirmBookingUseCase(
-
   bookingRepository,
-
   permissionChecker,
-
   auditLogRepository,
-
+  onBookingConfirmedMessagingHook,
 );
 
-
-
 export const cancelBookingUseCase = new CancelBookingUseCase(
-
   bookingRepository,
-
   permissionChecker,
-
   auditLogRepository,
-
+  revokeBookingMessagingContactTokensUseCase,
 );
 
 
@@ -2385,6 +2422,7 @@ const importChannelReservationCommandUseCase = new ImportChannelReservationComma
   channelImportPersistence,
   idGenerator,
   resolveOrCreateGuest,
+  onBookingConfirmedMessagingHook,
 );
 
 const importChannelReservationModifyDryRunUseCase =

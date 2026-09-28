@@ -2,6 +2,9 @@
  * WhatsApp / Booking-driven messaging — persistence-shaped types (V1).
  */
 
+import type { WelcomeEmailStatus } from "./ContactToken";
+export type { WelcomeEmailStatus } from "./ContactToken";
+
 export const PLATFORM_MESSAGING_CONNECTION_STATUSES = [
   "draft",
   "connected",
@@ -15,6 +18,7 @@ export const BOOKING_MESSAGING_CONTACT_SOURCES = [
   "manual",
   "snapshot_prefill",
   "crm_prefill",
+  "email_token",
 ] as const;
 export type BookingMessagingContactSource =
   (typeof BOOKING_MESSAGING_CONTACT_SOURCES)[number];
@@ -87,9 +91,13 @@ export interface PropertyMessagingSettingsRecord {
   tenantId: string;
   propertyId: string;
   whatsappEnabled: boolean;
+  /** Primary V1 workerless Welcome Email activation. */
+  welcomeEmailEnabled: boolean;
+  /** Future Meta template welcome (worker-dependent). */
   welcomeEnabled: boolean;
   welcomeTemplateName: string | null;
   welcomeTemplateLanguage: string;
+  /** Future Arrival automation (worker-dependent). */
   arrivalEnabled: boolean;
   arrivalTemplateName: string | null;
   arrivalTemplateLanguage: string;
@@ -117,6 +125,12 @@ export interface BookingMessagingProfileRecord {
   identityStatus: BookingMessagingIdentityStatus;
   cswOpenUntil: Date | null;
   lastGuestInboundAt: Date | null;
+  welcomeEmailStatus: WelcomeEmailStatus;
+  welcomeEmailTo: string | null;
+  welcomeEmailSentAt: Date | null;
+  welcomeEmailLastError: string | null;
+  welcomeEmailOccurrenceKey: string | null;
+  activeContactTokenId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

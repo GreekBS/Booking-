@@ -84,6 +84,8 @@ export class EnableBookingWhatsAppMessagingUseCase {
       whatsappPhone: string;
       messagingEnabled?: boolean;
       alsoUpdateGuestCrm?: boolean;
+      /** Opt-in future scheduled WA templates (requires worker). Default false. */
+      scheduleProactiveTemplates?: boolean;
     },
     actor: ActorContext,
   ): Promise<
@@ -190,6 +192,12 @@ export class EnableBookingWhatsAppMessagingUseCase {
         identityStatus: "bound",
         cswOpenUntil: profile?.cswOpenUntil ?? null,
         lastGuestInboundAt: profile?.lastGuestInboundAt ?? null,
+        welcomeEmailStatus: profile?.welcomeEmailStatus ?? "none",
+        welcomeEmailTo: profile?.welcomeEmailTo ?? null,
+        welcomeEmailSentAt: profile?.welcomeEmailSentAt ?? null,
+        welcomeEmailLastError: profile?.welcomeEmailLastError ?? null,
+        welcomeEmailOccurrenceKey: profile?.welcomeEmailOccurrenceKey ?? null,
+        activeContactTokenId: profile?.activeContactTokenId ?? null,
         createdAt: profile?.createdAt ?? now,
         updatedAt: now,
       });
@@ -219,7 +227,13 @@ export class EnableBookingWhatsAppMessagingUseCase {
         ipAddress: null,
       });
 
-      if (messagingEnabled && booking.status === "confirmed") {
+      // V1 default: do NOT enqueue worker-dependent Welcome/Arrival WA templates.
+      // Scheduled proactive automations remain available for a future phase.
+      if (
+        messagingEnabled &&
+        booking.status === "confirmed" &&
+        input.scheduleProactiveTemplates === true
+      ) {
         await this.scheduleAutomationsForEnabledBooking({
           tenantId: input.tenantId,
           bookingId: booking.id,
@@ -387,6 +401,7 @@ export class UpsertPropertyMessagingSettingsUseCase {
         tenantId: input.tenantId,
         propertyId: input.propertyId,
         whatsappEnabled: input.whatsappEnabled,
+        welcomeEmailEnabled: input.welcomeEmailEnabled ?? true,
         welcomeEnabled: input.welcomeEnabled,
         welcomeTemplateName: input.welcomeTemplateName,
         welcomeTemplateLanguage: input.welcomeTemplateLanguage || "en",

@@ -5,6 +5,7 @@ import type {
   PlatformMessagingConnectionRecord,
   PropertyMessagingSettingsRecord,
 } from "../domain/WhatsAppMessagingTypes";
+import type { MessagingContactTokenRecord } from "../domain/ContactToken";
 import type { ConversationRecord, MessageRecord } from "../domain/MessagingTypes";
 
 export interface IPlatformMessagingConnectionRepository {
@@ -12,7 +13,9 @@ export interface IPlatformMessagingConnectionRepository {
   findByPhoneNumberId(
     phoneNumberId: string,
   ): Promise<PlatformMessagingConnectionRecord | null>;
-  upsertConnected(input: PlatformMessagingConnectionRecord): Promise<PlatformMessagingConnectionRecord>;
+  upsertConnected(
+    input: PlatformMessagingConnectionRecord,
+  ): Promise<PlatformMessagingConnectionRecord>;
 }
 
 export interface IMessagingSecretVault {
@@ -48,6 +51,29 @@ export interface IBookingMessagingProfileRepository {
     id: string,
     patch: Partial<BookingMessagingProfileRecord>,
   ): Promise<BookingMessagingProfileRecord>;
+}
+
+export interface IMessagingContactTokenRepository {
+  create(
+    input: MessagingContactTokenRecord,
+  ): Promise<MessagingContactTokenRecord>;
+  findByTokenHash(
+    tokenHash: string,
+  ): Promise<MessagingContactTokenRecord | null>;
+  findActiveByBooking(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<MessagingContactTokenRecord | null>;
+  update(
+    tenantId: string,
+    id: string,
+    patch: Partial<MessagingContactTokenRecord>,
+  ): Promise<MessagingContactTokenRecord>;
+  revokeActiveForBooking(
+    tenantId: string,
+    bookingId: string,
+    reason: string,
+  ): Promise<number>;
 }
 
 export interface IMessagingAutomationRunRepository {
@@ -89,11 +115,9 @@ export interface WhatsAppOutboundSendRequest {
   phoneNumberId: string;
   accessToken: string;
   toE164: string;
-  /** Free-form body (session messages only). */
   textBody?: string;
   templateName?: string;
   templateLanguage?: string;
-  /** Ordered template body parameters. */
   templateBodyParameters?: string[];
   clientMessageId: string;
 }
@@ -137,4 +161,30 @@ export interface IWhatsAppConversationLookup {
     tenantId: string,
     externalMessageId: string,
   ): Promise<MessageRecord | null>;
+}
+
+/** Synchronous guest Welcome Email transport (no BackgroundJob). */
+export interface GuestWelcomeEmailPayload {
+  to: string;
+  propertyName: string;
+  guestName: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  whatsappDeepLink: string;
+}
+
+export interface IGuestWelcomeEmailSender {
+  sendWelcome(payload: GuestWelcomeEmailPayload): Promise<void>;
+}
+
+export interface IMessagingWaIdentityRouteWriter {
+  upsertRoute(input: {
+    guestChannelIdentity: string;
+    tenantId: string;
+    propertyId: string;
+    bookingId: string;
+    profileId: string;
+    conversationId: string | null;
+    messagingEnabled: boolean;
+  }): Promise<void>;
 }

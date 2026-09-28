@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 
+/**
+ * V1 Property Guest Messaging settings.
+ * Active: Welcome Email → WhatsApp CTA (workerless).
+ * Scheduled Arrival / proactive WA templates are future (worker-dependent).
+ */
 export function PropertyWhatsAppAutomationsPanel({
   propertyId,
 }: {
@@ -16,19 +19,8 @@ export function PropertyWhatsAppAutomationsPanel({
   const { tenantId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    whatsappEnabled: true,
-    welcomeEnabled: false,
-    welcomeTemplateName: "",
-    welcomeTemplateLanguage: "en",
-    arrivalEnabled: false,
-    arrivalTemplateName: "",
-    arrivalTemplateLanguage: "en",
-    arrivalTimingMode: "check_in_local_time" as const,
-    arrivalLocalTime: "09:00",
-    arrivalOffsetDays: 0,
-    arrivalOffsetHours: 0,
-  });
+  const [welcomeEmailEnabled, setWelcomeEmailEnabled] = useState(true);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -41,20 +33,8 @@ export function PropertyWhatsAppAutomationsPanel({
         );
         const json = await res.json();
         if (res.ok && json.data) {
-          setForm({
-            whatsappEnabled: json.data.whatsappEnabled ?? true,
-            welcomeEnabled: json.data.welcomeEnabled ?? false,
-            welcomeTemplateName: json.data.welcomeTemplateName ?? "",
-            welcomeTemplateLanguage: json.data.welcomeTemplateLanguage ?? "en",
-            arrivalEnabled: json.data.arrivalEnabled ?? false,
-            arrivalTemplateName: json.data.arrivalTemplateName ?? "",
-            arrivalTemplateLanguage: json.data.arrivalTemplateLanguage ?? "en",
-            arrivalTimingMode:
-              json.data.arrivalTimingMode ?? "check_in_local_time",
-            arrivalLocalTime: json.data.arrivalLocalTime ?? "09:00",
-            arrivalOffsetDays: json.data.arrivalOffsetDays ?? 0,
-            arrivalOffsetHours: json.data.arrivalOffsetHours ?? 0,
-          });
+          setWelcomeEmailEnabled(json.data.welcomeEmailEnabled ?? true);
+          setWhatsappEnabled(json.data.whatsappEnabled ?? true);
         }
       } finally {
         setLoading(false);
@@ -75,15 +55,25 @@ export function PropertyWhatsAppAutomationsPanel({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            ...form,
-            welcomeTemplateName: form.welcomeTemplateName || null,
-            arrivalTemplateName: form.arrivalTemplateName || null,
+            whatsappEnabled,
+            welcomeEmailEnabled,
+            // Keep future scheduled template fields disabled in V1 UX.
+            welcomeEnabled: false,
+            welcomeTemplateName: null,
+            welcomeTemplateLanguage: "en",
+            arrivalEnabled: false,
+            arrivalTemplateName: null,
+            arrivalTemplateLanguage: "en",
+            arrivalTimingMode: "check_in_local_time",
+            arrivalLocalTime: "09:00",
+            arrivalOffsetDays: 0,
+            arrivalOffsetHours: 0,
           }),
         },
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message ?? "Save failed");
-      toastSuccess("WhatsApp automations saved");
+      toastSuccess("Guest Messaging settings saved");
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -94,8 +84,8 @@ export function PropertyWhatsAppAutomationsPanel({
   return (
     <Surface>
       <SurfaceHeader
-        title="WhatsApp automations"
-        description="Welcome/Arrival use Meta-approved templates on the central Talos WhatsApp number. Free-form AI replies only inside the guest service window."
+        title="Guest Messaging"
+        description="Welcome Email invites the guest to contact the central Talos WhatsApp number. AI replies only after the guest sends the first message (customer service window)."
       />
       {loading ? (
         <p className="p-4 text-sm text-muted-foreground">Loading…</p>
@@ -104,77 +94,26 @@ export function PropertyWhatsAppAutomationsPanel({
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={form.welcomeEnabled}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, welcomeEnabled: e.target.checked }))
-              }
+              checked={welcomeEmailEnabled}
+              onChange={(e) => setWelcomeEmailEnabled(e.target.checked)}
             />
-            Welcome message enabled
+            Welcome Email enabled
           </label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <Label>Welcome template name</Label>
-              <Input
-                value={form.welcomeTemplateName}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    welcomeTemplateName: e.target.value,
-                  }))
-                }
-                placeholder="talos_welcome_v1"
-              />
-            </div>
-            <div>
-              <Label>Welcome language</Label>
-              <Input
-                value={form.welcomeTemplateLanguage}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    welcomeTemplateLanguage: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={form.arrivalEnabled}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, arrivalEnabled: e.target.checked }))
-              }
+              checked={whatsappEnabled}
+              onChange={(e) => setWhatsappEnabled(e.target.checked)}
             />
-            Arrival message enabled
+            WhatsApp messaging enabled for this property
           </label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <Label>Arrival template name</Label>
-              <Input
-                value={form.arrivalTemplateName}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    arrivalTemplateName: e.target.value,
-                  }))
-                }
-                placeholder="talos_arrival_v1"
-              />
-            </div>
-            <div>
-              <Label>Arrival local time (check-in day)</Label>
-              <Input
-                value={form.arrivalLocalTime}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, arrivalLocalTime: e.target.value }))
-                }
-                placeholder="09:00"
-              />
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Scheduled Arrival and other proactive WhatsApp automations require
+            the Production worker and are not part of active V1. Infrastructure
+            is retained for a future phase.
+          </p>
           <Button onClick={() => void save()} disabled={saving}>
-            {saving ? "Saving…" : "Save automations"}
+            {saving ? "Saving…" : "Save"}
           </Button>
         </div>
       )}

@@ -2,13 +2,16 @@ import { createHmac, timingSafeEqual, randomUUID } from "node:crypto";
 import type {
   BookingMessagingProfileRecord,
   MessagingAutomationRunRecord,
+  MessagingContactTokenRecord,
   MessagingUnmatchedInboundRecord,
   PlatformMessagingConnectionRecord,
   PropertyMessagingSettingsRecord,
   IBookingMessagingProfileRepository,
   IMessagingAutomationRunRepository,
+  IMessagingContactTokenRepository,
   IMessagingSecretVault,
   IMessagingUnmatchedInboundRepository,
+  IMessagingWaIdentityRouteWriter,
   IPlatformMessagingConnectionRepository,
   IPropertyMessagingSettingsRepository,
   IWhatsAppCloudApiAdapter,
@@ -191,6 +194,7 @@ function mapSettings(row: {
   tenantId: string;
   propertyId: string;
   whatsappEnabled: boolean;
+  welcomeEmailEnabled?: boolean;
   welcomeEnabled: boolean;
   welcomeTemplateName: string | null;
   welcomeTemplateLanguage: string;
@@ -209,6 +213,7 @@ function mapSettings(row: {
     tenantId: row.tenantId,
     propertyId: row.propertyId,
     whatsappEnabled: row.whatsappEnabled,
+    welcomeEmailEnabled: row.welcomeEmailEnabled ?? true,
     welcomeEnabled: row.welcomeEnabled,
     welcomeTemplateName: row.welcomeTemplateName,
     welcomeTemplateLanguage: row.welcomeTemplateLanguage,
@@ -248,6 +253,7 @@ export class PrismaPropertyMessagingSettingsRepository
         create: { ...input },
         update: {
           whatsappEnabled: input.whatsappEnabled,
+          welcomeEmailEnabled: input.welcomeEmailEnabled,
           welcomeEnabled: input.welcomeEnabled,
           welcomeTemplateName: input.welcomeTemplateName,
           welcomeTemplateLanguage: input.welcomeTemplateLanguage,
@@ -281,6 +287,12 @@ function mapProfile(row: {
   identityStatus: string;
   cswOpenUntil: Date | null;
   lastGuestInboundAt: Date | null;
+  welcomeEmailStatus?: string;
+  welcomeEmailTo?: string | null;
+  welcomeEmailSentAt?: Date | null;
+  welcomeEmailLastError?: string | null;
+  welcomeEmailOccurrenceKey?: string | null;
+  activeContactTokenId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): BookingMessagingProfileRecord {
@@ -300,6 +312,13 @@ function mapProfile(row: {
     identityStatus: row.identityStatus as BookingMessagingProfileRecord["identityStatus"],
     cswOpenUntil: row.cswOpenUntil,
     lastGuestInboundAt: row.lastGuestInboundAt,
+    welcomeEmailStatus: (row.welcomeEmailStatus ??
+      "none") as BookingMessagingProfileRecord["welcomeEmailStatus"],
+    welcomeEmailTo: row.welcomeEmailTo ?? null,
+    welcomeEmailSentAt: row.welcomeEmailSentAt ?? null,
+    welcomeEmailLastError: row.welcomeEmailLastError ?? null,
+    welcomeEmailOccurrenceKey: row.welcomeEmailOccurrenceKey ?? null,
+    activeContactTokenId: row.activeContactTokenId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -356,6 +375,12 @@ export class PrismaBookingMessagingProfileRepository
           identityStatus: input.identityStatus,
           cswOpenUntil: input.cswOpenUntil,
           lastGuestInboundAt: input.lastGuestInboundAt,
+          welcomeEmailStatus: input.welcomeEmailStatus,
+          welcomeEmailTo: input.welcomeEmailTo,
+          welcomeEmailSentAt: input.welcomeEmailSentAt,
+          welcomeEmailLastError: input.welcomeEmailLastError,
+          welcomeEmailOccurrenceKey: input.welcomeEmailOccurrenceKey,
+          activeContactTokenId: input.activeContactTokenId,
         },
       });
       return mapProfile(row);
@@ -400,8 +425,24 @@ export class PrismaBookingMessagingProfileRepository
       const row = await tx.bookingMessagingProfile.update({
         where: { id },
         data: {
+          ...(patch.guestId !== undefined ? { guestId: patch.guestId } : {}),
           ...(patch.conversationId !== undefined
             ? { conversationId: patch.conversationId }
+            : {}),
+          ...(patch.whatsappPhone !== undefined
+            ? { whatsappPhone: patch.whatsappPhone }
+            : {}),
+          ...(patch.whatsappPhoneNormalized !== undefined
+            ? { whatsappPhoneNormalized: patch.whatsappPhoneNormalized }
+            : {}),
+          ...(patch.guestChannelIdentity !== undefined
+            ? { guestChannelIdentity: patch.guestChannelIdentity }
+            : {}),
+          ...(patch.contactSource !== undefined
+            ? { contactSource: patch.contactSource }
+            : {}),
+          ...(patch.contactConfirmedAt !== undefined
+            ? { contactConfirmedAt: patch.contactConfirmedAt }
             : {}),
           ...(patch.messagingEnabled !== undefined
             ? { messagingEnabled: patch.messagingEnabled }
@@ -414,6 +455,24 @@ export class PrismaBookingMessagingProfileRepository
             : {}),
           ...(patch.lastGuestInboundAt !== undefined
             ? { lastGuestInboundAt: patch.lastGuestInboundAt }
+            : {}),
+          ...(patch.welcomeEmailStatus !== undefined
+            ? { welcomeEmailStatus: patch.welcomeEmailStatus }
+            : {}),
+          ...(patch.welcomeEmailTo !== undefined
+            ? { welcomeEmailTo: patch.welcomeEmailTo }
+            : {}),
+          ...(patch.welcomeEmailSentAt !== undefined
+            ? { welcomeEmailSentAt: patch.welcomeEmailSentAt }
+            : {}),
+          ...(patch.welcomeEmailLastError !== undefined
+            ? { welcomeEmailLastError: patch.welcomeEmailLastError }
+            : {}),
+          ...(patch.welcomeEmailOccurrenceKey !== undefined
+            ? { welcomeEmailOccurrenceKey: patch.welcomeEmailOccurrenceKey }
+            : {}),
+          ...(patch.activeContactTokenId !== undefined
+            ? { activeContactTokenId: patch.activeContactTokenId }
             : {}),
         },
       });
@@ -722,5 +781,160 @@ export class FakeWhatsAppCloudApiAdapter implements IWhatsAppCloudApiAdapter {
       errorCode: null,
       httpStatus: 200,
     };
+  }
+}
+
+function mapToken(row: {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  bookingId: string;
+  guestId: string | null;
+  profileId: string | null;
+  tokenHash: string;
+  status: string;
+  expiresAt: Date;
+  activatedAt: Date | null;
+  activatedConversationId: string | null;
+  activatedWaIdentity: string | null;
+  revokedAt: Date | null;
+  revokeReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): MessagingContactTokenRecord {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    propertyId: row.propertyId,
+    bookingId: row.bookingId,
+    guestId: row.guestId,
+    profileId: row.profileId,
+    tokenHash: row.tokenHash,
+    status: row.status as MessagingContactTokenRecord["status"],
+    expiresAt: row.expiresAt,
+    activatedAt: row.activatedAt,
+    activatedConversationId: row.activatedConversationId,
+    activatedWaIdentity: row.activatedWaIdentity,
+    revokedAt: row.revokedAt,
+    revokeReason: row.revokeReason,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export class PrismaMessagingContactTokenRepository
+  implements IMessagingContactTokenRepository
+{
+  async create(
+    input: MessagingContactTokenRecord,
+  ): Promise<MessagingContactTokenRecord> {
+    return withTenantTransaction(input.tenantId, async (tx) => {
+      const row = await tx.messagingContactToken.create({ data: { ...input } });
+      return mapToken(row);
+    });
+  }
+
+  async findByTokenHash(
+    tokenHash: string,
+  ): Promise<MessagingContactTokenRecord | null> {
+    // Webhook path: no tenant GUC - hash is unguessable; RLS FORCE requires clear context.
+    await clearTenantContext(prisma);
+    const row = await prisma.messagingContactToken.findUnique({
+      where: { tokenHash },
+    });
+    return row ? mapToken(row) : null;
+  }
+
+  async findActiveByBooking(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<MessagingContactTokenRecord | null> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.messagingContactToken.findFirst({
+        where: { tenantId, bookingId, status: "active" },
+        orderBy: { createdAt: "desc" },
+      });
+      return row ? mapToken(row) : null;
+    });
+  }
+
+  async update(
+    tenantId: string,
+    id: string,
+    patch: Partial<MessagingContactTokenRecord>,
+  ): Promise<MessagingContactTokenRecord> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const row = await tx.messagingContactToken.update({
+        where: { id },
+        data: {
+          ...(patch.status !== undefined ? { status: patch.status } : {}),
+          ...(patch.activatedAt !== undefined
+            ? { activatedAt: patch.activatedAt }
+            : {}),
+          ...(patch.activatedConversationId !== undefined
+            ? { activatedConversationId: patch.activatedConversationId }
+            : {}),
+          ...(patch.activatedWaIdentity !== undefined
+            ? { activatedWaIdentity: patch.activatedWaIdentity }
+            : {}),
+          ...(patch.revokedAt !== undefined ? { revokedAt: patch.revokedAt } : {}),
+          ...(patch.revokeReason !== undefined
+            ? { revokeReason: patch.revokeReason }
+            : {}),
+          ...(patch.profileId !== undefined ? { profileId: patch.profileId } : {}),
+        },
+      });
+      return mapToken(row);
+    });
+  }
+
+  async revokeActiveForBooking(
+    tenantId: string,
+    bookingId: string,
+    reason: string,
+  ): Promise<number> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const result = await tx.messagingContactToken.updateMany({
+        where: { tenantId, bookingId, status: "active" },
+        data: {
+          status: "revoked",
+          revokedAt: new Date(),
+          revokeReason: reason.slice(0, 64),
+        },
+      });
+      return result.count;
+    });
+  }
+}
+
+export class PrismaMessagingWaIdentityRouteWriter
+  implements IMessagingWaIdentityRouteWriter
+{
+  async upsertRoute(input: {
+    guestChannelIdentity: string;
+    tenantId: string;
+    propertyId: string;
+    bookingId: string;
+    profileId: string;
+    conversationId: string | null;
+    messagingEnabled: boolean;
+  }): Promise<void> {
+    await clearTenantContext(prisma);
+    await prisma.messagingWaIdentityRoute.upsert({
+      where: {
+        guestChannelIdentity_bookingId: {
+          guestChannelIdentity: input.guestChannelIdentity,
+          bookingId: input.bookingId,
+        },
+      },
+      create: { ...input },
+      update: {
+        tenantId: input.tenantId,
+        propertyId: input.propertyId,
+        profileId: input.profileId,
+        conversationId: input.conversationId,
+        messagingEnabled: input.messagingEnabled,
+      },
+    });
   }
 }

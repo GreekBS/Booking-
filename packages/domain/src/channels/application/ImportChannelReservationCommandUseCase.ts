@@ -48,6 +48,13 @@ export class ImportChannelReservationCommandUseCase {
     private readonly importPersistence: IChannelReservationImportPersistencePort,
     private readonly idGenerator: IIdGenerator,
     private readonly resolveOrCreateGuest: ResolveOrCreateGuest,
+    private readonly messagingActivation?: {
+      onConfirmed(params: {
+        tenantId: string;
+        bookingId: string;
+        systemUserId: string;
+      }): Promise<void>;
+    },
   ) {}
 
   async execute(
@@ -161,6 +168,12 @@ export class ImportChannelReservationCommandUseCase {
         }
         throw error;
       }
+
+      await this.messagingActivation?.onConfirmed({
+        tenantId,
+        bookingId: booking.id,
+        systemUserId: actor.userId,
+      });
 
       return Result.ok({ outcome: "created", booking, link });
     } catch (error) {

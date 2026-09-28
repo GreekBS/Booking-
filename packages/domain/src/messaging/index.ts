@@ -1,5 +1,6 @@
 export * from "./domain/MessagingTypes";
 export * from "./domain/WhatsAppMessagingTypes";
+export * from "./domain/ContactToken";
 export * from "./application/messagingAccess";
 export * from "./application/AssistantPolicy";
 export * from "./application/AssistantContextBuilder";
@@ -8,5 +9,6 @@ export * from "./ports/IMessagingRepositories";
 export * from "./ports/IWhatsAppMessagingPorts";
 export * from "./application/MessagingUseCases";
 export * from "./application/WhatsAppMessagingUseCases";
+export * from "./application/WelcomeEmailActivationUseCases";
 export * from "./application/ArrivalSchedule";
 export * from "./application/HeuristicAssistantProvider";

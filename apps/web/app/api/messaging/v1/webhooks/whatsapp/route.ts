@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual, randomUUID } from "node:crypto";
 import {
   extendCustomerServiceWindow,
+  extractContactTokenFromText,
   whatsappChannelIdentityFromSender,
 } from "@hcp/domain";
 import {
+  activateWhatsAppFromContactTokenUseCase,
   conversationRepository,
   ingestGuestMessageUseCase,
   loadPropertyAmenities,
@@ -43,7 +45,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * Meta WhatsApp inbound + status webhooks (POST).
- * Signature verified with META_APP_SECRET / MESSAGING_WHATSAPP_APP_SECRET.
+ * First-contact: opaque contact token → Booking binding (workerless).
+ * Subsequent: identity route → Conversation.
  */
 export async function POST(request: NextRequest) {
   if (!isWhatsAppWebhookEnabled()) {
@@ -127,46 +130,6 @@ export async function POST(request: NextRequest) {
           const identity = whatsappChannelIdentityFromSender(from);
           if (!identity) continue;
 
-          const route = await routeWhatsAppInboundUseCase.execute({
-            guestChannelIdentity: identity,
-          });
-
-          if (route.outcome === "unmatched") {
-            const existing =
-              await messagingUnmatchedInboundRepository.findByExternalMessageId(
-                wamid,
-              );
-            if (!existing) {
-              await messagingUnmatchedInboundRepository.create({
-                id: randomUUID(),
-                platformConnectionId: connection.id,
-                guestChannelIdentity: identity,
-                externalMessageId: wamid,
-                bodyPreview: body.slice(0, 280),
-                rawMetaJson: { phoneNumberId },
-                status: "open",
-                createdAt: new Date(),
-              });
-            }
-            continue;
-          }
-
-          if (route.outcome === "ambiguous") {
-            for (const profile of route.profiles) {
-              if (!profile.conversationId) continue;
-              await conversationRepository.updateMeta(
-                profile.tenantId,
-                profile.conversationId,
-                { routingStatus: "ambiguous" },
-              );
-            }
-            logger.info("whatsapp inbound ambiguous", { identity });
-            continue;
-          }
-
-          const profile = route.profile;
-          if (!profile.conversationId) continue;
-
           const actor = {
             userId: "00000000-0000-4000-8000-000000000001",
             role: "admin" as const,
@@ -174,26 +137,103 @@ export async function POST(request: NextRequest) {
             isSuperAdmin: true,
           };
 
-          const amenities = await loadPropertyAmenities(
-            profile.tenantId,
-            profile.propertyId,
-          );
+          // PRIMARY first-contact: opaque email contact token (authoritative).
+          let tenantId: string | null = null;
+          let propertyId: string | null = null;
+          let conversationId: string | null = null;
+          let ingestBody = body;
 
-          await conversationRepository.updateMeta(
-            profile.tenantId,
-            profile.conversationId,
-            {
-              lastGuestInboundAt: new Date(),
-              cswOpenUntil: extendCustomerServiceWindow(),
-              routingStatus: "ok",
-            },
-          );
+          if (extractContactTokenFromText(body)) {
+            const activation =
+              await activateWhatsAppFromContactTokenUseCase.execute({
+                rawMessageBody: body,
+                senderWaId: from,
+              });
+            if (activation.outcome === "activated") {
+              tenantId = activation.profile.tenantId;
+              propertyId = activation.profile.propertyId;
+              conversationId = activation.conversation.id;
+              ingestBody = activation.redactedBody || "Hello";
+            } else {
+              // Invalid/expired/revoked token → no disclosure, no AI.
+              const existing =
+                await messagingUnmatchedInboundRepository.findByExternalMessageId(
+                  wamid,
+                );
+              if (!existing) {
+                await messagingUnmatchedInboundRepository.create({
+                  id: randomUUID(),
+                  platformConnectionId: connection.id,
+                  guestChannelIdentity: identity,
+                  externalMessageId: wamid,
+                  bodyPreview: "contact-token-rejected",
+                  rawMetaJson: { phoneNumberId, reason: "token_rejected" },
+                  status: "open",
+                  createdAt: new Date(),
+                });
+              }
+              continue;
+            }
+          } else {
+            const route = await routeWhatsAppInboundUseCase.execute({
+              guestChannelIdentity: identity,
+            });
+
+            if (route.outcome === "unmatched") {
+              const existing =
+                await messagingUnmatchedInboundRepository.findByExternalMessageId(
+                  wamid,
+                );
+              if (!existing) {
+                await messagingUnmatchedInboundRepository.create({
+                  id: randomUUID(),
+                  platformConnectionId: connection.id,
+                  guestChannelIdentity: identity,
+                  externalMessageId: wamid,
+                  bodyPreview: body.slice(0, 280),
+                  rawMetaJson: { phoneNumberId },
+                  status: "open",
+                  createdAt: new Date(),
+                });
+              }
+              continue;
+            }
+
+            if (route.outcome === "ambiguous") {
+              for (const profile of route.profiles) {
+                if (!profile.conversationId) continue;
+                await conversationRepository.updateMeta(
+                  profile.tenantId,
+                  profile.conversationId,
+                  { routingStatus: "ambiguous" },
+                );
+              }
+              logger.info("whatsapp inbound ambiguous", { identity });
+              continue;
+            }
+
+            const profile = route.profile;
+            if (!profile.conversationId) continue;
+            tenantId = profile.tenantId;
+            propertyId = profile.propertyId;
+            conversationId = profile.conversationId;
+          }
+
+          if (!tenantId || !propertyId || !conversationId) continue;
+
+          const amenities = await loadPropertyAmenities(tenantId, propertyId);
+
+          await conversationRepository.updateMeta(tenantId, conversationId, {
+            lastGuestInboundAt: new Date(),
+            cswOpenUntil: extendCustomerServiceWindow(),
+            routingStatus: "ok",
+          });
 
           await ingestGuestMessageUseCase.execute(
             {
-              tenantId: profile.tenantId,
-              conversationId: profile.conversationId,
-              body,
+              tenantId,
+              conversationId,
+              body: ingestBody,
               externalMessageId: wamid,
               amenities,
             },

@@ -311,6 +311,7 @@ model Tenant {
   propertyMessagingSettings      PropertyMessagingSettings[]
   bookingMessagingProfiles       BookingMessagingProfile[]
   messagingAutomationRuns        MessagingAutomationRun[]
+  messagingContactTokens         MessagingContactToken[]
 
   @@map("tenants")
 }
@@ -480,6 +481,7 @@ model Property {
   messagingSettings          PropertyMessagingSettings?
   bookingMessagingProfiles   BookingMessagingProfile[]
   messagingAutomationRuns    MessagingAutomationRun[]
+  messagingContactTokens     MessagingContactToken[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -850,6 +852,7 @@ model Booking {
   escalations              OwnerEscalation[]
   messagingProfile         BookingMessagingProfile?
   messagingAutomationRuns  MessagingAutomationRun[]
+  messagingContactTokens   MessagingContactToken[]
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -1199,6 +1202,7 @@ model Guest {
   conversations            Conversation[]
   escalations              OwnerEscalation[]
   bookingMessagingProfiles BookingMessagingProfile[]
+  messagingContactTokens   MessagingContactToken[]
 
   @@index([tenantId, emailNormalized])
   @@index([tenantId, phoneNormalized])
@@ -2367,9 +2371,13 @@ model PropertyMessagingSettings {
   tenantId                 String   @map("tenant_id") @db.Uuid
   propertyId               String   @map("property_id") @db.Uuid
   whatsappEnabled          Boolean  @default(false) @map("whatsapp_enabled")
+  /// Primary V1: Welcome Email → WhatsApp CTA (workerless).
+  welcomeEmailEnabled      Boolean  @default(true) @map("welcome_email_enabled")
+  /// Future / worker-dependent Meta template welcome (not default V1).
   welcomeEnabled           Boolean  @default(false) @map("welcome_enabled")
   welcomeTemplateName      String?  @map("welcome_template_name") @db.VarChar(128)
   welcomeTemplateLanguage  String   @default("en") @map("welcome_template_language") @db.VarChar(16)
+  /// Future / worker-dependent Arrival automation (not active V1 UX).
   arrivalEnabled           Boolean  @default(false) @map("arrival_enabled")
   arrivalTemplateName      String?  @map("arrival_template_name") @db.VarChar(128)
   arrivalTemplateLanguage  String   @default("en") @map("arrival_template_language") @db.VarChar(16)
@@ -2404,6 +2412,12 @@ model BookingMessagingProfile {
   identityStatus          String    @default("unbound") @map("identity_status") @db.VarChar(32)
   cswOpenUntil            DateTime? @map("csw_open_until") @db.Timestamptz
   lastGuestInboundAt      DateTime? @map("last_guest_inbound_at") @db.Timestamptz
+  welcomeEmailStatus      String    @default("none") @map("welcome_email_status") @db.VarChar(32)
+  welcomeEmailTo          String?   @map("welcome_email_to") @db.VarChar(320)
+  welcomeEmailSentAt      DateTime? @map("welcome_email_sent_at") @db.Timestamptz
+  welcomeEmailLastError   String?   @map("welcome_email_last_error") @db.VarChar(128)
+  welcomeEmailOccurrenceKey String? @map("welcome_email_occurrence_key") @db.VarChar(64)
+  activeContactTokenId    String?   @map("active_contact_token_id") @db.Uuid
   createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -2412,10 +2426,41 @@ model BookingMessagingProfile {
   booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   guest        Guest?        @relation(fields: [guestId], references: [id], onDelete: SetNull)
   conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  contactTokens MessagingContactToken[]
 
   @@unique([bookingId])
   @@index([tenantId, guestChannelIdentity])
   @@map("booking_messaging_profiles")
+}
+
+/// Opaque Guest Messaging contact token (hash-at-rest). Raw token never stored.
+model MessagingContactToken {
+  id                       String    @id @default(uuid()) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  propertyId               String    @map("property_id") @db.Uuid
+  bookingId                String    @map("booking_id") @db.Uuid
+  guestId                  String?   @map("guest_id") @db.Uuid
+  profileId                String?   @map("profile_id") @db.Uuid
+  tokenHash                String    @map("token_hash") @db.VarChar(64)
+  status                   String    @default("active") @db.VarChar(32)
+  expiresAt                DateTime  @map("expires_at") @db.Timestamptz
+  activatedAt              DateTime? @map("activated_at") @db.Timestamptz
+  activatedConversationId  String?   @map("activated_conversation_id") @db.Uuid
+  activatedWaIdentity      String?   @map("activated_wa_identity") @db.VarChar(64)
+  revokedAt                DateTime? @map("revoked_at") @db.Timestamptz
+  revokeReason             String?   @map("revoke_reason") @db.VarChar(64)
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property                @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  booking  Booking                 @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guest    Guest?                  @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  profile  BookingMessagingProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@unique([tokenHash])
+  @@index([tenantId, bookingId])
+  @@map("messaging_contact_tokens")
 }
 
 model MessagingAutomationRun {

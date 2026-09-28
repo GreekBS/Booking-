@@ -568,6 +568,13 @@ export class ConfirmBookingUseCase {
     private readonly bookingRepository: IBookingRepository,
     private readonly permissionChecker: PermissionChecker,
     private readonly auditLogRepository: IAuditLogRepository,
+    private readonly messagingActivation?: {
+      onConfirmed(params: {
+        tenantId: string;
+        bookingId: string;
+        systemUserId: string;
+      }): Promise<void>;
+    },
   ) {}
 
   async execute(
@@ -604,6 +611,13 @@ export class ConfirmBookingUseCase {
         ipAddress: audit?.ipAddress ?? null,
       });
 
+      // Workerless Welcome Email activation — never fails the Booking.
+      await this.messagingActivation?.onConfirmed({
+        tenantId: command.tenantId,
+        bookingId: booking.id,
+        systemUserId: actor.userId,
+      });
+
       return Result.ok(booking);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -622,6 +636,9 @@ export class CancelBookingUseCase {
     private readonly bookingRepository: IBookingRepository,
     private readonly permissionChecker: PermissionChecker,
     private readonly auditLogRepository: IAuditLogRepository,
+    private readonly messagingRevocation?: {
+      execute(tenantId: string, bookingId: string): Promise<void>;
+    },
   ) {}
 
   async execute(
@@ -657,6 +674,12 @@ export class CancelBookingUseCase {
         metadata: { reason: command.reason ?? null },
         ipAddress: audit?.ipAddress ?? null,
       });
+
+      try {
+        await this.messagingRevocation?.execute(command.tenantId, booking.id);
+      } catch {
+        // Cancellation must succeed even if messaging cleanup fails.
+      }
 
       return Result.ok(booking);
     } catch (error) {

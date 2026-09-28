@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, context: Ctx) {
 
 const bodySchema = z.object({
   whatsappEnabled: z.boolean(),
+  welcomeEmailEnabled: z.boolean().optional().default(true),
   welcomeEnabled: z.boolean(),
   welcomeTemplateName: z.string().max(128).nullable(),
   welcomeTemplateLanguage: z.string().max(16).optional(),

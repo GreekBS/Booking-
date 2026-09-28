@@ -12,6 +12,13 @@ export class CreateReservationUseCase {
     private readonly commerceFlowRepository: ICommerceFlowRepository,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly resolveOrCreateGuest: ResolveOrCreateGuest,
+    private readonly messagingActivation?: {
+      onConfirmed(params: {
+        tenantId: string;
+        bookingId: string;
+        systemUserId: string;
+      }): Promise<void>;
+    },
   ) {}
 
   async execute(
@@ -64,6 +71,14 @@ export class CreateReservationUseCase {
             externalReference: reservation.externalReference ?? null,
           },
           ipAddress: audit?.ipAddress ?? null,
+        });
+      }
+
+      if (booking.status === "confirmed") {
+        await this.messagingActivation?.onConfirmed({
+          tenantId: reservation.tenantId,
+          bookingId: booking.id,
+          systemUserId: profile.actor.userId,
         });
       }
 

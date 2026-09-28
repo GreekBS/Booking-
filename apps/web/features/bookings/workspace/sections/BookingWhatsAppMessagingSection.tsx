@@ -21,7 +21,16 @@ type MessagingPayload = {
     conversationId: string | null;
     contactConfirmedAt: string | null;
     cswOpenUntil: string | null;
+    guestChannelIdentity?: string | null;
+    welcomeEmailStatus?: string;
   } | null;
+  welcomeEmail: {
+    status: string;
+    to: string | null;
+    sentAt: string | null;
+    lastError: string | null;
+  } | null;
+  whatsappConnected: boolean;
   automations: Array<{
     trigger: string;
     status: string;
@@ -30,15 +39,36 @@ type MessagingPayload = {
   }>;
 };
 
+function welcomeLabel(status: string | undefined): string {
+  switch (status) {
+    case "sent":
+      return "Sent";
+    case "failed":
+      return "Failed";
+    case "unavailable":
+      return "Unavailable";
+    case "pending":
+      return "Pending";
+    default:
+      return "Not sent";
+  }
+}
+
 export function BookingWhatsAppMessagingSection({
   booking,
 }: BookingSectionProps) {
   const { tenantId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [data, setData] = useState<MessagingPayload | null>(null);
   const [phone, setPhone] = useState("");
   const [alsoCrm, setAlsoCrm] = useState(false);
+
+  const guestEmail =
+    booking.guest.email?.trim() ||
+    booking.linkedGuest?.email?.trim() ||
+    "";
 
   async function reload() {
     if (!tenantId) return;
@@ -68,7 +98,38 @@ export function BookingWhatsAppMessagingSection({
     void reload();
   }, [tenantId, booking.id]);
 
-  async function save() {
+  async function sendWelcomeEmail(manualResend: boolean) {
+    if (!tenantId) return;
+    setEmailBusy(true);
+    try {
+      const res = await fetch(
+        `/api/admin/v1/bookings/${booking.id}/messaging/whatsapp`,
+        {
+          method: "POST",
+          headers: {
+            "x-tenant-id": tenantId,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "send_welcome_email",
+            manualResend,
+          }),
+        },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message ?? "Email failed");
+      toastSuccess(
+        manualResend ? "Welcome Email resent" : "Welcome Email sent",
+      );
+      await reload();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Email failed");
+    } finally {
+      setEmailBusy(false);
+    }
+  }
+
+  async function saveWhatsAppFallback() {
     if (!tenantId) return;
     setSaving(true);
     try {
@@ -81,6 +142,7 @@ export function BookingWhatsAppMessagingSection({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            action: "enable_whatsapp",
             whatsappPhone: phone,
             messagingEnabled: true,
             alsoUpdateGuestCrm: alsoCrm,
@@ -98,29 +160,88 @@ export function BookingWhatsAppMessagingSection({
     }
   }
 
-  const welcome = data?.automations.find((a) => a.trigger === "welcome");
-  const arrival = data?.automations.find((a) => a.trigger === "arrival");
+  const emailStatus =
+    data?.welcomeEmail?.status ?? data?.profile?.welcomeEmailStatus ?? "none";
+  const alreadySent = emailStatus === "sent";
 
   return (
-    <WorkspaceSection title="WhatsApp messaging">
+    <WorkspaceSection title="Guest Messaging">
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Confirm the guest WhatsApp number for this stay. Prefills from the
-            reservation contact or CRM Guest when available. Stay-only by
-            default — does not invent country codes.
-          </p>
-          <div className="space-y-2">
-            <Label htmlFor="wa-phone">WhatsApp phone (E.164)</Label>
-            <Input
-              id="wa-phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+3069…"
-            />
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Primary activation: Welcome Email with a secure WhatsApp contact
+              link. The guest sends the first WhatsApp message — no worker
+              required.
+            </p>
+            <WorkspaceDetailList>
+              <WorkspaceDetailRow
+                label="Email"
+                value={guestEmail || "No usable email"}
+              />
+              <WorkspaceDetailRow
+                label="Welcome Email"
+                value={
+                  welcomeLabel(emailStatus) +
+                  (data?.welcomeEmail?.lastError
+                    ? ` · ${data.welcomeEmail.lastError}`
+                    : "")
+                }
+              />
+              <WorkspaceDetailRow
+                label="WhatsApp"
+                value={
+                  data?.whatsappConnected
+                    ? `Connected · ${data.profile?.guestChannelIdentity ?? data.profile?.whatsappPhone ?? ""}`
+                    : "Not connected"
+                }
+              />
+              <WorkspaceDetailRow
+                label="Conversation"
+                value={data?.profile?.conversationId ?? "—"}
+              />
+            </WorkspaceDetailList>
+            {!guestEmail ? (
+              <p className="text-sm text-amber-700">
+                Automatic email activation is unavailable — no usable guest
+                email. Use the manual WhatsApp contact fallback below.
+              </p>
+            ) : (
+              <Button
+                onClick={() => void sendWelcomeEmail(alreadySent)}
+                disabled={emailBusy || booking.status === "cancelled"}
+              >
+                {emailBusy
+                  ? "Sending…"
+                  : alreadySent
+                    ? "Resend Welcome Email"
+                    : "Send Welcome Email"}
+              </Button>
+            )}
+            {data?.profile?.conversationId ? (
+              <Button variant="outline" size="sm" asChild>
+                <a href="/dashboard/messages">Open conversation</a>
+              </Button>
+            ) : null}
           </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-sm font-medium">Manual WhatsApp fallback</p>
+            <p className="text-sm text-muted-foreground">
+              Confirm an E.164 WhatsApp number for this stay when email
+              activation is unavailable. Stay-only by default.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="wa-phone">WhatsApp phone (E.164)</Label>
+              <Input
+                id="wa-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+3069…"
+              />
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -129,48 +250,14 @@ export function BookingWhatsAppMessagingSection({
               />
               Also update CRM Guest phone
             </label>
-          <Button onClick={() => void save()} disabled={saving || !phone.trim()}>
-            {saving ? "Saving…" : "Confirm & enable messaging"}
-          </Button>
-          <WorkspaceDetailList>
-            <WorkspaceDetailRow
-              label="Status"
-              value={
-                data?.profile?.messagingEnabled
-                  ? `Enabled · ${data.profile.identityStatus}`
-                  : "Not enabled"
-              }
-            />
-            <WorkspaceDetailRow
-              label="Conversation"
-              value={data?.profile?.conversationId ?? "—"}
-            />
-            <WorkspaceDetailRow
-              label="CSW open until"
-              value={data?.profile?.cswOpenUntil ?? "—"}
-            />
-            <WorkspaceDetailRow
-              label="Welcome"
-              value={
-                welcome
-                  ? `${welcome.status}${welcome.scheduledFor ? ` · ${welcome.scheduledFor}` : ""}`
-                  : "—"
-              }
-            />
-            <WorkspaceDetailRow
-              label="Arrival"
-              value={
-                arrival
-                  ? `${arrival.status}${arrival.scheduledFor ? ` · ${arrival.scheduledFor}` : ""}`
-                  : "—"
-              }
-            />
-          </WorkspaceDetailList>
-          {data?.profile?.conversationId ? (
-            <Button variant="outline" size="sm" asChild>
-              <a href="/dashboard/messages">Open Messages</a>
+            <Button
+              variant="secondary"
+              onClick={() => void saveWhatsAppFallback()}
+              disabled={saving || !phone.trim()}
+            >
+              {saving ? "Saving…" : "Confirm & enable messaging"}
             </Button>
-          ) : null}
+          </div>
         </div>
       )}
     </WorkspaceSection>
