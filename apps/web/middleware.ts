@@ -22,10 +22,7 @@ export async function middleware(request: Request) {
   const isMarketingPublic = isPublicMarketingPath(url.pathname);
   const isSeoFile =
     url.pathname === "/robots.txt" || url.pathname === "/sitemap.xml";
-  /** Public marketing lead capture + demo request only — not a broad /api/marketing/* allowlist. */
-  const isPublicMarketingLeadApi =
-    url.pathname === "/api/marketing/v1/leads" ||
-    /^\/api\/marketing\/v1\/leads\/[^/]+\/demo$/.test(url.pathname);
+  const isWidgetEmbed = url.pathname.startsWith("/w/");
   const isApiAuth =
     url.pathname.startsWith("/api/auth") &&
     !url.pathname.startsWith("/api/auth/register") &&
@@ -34,13 +31,26 @@ export async function middleware(request: Request) {
   const isPublicInvite =
     url.pathname.includes("/invitations/") &&
     url.pathname.includes("/accept");
+  /** Storefront guest APIs remain reachable without a session cookie. */
+  const isPublicStorefrontApi = url.pathname.startsWith("/api/storefront/");
+  /** Public marketing lead capture + demo request only — not a broad /api/marketing/* allowlist. */
+  const isPublicMarketingLeadApi =
+    url.pathname === "/api/marketing/v1/leads" ||
+    /^\/api\/marketing\/v1\/leads\/[^/]+\/demo$/.test(url.pathname);
+  /**
+   * Meta WhatsApp Cloud API webhook (GET verify + POST inbound).
+   * Exact path only — never a broad /api/messaging/* exemption.
+   * Route still enforces verify_token (GET) and X-Hub-Signature-256 (POST).
+   */
+  const isPublicWhatsAppWebhook =
+    url.pathname === "/api/messaging/v1/webhooks/whatsapp";
 
   const attachRequestId = (response: NextResponse) => {
     response.headers.set("x-request-id", requestId);
     return response;
   };
 
-  if (isApiAuth || isPublicInvite || isSeoFile) {
+  if (isApiAuth || isPublicInvite || isSeoFile || isPublicWhatsAppWebhook) {
     return attachRequestId(NextResponse.next());
   }
 
@@ -52,6 +62,8 @@ export async function middleware(request: Request) {
     !isAuthPage &&
     !isDevPreview &&
     !isMarketingPublic &&
+    !isWidgetEmbed &&
+    !isPublicStorefrontApi &&
     !isPublicMarketingLeadApi &&
     !url.pathname.startsWith("/api/auth/")
   ) {
