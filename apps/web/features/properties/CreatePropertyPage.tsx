@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { adminFetch, invalidatePropertiesCache } from "@/lib/admin/api";
+import type { PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { ErrorState } from "@/components/admin/error-state";
@@ -21,6 +22,8 @@ import { elCommon } from "@/lib/i18n";
 
 export function CreatePropertyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const onboarding = searchParams.get("onboarding") === "1";
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const [name, setName] = useState("");
   const [type, setType] = useState("villa");
@@ -34,13 +37,16 @@ export function CreatePropertyPage() {
     setLoading(true);
     setError(null);
     try {
-      await adminFetch("/properties", {
+      const created = await adminFetch<PropertyRecord>("/properties", {
         method: "POST",
         tenantId,
         body: JSON.stringify({ name, type, maxGuests }),
       });
       invalidatePropertiesCache(tenantId);
-      router.push("/dashboard/properties");
+      const next = onboarding
+        ? `/dashboard/properties/${created.id}?onboarding=1`
+        : `/dashboard/properties/${created.id}`;
+      router.push(next);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Αποτυχία δημιουργίας καταλύματος");
@@ -59,8 +65,12 @@ export function CreatePropertyPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Νέο κατάλυμα"
-        description="Δημιουργία καταχώρησης για τον οργανισμό. Δημιουργείται προεπιλεγμένη μονάδα με την παρακάτω χωρητικότητα."
+        title={onboarding ? "Πρώτο κατάλυμα" : "Νέο κατάλυμα"}
+        description={
+          onboarding
+            ? "Βήμα 2 από 4 — δημιουργήστε το κατάλυμα. Στη συνέχεια ορίστε τιμές και ενεργοποιήστε το για κρατήσεις."
+            : "Δημιουργία καταχώρησης για τον οργανισμό. Δημιουργείται προεπιλεγμένη μονάδα με την παρακάτω χωρητικότητα."
+        }
       />
 
       <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-4">

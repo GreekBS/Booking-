@@ -26,6 +26,7 @@ import {
   countOutboxForAggregate,
   prisma,
 } from "./helpers";
+import { withTenantTransaction } from "../../src/client";
 import { seedCommerceFixture } from "./commerceFixtures";
 import { runIntegration } from "./integrationGate";
 
@@ -179,9 +180,11 @@ runIntegration("Commerce flow integration", () => {
     expect(holdResult.isSuccess).toBe(true);
     const holdId = holdResult.getValue().id;
 
-    await prisma.bookingHold.update({
-      where: { id: holdId },
-      data: { expiresAt: new Date("2026-01-01T00:00:00.000Z") },
+    await withTenantTransaction(tenantId, async (tx) => {
+      await tx.bookingHold.update({
+        where: { id: holdId },
+        data: { expiresAt: new Date("2026-01-01T00:00:00.000Z") },
+      });
     });
 
     const expireResult = await expireHoldsUseCase.execute(

@@ -25,7 +25,7 @@ describe("Hold / quote lifecycle operator wiring", () => {
     expect(page).toContain("createManualBooking");
     expect(page).toContain("createBookingFromQuote");
     expect(page).toContain("quoteId");
-    expect(page).toContain("Price preview is read-only");
+    expect(page).toContain("Η προεπισκόπηση τιμής είναι μόνο για ανάγνωση");
     // Must not POST /holds inside generateQuote for preview
     expect(page).not.toMatch(/generateQuote[\s\S]*?\/holds/);
   });

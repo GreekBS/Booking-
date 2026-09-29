@@ -66,6 +66,14 @@ export async function setTenantContext(
   await client.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`;
 }
 
+export async function setUserContext(
+  client: PrismaClient | Prisma.TransactionClient,
+  userId: string,
+): Promise<void> {
+  assertValidTenantId(userId);
+  await client.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, true)`;
+}
+
 export async function clearTenantContext(
   client: PrismaClient | Prisma.TransactionClient,
 ): Promise<void> {
@@ -95,6 +103,22 @@ export async function withTenantTransaction<T>(
   return basePrisma.$transaction(async (tx) => {
     await setTenantContext(tx, tenantId);
     return tenantTxAls.run({ tenantId, tx }, () => fn(tx));
+  }, options);
+}
+
+/**
+ * Read path for cross-tenant user-scoped rows (e.g. memberships for /me).
+ * Sets SET LOCAL app.current_user_id for the matching SELECT RLS policy.
+ */
+export async function withUserScopedTransaction<T>(
+  userId: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  options: { maxWait?: number; timeout?: number } = DEFAULT_TX_OPTIONS,
+): Promise<T> {
+  assertValidTenantId(userId);
+  return basePrisma.$transaction(async (tx) => {
+    await setUserContext(tx, userId);
+    return fn(tx);
   }, options);
 }
 

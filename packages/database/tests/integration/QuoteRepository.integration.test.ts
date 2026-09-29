@@ -9,6 +9,7 @@ import {
   countOutboxForAggregate,
   prisma,
 } from "./helpers";
+import { withTenantTransaction } from "../../src/client";
 import { seedCommerceFixture } from "./commerceFixtures";
 import { runIntegration } from "./integrationGate";
 
@@ -72,7 +73,9 @@ runIntegration("QuoteRepository integration", () => {
     expect(loaded?.snapshot.totalAmount).toBe(quote.snapshot.totalAmount);
     expect(loaded?.snapshot.checkIn).toBe("2026-12-01");
 
-    const row = await prisma.quote.findUnique({ where: { id: quoteId } });
+    const row = await withTenantTransaction(tenantId, async (tx) =>
+      tx.quote.findUnique({ where: { id: quoteId } }),
+    );
     expect(row?.snapshot).toBeTruthy();
 
     expect(await countOutboxForAggregate(quoteId)).toBe(1);

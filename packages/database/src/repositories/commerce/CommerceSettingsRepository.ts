@@ -4,6 +4,20 @@ import type {
 } from "@hcp/domain";
 import { withTenantTransaction } from "../../client";
 
+function toReadModel(record: {
+  tenantId: string;
+  defaultHoldTtlSeconds: number;
+  confirmationMode: "manual" | "payment_required";
+  defaultCurrency: string;
+}): CommerceSettingsReadModel {
+  return {
+    tenantId: record.tenantId,
+    defaultHoldTtlSeconds: record.defaultHoldTtlSeconds,
+    confirmationMode: record.confirmationMode,
+    defaultCurrency: record.defaultCurrency,
+  };
+}
+
 export class PrismaCommerceSettingsRepository implements ICommerceSettingsRepository {
   async findByTenantId(tenantId: string): Promise<CommerceSettingsReadModel | null> {
     return withTenantTransaction(tenantId, async (tx) => {
@@ -15,12 +29,23 @@ export class PrismaCommerceSettingsRepository implements ICommerceSettingsReposi
         return null;
       }
 
-      return {
-        tenantId: record.tenantId,
-        defaultHoldTtlSeconds: record.defaultHoldTtlSeconds,
-        confirmationMode: record.confirmationMode,
-        defaultCurrency: record.defaultCurrency,
-      };
+      return toReadModel(record);
+    });
+  }
+
+  async ensureDefaults(tenantId: string): Promise<CommerceSettingsReadModel> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.tenantCommerceSettings.upsert({
+        where: { tenantId },
+        create: {
+          tenantId,
+          defaultHoldTtlSeconds: 900,
+          confirmationMode: "manual",
+          defaultCurrency: "EUR",
+        },
+        update: {},
+      });
+      return toReadModel(record);
     });
   }
 
@@ -38,12 +63,7 @@ export class PrismaCommerceSettingsRepository implements ICommerceSettingsReposi
         },
       });
 
-      return {
-        tenantId: record.tenantId,
-        defaultHoldTtlSeconds: record.defaultHoldTtlSeconds,
-        confirmationMode: record.confirmationMode,
-        defaultCurrency: record.defaultCurrency,
-      };
+      return toReadModel(record);
     });
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
@@ -255,6 +256,18 @@ export function PricingPage() {
           </Button>
         }
       />
+
+      {property?.status === "draft" ? (
+        <Surface className="mb-5" padding="md" variant="panel">
+          <SurfaceHeader
+            title="Το κατάλυμα είναι Πρόχειρο"
+            description="Μπορείτε να αποθηκεύσετε τιμοκατάλογο τώρα. Για διαθεσιμότητα και κρατήσεις, ενεργοποιήστε το κατάλυμα."
+          />
+          <Button variant="outline" asChild>
+            <Link href={`/dashboard/properties/${property.id}`}>Ενεργοποίηση καταλύματος</Link>
+          </Button>
+        </Surface>
+      ) : null}
 
       <Surface className="mb-5" padding="md">
         <SurfaceHeader

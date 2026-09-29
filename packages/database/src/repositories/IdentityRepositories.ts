@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { prisma, withTenantTransaction } from "../client";
+import { prisma, withTenantTransaction, withUserScopedTransaction } from "../client";
 import {
   User,
   Membership,
@@ -11,8 +11,6 @@ import {
 } from "@hcp/domain";
 import {
   PrismaOutboxRepository,
-  saveAggregateWithOutbox,
-  type TransactionClient,
 } from "./OutboxRepository";
 import type {
   User as PrismaUser,
@@ -132,29 +130,26 @@ export class PrismaMembershipRepository implements IMembershipRepository {
     const props = membership.toProps();
     const events = membership.pullDomainEvents();
 
-    await withTenantTransaction(props.tenantId, async () => {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        events,
-        async (tx: TransactionClient) => {
-          await tx.membership.upsert({
-            where: { id: props.id },
-            create: {
-              id: props.id,
-              userId: props.userId,
-              tenantId: props.tenantId,
-              role: props.role as TenantRole,
-              propertyIds: props.propertyIds ?? [],
-              status: props.status as MembershipStatus,
-            },
-            update: {
-              role: props.role as TenantRole,
-              propertyIds: props.propertyIds ?? [],
-              status: props.status as MembershipStatus,
-            },
-          });
+    // Use the interactive TX client directly — do not rely on ALS alone.
+    // Nested prisma.$transaction without the tenant GUC fails FORCE RLS inserts.
+    await withTenantTransaction(props.tenantId, async (tx) => {
+      await tx.membership.upsert({
+        where: { id: props.id },
+        create: {
+          id: props.id,
+          userId: props.userId,
+          tenantId: props.tenantId,
+          role: props.role as TenantRole,
+          propertyIds: props.propertyIds ?? [],
+          status: props.status as MembershipStatus,
         },
-      );
+        update: {
+          role: props.role as TenantRole,
+          propertyIds: props.propertyIds ?? [],
+          status: props.status as MembershipStatus,
+        },
+      });
+      await this.outboxRepository.saveEvents(events, tx);
     });
   }
 
@@ -183,8 +178,10 @@ export class PrismaMembershipRepository implements IMembershipRepository {
   }
 
   async findByUser(userId: string): Promise<Membership[]> {
-    const records = await prisma.membership.findMany({ where: { userId } });
-    return records.map(mapMembership);
+    return withUserScopedTransaction(userId, async (tx) => {
+      const records = await tx.membership.findMany({ where: { userId } });
+      return records.map(mapMembership);
+    });
   }
 }
 
@@ -195,32 +192,27 @@ export class PrismaInvitationRepository implements IInvitationRepository {
     const props = invitation.toProps();
     const events = invitation.pullDomainEvents();
 
-    await withTenantTransaction(props.tenantId, async () => {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        events,
-        async (tx: TransactionClient) => {
-          await tx.invitation.upsert({
-            where: { id: props.id },
-            create: {
-              id: props.id,
-              tenantId: props.tenantId,
-              email: props.email,
-              role: props.role as TenantRole,
-              propertyIds: props.propertyIds ?? [],
-              tokenHash: props.tokenHash,
-              expiresAt: props.expiresAt,
-              acceptedAt: props.acceptedAt,
-              invitedById: props.invitedBy,
-            },
-            update: {
-              acceptedAt: props.acceptedAt,
-              tokenHash: props.tokenHash,
-              expiresAt: props.expiresAt,
-            },
-          });
+    await withTenantTransaction(props.tenantId, async (tx) => {
+      await tx.invitation.upsert({
+        where: { id: props.id },
+        create: {
+          id: props.id,
+          tenantId: props.tenantId,
+          email: props.email,
+          role: props.role as TenantRole,
+          propertyIds: props.propertyIds ?? [],
+          tokenHash: props.tokenHash,
+          expiresAt: props.expiresAt,
+          acceptedAt: props.acceptedAt,
+          invitedById: props.invitedBy,
         },
-      );
+        update: {
+          acceptedAt: props.acceptedAt,
+          tokenHash: props.tokenHash,
+          expiresAt: props.expiresAt,
+        },
+      });
+      await this.outboxRepository.saveEvents(events, tx);
     });
   }
 

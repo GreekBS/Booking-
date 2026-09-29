@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { PropertyDetailPage } from "@/features/properties/PropertyDetailPage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PageProps {
   params: Promise<{ propertyId: string }>;
@@ -6,5 +8,9 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { propertyId } = await params;
-  return <PropertyDetailPage propertyId={propertyId} />;
+  return (
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+      <PropertyDetailPage propertyId={propertyId} />
+    </Suspense>
+  );
 }

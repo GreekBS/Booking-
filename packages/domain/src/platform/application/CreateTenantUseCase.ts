@@ -15,6 +15,7 @@ import type {
 import type { IIdGenerator } from "../../shared/ports/IIdGenerator";
 import type { UseCaseAuditContext } from "../../shared/types/AuditContext";
 import type { IAuditLogRepository } from "../../shared/ports/InfrastructurePorts";
+import type { ICommerceSettingsRepository } from "../../commerce/ports/CommercePorts";
 
 export interface CreateTenantCommand {
   name: string;
@@ -45,6 +46,7 @@ export class CreateTenantUseCase {
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly idGenerator: IIdGenerator,
     private readonly generateInviteToken: () => { token: string; tokenHash: string },
+    private readonly commerceSettingsRepository?: ICommerceSettingsRepository,
   ) {}
 
   async execute(
@@ -80,6 +82,10 @@ export class CreateTenantUseCase {
       });
 
       await this.tenantRepository.save(tenant);
+
+      if (this.commerceSettingsRepository) {
+        await this.commerceSettingsRepository.ensureDefaults(tenant.id);
+      }
 
       let provisioning: TenantProvisioningResult | null = null;
 

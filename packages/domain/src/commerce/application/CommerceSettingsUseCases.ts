@@ -1,5 +1,5 @@
 import { Result } from "../../shared/kernel/Result";
-import { ForbiddenError, ValidationError } from "../../shared/errors/DomainError";
+import { ForbiddenError } from "../../shared/errors/DomainError";
 import type { UseCaseAuditContext } from "../../shared/types/AuditContext";
 import type { IAuditLogRepository } from "../../shared/ports/InfrastructurePorts";
 import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
@@ -28,7 +28,9 @@ export class GetCommerceSettingsUseCase {
 
       const settings = await this.commerceSettingsRepository.findByTenantId(tenantId);
       if (!settings) {
-        return Result.fail(new ValidationError("Commerce settings not found"));
+        // Idempotent backfill for tenants created before commerce defaults on create.
+        const ensured = await this.commerceSettingsRepository.ensureDefaults(tenantId);
+        return Result.ok(ensured);
       }
 
       return Result.ok(settings);
@@ -68,9 +70,9 @@ export class UpdateCommerceSettingsUseCase {
         return Result.fail(new ForbiddenError());
       }
 
-      const current = await this.commerceSettingsRepository.findByTenantId(command.tenantId);
+      let current = await this.commerceSettingsRepository.findByTenantId(command.tenantId);
       if (!current) {
-        return Result.fail(new ValidationError("Commerce settings not found"));
+        current = await this.commerceSettingsRepository.ensureDefaults(command.tenantId);
       }
 
       const updated = await this.commerceSettingsRepository.update(command.tenantId, {

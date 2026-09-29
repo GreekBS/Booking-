@@ -810,7 +810,11 @@ export class ConfigureAvailabilityRulesUseCase {
         return Result.fail(new ForbiddenError());
       }
 
-      const unitCtx = await resolveUnitContext(this.catalog, command.unitId, command.tenantId);
+      const unitCtx = await resolveUnitContextForOperatorRead(
+        this.catalog,
+        command.unitId,
+        command.tenantId,
+      );
       if (unitCtx.isFailure) {
         return Result.fail(unitCtx.getError());
       }
@@ -873,7 +877,11 @@ export class ConfigureRatePlanUseCase {
         return Result.fail(new ForbiddenError());
       }
 
-      const unitCtx = await resolveUnitContext(this.catalog, command.unitId, command.tenantId);
+      const unitCtx = await resolveUnitContextForOperatorRead(
+        this.catalog,
+        command.unitId,
+        command.tenantId,
+      );
       if (unitCtx.isFailure) {
         return Result.fail(unitCtx.getError());
       }

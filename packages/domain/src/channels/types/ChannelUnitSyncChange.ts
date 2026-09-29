@@ -1,4 +1,5 @@
 import type { MutationOrigin } from "../../shared/types/MutationOrigin";
+import { sha256HexUtf8 } from "../utils/sha256Hex";
 
 /**
  * Provider-independent change intent for external distribution.
@@ -25,10 +26,16 @@ export interface ChannelUnitSyncChangePayload {
   readonly sourceEventId: string;
 }
 
+/**
+ * Outbox `delivery_key` is CHAR(64). Hash the logical identity so rate/rules
+ * sourceEventIds (uuid + timestamp) never overflow the column.
+ */
 export function buildUnitExternalSyncDeliveryKey(input: {
   tenantId: string;
   unitId: string;
   sourceEventId: string;
 }): string {
-  return `unit-external-sync:${input.tenantId}:${input.unitId}:${input.sourceEventId}`;
+  return sha256HexUtf8(
+    `unit-external-sync:${input.tenantId}:${input.unitId}:${input.sourceEventId}`,
+  );
 }

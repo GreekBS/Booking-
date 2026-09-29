@@ -6,7 +6,7 @@ import type {
   OutboxFailureDisposition,
 } from "@hcp/domain";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "../client";
+import { getTenantTransaction, prisma } from "../client";
 import {
   TALOS_ASYNC_WAKE_OUTBOX_CHANNEL,
   notifyTalosAsyncWake,
@@ -200,6 +200,16 @@ export async function saveAggregateWithOutbox(
   events: DomainEvent[],
   persist: (tx: TransactionClient) => Promise<void>,
 ): Promise<void> {
+  // Prefer the active tenant TX so SET LOCAL app.current_tenant is preserved.
+  // Nested prisma.$transaction can otherwise open a new connection without the GUC
+  // (RLS fail-closed on memberships/properties/etc.).
+  const existingTx = getTenantTransaction();
+  if (existingTx) {
+    await persist(existingTx);
+    await outboxRepository.saveEvents(events, existingTx);
+    return;
+  }
+
   await prisma.$transaction(async (tx) => {
     await persist(tx);
     await outboxRepository.saveEvents(events, tx);

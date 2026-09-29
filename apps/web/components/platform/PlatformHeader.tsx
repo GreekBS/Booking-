@@ -56,7 +56,7 @@ export function PlatformHeader({ title, environment, onMenuClick }: Props) {
 
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ callbackUrl: "/" })}
           className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--platform-border)] px-2.5 text-xs font-medium text-[var(--platform-ink-soft)] hover:bg-[var(--platform-muted-bg)]"
         >
           <LogOut className="h-3.5 w-3.5" aria-hidden />

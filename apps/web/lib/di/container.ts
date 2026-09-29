@@ -2,6 +2,8 @@ import {
 
   CreateTenantUseCase,
 
+  CreateOrganizationForUserUseCase,
+
   SuspendTenantUseCase,
 
   ActivateTenantUseCase,
@@ -716,6 +718,8 @@ const invitationRepository = new PrismaInvitationRepository(outboxRepository);
 
 export const auditLogRepository = new PrismaAuditLogRepository();
 
+const commerceSettingsRepository = new PrismaCommerceSettingsRepository();
+
 const amenityRepository = new PrismaAmenityRepository();
 
 const sessionRepository = new PrismaSessionRepository();
@@ -739,6 +743,24 @@ export const createTenantUseCase = new CreateTenantUseCase(
   idGenerator,
 
   generateInviteToken,
+
+  commerceSettingsRepository,
+
+);
+
+export const createOrganizationForUserUseCase = new CreateOrganizationForUserUseCase(
+
+  createTenantUseCase,
+
+  userRepository,
+
+  membershipRepository,
+
+  tenantRepository,
+
+  idGenerator,
+
+  commerceSettingsRepository,
 
 );
 
@@ -1137,8 +1159,6 @@ const storefrontCatalogAdapter = new PrismaStorefrontCatalogAdapter();
 export const storefrontIdempotencyRepository = new PrismaStorefrontIdempotencyRepository();
 
 export const publishableKeyRepository = new PrismaPublishableKeyRepository();
-
-const commerceSettingsRepository = new PrismaCommerceSettingsRepository();
 
 export { holdRepository, quoteRepository, bookingRepository, storefrontCatalogAdapter };
 

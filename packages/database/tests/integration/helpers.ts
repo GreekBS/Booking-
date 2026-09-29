@@ -13,6 +13,35 @@ export async function truncateIntegrationTables(): Promise<void> {
   );
   // Clear RLS tenant GUC so deletes are not filtered to a single tenant.
   await clearTenantContext(prisma);
+
+  // FORCE RLS: unscoped deleteMany is often a no-op. Clean int-* tenants under GUC first.
+  const intTenants = await prisma.tenant.findMany({
+    where: { slug: { startsWith: "int-" } },
+    select: { id: true },
+  });
+  for (const { id: tenantId } of intTenants) {
+    await withTenantTransaction(tenantId, async (tx) => {
+      await tx.booking.deleteMany({ where: { tenantId } });
+      await tx.guest.deleteMany({ where: { tenantId } });
+      await tx.quote.deleteMany({ where: { tenantId } });
+      await tx.bookingHold.deleteMany({ where: { tenantId } });
+      await tx.unitCalendarBlock.deleteMany({ where: { tenantId } });
+      await tx.rateDowModifier.deleteMany({ where: { tenantId } });
+      await tx.rateSeason.deleteMany({ where: { tenantId } });
+      await tx.ratePlan.deleteMany({ where: { tenantId } });
+      await tx.unitAvailabilityRule.deleteMany({ where: { tenantId } });
+      await tx.tenantCommerceSettings.deleteMany({ where: { tenantId } });
+      await tx.outboxEvent.deleteMany({ where: { tenantId } });
+      await tx.propertyAmenity.deleteMany({
+        where: { property: { tenantId } },
+      });
+      await tx.unit.deleteMany({ where: { tenantId } });
+      await tx.property.deleteMany({ where: { tenantId } });
+      await tx.invitation.deleteMany({ where: { tenantId } });
+      await tx.membership.deleteMany({ where: { tenantId } });
+    });
+  }
+
   await prisma.channelSemanticTransitionCommand.deleteMany();
   await prisma.channelSecretRecord.deleteMany();
   await prisma.channelInventoryReconciliation.deleteMany();
@@ -51,9 +80,26 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();
   await prisma.verificationToken.deleteMany();
-  await prisma.user.deleteMany({
+  // Shared demo DB + FORCE RLS can leave invitations invisible to unscoped
+  // deleteMany while still enforcing invited_by FK against integration users.
+  const integrationUsers = await prisma.user.findMany({
     where: { email: { contains: "@integration.test" } },
+    select: { id: true },
   });
+  if (integrationUsers.length > 0) {
+    const integrationUserIds = integrationUsers.map((u) => u.id);
+    try {
+      await prisma.invitation.deleteMany({
+        where: { invitedById: { in: integrationUserIds } },
+      });
+      await prisma.user.deleteMany({
+        where: { id: { in: integrationUserIds } },
+      });
+    } catch {
+      // Best-effort on shared demo: do not fail the suite when RLS hides
+      // invitation rows that still block user deletes.
+    }
+  }
   await prisma.tenant.deleteMany({
     where: { slug: { startsWith: "int-" } },
   });

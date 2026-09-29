@@ -1,13 +1,15 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ErrorState } from "@/components/admin/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminFetch } from "@/lib/admin/api";
 import type { MeProfile } from "@/lib/admin/types";
 
-const NO_TENANT_MESSAGE =
-  "No active tenant. Super admins must impersonate a tenant from Platform Admin first.";
+const NO_TENANT_SA_MESSAGE =
+  "Δεν υπάρχει ενεργός οργανισμός. Οι διαχειριστές πλατφόρμας πρέπει να επιλέξουν οργανισμό από τη Διαχείριση πλατφόρμας.";
 
 export function renderTenantGate(
   state: { loading: boolean; error: string | null; tenantId: string | null },
@@ -20,7 +22,12 @@ export function renderTenantGate(
     return <ErrorState message={state.error} />;
   }
   if (!state.tenantId) {
-    return <ErrorState title="No tenant context" message={NO_TENANT_MESSAGE} />;
+    return (
+      <ErrorState
+        title="Απαιτείται οργανισμός"
+        message="Δημιουργήστε οργανισμό για να συνεχίσετε, ή ανοίξτε την ενότητα έναρξης."
+      />
+    );
   }
   return null;
 }
@@ -41,6 +48,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<MeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { update } = useSession();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -55,14 +65,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const switchTenant = useCallback(async (tenantId: string) => {
-    await adminFetch<{ activeTenantId: string }>("/me", {
-      method: "PATCH",
-      body: JSON.stringify({ activeTenantId: tenantId }),
-    });
-    await refresh();
-    window.location.reload();
-  }, [refresh]);
+  const switchTenant = useCallback(
+    async (nextTenantId: string) => {
+      await adminFetch<{ activeTenantId: string }>("/me", {
+        method: "PATCH",
+        body: JSON.stringify({ activeTenantId: nextTenantId }),
+      });
+      await update({ activeTenantId: nextTenantId });
+      window.location.reload();
+    },
+    [update],
+  );
 
   useEffect(() => {
     void refresh();
@@ -71,6 +84,15 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const tenantId = profile?.activeTenantId ?? profile?.memberships?.[0]?.tenantId ?? null;
   const tenantName =
     profile?.memberships.find((m) => m.tenantId === tenantId)?.tenantName ?? "Tenant";
+  const isSuperAdmin = profile?.user?.platformRole === "super_admin";
+  const needsCustomerOnboarding =
+    !loading && !error && !tenantId && !isSuperAdmin && Boolean(profile);
+
+  useEffect(() => {
+    if (!needsCustomerOnboarding) return;
+    if (pathname?.startsWith("/dashboard/onboarding")) return;
+    router.replace("/dashboard/onboarding");
+  }, [needsCustomerOnboarding, pathname, router]);
 
   const value = useMemo(
     () => ({
@@ -85,7 +107,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     [profile, tenantId, tenantName, loading, error, refresh, switchTenant],
   );
 
-  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+  let body: React.ReactNode = children;
+  if (needsCustomerOnboarding && !pathname?.startsWith("/dashboard/onboarding")) {
+    body = <Skeleton className="h-96 w-full" />;
+  } else if (!loading && !tenantId && isSuperAdmin && !pathname?.startsWith("/platform")) {
+    body = (
+      <ErrorState title="Δεν υπάρχει πλαίσιο οργανισμού" message={NO_TENANT_SA_MESSAGE} />
+    );
+  }
+
+  return <TenantContext.Provider value={value}>{body}</TenantContext.Provider>;
 }
 
 export function useTenant() {

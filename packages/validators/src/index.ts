@@ -18,6 +18,20 @@ export const createTenantSchema = z.object({
   adminName: z.string().min(2).max(255).optional(),
 });
 
+/** Self-serve customer organization (no platform role). */
+export const createOrganizationSchema = z.object({
+  name: z.string().min(2).max(255),
+  slug: z
+    .string()
+    .min(3)
+    .max(63)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .optional(),
+  timezone: z.string().optional(),
+  defaultLocale: z.string().optional(),
+  defaultCurrency: z.string().length(3).optional(),
+});
+
 export const updateTenantSchema = z.object({
   name: z.string().min(2).max(255).optional(),
   timezone: z.string().optional(),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { adminFetch, invalidatePropertiesCache } from "@/lib/admin/api";
 import type { AmenityRecord, PropertyRecord } from "@/lib/admin/types";
@@ -41,6 +41,8 @@ interface PropertyDetailPageProps {
 
 export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const onboarding = searchParams.get("onboarding") === "1";
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const [property, setProperty] = useState<PropertyRecord | null>(null);
   const [amenities, setAmenities] = useState<AmenityRecord[]>([]);
@@ -136,6 +138,11 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
     router.push("/dashboard/properties");
   }
 
+  async function activateProperty() {
+    setForm((prev) => ({ ...prev, status: "active" }));
+    await save({ status: "active" });
+  }
+
   const tenantGate = renderTenantGate({
     loading: tenantLoading,
     error: tenantError,
@@ -146,6 +153,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
   if (error && !property) return <ErrorState message={error} onRetry={() => void loadProperty()} />;
   if (!property) return <ErrorState message="Το κατάλυμα δεν βρέθηκε" />;
 
+  const isDraft = property.status === "draft";
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -154,6 +163,11 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         actions={
           <div className="flex items-center gap-2">
             <StatusBadge status={property.status} />
+            {isDraft ? (
+              <Button size="sm" disabled={saving} onClick={() => void activateProperty()}>
+                {saving ? elCommon.saving : "Ενεργοποίηση καταλύματος"}
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/properties/${propertyId}/assistant`}>
                 AI Assistant
@@ -173,7 +187,46 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         </div>
       ) : null}
 
-      <Tabs defaultValue="general">
+      {(isDraft || onboarding) && (
+        <Surface variant="panel" padding="md">
+          <SurfaceHeader
+            title={isDraft ? "Το κατάλυμα είναι Πρόχειρο" : "Επόμενα βήματα"}
+            description={
+              isDraft
+                ? "Τα πρόχειρα καταλύματα δέχονται τιμοκαταλόγους, αλλά όχι κρατήσεις ή έλεγχο διαθεσιμότητας. Ολοκληρώστε τη ρύθμιση και ενεργοποιήστε το."
+                : "Οργανισμός και κατάλυμα είναι έτοιμα. Ορίστε τιμές και δημιουργήστε την πρώτη κράτηση."
+            }
+          />
+          <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Ολοκληρώστε βασικά στοιχεία (όνομα, τοποθεσία, πολιτικές) αν χρειάζεται</li>
+            <li>
+              Ορίστε{" "}
+              <Link href="/dashboard/pricing" className="underline underline-offset-2">
+                τιμοκατάλογο
+              </Link>{" "}
+              για την προεπιλεγμένη μονάδα
+            </li>
+            <li>Ενεργοποιήστε το κατάλυμα (κατάσταση → Ενεργό)</li>
+            <li>
+              Δημιουργήστε{" "}
+              <Link href="/dashboard/bookings/new" className="underline underline-offset-2">
+                χειροκίνητη κράτηση
+              </Link>
+            </li>
+          </ol>
+          {isDraft ? (
+            <Button disabled={saving} onClick={() => void activateProperty()}>
+              {saving ? elCommon.saving : "Ενεργοποίηση καταλύματος"}
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/dashboard/bookings/new">Νέα κράτηση</Link>
+            </Button>
+          )}
+        </Surface>
+      )}
+
+      <Tabs defaultValue={onboarding || isDraft ? "status" : "general"}>
         <TabsList className="mb-4 flex-wrap">
           <TabsTrigger value="general">Γενικά</TabsTrigger>
           <TabsTrigger value="units">Μονάδες</TabsTrigger>
@@ -448,10 +501,20 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         <TabsContent value="status">
           <Surface variant="panel" padding="md">
             <SurfaceHeader
-              title="Κατάσταση δημοσίευσης"
-              description="Ενεργά καταλύματα στο storefront. Πρόχειρα μόνο για διαχειριστές."
+              title="Κατάσταση λειτουργίας"
+              description={
+                isDraft
+                  ? "Πρόχειρο: μπορείτε να ρυθμίσετε τιμές. Διαθεσιμότητα και κρατήσεις απαιτούν κατάσταση Ενεργό."
+                  : "Ενεργά καταλύματα δέχονται κρατήσεις. Ανενεργά αποκλείουν νέες κρατήσεις."
+              }
             />
             <div className="space-y-4">
+              {isDraft ? (
+                <p className="text-sm text-muted-foreground">
+                  Για να δέχεστε κρατήσεις: αποθηκεύστε τιμοκατάλογο (προαιρετικά πριν την
+                  ενεργοποίηση) και πατήστε «Ενεργοποίηση καταλύματος».
+                </p>
+              ) : null}
               <div className="space-y-2">
                 <Label>Κατάσταση</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -469,9 +532,23 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 <StatusBadge status={form.status} />
                 <span className="text-sm text-muted-foreground">Slug: /{property.slug}</span>
               </div>
-              <Button disabled={saving} onClick={() => void save({ status: form.status })}>
-                {saving ? elCommon.saving : "Ενημέρωση κατάστασης"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {isDraft ? (
+                  <Button disabled={saving} onClick={() => void activateProperty()}>
+                    {saving ? elCommon.saving : "Ενεργοποίηση καταλύματος"}
+                  </Button>
+                ) : null}
+                <Button
+                  variant={isDraft ? "outline" : "default"}
+                  disabled={saving}
+                  onClick={() => void save({ status: form.status })}
+                >
+                  {saving ? elCommon.saving : "Ενημέρωση κατάστασης"}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard/pricing">Τιμοκατάλογος</Link>
+                </Button>
+              </div>
             </div>
           </Surface>
         </TabsContent>

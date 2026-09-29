@@ -3,6 +3,7 @@ import { Property, Tenant, TenantSettings } from "@hcp/domain";
 import { PrismaPropertyRepository } from "../../src/repositories/PropertyRepository";
 import { PrismaTenantRepository } from "../../src/repositories/TenantRepository";
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
+import { withTenantTransaction } from "../../src/client";
 import { prisma } from "./helpers";
 
 export interface CommerceFixture {
@@ -38,72 +39,75 @@ export async function seedCommerceFixture(
 
   await propertyRepository.save(property);
 
-  await prisma.property.update({
-    where: { id: ids.propertyId },
-    data: { status: "active" },
-  });
-
-  await prisma.unit.update({
-    where: { id: ids.unitId },
-    data: { status: "active" },
-  });
-
-  await prisma.ratePlan.create({
-    data: {
-      id: randomUUID(),
-      tenantId: ids.tenantId,
-      unitId: ids.unitId,
-      baseNightlyAmount: "100.0000",
-      currency: "EUR",
-    },
-  });
-
-  await prisma.unitAvailabilityRule.create({
-    data: {
-      id: randomUUID(),
-      tenantId: ids.tenantId,
-      unitId: ids.unitId,
-    },
-  });
-
-  if (options?.adminUserId) {
-    await prisma.user.upsert({
-      where: { id: options.adminUserId },
-      create: {
-        id: options.adminUserId,
-        email: `admin-${options.adminUserId.slice(-8)}@commerce.test`,
-        name: "Commerce Admin",
-      },
-      update: {},
+  // Tenant-scoped writes must run under SET LOCAL app.current_tenant (FORCE RLS).
+  await withTenantTransaction(ids.tenantId, async (tx) => {
+    await tx.property.update({
+      where: { id: ids.propertyId },
+      data: { status: "active" },
     });
 
-    await prisma.membership.upsert({
-      where: {
-        userId_tenantId: {
+    await tx.unit.update({
+      where: { id: ids.unitId },
+      data: { status: "active" },
+    });
+
+    await tx.ratePlan.create({
+      data: {
+        id: randomUUID(),
+        tenantId: ids.tenantId,
+        unitId: ids.unitId,
+        baseNightlyAmount: "100.0000",
+        currency: "EUR",
+      },
+    });
+
+    await tx.unitAvailabilityRule.create({
+      data: {
+        id: randomUUID(),
+        tenantId: ids.tenantId,
+        unitId: ids.unitId,
+      },
+    });
+
+    if (options?.adminUserId) {
+      await prisma.user.upsert({
+        where: { id: options.adminUserId },
+        create: {
+          id: options.adminUserId,
+          email: `admin-${options.adminUserId.slice(-8)}@commerce.test`,
+          name: "Commerce Admin",
+        },
+        update: {},
+      });
+
+      await tx.membership.upsert({
+        where: {
+          userId_tenantId: {
+            userId: options.adminUserId,
+            tenantId: ids.tenantId,
+          },
+        },
+        create: {
+          id: randomUUID(),
           userId: options.adminUserId,
           tenantId: ids.tenantId,
+          role: "admin",
+          status: "active",
         },
-      },
+        update: {},
+      });
+    }
+
+    await tx.tenantCommerceSettings.upsert({
+      where: { tenantId: ids.tenantId },
       create: {
-        id: randomUUID(),
-        userId: options.adminUserId,
         tenantId: ids.tenantId,
-        role: "admin",
-        status: "active",
+        defaultHoldTtlSeconds: 900,
+        confirmationMode: "manual",
+        defaultCurrency: "EUR",
       },
       update: {},
     });
-  }
-
-  await prisma.tenantCommerceSettings.upsert({
-    where: { tenantId: ids.tenantId },
-    create: {
-      tenantId: ids.tenantId,
-      defaultHoldTtlSeconds: 900,
-      confirmationMode: "manual",
-      defaultCurrency: "EUR",
-    },
-    update: {},
   });
 }
 
@@ -113,33 +117,35 @@ export async function seedAdditionalUnit(
   unitId: string,
   options?: { name?: string; slug?: string },
 ): Promise<void> {
-  await prisma.unit.create({
-    data: {
-      id: unitId,
-      tenantId,
-      propertyId,
-      name: options?.name ?? "Commerce Unit 2",
-      slug: options?.slug ?? `commerce-unit-${unitId.slice(-4)}`,
-      maxGuests: 4,
-      status: "active",
-    },
-  });
+  await withTenantTransaction(tenantId, async (tx) => {
+    await tx.unit.create({
+      data: {
+        id: unitId,
+        tenantId,
+        propertyId,
+        name: options?.name ?? "Commerce Unit 2",
+        slug: options?.slug ?? `commerce-unit-${unitId.slice(-4)}`,
+        maxGuests: 4,
+        status: "active",
+      },
+    });
 
-  await prisma.ratePlan.create({
-    data: {
-      id: randomUUID(),
-      tenantId,
-      unitId,
-      baseNightlyAmount: "120.0000",
-      currency: "EUR",
-    },
-  });
+    await tx.ratePlan.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        unitId,
+        baseNightlyAmount: "120.0000",
+        currency: "EUR",
+      },
+    });
 
-  await prisma.unitAvailabilityRule.create({
-    data: {
-      id: randomUUID(),
-      tenantId,
-      unitId,
-    },
+    await tx.unitAvailabilityRule.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        unitId,
+      },
+    });
   });
 }

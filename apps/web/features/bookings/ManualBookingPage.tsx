@@ -73,6 +73,7 @@ export function ManualBookingPage() {
   const [checkOut, setCheckOut] = useState("");
   const [guestCount, setGuestCount] = useState(2);
   const [availabilityOk, setAvailabilityOk] = useState<boolean | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   /** Read-only pricing preview (no Hold). */
   const [pricePreview, setPricePreview] = useState<StayPricingPreview | null>(null);
   /** Existing commercial Quote from Hold conversion (?quoteId=). */
@@ -224,19 +225,33 @@ export function ManualBookingPage() {
     if (!tenantId || !unitId) return;
     setSubmitting(true);
     setAvailabilityOk(null);
+    setAvailabilityError(null);
     try {
       const result = await adminFetch<{ available: boolean }>(
-        `/units/${unitId}/availability/check?checkIn=${checkIn}&checkOut=${checkOut}&guestCount=${guestCount}`,
-        { tenantId },
+        `/units/${unitId}/availability/check`,
+        {
+          method: "POST",
+          tenantId,
+          body: JSON.stringify({ checkIn, checkOut, guestCount }),
+        },
       );
       setAvailabilityOk(result.available);
       if (result.available) {
         setStep(3);
       } else {
+        setAvailabilityError("Οι ημερομηνίες δεν είναι διαθέσιμες για τις επιλεγμένες ημερομηνίες.");
         toastError("Οι ημερομηνίες δεν είναι διαθέσιμες");
       }
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Αποτυχία ελέγχου διαθεσιμότητας");
+      const msg =
+        err instanceof Error ? err.message : "Αποτυχία ελέγχου διαθεσιμότητας";
+      const customerMsg =
+        msg.includes("not available for booking") || msg.includes("Unit is not available")
+          ? "Το κατάλυμα ή η μονάδα δεν είναι ενεργά για κρατήσεις. Ενεργοποιήστε το κατάλυμα και δοκιμάστε ξανά."
+          : msg;
+      setAvailabilityOk(false);
+      setAvailabilityError(customerMsg);
+      toastError(customerMsg);
     } finally {
       setSubmitting(false);
     }
@@ -475,7 +490,9 @@ export function ManualBookingPage() {
                 Έλεγχος διαθεσιμότητας για {checkIn} → {checkOut}, {guestCount}{" "}
                 {guestCount === 1 ? "επισκέπτη" : "επισκέπτες"}
               </p>
-              {availabilityOk === false ? (
+              {availabilityError ? (
+                <p className="text-sm text-destructive">{availabilityError}</p>
+              ) : availabilityOk === false ? (
                 <p className="text-sm text-destructive">Μη διαθέσιμο για τις επιλεγμένες ημερομηνίες.</p>
               ) : null}
               <div className="flex gap-2">

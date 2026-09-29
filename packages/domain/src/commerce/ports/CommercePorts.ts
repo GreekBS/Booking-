@@ -128,6 +128,11 @@ export interface CommerceSettingsReadModel {
 
 export interface ICommerceSettingsRepository {
   findByTenantId(tenantId: string): Promise<CommerceSettingsReadModel | null>;
+  /**
+   * Idempotent defaults for a new (or legacy) tenant.
+   * Must not overwrite existing settings when a row already exists.
+   */
+  ensureDefaults(tenantId: string): Promise<CommerceSettingsReadModel>;
   update(
     tenantId: string,
     data: Partial<Omit<CommerceSettingsReadModel, "tenantId">>,

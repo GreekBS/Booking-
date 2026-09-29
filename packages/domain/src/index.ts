@@ -35,6 +35,7 @@ export * from "./platform/domain/events/TenantEvents";
 export * from "./platform/ports/ITenantRepository";
 
 export * from "./platform/application/CreateTenantUseCase";
+export * from "./platform/application/CreateOrganizationForUserUseCase";
 
 export * from "./platform/application/UpdateTenantUseCase";
 export * from "./platform/application/TenantSettingsUseCases";
