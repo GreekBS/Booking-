@@ -83,6 +83,18 @@ export const MARKETING_ROUTES = [
     changeFrequency: "yearly" as const,
     priority: 0.3,
   },
+  {
+    path: "/terms",
+    title: "Terms of Service",
+    changeFrequency: "yearly" as const,
+    priority: 0.3,
+  },
+  {
+    path: "/data-deletion",
+    title: "User data deletion",
+    changeFrequency: "yearly" as const,
+    priority: 0.3,
+  },
 ] as const;
 
 export type MarketingNavItem = {
@@ -124,6 +136,8 @@ export const FOOTER_GROUPS: Array<{
     links: [
       { label: "Contact", href: "/contact" },
       { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+      { label: "Data deletion", href: "/data-deletion" },
     ],
   },
 ];
@@ -139,6 +153,8 @@ export const PUBLIC_MARKETING_PATHS = [
   "/vacation-rental-software",
   "/contact",
   "/privacy",
+  "/terms",
+  "/data-deletion",
   "/get-started",
 ] as const;
 

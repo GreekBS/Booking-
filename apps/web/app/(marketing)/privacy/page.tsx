@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { buildPageMetadata } from "@/lib/marketing/seo";
 import { getContactEmail } from "@/lib/marketing/site";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
   description:
-    "How Talos collects and uses information when you use our hospitality platform, contact us, or share business details.",
+    "How Talos processes information for hospitality operations, guest communications, WhatsApp messaging, and AI-assisted support.",
   path: "/privacy",
 });
 
-const LAST_UPDATED = "18 September 2026";
+const LAST_UPDATED = "29 September 2026";
 
 export default function PrivacyPage() {
   const email = getContactEmail();
@@ -26,41 +27,62 @@ export default function PrivacyPage() {
         </p>
         <p className="talos-lede mt-6">
           This policy explains, at a product level, how Talos handles information when you visit
-          our website, contact us, create an account, or share details about your hospitality
-          business. It is not a substitute for formal legal advice.
+          our website, contact us, create an account, operate hospitality workflows, or use
+          guest-messaging features such as WhatsApp and AI-assisted replies. It is not a substitute
+          for formal legal advice.
         </p>
 
         <div className="mt-12 space-y-10 text-sm leading-relaxed text-[var(--talos-ink-soft)]">
           <section>
             <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
-              Information you provide
+              What Talos is
             </h2>
             <p className="mt-3">
-              You may share information with Talos when you create or manage an account, submit a
-              contact or onboarding request, configure properties, or communicate with our team.
-              Depending on the interaction, this can include:
+              Talos is a hospitality platform used by accommodation operators and related teams to
+              manage properties, bookings, guest communications, and day-to-day operations. In many
+              cases, Talos processes guest and booking information on behalf of the accommodation
+              operator that uses the platform for their properties.
             </p>
-            <ul className="mt-3 list-disc space-y-2 pl-5">
-              <li>Contact details such as name, email address, and phone number</li>
-              <li>Account credentials and profile information</li>
-              <li>
-                Hospitality and business details such as portfolio size, property location,
-                operating channels, current tools, and interests in Talos products or services
-              </li>
-              <li>Messages and other content you choose to send us</li>
-            </ul>
           </section>
 
           <section>
             <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
-              Service and technical information
+              Categories of information
             </h2>
             <p className="mt-3">
-              When you use Talos websites or applications, we may process technical information
-              needed to operate and secure the service. This can include IP address, browser or
-              device characteristics, approximate request timing, and diagnostic logs associated
-              with authentication, API access, and reliability.
+              Depending on how Talos is used, we may process information in categories such as:
             </p>
+            <ul className="mt-3 list-disc space-y-2 pl-5">
+              <li>
+                Account and operator contact details (for example name, email address, and phone
+                number)
+              </li>
+              <li>Account credentials and profile information</li>
+              <li>
+                Hospitality and business details such as portfolio size, property information,
+                operating channels, and configuration of Talos features
+              </li>
+              <li>
+                Guest and contact information associated with stays (for example guest name, email,
+                and phone number)
+              </li>
+              <li>Booking and stay information (for example dates, property, and stay status)</li>
+              <li>
+                WhatsApp-related identifiers and message content when messaging features are enabled
+                (for example WhatsApp user identifiers and inbound/outbound messages needed to
+                operate conversations)
+              </li>
+              <li>Communication history and related operational notes created in Talos</li>
+              <li>
+                Operational accommodation data relevant to guest support (for example property
+                knowledge used to answer guest questions)
+              </li>
+              <li>
+                Technical and security information such as IP address, device/browser
+                characteristics, request timing, and diagnostic logs
+              </li>
+              <li>Messages and other content you choose to send us through contact or support channels</li>
+            </ul>
           </section>
 
           <section>
@@ -70,12 +92,53 @@ export default function PrivacyPage() {
             <p className="mt-3">We process information to:</p>
             <ul className="mt-3 list-disc space-y-2 pl-5">
               <li>Provide and improve Talos software and related services</li>
-              <li>Respond to inquiries and evaluate fit for software or managed-service paths</li>
+              <li>Operate booking, property, and hospitality workflows configured by operators</li>
+              <li>Enable guest communication and support, including WhatsApp messaging where enabled</li>
+              <li>
+                Provide AI-assisted draft or automatic replies grounded in operator-configured
+                property information, subject to product settings and safeguards
+              </li>
               <li>Authenticate users, protect accounts, and maintain platform security</li>
-              <li>Operate hospitality workflows you configure inside Talos</li>
+              <li>Respond to inquiries and support requests</li>
               <li>Communicate about service updates, support, or follow-up you requested</li>
               <li>Meet applicable legal and operational obligations</li>
             </ul>
+          </section>
+
+          <section>
+            <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
+              Operators and guest data
+            </h2>
+            <p className="mt-3">
+              When an accommodation operator uses Talos to manage guest stays and communications,
+              Talos may process guest personal data as part of providing that service to the
+              operator. Operators remain responsible for how they collect guest information, what
+              they instruct Talos to do with it, and how they communicate with guests through
+              channels they enable.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
+              Service providers and processors
+            </h2>
+            <p className="mt-3">
+              Talos may use trusted service providers that help host, operate, secure, communicate,
+              or support the platform. Those providers process information only as needed to perform
+              services for Talos. Depending on enabled features, this can include:
+            </p>
+            <ul className="mt-3 list-disc space-y-2 pl-5">
+              <li>Meta / WhatsApp Business Platform for WhatsApp delivery and related messaging</li>
+              <li>Hosting and infrastructure providers used to run the Talos application</li>
+              <li>
+                AI providers used to generate or assist with guest-facing responses when AI features
+                are enabled
+              </li>
+            </ul>
+            <p className="mt-3">
+              We do not sell personal information. We may disclose information if required by law or
+              to protect the rights, safety, and integrity of Talos, our users, or others.
+            </p>
           </section>
 
           <section>
@@ -92,37 +155,52 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
-              Sharing
-            </h2>
-            <p className="mt-3">
-              Talos may use trusted service providers that help us host, operate, secure, or
-              support the platform. Those providers process information only as needed to perform
-              services for Talos. We do not sell personal information. We may disclose information
-              if required by law or to protect the rights, safety, and integrity of Talos, our
-              users, or others.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
-              Your choices
-            </h2>
-            <p className="mt-3">
-              Depending on your location and applicable law, you may have rights to access,
-              correct, delete, or restrict certain information, or to object to certain processing.
-              You can also update account details where the product allows it, and you may contact
-              us to exercise available rights or ask privacy-related questions.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
               Security
             </h2>
             <p className="mt-3">
               We apply technical and organizational measures designed to protect information against
               unauthorized access, alteration, or loss. No method of transmission or storage is
               completely secure, and we continually improve our controls as the platform evolves.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
+              International transfers
+            </h2>
+            <p className="mt-3">
+              Talos and its service providers may process information in countries other than the
+              country where you or the guest are located. Where international transfers occur, we
+              take steps intended to protect the information in line with applicable requirements
+              and the nature of the processing.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="talos-display text-2xl font-semibold text-[var(--talos-ink)]">
+              Rights for EU/EEA individuals
+            </h2>
+            <p className="mt-3">
+              Where the GDPR or similar laws apply, individuals may have rights to request access,
+              correction, deletion, restriction, objection, and portability of personal data, and to
+              lodge a complaint with a supervisory authority. Availability of a given right depends
+              on the circumstances and applicable law. You may also update certain account details
+              where the product allows it.
+            </p>
+            <p className="mt-3">
+              Guests who interacted with an accommodation through Talos/WhatsApp may contact us
+              using the details below, or may also contact the accommodation operator that managed
+              their stay.
+            </p>
+            <p className="mt-3">
+              For deletion-specific instructions related to Meta requirements, see our{" "}
+              <Link
+                href="/data-deletion"
+                className="underline underline-offset-4 hover:text-[var(--talos-ink)]"
+              >
+                User data deletion
+              </Link>{" "}
+              page.
             </p>
           </section>
 
@@ -155,7 +233,17 @@ export default function PrivacyPage() {
                   </a>
                 </>
               ) : (
-                " through the channels published on our Contact page"
+                <>
+                  {" "}
+                  through the channels published on our{" "}
+                  <Link
+                    href="/contact"
+                    className="underline underline-offset-4 hover:text-[var(--talos-ink)]"
+                  >
+                    Contact
+                  </Link>{" "}
+                  page
+                </>
               )}
               .
             </p>

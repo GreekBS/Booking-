@@ -12,6 +12,8 @@ describe("isPublicMarketingPath", () => {
     expect(isPublicMarketingPath("/vacation-rental-software")).toBe(true);
     expect(isPublicMarketingPath("/contact")).toBe(true);
     expect(isPublicMarketingPath("/privacy")).toBe(true);
+    expect(isPublicMarketingPath("/terms")).toBe(true);
+    expect(isPublicMarketingPath("/data-deletion")).toBe(true);
     expect(isPublicMarketingPath("/get-started")).toBe(true);
   });
 
