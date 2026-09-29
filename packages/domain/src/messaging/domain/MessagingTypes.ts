@@ -35,6 +35,7 @@ export type MessageSenderType = (typeof MESSAGE_SENDER_TYPES)[number];
 
 export const DELIVERY_STATUSES = [
   "pending",
+  "sending",
   "sent",
   "delivered",
   "failed",

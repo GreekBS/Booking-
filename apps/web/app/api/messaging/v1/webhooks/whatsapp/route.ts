@@ -236,6 +236,7 @@ export async function POST(request: NextRequest) {
               body: ingestBody,
               externalMessageId: wamid,
               amenities,
+              whatsappPhoneNumberId: phoneNumberId,
             },
             actor,
           );

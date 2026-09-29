@@ -209,6 +209,7 @@ import {
   OnBookingConfirmedMessagingHook,
   RevokeBookingMessagingContactTokensUseCase,
   ActivateWhatsAppFromContactTokenUseCase,
+  WhatsAppSessionReplySender,
 
   GetQuoteUseCase,
 
@@ -1339,6 +1340,18 @@ const aiUsageRepository = new PrismaAiUsageRepository();
 export const propertyAmenityReader = new PrismaPropertyAmenityReader();
 const assistantProvider = createAssistantProvider();
 
+/** Platform WhatsApp connection + sealed vault (needed before ingest session reply). */
+export const platformMessagingConnectionRepository =
+  new PrismaPlatformMessagingConnectionRepository();
+export const messagingSecretVault = new PrismaMessagingSecretVault();
+export const whatsAppCloudApiAdapter = new MetaWhatsAppCloudApiAdapter();
+export const whatsAppSessionReplySender = new WhatsAppSessionReplySender(
+  platformMessagingConnectionRepository,
+  messagingSecretVault,
+  whatsAppCloudApiAdapter,
+  messageRepository,
+);
+
 export async function loadPropertyAmenities(
   tenantId: string,
   propertyId: string,
@@ -1418,6 +1431,7 @@ export const ingestGuestMessageUseCase = new IngestGuestMessageUseCase(
   idGenerator,
   permissionChecker,
   auditLogRepository,
+  whatsAppSessionReplySender,
 );
 
 export const listOpenEscalationsUseCase = new ListOpenEscalationsUseCase(
@@ -1454,12 +1468,8 @@ const propertyMessagingSettingsRepository =
   new PrismaPropertyMessagingSettingsRepository();
 const messagingAutomationRunRepository =
   new PrismaMessagingAutomationRunRepository();
-export const platformMessagingConnectionRepository =
-  new PrismaPlatformMessagingConnectionRepository();
-export const messagingSecretVault = new PrismaMessagingSecretVault();
 export const messagingUnmatchedInboundRepository =
   new PrismaMessagingUnmatchedInboundRepository();
-export const whatsAppCloudApiAdapter = new MetaWhatsAppCloudApiAdapter();
 export const messagingContactTokenRepository =
   new PrismaMessagingContactTokenRepository();
 export const messagingWaIdentityRouteWriter =

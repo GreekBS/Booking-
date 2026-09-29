@@ -138,6 +138,32 @@ export interface IWhatsAppCloudApiAdapter {
   }): boolean;
 }
 
+/**
+ * Workerless session reply: send free-form text inside an open CSW.
+ * Uses the same PlatformMessagingConnection that received the inbound.
+ */
+export interface WhatsAppSessionReplyInput {
+  tenantId: string;
+  conversation: ConversationRecord;
+  message: MessageRecord;
+  /** Meta phone_number_id from the inbound webhook metadata. */
+  phoneNumberId: string;
+  /** Stable idempotency key for this outbound attempt (e.g. talos-out:<inboundId>). */
+  clientMessageId: string;
+}
+
+export interface WhatsAppSessionReplyResult {
+  message: MessageRecord;
+  success: boolean;
+  errorCode: string | null;
+}
+
+export interface IWhatsAppSessionReplySender {
+  deliver(
+    input: WhatsAppSessionReplyInput,
+  ): Promise<WhatsAppSessionReplyResult>;
+}
+
 export type WhatsAppInboundRouteResult =
   | {
       outcome: "routed";

@@ -12,3 +12,4 @@ export * from "./application/WhatsAppMessagingUseCases";
 export * from "./application/WelcomeEmailActivationUseCases";
 export * from "./application/ArrivalSchedule";
 export * from "./application/HeuristicAssistantProvider";
+export * from "./application/WhatsAppSessionReplySender";

@@ -65,6 +65,87 @@ function emptyWelcomeFields(): Pick<
 }
 
 /**
+ * Shared mint: opaque contact token + wa.me deep link (same path as Welcome Email).
+ * Raw token is returned once to the caller; only hash is persisted.
+ */
+export async function mintBookingWhatsAppActivationLink(params: {
+  tenantId: string;
+  booking: {
+    id: string;
+    propertyId: string;
+    guestId: string | null;
+    stayPeriod: { checkOut: { value: string } };
+  };
+  profile: BookingMessagingProfileRecord;
+  revokeReason: string;
+  profiles: IBookingMessagingProfileRepository;
+  tokens: IMessagingContactTokenRepository;
+  platformConnections: IPlatformMessagingConnectionRepository;
+  opaqueTokens: IOpaqueTokenFactory;
+  ids: IIdGenerator;
+}): Promise<
+  | {
+      ok: true;
+      rawToken: string;
+      deepLink: string;
+      digits: string;
+      token: MessagingContactTokenRecord;
+      profile: BookingMessagingProfileRecord;
+    }
+  | { ok: false; code: "whatsapp_display_number_missing" }
+> {
+  const connection = await params.platformConnections.findConnectedWhatsApp();
+  const digits = whatsappMeDigits(connection?.displayPhoneNumber ?? null);
+  if (!digits) {
+    return { ok: false, code: "whatsapp_display_number_missing" };
+  }
+
+  await params.tokens.revokeActiveForBooking(
+    params.tenantId,
+    params.booking.id,
+    params.revokeReason,
+  );
+
+  const material = params.opaqueTokens.create();
+  const rawToken = wrapContactTokenBody(material.token);
+  const tokenHash = params.opaqueTokens.hash(rawToken);
+  const now = new Date();
+  const token: MessagingContactTokenRecord = {
+    id: params.ids.generate(),
+    tenantId: params.tenantId,
+    propertyId: params.booking.propertyId,
+    bookingId: params.booking.id,
+    guestId: params.booking.guestId,
+    profileId: params.profile.id,
+    tokenHash,
+    status: "active",
+    expiresAt: computeContactTokenExpiresAt({
+      checkOutDate: params.booking.stayPeriod.checkOut.value,
+      now,
+    }),
+    activatedAt: null,
+    activatedConversationId: null,
+    activatedWaIdentity: null,
+    revokedAt: null,
+    revokeReason: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await params.tokens.create(token);
+
+  const profile = await params.profiles.update(params.tenantId, params.profile.id, {
+    activeContactTokenId: token.id,
+  });
+
+  const deepLink = buildWhatsAppDeepLink({
+    displayPhoneDigits: digits,
+    rawToken,
+  });
+
+  return { ok: true, rawToken, deepLink, digits, token, profile };
+}
+
+/**
  * Immediate Welcome Email + opaque contact token (workerless).
  * Idempotent per Booking occurrence unless manualResend.
  */
@@ -174,67 +255,40 @@ export class SendBookingWelcomeEmailUseCase {
         return Result.ok({ profile, sent: false, status: "sent" });
       }
 
-      const connection = await this.platformConnections.findConnectedWhatsApp();
-      const digits = whatsappMeDigits(connection?.displayPhoneNumber ?? null);
-      if (!digits) {
-        profile = await this.profiles.update(input.tenantId, profile.id, {
-          welcomeEmailStatus: "failed",
-          welcomeEmailTo: email,
-          welcomeEmailLastError: "whatsapp_display_number_missing",
-          welcomeEmailOccurrenceKey: WELCOME_EMAIL_OCCURRENCE_KEY,
-        });
-        return Result.ok({ profile, sent: false, status: "failed" });
-      }
-
       const property = await this.properties.findById(
         input.tenantId,
         booking.propertyId,
       );
 
-      await this.tokens.revokeActiveForBooking(
-        input.tenantId,
-        booking.id,
-        input.manualResend ? "manual_resend" : "reissue",
-      );
-
-      const material = this.opaqueTokens.create();
-      const rawToken = wrapContactTokenBody(material.token);
-      const tokenHash = this.opaqueTokens.hash(rawToken);
-      const now = new Date();
-      const token: MessagingContactTokenRecord = {
-        id: this.ids.generate(),
+      const minted = await mintBookingWhatsAppActivationLink({
         tenantId: input.tenantId,
-        propertyId: booking.propertyId,
-        bookingId: booking.id,
-        guestId: booking.guestId,
-        profileId: profile.id,
-        tokenHash,
-        status: "active",
-        expiresAt: computeContactTokenExpiresAt({
-          checkOutDate: booking.stayPeriod.checkOut.value,
-          now,
-        }),
-        activatedAt: null,
-        activatedConversationId: null,
-        activatedWaIdentity: null,
-        revokedAt: null,
-        revokeReason: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await this.tokens.create(token);
+        booking,
+        profile,
+        revokeReason: input.manualResend ? "manual_resend" : "reissue",
+        profiles: this.profiles,
+        tokens: this.tokens,
+        platformConnections: this.platformConnections,
+        opaqueTokens: this.opaqueTokens,
+        ids: this.ids,
+      });
 
-      profile = await this.profiles.update(input.tenantId, profile.id, {
-        activeContactTokenId: token.id,
+      if (!minted.ok) {
+        profile = await this.profiles.update(input.tenantId, profile.id, {
+          welcomeEmailStatus: "failed",
+          welcomeEmailTo: email,
+          welcomeEmailLastError: minted.code,
+          welcomeEmailOccurrenceKey: WELCOME_EMAIL_OCCURRENCE_KEY,
+        });
+        return Result.ok({ profile, sent: false, status: "failed" });
+      }
+
+      const now = new Date();
+      profile = await this.profiles.update(input.tenantId, minted.profile.id, {
         welcomeEmailStatus: "pending",
         welcomeEmailTo: email,
         welcomeEmailLastError: null,
         welcomeEmailOccurrenceKey: WELCOME_EMAIL_OCCURRENCE_KEY,
-      });
-
-      const deepLink = buildWhatsAppDeepLink({
-        displayPhoneDigits: digits,
-        rawToken,
+        activeContactTokenId: minted.token.id,
       });
 
       try {
@@ -244,7 +298,7 @@ export class SendBookingWelcomeEmailUseCase {
           guestName: booking.guest.name || null,
           checkIn: booking.stayPeriod.checkIn.value,
           checkOut: booking.stayPeriod.checkOut.value,
-          whatsappDeepLink: deepLink,
+          whatsappDeepLink: minted.deepLink,
         });
       } catch (sendError) {
         const code =
@@ -255,7 +309,6 @@ export class SendBookingWelcomeEmailUseCase {
           welcomeEmailStatus: "failed",
           welcomeEmailLastError: code,
         });
-        // Token remains active so a later resend/retry can reuse after rotation.
         return Result.ok({ profile, sent: false, status: "failed" });
       }
 
@@ -275,7 +328,6 @@ export class SendBookingWelcomeEmailUseCase {
         resourceId: profile.id,
         metadata: {
           bookingId: booking.id,
-          // Never log raw token. Email domain only.
           emailDomain: email.includes("@") ? email.split("@")[1] : null,
           manualResend: Boolean(input.manualResend),
         },
@@ -320,6 +372,150 @@ export class SendBookingWelcomeEmailUseCase {
       createdAt: now,
       updatedAt: now,
     });
+  }
+}
+
+/**
+ * Demo/dev-only: mint the same Welcome Email WhatsApp deep link without sending email.
+ * Returns the plaintext token once; DB stores hash only. Does not enqueue jobs.
+ */
+export class PrepareBookingWhatsAppActivationLinkUseCase {
+  constructor(
+    private readonly bookings: IBookingRepository,
+    private readonly properties: IPropertyRepository,
+    private readonly profiles: IBookingMessagingProfileRepository,
+    private readonly tokens: IMessagingContactTokenRepository,
+    private readonly platformConnections: IPlatformMessagingConnectionRepository,
+    private readonly opaqueTokens: IOpaqueTokenFactory,
+    private readonly permissionChecker: PermissionChecker,
+    private readonly ids: IIdGenerator,
+  ) {}
+
+  async execute(
+    input: {
+      tenantId: string;
+      bookingId: string;
+      systemActor?: boolean;
+    },
+    actor: ActorContext,
+  ): Promise<
+    Result<
+      {
+        deepLink: string;
+        /** Returned once for explicit demo/test; never persist or log. */
+        rawToken: string;
+        expiresAt: Date;
+        tokenId: string;
+        tokenHash: string;
+        displayPhoneDigits: string;
+        bookingId: string;
+        propertyId: string;
+        propertyName: string;
+        guestName: string;
+        guestEmail: string | null;
+        guestId: string | null;
+      },
+      Error
+    >
+  > {
+    try {
+      const booking = await this.bookings.findById(
+        input.bookingId,
+        input.tenantId,
+      );
+      if (!booking) {
+        return Result.fail(new NotFoundError("Booking", input.bookingId));
+      }
+      if (
+        !input.systemActor &&
+        !canWriteMessagingOnProperty(
+          this.permissionChecker,
+          actor,
+          input.tenantId,
+          booking.propertyId,
+        )
+      ) {
+        return Result.fail(new ForbiddenError());
+      }
+      if (booking.status !== "confirmed") {
+        return Result.fail(
+          new ValidationError("Booking must be confirmed for WhatsApp activation"),
+        );
+      }
+
+      const property = await this.properties.findById(
+        input.tenantId,
+        booking.propertyId,
+      );
+      if (!property || property.deletedAt) {
+        return Result.fail(new NotFoundError("Property", booking.propertyId));
+      }
+
+      let profile = await this.profiles.findByBookingId(
+        input.tenantId,
+        booking.id,
+      );
+      if (!profile) {
+        const now = new Date();
+        profile = await this.profiles.upsert({
+          id: this.ids.generate(),
+          tenantId: input.tenantId,
+          propertyId: booking.propertyId,
+          bookingId: booking.id,
+          guestId: booking.guestId,
+          conversationId: null,
+          whatsappPhone: null,
+          whatsappPhoneNormalized: null,
+          guestChannelIdentity: null,
+          contactSource: "manual",
+          contactConfirmedAt: null,
+          messagingEnabled: false,
+          identityStatus: "unbound",
+          cswOpenUntil: null,
+          lastGuestInboundAt: null,
+          ...emptyWelcomeFields(),
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      const minted = await mintBookingWhatsAppActivationLink({
+        tenantId: input.tenantId,
+        booking,
+        profile,
+        revokeReason: "demo_activation_link",
+        profiles: this.profiles,
+        tokens: this.tokens,
+        platformConnections: this.platformConnections,
+        opaqueTokens: this.opaqueTokens,
+        ids: this.ids,
+      });
+
+      if (!minted.ok) {
+        return Result.fail(
+          new ValidationError(
+            "Central Talos WhatsApp PlatformMessagingConnection is missing a valid displayPhoneNumber (wa.me destination). Configure a connected platform WhatsApp connection with displayPhoneNumber in E.164; do not invent a number.",
+          ),
+        );
+      }
+
+      return Result.ok({
+        deepLink: minted.deepLink,
+        rawToken: minted.rawToken,
+        expiresAt: minted.token.expiresAt,
+        tokenId: minted.token.id,
+        tokenHash: minted.token.tokenHash,
+        displayPhoneDigits: minted.digits,
+        bookingId: booking.id,
+        propertyId: booking.propertyId,
+        propertyName: property.name,
+        guestName: booking.guest.name,
+        guestEmail: resolveUsableGuestEmail(booking.guest.email),
+        guestId: booking.guestId,
+      });
+    } catch (error) {
+      return Result.fail(toError(error));
+    }
   }
 }
 

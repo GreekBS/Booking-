@@ -514,9 +514,58 @@ describe("ActivateWhatsAppFromContactTokenUseCase", () => {
   });
 });
 
-describe("Workerless proof markers", () => {
-  it("welcome email path does not reference BackgroundJob enqueue", () => {
-    expect(SendBookingWelcomeEmailUseCase.length).toBeGreaterThanOrEqual(8);
-    expect(vi).toBeTruthy();
+describe("PrepareBookingWhatsAppActivationLinkUseCase", () => {
+  it("fail-closed when central displayPhoneNumber is missing", async () => {
+    const { PrepareBookingWhatsAppActivationLinkUseCase } = await import(
+      "../../src/messaging"
+    );
+    const booking = {
+      id: "b1",
+      propertyId: "p1",
+      guestId: null,
+      status: "confirmed",
+      guest: { name: "Test", email: "t@example.com", phone: null },
+      stayPeriod: {
+        checkIn: { value: "2027-07-10" },
+        checkOut: { value: "2027-07-14" },
+      },
+    };
+    const uc = new PrepareBookingWhatsAppActivationLinkUseCase(
+      { findById: async () => booking as never } as never,
+      {
+        findById: async () =>
+          ({ name: "Olive", deletedAt: null }) as never,
+      } as never,
+      {
+        findByBookingId: async () => profile(),
+        upsert: async (p: BookingMessagingProfileRecord) => p,
+        update: async (
+          _t: string,
+          _i: string,
+          patch: Partial<BookingMessagingProfileRecord>,
+        ) => ({ ...profile(), ...patch }),
+      } as never,
+      {
+        revokeActiveForBooking: async () => 0,
+        create: async () => {
+          throw new Error("should not create token");
+        },
+      } as never,
+      { findConnectedWhatsApp: async () => null } as never,
+      opaqueTokens,
+      { hasPermission: () => true } as never,
+      { generate: () => "id" } as never,
+    );
+    const result = await uc.execute(
+      { tenantId: "t1", bookingId: "b1", systemActor: true },
+      {
+        userId: "u1",
+        role: "admin",
+        propertyIds: null,
+        isSuperAdmin: true,
+      },
+    );
+    expect(result.isFailure).toBe(true);
+    expect(result.getError().message).toMatch(/displayPhoneNumber/);
   });
 });

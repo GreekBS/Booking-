@@ -38,6 +38,7 @@ import type {
   AssistantContextAmenity,
   IAssistantProvider,
 } from "../ports/IAssistantProvider";
+import type { IWhatsAppSessionReplySender } from "../ports/IWhatsAppMessagingPorts";
 import {
   createAssistantProviderFailureResult,
   isAssistantProviderFailureReason,
@@ -730,6 +731,11 @@ export interface IngestGuestMessageInput {
   stay?: AssistantStayInput | null;
   /** Authoritative Property amenities for this conversation's property. */
   amenities?: AssistantContextAmenity[];
+  /**
+   * Meta phone_number_id that received this inbound (WhatsApp only).
+   * Required for workerless session reply delivery.
+   */
+  whatsappPhoneNumberId?: string | null;
 }
 
 export interface IngestGuestMessageResult {
@@ -754,6 +760,7 @@ export class IngestGuestMessageUseCase {
     private readonly ids: IIdGenerator,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
+    private readonly whatsAppSessionReply?: IWhatsAppSessionReplySender | null,
   ) {}
 
   async execute(
@@ -790,6 +797,25 @@ export class IngestGuestMessageUseCase {
         return Result.fail(new ForbiddenError());
       }
 
+      // Duplicate inbound Meta wamid → one Message / one AI execution.
+      const inboundExternalId = input.externalMessageId?.trim() || null;
+      if (inboundExternalId) {
+        const existingInbound = await this.messages.findByExternalMessageId(
+          input.tenantId,
+          inboundExternalId,
+        );
+        if (existingInbound) {
+          return Result.ok({
+            conversation,
+            inboundMessage: existingInbound,
+            suggestion: null,
+            sentMessage: null,
+            escalation: null,
+            autoSent: false,
+          });
+        }
+      }
+
       const now = new Date();
       const inboundMessage = await this.messages.append({
         id: this.ids.generate(),
@@ -800,7 +826,7 @@ export class IngestGuestMessageUseCase {
         senderType: "guest",
         body,
         deliveryStatus: "delivered",
-        externalMessageId: input.externalMessageId?.trim() || null,
+        externalMessageId: inboundExternalId,
         createdByUserId: null,
         aiSuggestionId: null,
         createdAt: now,
@@ -924,6 +950,7 @@ export class IngestGuestMessageUseCase {
 
       let sentMessage: MessageRecord | null = null;
       if (autoSend && generated.replyText) {
+        const isWhatsApp = conversation.channel === "whatsapp";
         sentMessage = await this.messages.append({
           id: this.ids.generate(),
           tenantId: input.tenantId,
@@ -932,7 +959,7 @@ export class IngestGuestMessageUseCase {
           direction: "outbound",
           senderType: "assistant",
           body: generated.replyText.trim(),
-          deliveryStatus: "sent",
+          deliveryStatus: isWhatsApp ? "pending" : "sent",
           externalMessageId: null,
           createdByUserId: null,
           aiSuggestionId: suggestionId,
@@ -943,6 +970,55 @@ export class IngestGuestMessageUseCase {
           conversation.id,
           { lastMessageAt: new Date(), status: "waiting_guest" },
         );
+
+        if (isWhatsApp) {
+          const phoneNumberId = input.whatsappPhoneNumberId?.trim() || null;
+          if (phoneNumberId && this.whatsAppSessionReply) {
+            const delivered = await this.whatsAppSessionReply.deliver({
+              tenantId: input.tenantId,
+              conversation: touched,
+              message: sentMessage,
+              phoneNumberId,
+              clientMessageId: `talos-out-${inboundMessage.id}`,
+            });
+            sentMessage = delivered.message;
+            if (!delivered.success) {
+              await this.audit?.append({
+                tenantId: input.tenantId,
+                actorId: actor.userId,
+                action: "messaging.whatsapp_session_send_failed",
+                resourceType: "message",
+                resourceId: sentMessage.id,
+                metadata: {
+                  conversationId: conversation.id,
+                  errorCode: delivered.errorCode,
+                  // Never log tokens, secrets, or full guest message bodies.
+                },
+                ipAddress: auditContext?.ipAddress ?? null,
+              });
+            }
+          } else {
+            sentMessage = await this.messages.updateDelivery(
+              input.tenantId,
+              sentMessage.id,
+              { deliveryStatus: "failed" },
+            );
+            await this.audit?.append({
+              tenantId: input.tenantId,
+              actorId: actor.userId,
+              action: "messaging.whatsapp_session_send_failed",
+              resourceType: "message",
+              resourceId: sentMessage.id,
+              metadata: {
+                conversationId: conversation.id,
+                errorCode: phoneNumberId
+                  ? "session_sender_unwired"
+                  : "phone_number_id_missing",
+              },
+              ipAddress: auditContext?.ipAddress ?? null,
+            });
+          }
+        }
       }
 
       await this.usage.record({

@@ -20,6 +20,8 @@ import type { IConversationRepository } from "../ports/IMessagingRepositories";
 import type {
   IBookingMessagingProfileRepository,
   IMessagingAutomationRunRepository,
+  IMessagingSecretVault,
+  IPlatformMessagingConnectionRepository,
   IPropertyMessagingSettingsRepository,
 } from "../ports/IWhatsAppMessagingPorts";
 import type { ConversationRecord } from "../domain/MessagingTypes";
@@ -29,6 +31,7 @@ import {
   whatsappChannelIdentityFromE164,
   whatsappChannelIdentityFromSender,
   type BookingMessagingProfileRecord,
+  type PlatformMessagingConnectionRecord,
   type PropertyMessagingSettingsRecord,
 } from "../domain/WhatsAppMessagingTypes";
 import {
@@ -486,6 +489,84 @@ export class RouteWhatsAppInboundUseCase {
     }
 
     return { outcome: "routed", profile: candidates[0]! };
+  }
+}
+
+/**
+ * Upsert the central Talos PlatformMessagingConnection for Meta Cloud API.
+ * Seals the access token via IMessagingSecretVault — never logs the token.
+ */
+export interface ConfigurePlatformWhatsAppConnectionInput {
+  phoneNumberId: string;
+  /** E.164 display number for wa.me (e.g. +15551589328). */
+  displayPhoneNumber: string;
+  /** Meta permanent/system-user access token — sealed, never logged. */
+  accessToken: string;
+  /** WhatsApp Business Account ID (stored as externalAccountId). */
+  whatsappBusinessAccountId?: string | null;
+  provider?: string;
+}
+
+export class ConfigurePlatformWhatsAppConnectionUseCase {
+  constructor(
+    private readonly connections: IPlatformMessagingConnectionRepository,
+    private readonly vault: IMessagingSecretVault,
+    private readonly ids: IIdGenerator,
+  ) {}
+
+  async execute(
+    input: ConfigurePlatformWhatsAppConnectionInput,
+  ): Promise<Result<PlatformMessagingConnectionRecord, Error>> {
+    try {
+      const phoneNumberId = input.phoneNumberId.trim();
+      if (!phoneNumberId) {
+        return Result.fail(new ValidationError("phoneNumberId is required"));
+      }
+      const display = normalizeWhatsAppE164(input.displayPhoneNumber);
+      if (!display) {
+        return Result.fail(
+          new ValidationError("displayPhoneNumber must be valid E.164"),
+        );
+      }
+      const accessToken = input.accessToken.trim();
+      if (!accessToken) {
+        return Result.fail(new ValidationError("accessToken is required"));
+      }
+
+      const existing =
+        await this.connections.findByPhoneNumberId(phoneNumberId);
+      const credentialRef = await this.vault.putPlatformCredential({
+        accessToken,
+      });
+      const waba =
+        input.whatsappBusinessAccountId?.trim() ||
+        existing?.externalAccountId ||
+        null;
+      const now = new Date();
+
+      const record = await this.connections.upsertConnected({
+        id: existing?.id ?? this.ids.generate(),
+        channel: "whatsapp",
+        provider: input.provider?.trim() || existing?.provider || "meta_cloud",
+        externalAccountId: waba,
+        phoneNumberId,
+        displayPhoneNumber: display,
+        credentialRef,
+        webhookVerificationRef: existing?.webhookVerificationRef ?? null,
+        status: "connected",
+        configJson: {
+          ...(existing?.configJson ?? {}),
+          ...(waba ? { whatsappBusinessAccountId: waba } : {}),
+        },
+        lastError: null,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      });
+
+      return Result.ok(record);
+    } catch (error) {
+      return Result.fail(toError(error));
+    }
   }
 }
 

@@ -712,6 +712,9 @@ export class MetaWhatsAppCloudApiAdapter implements IWhatsAppCloudApiAdapter {
             to: request.toE164.replace(/^\+/, ""),
             type: "text",
             text: { body: request.textBody ?? "" },
+            ...(request.clientMessageId
+              ? { biz_opaque_callback_data: request.clientMessageId.slice(0, 512) }
+              : {}),
           };
 
     try {
