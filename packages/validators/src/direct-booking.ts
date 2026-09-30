@@ -34,3 +34,34 @@ export const directBookingQuoteSchema = z
     guestCount: z.number().int().min(1).max(50),
   })
   .strict();
+
+/** Max [from, to) span in days for public Direct Booking calendar browsing. */
+export const DIRECT_BOOKING_CALENDAR_MAX_RANGE_DAYS = 93;
+
+export const directBookingCalendarSchema = z
+  .object({
+    from: localDateSchema,
+    to: localDateSchema,
+    guestCount: z.number().int().min(1).max(50),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!(value.from < value.to)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "to must be after from",
+        path: ["to"],
+      });
+      return;
+    }
+    const fromMs = Date.parse(`${value.from}T00:00:00.000Z`);
+    const toMs = Date.parse(`${value.to}T00:00:00.000Z`);
+    const days = Math.round((toMs - fromMs) / 86_400_000);
+    if (days > DIRECT_BOOKING_CALENDAR_MAX_RANGE_DAYS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Calendar range exceeds maximum of ${DIRECT_BOOKING_CALENDAR_MAX_RANGE_DAYS} days`,
+        path: ["to"],
+      });
+    }
+  });
