@@ -269,6 +269,12 @@ import {
 
   GetPublicPropertyBySlugUseCase,
 
+  CreateDirectBookingIntegrationUseCase,
+  UpdateDirectBookingIntegrationStatusUseCase,
+  GetDirectBookingPublicConfigUseCase,
+  CheckDirectBookingAvailabilityUseCase,
+  QuoteDirectBookingStayUseCase,
+
   GetTenantSettingsUseCase,
 
   UpdateTenantSettingsUseCase,
@@ -577,13 +583,19 @@ import {
 
   PrismaStorefrontCatalogAdapter,
 
+  PrismaDirectBookingCatalogAdapter,
+
   PrismaStorefrontIdempotencyRepository,
 
   PrismaPublishableKeyRepository,
 
+  PrismaDirectBookingIntegrationRepository,
+
   PrismaCommerceSettingsRepository,
 
   generatePublishableKey,
+
+  generateDirectBookingPublicKey,
 
   TimezoneService,
 
@@ -1160,11 +1172,22 @@ export const storefrontIdempotencyRepository = new PrismaStorefrontIdempotencyRe
 
 export const publishableKeyRepository = new PrismaPublishableKeyRepository();
 
+export const directBookingIntegrationRepository =
+  new PrismaDirectBookingIntegrationRepository();
+
+const directBookingCatalogAdapter = new PrismaDirectBookingCatalogAdapter();
+
 export { holdRepository, quoteRepository, bookingRepository, storefrontCatalogAdapter };
 
 export const getPublicPropertyBySlugUseCase = new GetPublicPropertyBySlugUseCase(
   storefrontCatalogAdapter,
 );
+
+export const getDirectBookingPublicConfigUseCase =
+  new GetDirectBookingPublicConfigUseCase(
+    directBookingIntegrationRepository,
+    directBookingCatalogAdapter,
+  );
 
 export const reservationOrchestrator = new ReservationOrchestrator(
   catalogQueryAdapter,
@@ -1173,6 +1196,17 @@ export const reservationOrchestrator = new ReservationOrchestrator(
   ratePlanRepository,
   timezoneService,
   idGenerator,
+);
+
+export const checkDirectBookingAvailabilityUseCase =
+  new CheckDirectBookingAvailabilityUseCase(
+    directBookingCatalogAdapter,
+    reservationOrchestrator,
+  );
+
+export const quoteDirectBookingStayUseCase = new QuoteDirectBookingStayUseCase(
+  directBookingCatalogAdapter,
+  reservationOrchestrator,
 );
 
 export const checkAvailabilityUseCase = new CheckAvailabilityUseCase(
@@ -2155,6 +2189,21 @@ export const updatePublishableKeyDomainsUseCase = new UpdatePublishableKeyDomain
   auditLogRepository,
 );
 
+export const createDirectBookingIntegrationUseCase =
+  new CreateDirectBookingIntegrationUseCase(
+    directBookingIntegrationRepository,
+    propertyRepository,
+    permissionChecker,
+    idGenerator,
+    (environment) => generateDirectBookingPublicKey(environment),
+  );
+
+export const updateDirectBookingIntegrationStatusUseCase =
+  new UpdateDirectBookingIntegrationStatusUseCase(
+    directBookingIntegrationRepository,
+    permissionChecker,
+  );
+
 export const searchBookingsUseCase = new SearchBookingsUseCase(
   bookingRepository,
   permissionChecker,
@@ -2823,6 +2872,6 @@ export const processJobBatchUseCase = new ProcessJobBatchUseCase(
   jobHandlerRegistry,
 );
 
-export { hashToken, generateInviteToken, generatePublishableKey };
+export { hashToken, generateInviteToken, generatePublishableKey, generateDirectBookingPublicKey };
 
 

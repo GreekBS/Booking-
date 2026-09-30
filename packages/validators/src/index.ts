@@ -154,6 +154,7 @@ export const patchMeSchema = z.object({
 
 export * from "./commerce";
 export * from "./storefront";
+export * from "./direct-booking";
 export * from "./admin";
 export * from "./internal";
 export * from "./marketing";

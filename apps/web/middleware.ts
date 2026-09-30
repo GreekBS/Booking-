@@ -33,6 +33,8 @@ export async function middleware(request: Request) {
     url.pathname.includes("/accept");
   /** Storefront guest APIs remain reachable without a session cookie. */
   const isPublicStorefrontApi = url.pathname.startsWith("/api/storefront/");
+  /** Direct Booking public APIs (config / availability / quote) — key-authenticated. */
+  const isPublicDirectBookingApi = url.pathname.startsWith("/api/direct-booking/");
   /** Public marketing lead capture + demo request only — not a broad /api/marketing/* allowlist. */
   const isPublicMarketingLeadApi =
     url.pathname === "/api/marketing/v1/leads" ||
@@ -64,6 +66,7 @@ export async function middleware(request: Request) {
     !isMarketingPublic &&
     !isWidgetEmbed &&
     !isPublicStorefrontApi &&
+    !isPublicDirectBookingApi &&
     !isPublicMarketingLeadApi &&
     !url.pathname.startsWith("/api/auth/")
   ) {

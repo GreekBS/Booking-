@@ -147,8 +147,13 @@ export {
   generatePublishableKey,
 } from "./repositories/storefront/PublishableKeyRepository";
 export { PrismaStorefrontIdempotencyRepository } from "./repositories/storefront/StorefrontIdempotencyRepository";
+export {
+  PrismaDirectBookingIntegrationRepository,
+  generateDirectBookingPublicKey,
+} from "./repositories/direct-booking/DirectBookingIntegrationRepository";
 export { PrismaCatalogQueryAdapter } from "./adapters/CatalogQueryAdapter";
 export { PrismaStorefrontCatalogAdapter } from "./adapters/StorefrontCatalogAdapter";
+export { PrismaDirectBookingCatalogAdapter } from "./adapters/DirectBookingCatalogAdapter";
 export { TimezoneService } from "./adapters/TimezoneService";
 
 export { PrismaChannelConnectionRepository } from "./repositories/channels/ChannelConnectionRepository";

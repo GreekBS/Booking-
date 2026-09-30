@@ -151,6 +151,12 @@ enum PublishableKeyEnvironment {
   live
 }
 
+enum DirectBookingIntegrationStatus {
+  draft
+  active
+  disabled
+}
+
 enum OutboxEventStatus {
   pending
   processing
@@ -312,6 +318,7 @@ model Tenant {
   bookingMessagingProfiles       BookingMessagingProfile[]
   messagingAutomationRuns        MessagingAutomationRun[]
   messagingContactTokens         MessagingContactToken[]
+  directBookingIntegrations      DirectBookingIntegration[]
 
   @@map("tenants")
 }
@@ -482,6 +489,7 @@ model Property {
   bookingMessagingProfiles   BookingMessagingProfile[]
   messagingAutomationRuns    MessagingAutomationRun[]
   messagingContactTokens     MessagingContactToken[]
+  directBookingIntegrations  DirectBookingIntegration[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -515,7 +523,8 @@ model Unit {
   qrAccess           UnitQrAccess[]
   cleaningExecutions CleaningExecution[]
   cleaningPhotos     CleaningPhoto[]
-  linkedCleaningLocations CleaningLocation[]
+  linkedCleaningLocations   CleaningLocation[]
+  directBookingIntegrations DirectBookingIntegration[]
 
   @@unique([propertyId, slug])
   @@index([tenantId, propertyId])
@@ -640,6 +649,35 @@ model TenantPublishableKey {
 
   @@index([tenantId])
   @@map("tenant_publishable_keys")
+}
+
+/**
+ * Property-scoped Direct Booking public integration.
+ * Opaque public key identifies the Property/Unit for external websites/BFFs.
+ * Does not replace tenant-wide storefront publishable keys.
+ */
+model DirectBookingIntegration {
+  id              String                         @id @default(uuid()) @db.Uuid
+  tenantId        String                         @map("tenant_id") @db.Uuid
+  propertyId      String                         @map("property_id") @db.Uuid
+  /** Commercial unit bound to this integration; required for V1. */
+  unitId          String                         @map("unit_id") @db.Uuid
+  publicKeyHash   String                         @unique @map("public_key_hash") @db.VarChar(64)
+  publicKeyPrefix String                         @map("public_key_prefix") @db.VarChar(32)
+  environment     PublishableKeyEnvironment
+  allowedOrigins  String[]                       @default([]) @map("allowed_origins")
+  status          DirectBookingIntegrationStatus @default(draft)
+  createdAt       DateTime                       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                       @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit     Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, propertyId])
+  @@index([status])
+  @@map("direct_booking_integrations")
 }
 
 model StorefrontIdempotencyRecord {

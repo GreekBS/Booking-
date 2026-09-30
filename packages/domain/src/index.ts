@@ -142,3 +142,5 @@ export * from "./channels/index";
 
 export * from "./storefront/index";
 
+export * from "./direct-booking/index";
+
