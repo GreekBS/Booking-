@@ -22,7 +22,7 @@ export function getBookingComPartnerAccessStatus(
     liveConnectivityAvailable: false,
     fixtureTransportEnabled,
     operatorMessage: fixtureTransportEnabled
-      ? "Local fixture transport is enabled for setup rehearsal. This is not a live Booking.com connection."
-      : "Booking.com connectivity is being prepared for partner activation. Live connection is not available yet.",
+      ? "Το τοπικό fixture transport είναι ενεργό για πρόβα ρύθμισης. Δεν πρόκειται για ζωντανή σύνδεση Booking.com."
+      : "Η σύνδεση Booking.com προετοιμάζεται για ενεργοποίηση partner. Η ζωντανή σύνδεση δεν είναι ακόμη διαθέσιμη.",
   };
 }

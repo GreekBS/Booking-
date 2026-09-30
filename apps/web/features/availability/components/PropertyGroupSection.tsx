@@ -11,6 +11,7 @@ import { occupancyHeatClass } from "../lib/occupancy";
 import { UnitCalendarRow } from "./UnitCalendarRow";
 import type { AvailabilityRulesRecord, CalendarRecord, RatePlanRecord } from "@/lib/admin/types";
 import type { OverlayToggles } from "../types";
+import { displayUnitName } from "@/lib/i18n";
 
 interface PropertyGroupSectionProps {
   property: PropertyRecord;
@@ -128,7 +129,7 @@ export function PropertyGroupSection({
             key={unit.id}
             meta={{
               unitId: unit.id,
-              unitName: unit.name,
+              unitName: displayUnitName(unit.name),
               propertyId: property.id,
               propertyName: property.name,
             }}

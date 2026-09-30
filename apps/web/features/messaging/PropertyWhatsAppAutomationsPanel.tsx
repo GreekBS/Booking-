@@ -5,6 +5,7 @@ import { useTenant } from "@/hooks/use-tenant";
 import { Button } from "@/components/ui/button";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
+import { elCommon } from "@/lib/i18n";
 
 /**
  * V1 Property Guest Messaging settings.
@@ -72,10 +73,10 @@ export function PropertyWhatsAppAutomationsPanel({
         },
       );
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message ?? "Save failed");
-      toastSuccess("Guest Messaging settings saved");
+      if (!res.ok) throw new Error(json?.error?.message ?? "Αποτυχία αποθήκευσης");
+      toastSuccess("Οι ρυθμίσεις μηνυμάτων επισκέπτη αποθηκεύτηκαν");
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Save failed");
+      toastError(e instanceof Error ? e.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
@@ -84,11 +85,11 @@ export function PropertyWhatsAppAutomationsPanel({
   return (
     <Surface>
       <SurfaceHeader
-        title="Guest Messaging"
-        description="Welcome Email invites the guest to contact the central Talos WhatsApp number. AI replies only after the guest sends the first message (customer service window)."
+        title={elCommon.guestMessaging}
+        description="Το Welcome Email καλεί τον επισκέπτη να επικοινωνήσει με τον κεντρικό αριθμό WhatsApp του Talos. Το AI απαντά μόνο αφού ο επισκέπτης στείλει το πρώτο μήνυμα (παράθυρο εξυπηρέτησης)."
       />
       {loading ? (
-        <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+        <p className="p-4 text-sm text-muted-foreground">{elCommon.loading}</p>
       ) : (
         <div className="space-y-4 p-4">
           <label className="flex items-center gap-2 text-sm">
@@ -97,7 +98,7 @@ export function PropertyWhatsAppAutomationsPanel({
               checked={welcomeEmailEnabled}
               onChange={(e) => setWelcomeEmailEnabled(e.target.checked)}
             />
-            Welcome Email enabled
+            Welcome Email ενεργό
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -105,15 +106,14 @@ export function PropertyWhatsAppAutomationsPanel({
               checked={whatsappEnabled}
               onChange={(e) => setWhatsappEnabled(e.target.checked)}
             />
-            WhatsApp messaging enabled for this property
+            Μηνύματα WhatsApp ενεργά για αυτό το κατάλυμα
           </label>
           <p className="text-xs text-muted-foreground">
-            Scheduled Arrival and other proactive WhatsApp automations require
-            the Production worker and are not part of active V1. Infrastructure
-            is retained for a future phase.
+            Προγραμματισμένες αφίξεις και άλλες προληπτικές αυτοματισμοί WhatsApp
+            απαιτούν τον Production worker και δεν ανήκουν στο ενεργό V1.
           </p>
           <Button onClick={() => void save()} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? elCommon.saving : elCommon.save}
           </Button>
         </div>
       )}

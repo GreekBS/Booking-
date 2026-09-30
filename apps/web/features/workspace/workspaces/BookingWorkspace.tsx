@@ -4,6 +4,7 @@ import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import { useCalendarActions } from "@/features/extranet-calendar/context/CalendarActionsContext";
 import type { RackUnit, WorkspaceBookingTarget } from "@/features/extranet-calendar/types";
 import { BookingWorkspaceView } from "@/features/bookings/workspace/BookingWorkspaceView";
+import { displayUnitName } from "@/lib/i18n";
 
 interface BookingWorkspaceProps {
   target: WorkspaceBookingTarget;
@@ -17,7 +18,7 @@ export function BookingWorkspace({ target, active, units }: BookingWorkspaceProp
 
   const unitOptions = units.map((u) => ({
     unitId: u.unitId,
-    unitName: u.unitName,
+    unitName: displayUnitName(u.unitName),
     propertyId: u.propertyId,
   }));
 
@@ -27,7 +28,7 @@ export function BookingWorkspace({ target, active, units }: BookingWorkspaceProp
       active={active}
       labels={{
         propertyLabel: target.propertyName,
-        unitLabel: target.unitName,
+        unitLabel: displayUnitName(target.unitName),
       }}
       unitOptions={unitOptions}
       onClose={closeWorkspace}

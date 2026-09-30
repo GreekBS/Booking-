@@ -54,7 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { elCommon, elNav, statusLabelEl } from "@/lib/i18n";
+import { displayUnitName, elCommon, elNav, statusLabelEl } from "@/lib/i18n";
 
 const PAGE_SIZE = 15;
 
@@ -261,7 +261,7 @@ function BookingsPageContent() {
         .filter((u) => u.propertyId === propertyId)
         .map((u) => ({
           unitId: u.id,
-          unitName: u.name,
+          unitName: displayUnitName(u.name),
           propertyId: u.propertyId,
         })),
     [units, propertyId],
@@ -421,7 +421,7 @@ function BookingsPageContent() {
               <SelectContent>
                 <SelectItem value="all">Όλες οι μονάδες</SelectItem>
                 {filteredUnits.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  <SelectItem key={u.id} value={u.id}>{displayUnitName(u.name)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -538,7 +538,7 @@ function BookingsPageContent() {
                         <div className="text-xs text-muted-foreground">{booking.guest.email}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{unit?.name ?? "—"}</div>
+                        <div className="text-sm">{displayUnitName(unit?.name)}</div>
                         <div className="text-xs text-muted-foreground">{propertyName ?? "—"}</div>
                       </TableCell>
                       <TableCell className="tabular-nums text-sm">{booking.checkIn}</TableCell>
@@ -567,7 +567,11 @@ function BookingsPageContent() {
           if (!open) closeBooking();
         }}
         requestClose={requestClose}
-        unitLabel={selected ? unitMap.get(selected.unitId)?.name : undefined}
+        unitLabel={
+          selected
+            ? displayUnitName(unitMap.get(selected.unitId)?.name)
+            : undefined
+        }
         propertyLabel={selected ? propertyMap.get(selected.propertyId)?.name : undefined}
         unitOptions={workspaceUnitOptions}
         onUpdated={(updated) => {

@@ -104,7 +104,7 @@ export function BlockWorkspacePanel({ target, active }: BlockWorkspacePanelProps
         <DrawerSection title="Location">
           <DrawerDetailList>
             <DrawerDetailRow label="Property" value={target.propertyName} />
-            <DrawerDetailRow label="Unit" value={target.unitName} />
+            <DrawerDetailRow label="Μονάδα" value={target.unitName} />
             <DrawerDetailRow label="ID block" value={target.id.slice(0, 12)} mono />
           </DrawerDetailList>
         </DrawerSection>

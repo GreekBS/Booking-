@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { elCommon } from "@/lib/i18n";
 import { FiscalSettingsSection } from "./FiscalSettingsSection";
 
 type SettingsSection =
@@ -192,19 +193,19 @@ export function SettingsPage() {
         <div className="border-b border-border">
           <TabsList className="h-9 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
             <TabsTrigger value="organization" className={SECTION_TRIGGER_CLASS}>
-              Organization
+              Οργανισμός
             </TabsTrigger>
             <TabsTrigger value="regional" className={SECTION_TRIGGER_CLASS}>
-              Regional
+              Περιφέρεια
             </TabsTrigger>
             <TabsTrigger value="commerce" className={SECTION_TRIGGER_CLASS}>
-              Commerce
+              Εμπόριο
             </TabsTrigger>
             <TabsTrigger value="fiscal" className={SECTION_TRIGGER_CLASS}>
-              Fiscal
+              Φορολογία
             </TabsTrigger>
             <TabsTrigger value="storefront-keys" className={SECTION_TRIGGER_CLASS}>
-              Storefront keys
+              Κλειδιά vitrine
             </TabsTrigger>
           </TabsList>
         </div>
@@ -217,7 +218,7 @@ export function SettingsPage() {
             />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Tenant name</Label>
+                <Label>Όνομα οργανισμού</Label>
                 <Input value={tenantName} readOnly />
               </div>
               <div className="space-y-1.5">
@@ -225,7 +226,7 @@ export function SettingsPage() {
                 <Input value={membership?.tenantSlug ?? ""} readOnly />
               </div>
               <div className="space-y-1.5">
-                <Label>Your role</Label>
+                <Label>Ο ρόλος σας</Label>
                 <Input value={membership?.role ?? ""} readOnly className="capitalize" />
               </div>
             </div>
@@ -240,7 +241,7 @@ export function SettingsPage() {
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Timezone</Label>
+                <Label>Ζώνη ώρας</Label>
                 <Input
                   value={tenantSettings.timezone}
                   onChange={(e) =>
@@ -249,7 +250,7 @@ export function SettingsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Default locale</Label>
+                <Label>Προεπιλεγμένο locale</Label>
                 <Input
                   value={tenantSettings.defaultLocale}
                   onChange={(e) =>
@@ -258,7 +259,7 @@ export function SettingsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Default currency</Label>
+                <Label>Προεπιλεγμένο νόμισμα</Label>
                 <Input
                   value={tenantSettings.defaultCurrency}
                   onChange={(e) =>
@@ -271,7 +272,7 @@ export function SettingsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Date format</Label>
+                <Label>Μορφή ημερομηνίας</Label>
                 <Select
                   value={tenantSettings.dateFormat}
                   onValueChange={(value) =>
@@ -289,7 +290,7 @@ export function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Time format</Label>
+                <Label>Μορφή ώρας</Label>
                 <Select
                   value={tenantSettings.timeFormat}
                   onValueChange={(value) =>
@@ -300,14 +301,14 @@ export function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="24h">24-hour</SelectItem>
-                    <SelectItem value="12h">12-hour</SelectItem>
+                    <SelectItem value="24h">24ωρο</SelectItem>
+                    <SelectItem value="12h">12ωρο</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="sm:col-span-2">
                 <Button disabled={saving} onClick={() => void saveTenantSettings()}>
-                  Αποθήκευση regional settings
+                  {elCommon.save}
                 </Button>
               </div>
             </div>
@@ -322,7 +323,7 @@ export function SettingsPage() {
             />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Hold TTL (seconds)</Label>
+                <Label>Hold TTL (δευτερόλεπτα)</Label>
                 <Input
                   type="number"
                   value={commerceSettings.defaultHoldTtlSeconds}
@@ -346,13 +347,13 @@ export function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manual">Manual</SelectItem>
-                    <SelectItem value="payment_required">Payment required</SelectItem>
+                    <SelectItem value="manual">Χειροκίνητα</SelectItem>
+                    <SelectItem value="payment_required">Απαιτείται πληρωμή</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Commerce currency</Label>
+                <Label>Νόμισμα εμπορίου</Label>
                 <Input
                   value={commerceSettings.defaultCurrency}
                   onChange={(e) =>
@@ -366,7 +367,7 @@ export function SettingsPage() {
               </div>
               <div className="sm:col-span-3">
                 <Button disabled={saving} onClick={() => void saveCommerceSettings()}>
-                  Αποθήκευση commerce settings
+                  {elCommon.save}
                 </Button>
               </div>
             </div>

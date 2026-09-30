@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { displayUnitName } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 
@@ -98,7 +99,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
       <Sheet open={Boolean(unit)} onOpenChange={onOpenChange}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>QR καθαρισμού · {unit?.name ?? ""}</SheetTitle>
+            <SheetTitle>QR καθαρισμού · {displayUnitName(unit?.name)}</SheetTitle>
           </SheetHeader>
 
           {loading ? (

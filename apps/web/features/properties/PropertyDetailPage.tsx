@@ -33,7 +33,8 @@ import {
 import Link from "next/link";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
-import { elCommon, statusLabelEl } from "@/lib/i18n";
+import { elCommon, displayUnitName, statusLabelEl } from "@/lib/i18n";
+import { useBreadcrumbEntityLabels } from "@/components/admin/breadcrumb-entity-labels";
 
 interface PropertyDetailPageProps {
   propertyId: string;
@@ -107,6 +108,12 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
     void loadProperty();
   }, [tenantId, propertyId]);
 
+  useBreadcrumbEntityLabels(
+    property
+      ? { [propertyId]: property.name }
+      : {},
+  );
+
   async function save(updates: Record<string, unknown>) {
     if (!tenantId) return;
     setSaving(true);
@@ -123,8 +130,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
       setMessage("Αποθηκεύτηκε επιτυχώς");
       toastSuccess("Αποθηκεύτηκε επιτυχώς");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-      toastError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης");
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης");
     } finally {
       setSaving(false);
     }
@@ -170,11 +177,11 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
             ) : null}
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/properties/${propertyId}/assistant`}>
-                AI Assistant
+                {elCommon.aiAssistant}
               </Link>
             </Button>
             <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
-              Archive
+              {elCommon.archive}
             </Button>
           </div>
         }
@@ -322,7 +329,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 <TableBody>
                   {property.units.map((unit) => (
                     <TableRow key={unit.id}>
-                      <TableCell>{unit.name}</TableCell>
+                      <TableCell>{displayUnitName(unit.name)}</TableCell>
                       <TableCell>{unit.maxGuests}</TableCell>
                       <TableCell>{unit.bedrooms}</TableCell>
                       <TableCell>
@@ -559,7 +566,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         onOpenChange={setArchiveOpen}
         title="Αρχειοθέτηση καταλύματος"
         description="Το κατάλυμα θα αρχειοθετηθεί και θα αφαιρεθεί από ενεργές καταχωρήσεις."
-        confirmLabel="Archive"
+        confirmLabel={elCommon.archive}
         destructive
         onConfirm={archiveProperty}
       />

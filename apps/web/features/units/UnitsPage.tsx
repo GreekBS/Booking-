@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitQrSheet } from "@/features/cleaning/UnitQrSheet";
+import { displayUnitName } from "@/lib/i18n";
 
 export function UnitsPage() {
   const searchParams = useSearchParams();
@@ -279,7 +280,7 @@ export function UnitsPage() {
                         className="hover:underline"
                         onClick={() => setDetailUnit(unit)}
                       >
-                        {unit.name}
+                        {displayUnitName(unit.name)}
                       </button>
                     </TableCell>
                     <TableCell>{unit.propertyName}</TableCell>

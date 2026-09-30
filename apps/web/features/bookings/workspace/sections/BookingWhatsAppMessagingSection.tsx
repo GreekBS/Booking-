@@ -11,6 +11,7 @@ import {
   WorkspaceSection,
 } from "@/features/workspace/components/WorkspaceSection";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
+import { elCommon } from "@/lib/i18n";
 import type { BookingSectionProps } from "../types";
 
 type MessagingPayload = {
@@ -165,21 +166,21 @@ export function BookingWhatsAppMessagingSection({
   const alreadySent = emailStatus === "sent";
 
   return (
-    <WorkspaceSection title="Guest Messaging">
+    <WorkspaceSection title={elCommon.guestMessaging}>
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{elCommon.loading}</p>
       ) : (
         <div className="space-y-6">
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Primary activation: Welcome Email with a secure WhatsApp contact
-              link. The guest sends the first WhatsApp message — no worker
-              required.
+              Κύρια ενεργοποίηση: Welcome Email με ασφαλή σύνδεσμο επικοινωνίας
+              WhatsApp. Ο επισκέπτης στέλνει το πρώτο μήνυμα WhatsApp — χωρίς
+              worker.
             </p>
             <WorkspaceDetailList>
               <WorkspaceDetailRow
                 label="Email"
-                value={guestEmail || "No usable email"}
+                value={guestEmail || "Δεν υπάρχει χρησιμοποιήσιμο email"}
               />
               <WorkspaceDetailRow
                 label="Welcome Email"
@@ -194,19 +195,20 @@ export function BookingWhatsAppMessagingSection({
                 label="WhatsApp"
                 value={
                   data?.whatsappConnected
-                    ? `Connected · ${data.profile?.guestChannelIdentity ?? data.profile?.whatsappPhone ?? ""}`
-                    : "Not connected"
+                    ? `Συνδεδεμένο · ${data.profile?.guestChannelIdentity ?? data.profile?.whatsappPhone ?? ""}`
+                    : "Μη συνδεδεμένο"
                 }
               />
               <WorkspaceDetailRow
-                label="Conversation"
+                label="Συνομιλία"
                 value={data?.profile?.conversationId ?? "—"}
               />
             </WorkspaceDetailList>
             {!guestEmail ? (
               <p className="text-sm text-amber-700">
-                Automatic email activation is unavailable — no usable guest
-                email. Use the manual WhatsApp contact fallback below.
+                Η αυτόματη ενεργοποίηση μέσω email δεν είναι διαθέσιμη — δεν
+                υπάρχει χρησιμοποιήσιμο email επισκέπτη. Χρησιμοποιήστε την
+                εναλλακτική WhatsApp παρακάτω.
               </p>
             ) : (
               <Button
@@ -214,27 +216,28 @@ export function BookingWhatsAppMessagingSection({
                 disabled={emailBusy || booking.status === "cancelled"}
               >
                 {emailBusy
-                  ? "Sending…"
+                  ? "Αποστολή…"
                   : alreadySent
-                    ? "Resend Welcome Email"
-                    : "Send Welcome Email"}
+                    ? "Επανάληψη Welcome Email"
+                    : "Αποστολή Welcome Email"}
               </Button>
             )}
             {data?.profile?.conversationId ? (
               <Button variant="outline" size="sm" asChild>
-                <a href="/dashboard/messages">Open conversation</a>
+                <a href="/dashboard/messages">Άνοιγμα συνομιλίας</a>
               </Button>
             ) : null}
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <p className="text-sm font-medium">Manual WhatsApp fallback</p>
+            <p className="text-sm font-medium">Χειροκίνητη εναλλακτική WhatsApp</p>
             <p className="text-sm text-muted-foreground">
-              Confirm an E.164 WhatsApp number for this stay when email
-              activation is unavailable. Stay-only by default.
+              Επιβεβαιώστε αριθμό WhatsApp σε μορφή E.164 για αυτή τη διαμονή
+              όταν δεν υπάρχει ενεργοποίηση μέσω email. Μόνο για τη διαμονή από
+              προεπιλογή.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="wa-phone">WhatsApp phone (E.164)</Label>
+              <Label htmlFor="wa-phone">Τηλέφωνο WhatsApp (E.164)</Label>
               <Input
                 id="wa-phone"
                 value={phone}
@@ -248,14 +251,14 @@ export function BookingWhatsAppMessagingSection({
                 checked={alsoCrm}
                 onChange={(e) => setAlsoCrm(e.target.checked)}
               />
-              Also update CRM Guest phone
+              Ενημέρωση και του τηλεφώνου στο CRM Guest
             </label>
             <Button
               variant="secondary"
               onClick={() => void saveWhatsAppFallback()}
               disabled={saving || !phone.trim()}
             >
-              {saving ? "Saving…" : "Confirm & enable messaging"}
+              {saving ? elCommon.saving : "Επιβεβαίωση & ενεργοποίηση μηνυμάτων"}
             </Button>
           </div>
         </div>

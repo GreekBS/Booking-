@@ -11,6 +11,7 @@ import {
   writeSidebarCollapsed,
 } from "./admin-sidebar";
 import { AdminHeader } from "./admin-header";
+import { BreadcrumbEntityLabelsProvider } from "./breadcrumb-entity-labels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -38,6 +39,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <TenantProvider>
       <ActivePropertyProvider>
+        <BreadcrumbEntityLabelsProvider>
         <div className="flex min-h-screen bg-background font-sans">
           <div className="hidden h-screen sticky top-0 lg:block">
             <AdminSidebar
@@ -66,6 +68,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </main>
           </div>
         </div>
+        </BreadcrumbEntityLabelsProvider>
       </ActivePropertyProvider>
     </TenantProvider>
   );

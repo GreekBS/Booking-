@@ -48,6 +48,8 @@ export const elCommon = {
   properties: "Καταλύματα",
   unit: "Μονάδα",
   units: "Μονάδες",
+  /** Customer-facing label for the default whole-property unit (internal name: Entire Property). */
+  entireProperty: "Ολόκληρο κατάλυμα",
   guest: "Επισκέπτης",
   guests: "Επισκέπτες",
   booking: "Κράτηση",
@@ -87,6 +89,10 @@ export const elCommon = {
   noProperty: "Δεν υπάρχει κατάλυμα",
   selectProperty: "Επιλέξτε κατάλυμα",
   createProperty: "Δημιουργία καταλύματος",
+  addProperty: "Προσθήκη καταλύματος",
+  archive: "Αρχειοθέτηση",
+  aiAssistant: "Βοηθός AI",
+  guestMessaging: "Μηνύματα επισκέπτη",
   comingSoon: "Σύντομα",
   notificationsComingSoon: "Ειδοποιήσεις (σύντομα)",
   new: "Νέο",
@@ -113,6 +119,8 @@ export const elCommon = {
   children: "Παιδιά",
   capacity: "Χωρητικότητα",
   maxGuests: "Μέγ. επισκέπτες",
+  available: "Διαθέσιμο",
+  connected: "Συνδεδεμένα",
 } as const;
 
 /** Sidebar / section navigation. */

@@ -18,7 +18,7 @@ import {
 import type { StayChangePreviewRecord } from "@/lib/admin/types";
 import type { StayDraft } from "../hooks/useBookingStayDraft";
 import type { WorkspaceUnitOption } from "../types";
-import { elCommon } from "@/lib/i18n";
+import { displayUnitName, elCommon } from "@/lib/i18n";
 
 export interface BookingStaySectionProps {
   draft: StayDraft;
@@ -42,6 +42,9 @@ export function BookingStaySection({
   onDraftChange,
 }: BookingStaySectionProps) {
   const nights = nightsBetween(draft.checkIn, draft.checkOut);
+  const resolvedUnitLabel = displayUnitName(
+    unitLabel ?? unitOptions.find((u) => u.unitId === draft.unitId)?.unitName,
+  );
 
   if (readOnly) {
     return (
@@ -72,14 +75,14 @@ export function BookingStaySection({
               <SelectContent>
                 {unitOptions.map((unit) => (
                   <SelectItem key={unit.unitId} value={unit.unitId}>
-                    {unit.unitName}
+                    {displayUnitName(unit.unitName)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         ) : (
-          <WorkspaceDetailRow label={elCommon.unit} value={unitLabel ?? draft.unitId.slice(0, 8)} />
+          <WorkspaceDetailRow label={elCommon.unit} value={resolvedUnitLabel} />
         )}
 
         <div className="grid grid-cols-2 gap-3">

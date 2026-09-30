@@ -36,6 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { elCommon, statusLabelEl } from "@/lib/i18n";
 
 const PAGE_SIZE = 10;
 
@@ -111,7 +112,7 @@ export function PropertiesPage() {
           <Button asChild>
             <Link href="/dashboard/properties/new">
               <Plus className="h-4 w-4" />
-              Add property
+              {elCommon.addProperty}
             </Link>
           </Button>
         }
@@ -137,10 +138,10 @@ export function PropertiesPage() {
               <SelectValue placeholder="Κατάσταση" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Όλα statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="active">Ενεργό</SelectItem>
-              <SelectItem value="inactive">Ανενεργό</SelectItem>
+              <SelectItem value="all">Όλες οι καταστάσεις</SelectItem>
+              <SelectItem value="draft">{statusLabelEl("draft")}</SelectItem>
+              <SelectItem value="active">{statusLabelEl("active")}</SelectItem>
+              <SelectItem value="inactive">{statusLabelEl("inactive")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -150,7 +151,7 @@ export function PropertiesPage() {
         <EmptyState
           title="Δεν βρέθηκαν καταλύματα"
           description="Δημιουργήστε το πρώτο κατάλυμα για κρατήσεις."
-          action={{ label: "Add property", href: "/dashboard/properties/new", onClick: () => {} }}
+          action={{ label: elCommon.addProperty, href: "/dashboard/properties/new", onClick: () => {} }}
         />
       ) : (
         <Surface
@@ -164,7 +165,7 @@ export function PropertiesPage() {
               title="Όλα τα καταλύματα"
               description={
                 data
-                  ? `${data.meta.total} total · page ${page} of ${totalPages}`
+                  ? `${data.meta.total} σύνολο · σελίδα ${page} από ${totalPages}`
                   : undefined
               }
             />

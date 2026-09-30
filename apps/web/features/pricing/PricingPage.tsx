@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { elCommon, elWeekdaysShort } from "@/lib/i18n";
+import { displayUnitName, elCommon, elWeekdaysShort } from "@/lib/i18n";
 
 const DAYS = [...elWeekdaysShort];
 
@@ -282,14 +282,17 @@ export function PricingPage() {
             <SelectContent>
               {units.map((u) => (
                 <SelectItem key={u.id} value={u.id}>
-                  {u.name}
+                  {displayUnitName(u.name)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {selectedUnit ? (
             <p className="text-xs text-muted-foreground">
-              Επεξεργασία <span className="font-medium text-foreground">{selectedUnit.name}</span>
+              Επεξεργασία{" "}
+              <span className="font-medium text-foreground">
+                {displayUnitName(selectedUnit.name)}
+              </span>
             </p>
           ) : null}
         </div>
@@ -490,7 +493,7 @@ export function PricingPage() {
                     }
                   >
                     <Plus className="mr-1 h-4 w-4" />
-                    Add
+                    {elCommon.add}
                   </Button>
                 }
               />
@@ -593,7 +596,7 @@ export function PricingPage() {
                     }
                   >
                     <Plus className="mr-1 h-4 w-4" />
-                    Add
+                    {elCommon.add}
                   </Button>
                 }
               />

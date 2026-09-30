@@ -28,6 +28,7 @@ import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { useBreadcrumbEntityLabels } from "@/components/admin/breadcrumb-entity-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,6 +165,10 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
   useEffect(() => {
     void loadTagsCatalog();
   }, [loadTagsCatalog]);
+
+  useBreadcrumbEntityLabels(
+    profileData ? { [guestId]: profileData.guest.displayName } : {},
+  );
 
   const unassignedTags = useMemo(() => {
     if (!profileData) return [];

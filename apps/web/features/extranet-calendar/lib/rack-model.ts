@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { CatalogPropertyRecord } from "@/lib/admin/types";
+import { displayUnitName } from "@/lib/i18n";
 import type { RackPropertyGroup } from "../types";
 
 /** Minimal property shape for Availability rack / selectors (slim catalog compatible). */
@@ -22,10 +23,14 @@ export function buildRackGroup(
 
   const search = unitSearch.trim().toLowerCase();
   const units = property.units
-    .filter((u) => !search || u.name.toLowerCase().includes(search))
+    .filter((u) => {
+      if (!search) return true;
+      const label = displayUnitName(u.name).toLowerCase();
+      return label.includes(search) || u.name.toLowerCase().includes(search);
+    })
     .map((u) => ({
       unitId: u.id,
-      unitName: u.name,
+      unitName: displayUnitName(u.name),
       propertyId: property.id,
       propertyName: property.name,
     }));

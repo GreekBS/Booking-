@@ -37,6 +37,7 @@ import {
   channelProviderLabel,
   channelStatusLabel,
 } from "@/lib/admin/operator-labels";
+import { elCommon } from "@/lib/i18n";
 import {
   createIcalConnection,
   formatChannelApiError,
@@ -370,7 +371,7 @@ function IcalProviderCard({ count, onAdd }: { count: number; onAdd: () => void }
         </div>
         <StatusBadge
           status={count > 0 ? "active" : "draft"}
-          label={count > 0 ? `${count} connected` : "Available"}
+          label={count > 0 ? `${count} ${elCommon.connected}` : elCommon.available}
         />
       </div>
       <div className="mt-4">

@@ -13,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { elCommon } from "@/lib/i18n";
 import { getBarVisualConfig } from "../../lib/bar-styles";
 import {
   DrawerActions,
@@ -21,7 +22,6 @@ import {
   DrawerDivider,
   DrawerSection,
 } from "./DrawerPrimitives";
-import { elCommon } from "@/lib/i18n";
 
 type CalendarBlock = CalendarRecord["blocks"][number];
 
@@ -106,7 +106,7 @@ export function OperatorBlockDrawer({
           <DrawerSection title="Location">
             <DrawerDetailList>
               <DrawerDetailRow label="Property" value={propertyLabel ?? "—"} />
-              <DrawerDetailRow label="Unit" value={unitLabel ?? "—"} />
+              <DrawerDetailRow label={elCommon.unit} value={unitLabel ?? "—"} />
               <DrawerDetailRow label="ID block" value={block.id.slice(0, 12)} mono />
             </DrawerDetailList>
           </DrawerSection>

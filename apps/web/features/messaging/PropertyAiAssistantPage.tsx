@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import {
   getPropertyAssistantConfig,
   replacePropertyFaqs,
@@ -15,6 +16,7 @@ import type {
   PropertyGuestKnowledgeRecord,
 } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { useBreadcrumbEntityLabels } from "@/components/admin/breadcrumb-entity-labels";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { ErrorState } from "@/components/admin/error-state";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
+import { elCommon } from "@/lib/i18n";
 import { PropertyWhatsAppAutomationsPanel } from "./PropertyWhatsAppAutomationsPanel";
 
 const KNOWLEDGE_FIELDS: Array<{
@@ -71,6 +74,7 @@ export function PropertyAiAssistantPage({
   propertyId,
 }: PropertyAiAssistantPageProps) {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const { properties } = useActiveProperty();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +87,12 @@ export function PropertyAiAssistantPage({
   const [faqs, setFaqs] = useState<
     Array<{ id?: string; question: string; answer: string; isActive: boolean }>
   >([]);
+
+  const propertyName = properties.find((p) => p.id === propertyId)?.name;
+  useBreadcrumbEntityLabels({
+    ...(propertyName ? { [propertyId]: propertyName } : {}),
+    assistant: elCommon.aiAssistant,
+  });
 
   async function load() {
     if (!tenantId) return;
@@ -219,7 +229,7 @@ export function PropertyAiAssistantPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="AI Guest Receptionist"
+        title={elCommon.aiAssistant}
         description="Λειτουργία, ύφος και γνώση καταλύματος για τον βοηθό επισκεπτών."
         actions={
           <Button variant="outline" size="sm" asChild>

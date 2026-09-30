@@ -25,3 +25,7 @@ export {
   paymentStatusLabelEl,
   fiscalDocumentKindLabelEl,
 } from "./el";
+export {
+  displayUnitName,
+  INTERNAL_ENTIRE_PROPERTY_UNIT_NAME,
+} from "./display-unit-name";
