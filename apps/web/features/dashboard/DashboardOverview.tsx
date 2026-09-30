@@ -115,6 +115,37 @@ export function DashboardOverview() {
 
   const todayLabel = useMemo(() => formatOpsDate(todayIsoLocal()), []);
 
+  // First-property continuity: zero-property tenants need a clear next step on Dashboard only.
+  if (
+    !tenantLoading &&
+    propertyReady &&
+    tenantId &&
+    !tenantError &&
+    !propertyError &&
+    properties.length === 0
+  ) {
+    return (
+      <div className="space-y-5 md:space-y-6">
+        <PageHeader
+          title={elNav.operations}
+          description={
+            tenantName
+              ? `${tenantName} · Δημιουργήστε το πρώτο σας κατάλυμα για να ξεκινήσετε`
+              : "Δημιουργήστε το πρώτο σας κατάλυμα για να ξεκινήσετε"
+          }
+        />
+        <EmptyState
+          title="Καλώς ήρθατε στο Talos"
+          description="Ο οργανισμός σας είναι έτοιμος. Το επόμενο βήμα είναι να δημιουργήσετε το πρώτο σας κατάλυμα — για τιμές, διαθεσιμότητα και κρατήσεις."
+          action={{
+            label: "Δημιουργήστε το πρώτο σας κατάλυμα",
+            href: "/dashboard/properties/new",
+          }}
+        />
+      </div>
+    );
+  }
+
   const propertyGate = renderActivePropertyGate({
     tenantLoading,
     tenantError,

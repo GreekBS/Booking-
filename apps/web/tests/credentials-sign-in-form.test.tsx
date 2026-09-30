@@ -126,6 +126,13 @@ describe("CredentialsSignInForm", () => {
     );
   });
 
+  it("brands standalone admin login as Talos, not HCP Admin", () => {
+    render(<CredentialsSignInForm variant="admin" />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Talos");
+    expect(screen.queryByText(/HCP Admin/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Sign in to your Talos account/i)).toBeInTheDocument();
+  });
+
   it("uses navigation callbacks instead of links when provided", async () => {
     const user = userEvent.setup();
     const onCreateAccount = vi.fn();

@@ -74,6 +74,14 @@ describe("Talos operator Phase 1 design system", () => {
     expect(dash).toMatch(/fetchDashboardOverview\(tenantId,\s*propertyId\)/);
   });
 
+  it("shows a first-property CTA on the zero-property dashboard state", () => {
+    const dash = read("features/dashboard/DashboardOverview.tsx");
+    expect(dash).toContain("properties.length === 0");
+    expect(dash).toContain("Δημιουργήστε το πρώτο σας κατάλυμα");
+    expect(dash).toContain('/dashboard/properties/new');
+    expect(dash).toContain("Καλώς ήρθατε στο Talos");
+  });
+
   it("preserves calendar immersive layout and does not rewrite calendar page", () => {
     const cal = read("features/extranet-calendar/ExtranetCalendarPage.tsx");
     expect(cal.length).toBeGreaterThan(100);

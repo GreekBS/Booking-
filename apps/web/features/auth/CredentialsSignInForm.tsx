@@ -56,12 +56,12 @@ export function CredentialsSignInForm({
     );
   }
 
-  const title = heading ?? (isMarketing ? "Welcome back" : "HCP Admin");
+  const title = heading ?? (isMarketing ? "Welcome back" : "Talos");
   const lede =
     description ??
     (isMarketing
       ? "Sign in to manage your hospitality business."
-      : "Sign in to your account");
+      : "Sign in to your Talos account");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
