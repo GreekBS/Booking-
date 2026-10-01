@@ -6,6 +6,10 @@ const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_IP = 120;
 const MAX_REQUESTS_PER_KEY = 300;
 
+/** Stricter caps for Hold / future mutation endpoints. */
+const MUTATION_MAX_REQUESTS_PER_IP = 30;
+const MUTATION_MAX_REQUESTS_PER_KEY = 60;
+
 export function checkDirectBookingRateLimit(
   request: Request,
   integrationId?: string,
@@ -19,6 +23,22 @@ export function checkDirectBookingRateLimit(
 
   if (integrationId) {
     enforceBucket(`dbk:key:${integrationId}`, MAX_REQUESTS_PER_KEY);
+  }
+}
+
+export function checkDirectBookingMutationRateLimit(
+  request: Request,
+  integrationId?: string,
+): void {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  enforceBucket(`dbk:mut:ip:${ip}`, MUTATION_MAX_REQUESTS_PER_IP);
+
+  if (integrationId) {
+    enforceBucket(`dbk:mut:key:${integrationId}`, MUTATION_MAX_REQUESTS_PER_KEY);
   }
 }
 

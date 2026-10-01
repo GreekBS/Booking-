@@ -31,6 +31,16 @@ export class PrismaQuoteRepository implements IQuoteRepository {
     });
   }
 
+  async findByHoldId(holdId: string, tenantId: string): Promise<Quote | null> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const record = await tx.quote.findFirst({
+        where: { holdId, tenantId },
+        orderBy: { createdAt: "desc" },
+      });
+      return record ? quoteToDomain(record) : null;
+    });
+  }
+
   private async persistQuote(
     tx: TransactionClient,
     quote: Quote,

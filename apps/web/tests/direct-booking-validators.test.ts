@@ -4,6 +4,7 @@ import {
   directBookingAvailabilitySchema,
   directBookingPublicKeySchema,
   directBookingCalendarSchema,
+  directBookingCreateHoldSchema,
 } from "@hcp/validators";
 
 describe("direct booking validators", () => {
@@ -49,6 +50,47 @@ describe("direct booking validators", () => {
         from: "2026-01-01",
         to: "2026-05-01",
         guestCount: 2,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts hold payload and rejects price/TTL/tenant overrides", () => {
+    expect(
+      directBookingCreateHoldSchema.safeParse({
+        checkIn: "2026-12-10",
+        checkOut: "2026-12-13",
+        guestCount: 2,
+        idempotencyKey: "client-key-123456",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      directBookingCreateHoldSchema.safeParse({
+        checkIn: "2026-12-10",
+        checkOut: "2026-12-13",
+        guestCount: 2,
+        idempotencyKey: "client-key-123456",
+        total: "1.00",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateHoldSchema.safeParse({
+        checkIn: "2026-12-10",
+        checkOut: "2026-12-13",
+        guestCount: 2,
+        idempotencyKey: "client-key-123456",
+        ttlSeconds: 60,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateHoldSchema.safeParse({
+        checkIn: "2026-12-10",
+        checkOut: "2026-12-13",
+        guestCount: 2,
+        idempotencyKey: "client-key-123456",
+        propertyId: "1a975f6c-08b5-497d-94a0-777ff09fa618",
       }).success,
     ).toBe(false);
   });

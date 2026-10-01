@@ -41,6 +41,29 @@ export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
     }
   }
 
+  async saveHoldAndQuote(hold: Hold, quote: Quote): Promise<void> {
+    const holdEvents = hold.pullDomainEvents();
+    const quoteEvents = quote.pullDomainEvents();
+
+    try {
+      await withTenantTransaction(hold.tenantId, async () => {
+        await saveAggregateWithOutbox(
+          this.outboxRepository,
+          [...holdEvents, ...quoteEvents],
+          async (tx) => {
+            await persistHoldTx(tx, hold);
+            await persistQuoteTx(tx, quote);
+          },
+        );
+      });
+    } catch (error) {
+      if (isExclusionViolation(error)) {
+        throw new ConflictError("Dates no longer available");
+      }
+      throw error;
+    }
+  }
+
   async saveStayChange(quote: Quote, booking: Booking): Promise<void> {
     const quoteEvents = quote.pullDomainEvents();
     const bookingEvents = booking.pullDomainEvents();

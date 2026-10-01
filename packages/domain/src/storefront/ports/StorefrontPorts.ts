@@ -68,15 +68,17 @@ export interface IStorefrontCatalogPort {
   isPublishedUnit(tenantId: string, unitId: string): Promise<boolean>;
 }
 
+export type StorefrontIdempotencyScope = "hold" | "booking" | "dbk_hold";
+
 export interface IStorefrontIdempotencyRepository {
   findResourceId(
     tenantId: string,
-    scope: "hold" | "booking",
+    scope: StorefrontIdempotencyScope,
     idempotencyKey: string,
   ): Promise<string | null>;
   save(
     tenantId: string,
-    scope: "hold" | "booking",
+    scope: StorefrontIdempotencyScope,
     idempotencyKey: string,
     resourceId: string,
     expiresAt: Date,

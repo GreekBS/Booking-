@@ -47,6 +47,18 @@ export function directBookingError(error: unknown): NextResponse {
       message = "Unauthorized";
     } else if (error.code === "NOT_FOUND") {
       message = "Not found";
+    } else if (error.code === "CONFLICT") {
+      const lower = message.toLowerCase();
+      if (lower.includes("idempotency")) {
+        code = "IDEMPOTENCY_CONFLICT";
+        message = "Idempotency key conflict";
+      } else if (lower.includes("expired")) {
+        code = "HOLD_EXPIRED";
+        message = "Hold has expired";
+      } else {
+        code = "HOLD_CONFLICT";
+        message = "Dates no longer available";
+      }
     } else if (error.code === "VALIDATION_ERROR") {
       if (message.toLowerCase().includes("not available")) {
         code = "UNAVAILABLE";

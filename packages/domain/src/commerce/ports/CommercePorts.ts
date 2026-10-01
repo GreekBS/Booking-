@@ -78,6 +78,8 @@ export interface HoldListFilters {
 export interface IQuoteRepository {
   save(quote: Quote): Promise<void>;
   findById(id: string, tenantId: string): Promise<Quote | null>;
+  /** Latest quote for a hold (Direct Booking / storefront replay). */
+  findByHoldId(holdId: string, tenantId: string): Promise<Quote | null>;
 }
 
 export interface IBookingRepository {
@@ -190,6 +192,8 @@ export interface ICommerceFlowRepository {
   /** Run fn inside the tenant write transaction (ALS). Nested commerce saves join this TX. */
   runInTenantTransaction<T>(tenantId: string, fn: () => Promise<T>): Promise<T>;
   saveHoldAndBooking(hold: Hold, booking: Booking): Promise<void>;
+  /** Persist Hold inventory block + immutable Quote atomically (no Booking). */
+  saveHoldAndQuote(hold: Hold, quote: Quote): Promise<void>;
   saveImportReservation(hold: Hold, quote: Quote, booking: Booking): Promise<void>;
   saveStayChange(quote: Quote, booking: Booking): Promise<void>;
 }

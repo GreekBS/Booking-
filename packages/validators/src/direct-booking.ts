@@ -35,6 +35,25 @@ export const directBookingQuoteSchema = z
   })
   .strict();
 
+/** Public Direct Booking Hold — stay only; no price/TTL/tenant/unit overrides. */
+export const directBookingCreateHoldSchema = z
+  .object({
+    checkIn: localDateSchema,
+    checkOut: localDateSchema,
+    guestCount: z.number().int().min(1).max(50),
+    idempotencyKey: z.string().min(8).max(64),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!(value.checkIn < value.checkOut)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "checkOut must be after checkIn",
+        path: ["checkOut"],
+      });
+    }
+  });
+
 /** Max [from, to) span in days for public Direct Booking calendar browsing. */
 export const DIRECT_BOOKING_CALENDAR_MAX_RANGE_DAYS = 93;
 

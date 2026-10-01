@@ -4,7 +4,7 @@ import { withTenantTransaction } from "../../client";
 export class PrismaStorefrontIdempotencyRepository implements IStorefrontIdempotencyRepository {
   async findResourceId(
     tenantId: string,
-    scope: "hold" | "booking",
+    scope: "hold" | "booking" | "dbk_hold",
     idempotencyKey: string,
   ): Promise<string | null> {
     return withTenantTransaction(tenantId, async (tx) => {
@@ -32,7 +32,7 @@ export class PrismaStorefrontIdempotencyRepository implements IStorefrontIdempot
 
   async save(
     tenantId: string,
-    scope: "hold" | "booking",
+    scope: "hold" | "booking" | "dbk_hold",
     idempotencyKey: string,
     resourceId: string,
     expiresAt: Date,

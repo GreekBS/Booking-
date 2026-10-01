@@ -34,6 +34,8 @@ export interface PrepareHoldParams {
   guestCount: number;
   holdId: string;
   sessionRef?: string | null;
+  /** When omitted, Hold.create uses DEFAULT_HOLD_TTL_SECONDS. */
+  ttlSeconds?: number;
   mutationOrigin?: MutationOrigin | null;
 }
 
@@ -135,6 +137,7 @@ export class ReservationOrchestrator {
         checkOut: params.checkOut,
         guestCount: params.guestCount,
         sessionRef: params.sessionRef,
+        ttlSeconds: params.ttlSeconds,
         mutationOrigin: params.mutationOrigin ?? null,
       }),
     );
