@@ -14,6 +14,7 @@ import type { AuditIpContext } from "../../application/TaskUseCases";
 import type { UnitQrAccessRecord } from "../domain/CleaningTypes";
 import type { IUnitQrAccessRepository } from "../ports/IUnitQrAccessRepository";
 import type { IOpaqueTokenFactory } from "../ports/IOpaqueTokenFactory";
+import type { IHousekeepingQrTokenSealer } from "../ports/IHousekeepingQrTokenSealer";
 import {
   canManageCleaningConfigOnProperty,
   canReadCleaningOnProperty,
@@ -27,9 +28,10 @@ export interface UnitQrView {
   status: "ACTIVE" | "REVOKED" | "NONE";
   createdAt: Date | null;
   rotatedAt: Date | null;
+  recoverable: boolean;
   /**
-   * Plaintext token — returned only in the response that mints it.
-   * Existing codes cannot be re-read; rotate to print a new one.
+   * Plaintext token for authorized display/print when recoverable.
+   * Null when NONE, REVOKED, or legacy unrecoverable ACTIVE.
    */
   token: string | null;
 }
@@ -57,11 +59,33 @@ async function locateUnit(
   return null;
 }
 
+function recoverToken(
+  record: UnitQrAccessRecord | null,
+  sealer: IHousekeepingQrTokenSealer,
+): { token: string | null; recoverable: boolean } {
+  if (!record || record.status !== "ACTIVE") {
+    return { token: null, recoverable: false };
+  }
+  if (
+    record.tokenCiphertext == null ||
+    record.tokenCiphertext.length === 0 ||
+    record.tokenKeyVersion == null
+  ) {
+    return { token: null, recoverable: false };
+  }
+  const token = sealer.unseal(
+    record.tokenCiphertext,
+    record.tokenKeyVersion,
+  );
+  return { token, recoverable: true };
+}
+
 function toView(
   record: UnitQrAccessRecord | null,
   location: { propertyId: string; propertyName: string; unitName: string },
   unitId: string,
   token: string | null,
+  recoverable: boolean,
 ): UnitQrView {
   return {
     unitId,
@@ -71,6 +95,7 @@ function toView(
     status: record ? record.status : "NONE",
     createdAt: record?.createdAt ?? null,
     rotatedAt: record?.rotatedAt ?? null,
+    recoverable,
     token,
   };
 }
@@ -79,6 +104,7 @@ export class GetUnitQrUseCase {
   constructor(
     private readonly qrAccess: IUnitQrAccessRepository,
     private readonly properties: IPropertyRepository,
+    private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
   ) {}
 
@@ -110,7 +136,16 @@ export class GetUnitQrUseCase {
         input.tenantId,
         input.unitId,
       );
-      return Result.ok(toView(record, location, input.unitId, null));
+      const recovered = recoverToken(record, this.sealer);
+      return Result.ok(
+        toView(
+          record,
+          location,
+          input.unitId,
+          recovered.token,
+          recovered.recoverable,
+        ),
+      );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
@@ -119,13 +154,14 @@ export class GetUnitQrUseCase {
 
 /**
  * Mints a code when the unit has none. If an ACTIVE code already exists it is
- * returned without a token — only `RotateUnitQrUseCase` can replace it.
+ * returned (recovered when sealed) — only `RotateUnitQrUseCase` replaces it.
  */
 export class GenerateUnitQrUseCase {
   constructor(
     private readonly qrAccess: IUnitQrAccessRepository,
     private readonly properties: IPropertyRepository,
     private readonly tokens: IOpaqueTokenFactory,
+    private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
   ) {}
@@ -156,11 +192,14 @@ export class GenerateUnitQrUseCase {
       }
 
       const minted = this.tokens.create();
+      const sealed = this.sealer.seal(minted.token);
       const { record, issued } = await this.qrAccess.issue({
         tenantId: input.tenantId,
         propertyId: location.propertyId,
         unitId: input.unitId,
         tokenHash: minted.tokenHash,
+        tokenCiphertext: sealed.ciphertext,
+        tokenKeyVersion: sealed.keyVersion,
         rotate: false,
       });
 
@@ -174,10 +213,20 @@ export class GenerateUnitQrUseCase {
           metadata: { unitId: input.unitId, propertyId: location.propertyId },
           ipAddress: auditContext?.ipAddress ?? null,
         });
+        return Result.ok(
+          toView(record, location, input.unitId, minted.token, true),
+        );
       }
 
+      const recovered = recoverToken(record, this.sealer);
       return Result.ok(
-        toView(record, location, input.unitId, issued ? minted.token : null),
+        toView(
+          record,
+          location,
+          input.unitId,
+          recovered.token,
+          recovered.recoverable,
+        ),
       );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -190,6 +239,7 @@ export class RotateUnitQrUseCase {
     private readonly qrAccess: IUnitQrAccessRepository,
     private readonly properties: IPropertyRepository,
     private readonly tokens: IOpaqueTokenFactory,
+    private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
   ) {}
@@ -220,11 +270,14 @@ export class RotateUnitQrUseCase {
       }
 
       const minted = this.tokens.create();
+      const sealed = this.sealer.seal(minted.token);
       const { record } = await this.qrAccess.issue({
         tenantId: input.tenantId,
         propertyId: location.propertyId,
         unitId: input.unitId,
         tokenHash: minted.tokenHash,
+        tokenCiphertext: sealed.ciphertext,
+        tokenKeyVersion: sealed.keyVersion,
         rotate: true,
       });
 
@@ -238,7 +291,9 @@ export class RotateUnitQrUseCase {
         ipAddress: auditContext?.ipAddress ?? null,
       });
 
-      return Result.ok(toView(record, location, input.unitId, minted.token));
+      return Result.ok(
+        toView(record, location, input.unitId, minted.token, true),
+      );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }

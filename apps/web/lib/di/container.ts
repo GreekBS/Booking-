@@ -562,6 +562,7 @@ import {
   PrismaCleaningExecutionRepository,
   PrismaCleaningPhotoRepository,
   CryptoOpaqueTokenFactory,
+  AesHousekeepingQrTokenSealer,
   createCleaningObjectStorage,
 
   PrismaFiscalSeriesRepository,
@@ -703,6 +704,7 @@ const cleaningExecutionRepository = new PrismaCleaningExecutionRepository(
 );
 const cleaningPhotoRepository = new PrismaCleaningPhotoRepository();
 const opaqueTokenFactory = new CryptoOpaqueTokenFactory();
+const housekeepingQrTokenSealer = new AesHousekeepingQrTokenSealer();
 /**
  * Supabase private bucket in normal operation; `CLEANING_PHOTOS_DRIVER=fs`
  * switches to the repo-local demo store used by verification runs.
@@ -1698,12 +1700,14 @@ export const getHousekeepingTodayUseCase = new GetHousekeepingTodayUseCase(
 export const getUnitQrUseCase = new GetUnitQrUseCase(
   unitQrAccessRepository,
   propertyRepository,
+  housekeepingQrTokenSealer,
   permissionChecker,
 );
 export const generateUnitQrUseCase = new GenerateUnitQrUseCase(
   unitQrAccessRepository,
   propertyRepository,
   opaqueTokenFactory,
+  housekeepingQrTokenSealer,
   permissionChecker,
   auditLogRepository,
 );
@@ -1711,6 +1715,7 @@ export const rotateUnitQrUseCase = new RotateUnitQrUseCase(
   unitQrAccessRepository,
   propertyRepository,
   opaqueTokenFactory,
+  housekeepingQrTokenSealer,
   permissionChecker,
   auditLogRepository,
 );
@@ -1756,6 +1761,7 @@ export const getCleaningLocationQrUseCase = new GetCleaningLocationQrUseCase(
   cleaningLocationQrAccessRepository,
   cleaningLocationRepository,
   propertyRepository,
+  housekeepingQrTokenSealer,
   permissionChecker,
 );
 export const generateCleaningLocationQrUseCase =
@@ -1764,6 +1770,7 @@ export const generateCleaningLocationQrUseCase =
     cleaningLocationRepository,
     propertyRepository,
     opaqueTokenFactory,
+    housekeepingQrTokenSealer,
     permissionChecker,
     auditLogRepository,
   );
@@ -1773,6 +1780,7 @@ export const rotateCleaningLocationQrUseCase =
     cleaningLocationRepository,
     propertyRepository,
     opaqueTokenFactory,
+    housekeepingQrTokenSealer,
     permissionChecker,
     auditLogRepository,
   );

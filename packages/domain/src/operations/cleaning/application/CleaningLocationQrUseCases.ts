@@ -16,6 +16,7 @@ import type { ICleaningLocationRepository } from "../ports/ICleaningLocationRepo
 import type { ICleaningLocationQrAccessRepository } from "../ports/ICleaningLocationQrAccessRepository";
 import type { IUnitQrAccessRepository } from "../ports/IUnitQrAccessRepository";
 import type { IOpaqueTokenFactory } from "../ports/IOpaqueTokenFactory";
+import type { IHousekeepingQrTokenSealer } from "../ports/IHousekeepingQrTokenSealer";
 import {
   canManageCleaningConfigOnProperty,
   canReadCleaningOnProperty,
@@ -30,8 +31,13 @@ export interface CleaningLocationQrView {
   createdAt: Date | null;
   rotatedAt: Date | null;
   /**
-   * Plaintext token — returned only in the response that mints it.
-   * Existing codes cannot be re-read; rotate to print a new one.
+   * Whether sealed ciphertext exists for this ACTIVE code (authorized recovery).
+   * Legacy hash-only rows are ACTIVE but recoverable=false.
+   */
+  recoverable: boolean;
+  /**
+   * Plaintext token for authorized display/print when recoverable.
+   * Null when NONE, REVOKED, or legacy unrecoverable ACTIVE.
    */
   token: string | null;
 }
@@ -55,11 +61,33 @@ async function locatePropertyName(
   return property?.name ?? null;
 }
 
+function recoverToken(
+  record: CleaningLocationQrAccessRecord | null,
+  sealer: IHousekeepingQrTokenSealer,
+): { token: string | null; recoverable: boolean } {
+  if (!record || record.status !== "ACTIVE") {
+    return { token: null, recoverable: false };
+  }
+  if (
+    record.tokenCiphertext == null ||
+    record.tokenCiphertext.length === 0 ||
+    record.tokenKeyVersion == null
+  ) {
+    return { token: null, recoverable: false };
+  }
+  const token = sealer.unseal(
+    record.tokenCiphertext,
+    record.tokenKeyVersion,
+  );
+  return { token, recoverable: true };
+}
+
 function toView(
   record: CleaningLocationQrAccessRecord | null,
   location: { id: string; name: string; propertyId: string },
   propertyName: string,
   token: string | null,
+  recoverable: boolean,
 ): CleaningLocationQrView {
   return {
     locationId: location.id,
@@ -69,6 +97,7 @@ function toView(
     status: record ? record.status : "NONE",
     createdAt: record?.createdAt ?? null,
     rotatedAt: record?.rotatedAt ?? null,
+    recoverable,
     token,
   };
 }
@@ -78,6 +107,7 @@ export class GetCleaningLocationQrUseCase {
     private readonly qrAccess: ICleaningLocationQrAccessRepository,
     private readonly locations: ICleaningLocationRepository,
     private readonly properties: IPropertyRepository,
+    private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
   ) {}
 
@@ -117,7 +147,16 @@ export class GetCleaningLocationQrUseCase {
         input.tenantId,
         input.locationId,
       );
-      return Result.ok(toView(record, location, propertyName, null));
+      const recovered = recoverToken(record, this.sealer);
+      return Result.ok(
+        toView(
+          record,
+          location,
+          propertyName,
+          recovered.token,
+          recovered.recoverable,
+        ),
+      );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
@@ -126,7 +165,8 @@ export class GetCleaningLocationQrUseCase {
 
 /**
  * Mints a code when the location has none. If an ACTIVE code already exists it
- * is returned without a token — only `RotateCleaningLocationQrUseCase` can replace it.
+ * is returned (with recovered token when sealed material exists) — only
+ * `RotateCleaningLocationQrUseCase` replaces it.
  */
 export class GenerateCleaningLocationQrUseCase {
   constructor(
@@ -134,6 +174,7 @@ export class GenerateCleaningLocationQrUseCase {
     private readonly locations: ICleaningLocationRepository,
     private readonly properties: IPropertyRepository,
     private readonly tokens: IOpaqueTokenFactory,
+    private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
   ) {}
@@ -172,11 +213,14 @@ export class GenerateCleaningLocationQrUseCase {
         )) ?? "";
 
       const minted = this.tokens.create();
+      const sealed = this.sealer.seal(minted.token);
       const { record, issued } = await this.qrAccess.issue({
         tenantId: input.tenantId,
         propertyId: location.propertyId,
         cleaningLocationId: input.locationId,
         tokenHash: minted.tokenHash,
+        tokenCiphertext: sealed.ciphertext,
+        tokenKeyVersion: sealed.keyVersion,
         rotate: false,
       });
 
@@ -193,10 +237,20 @@ export class GenerateCleaningLocationQrUseCase {
           },
           ipAddress: auditContext?.ipAddress ?? null,
         });
+        return Result.ok(
+          toView(record, location, propertyName, minted.token, true),
+        );
       }
 
+      const recovered = recoverToken(record, this.sealer);
       return Result.ok(
-        toView(record, location, propertyName, issued ? minted.token : null),
+        toView(
+          record,
+          location,
+          propertyName,
+          recovered.token,
+          recovered.recoverable,
+        ),
       );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -210,6 +264,7 @@ export class RotateCleaningLocationQrUseCase {
     private readonly locations: ICleaningLocationRepository,
     private readonly properties: IPropertyRepository,
     private readonly tokens: IOpaqueTokenFactory,
+    private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
   ) {}
@@ -248,11 +303,14 @@ export class RotateCleaningLocationQrUseCase {
         )) ?? "";
 
       const minted = this.tokens.create();
+      const sealed = this.sealer.seal(minted.token);
       const { record } = await this.qrAccess.issue({
         tenantId: input.tenantId,
         propertyId: location.propertyId,
         cleaningLocationId: input.locationId,
         tokenHash: minted.tokenHash,
+        tokenCiphertext: sealed.ciphertext,
+        tokenKeyVersion: sealed.keyVersion,
         rotate: true,
       });
 
@@ -269,7 +327,9 @@ export class RotateCleaningLocationQrUseCase {
         ipAddress: auditContext?.ipAddress ?? null,
       });
 
-      return Result.ok(toView(record, location, propertyName, minted.token));
+      return Result.ok(
+        toView(record, location, propertyName, minted.token, true),
+      );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }

@@ -6,6 +6,9 @@ export interface IssueUnitQrCommand {
   unitId: string;
   /** SHA-256 hex of the opaque token. The plaintext never reaches this port. */
   tokenHash: string;
+  /** AES-GCM sealed raw token for authorized recovery. Required on new mints. */
+  tokenCiphertext: Uint8Array;
+  tokenKeyVersion: number;
   /** Revoke the current ACTIVE row first (rotation) instead of failing. */
   rotate: boolean;
   now?: Date;

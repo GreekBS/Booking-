@@ -3,12 +3,14 @@ import { PermissionChecker } from "../../../src/shared/services/PermissionChecke
 import type { ActorContext } from "../../../src/shared/services/PermissionChecker";
 import { ForbiddenError, NotFoundError } from "../../../src/shared/errors/DomainError";
 import {
+  GetCleaningLocationQrUseCase,
   ResolveCleaningQrUseCase,
   RotateCleaningLocationQrUseCase,
   GenerateCleaningLocationQrUseCase,
 } from "../../../src/operations/cleaning/application/CleaningLocationQrUseCases";
 import type { CleaningLocationRecord } from "../../../src/operations/cleaning/domain/CleaningLocationTypes";
 import type { CleaningLocationQrAccessRecord } from "../../../src/operations/cleaning/domain/CleaningLocationTypes";
+import type { IHousekeepingQrTokenSealer } from "../../../src/operations/cleaning/ports/IHousekeepingQrTokenSealer";
 
 const TENANT = "tenant-1";
 const PROPERTY = "prop-1";
@@ -16,7 +18,11 @@ const LOCATION_ID = "loc-1";
 const UNIT_ID = "unit-1";
 const TOKEN =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const TOKEN_B =
+  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const TOKEN_HASH = "hash-of-token";
+const TOKEN_HASH_B = "hash-of-token-b";
+const CIPHER = new Uint8Array([1, 2, 3, 4]);
 
 const actor: ActorContext = {
   userId: "user-1",
@@ -61,11 +67,32 @@ function makeLocationQr(
     propertyId: PROPERTY,
     cleaningLocationId: LOCATION_ID,
     tokenHash: TOKEN_HASH,
+    tokenCiphertext: CIPHER,
+    tokenKeyVersion: 1,
     status: "ACTIVE",
     createdAt: now,
     rotatedAt: null,
     revokedAt: null,
     ...overrides,
+  };
+}
+
+function makeSealer(
+  map: Record<string, string> = { "1,2,3,4": TOKEN },
+): IHousekeepingQrTokenSealer {
+  return {
+    seal: vi.fn((token: string) => ({
+      ciphertext: new Uint8Array(
+        token === TOKEN_B ? [9, 9, 9, 9] : [1, 2, 3, 4],
+      ),
+      keyVersion: 1,
+    })),
+    unseal: vi.fn((ciphertext: Uint8Array) => {
+      const key = Array.from(ciphertext).join(",");
+      const token = map[key];
+      if (!token) throw new Error("bad ciphertext");
+      return token;
+    }),
   };
 }
 
@@ -116,6 +143,8 @@ describe("ResolveCleaningQrUseCase", () => {
       propertyId: PROPERTY,
       unitId: UNIT_ID,
       tokenHash: TOKEN_HASH,
+      tokenCiphertext: null,
+      tokenKeyVersion: null,
       status: "ACTIVE",
       createdAt: new Date(),
       rotatedAt: null,
@@ -214,11 +243,83 @@ describe("ResolveCleaningQrUseCase", () => {
   });
 });
 
-describe("Generate / Rotate CleaningLocation QR", () => {
-  it("generate returns plaintext token only when newly issued", async () => {
-    const location = makeLocation({ commercialUnitId: null });
-    const issue = vi.fn(async () => ({
-      record: makeLocationQr(),
+describe("Get / Generate / Rotate CleaningLocation QR (recoverable)", () => {
+  const location = makeLocation({ commercialUnitId: null });
+  const catalog = {
+    listUnitCatalog: vi.fn(async () => ({
+      properties: [{ id: PROPERTY, name: "Hotel" }],
+    })),
+  };
+
+  it("GET recovers the same token from sealed material", async () => {
+    const sealer = makeSealer();
+    const useCase = new GetCleaningLocationQrUseCase(
+      {
+        findActiveByLocation: vi.fn(async () => makeLocationQr()),
+        findByTokenHash: vi.fn(),
+        issue: vi.fn(),
+      } as never,
+      {
+        findById: vi.fn(async () => location),
+        findActiveByCommercialUnit: vi.fn(),
+      } as never,
+      catalog as never,
+      sealer,
+      new PermissionChecker(),
+    );
+
+    const result = await useCase.execute(
+      { tenantId: TENANT, locationId: LOCATION_ID },
+      actor,
+    );
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue()).toMatchObject({
+      token: TOKEN,
+      recoverable: true,
+      status: "ACTIVE",
+    });
+    expect(sealer.unseal).toHaveBeenCalled();
+  });
+
+  it("GET reports unrecoverable legacy ACTIVE without decrypt", async () => {
+    const sealer = makeSealer();
+    const useCase = new GetCleaningLocationQrUseCase(
+      {
+        findActiveByLocation: vi.fn(async () =>
+          makeLocationQr({ tokenCiphertext: null, tokenKeyVersion: null }),
+        ),
+        findByTokenHash: vi.fn(),
+        issue: vi.fn(),
+      } as never,
+      {
+        findById: vi.fn(async () => location),
+        findActiveByCommercialUnit: vi.fn(),
+      } as never,
+      catalog as never,
+      sealer,
+      new PermissionChecker(),
+    );
+
+    const result = await useCase.execute(
+      { tenantId: TENANT, locationId: LOCATION_ID },
+      actor,
+    );
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue()).toMatchObject({
+      token: null,
+      recoverable: false,
+      status: "ACTIVE",
+    });
+    expect(sealer.unseal).not.toHaveBeenCalled();
+  });
+
+  it("generate seals tokenHash + ciphertext and returns plaintext", async () => {
+    const sealer = makeSealer();
+    const issue = vi.fn(async (cmd: { tokenHash: string; tokenCiphertext: Uint8Array }) => ({
+      record: makeLocationQr({
+        tokenHash: cmd.tokenHash,
+        tokenCiphertext: cmd.tokenCiphertext,
+      }),
       issued: true,
     }));
     const useCase = new GenerateCleaningLocationQrUseCase(
@@ -231,15 +332,12 @@ describe("Generate / Rotate CleaningLocation QR", () => {
         findById: vi.fn(async () => location),
         findActiveByCommercialUnit: vi.fn(),
       } as never,
-      {
-        listUnitCatalog: vi.fn(async () => ({
-          properties: [{ id: PROPERTY, name: "Hotel" }],
-        })),
-      } as never,
+      catalog as never,
       {
         create: vi.fn(() => ({ token: TOKEN, tokenHash: TOKEN_HASH })),
         hash: vi.fn(),
       } as never,
+      sealer,
       new PermissionChecker(),
     );
 
@@ -249,15 +347,60 @@ describe("Generate / Rotate CleaningLocation QR", () => {
     );
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().token).toBe(TOKEN);
+    expect(result.getValue().recoverable).toBe(true);
     expect(issue).toHaveBeenCalledWith(
-      expect.objectContaining({ rotate: false }),
+      expect.objectContaining({
+        rotate: false,
+        tokenHash: TOKEN_HASH,
+        tokenCiphertext: expect.any(Uint8Array),
+        tokenKeyVersion: 1,
+      }),
     );
+    expect(sealer.seal).toHaveBeenCalledWith(TOKEN);
   });
 
-  it("rotate always mints a new token", async () => {
-    const location = makeLocation({ commercialUnitId: null });
+  it("generate on existing recoverable ACTIVE recovers without re-issue", async () => {
+    const sealer = makeSealer();
     const issue = vi.fn(async () => ({
-      record: makeLocationQr({ id: "lqr-2" }),
+      record: makeLocationQr(),
+      issued: false,
+    }));
+    const useCase = new GenerateCleaningLocationQrUseCase(
+      {
+        findByTokenHash: vi.fn(),
+        findActiveByLocation: vi.fn(),
+        issue,
+      } as never,
+      {
+        findById: vi.fn(async () => location),
+        findActiveByCommercialUnit: vi.fn(),
+      } as never,
+      catalog as never,
+      {
+        create: vi.fn(() => ({ token: TOKEN_B, tokenHash: TOKEN_HASH_B })),
+        hash: vi.fn(),
+      } as never,
+      sealer,
+      new PermissionChecker(),
+    );
+
+    const result = await useCase.execute(
+      { tenantId: TENANT, locationId: LOCATION_ID },
+      actor,
+    );
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue().token).toBe(TOKEN);
+    expect(result.getValue().recoverable).toBe(true);
+  });
+
+  it("rotate mints new sealed token and returns new plaintext", async () => {
+    const sealer = makeSealer({ "9,9,9,9": TOKEN_B });
+    const issue = vi.fn(async (cmd: { tokenHash: string; tokenCiphertext: Uint8Array }) => ({
+      record: makeLocationQr({
+        id: "lqr-2",
+        tokenHash: cmd.tokenHash,
+        tokenCiphertext: cmd.tokenCiphertext,
+      }),
       issued: true,
     }));
     const useCase = new RotateCleaningLocationQrUseCase(
@@ -270,15 +413,12 @@ describe("Generate / Rotate CleaningLocation QR", () => {
         findById: vi.fn(async () => location),
         findActiveByCommercialUnit: vi.fn(),
       } as never,
+      catalog as never,
       {
-        listUnitCatalog: vi.fn(async () => ({
-          properties: [{ id: PROPERTY, name: "Hotel" }],
-        })),
-      } as never,
-      {
-        create: vi.fn(() => ({ token: TOKEN, tokenHash: TOKEN_HASH })),
+        create: vi.fn(() => ({ token: TOKEN_B, tokenHash: TOKEN_HASH_B })),
         hash: vi.fn(),
       } as never,
+      sealer,
       new PermissionChecker(),
     );
 
@@ -287,9 +427,9 @@ describe("Generate / Rotate CleaningLocation QR", () => {
       actor,
     );
     expect(result.isSuccess).toBe(true);
-    expect(result.getValue().token).toBe(TOKEN);
+    expect(result.getValue().token).toBe(TOKEN_B);
     expect(issue).toHaveBeenCalledWith(
-      expect.objectContaining({ rotate: true }),
+      expect.objectContaining({ rotate: true, tokenHash: TOKEN_HASH_B }),
     );
   });
 });

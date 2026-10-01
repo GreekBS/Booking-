@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { rotateUnitQrUseCase } from "@/lib/di/container";
 import {
   requireTenantContext,
@@ -8,6 +8,11 @@ import {
 import { apiSuccess, mapResultError } from "@/lib/api-error-handler";
 
 type RouteContext = { params: Promise<{ unitId: string }> };
+
+function withNoStore(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "no-store");
+  return response;
+}
 
 /** Revokes the current code and mints a replacement. Old printouts stop working. */
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -21,22 +26,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
       toPermissionActor(actor),
       { ipAddress: getClientIp(request) },
     );
-    if (result.isFailure) return mapResultError(result.getError());
+    if (result.isFailure) return withNoStore(mapResultError(result.getError()));
 
     const view = result.getValue();
-    return apiSuccess({
-      data: {
-        unitId: view.unitId,
-        propertyId: view.propertyId,
-        unitName: view.unitName,
-        propertyName: view.propertyName,
-        status: view.status,
-        createdAt: view.createdAt?.toISOString() ?? null,
-        rotatedAt: view.rotatedAt?.toISOString() ?? null,
-        token: view.token,
-      },
-    });
+    return withNoStore(
+      apiSuccess({
+        data: {
+          unitId: view.unitId,
+          propertyId: view.propertyId,
+          unitName: view.unitName,
+          propertyName: view.propertyName,
+          status: view.status,
+          createdAt: view.createdAt?.toISOString() ?? null,
+          rotatedAt: view.rotatedAt?.toISOString() ?? null,
+          recoverable: view.recoverable,
+          token: view.token,
+        },
+      }),
+    );
   } catch (error) {
-    return mapResultError(error instanceof Error ? error : new Error(String(error)));
+    return withNoStore(
+      mapResultError(error instanceof Error ? error : new Error(String(error))),
+    );
   }
 }

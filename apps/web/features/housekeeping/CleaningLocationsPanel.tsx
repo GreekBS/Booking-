@@ -421,18 +421,19 @@ export function CleaningLocationsPanel({
                             <div className="flex justify-center rounded bg-white p-3">
                               <QRCodeSVG
                                 value={buildQrScanUrl(token)}
-                                size={160}
+                                size={180}
                                 level="M"
                               />
                             </div>
-                            <p className="break-all font-mono text-[10px] text-muted-foreground">
-                              {buildQrScanUrl(token)}
+                            <p className="text-center text-xs text-muted-foreground">
+                              Σαρώστε για πρόσβαση στην καθαριότητα
                             </p>
                           </div>
                         ) : qr?.status === "ACTIVE" ? (
                           <p className="text-sm text-muted-foreground">
-                            Υπάρχει ενεργός κωδικός QR (αποθηκευμένος ως hash).
-                            Αντικαταστήστε για νέα εκτύπωση.
+                            Ο υπάρχων κωδικός QR παραμένει ενεργός, αλλά δημιουργήθηκε
+                            πριν ενεργοποιηθεί η μόνιμη προβολή. Αντικαταστήστε τον μία
+                            φορά για να εμφανίζεται και να εκτυπώνεται από εδώ.
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground">
@@ -451,15 +452,17 @@ export function CleaningLocationsPanel({
                               Δημιουργία QR
                             </Button>
                           ) : null}
-                          <Button size="sm" variant="outline" asChild>
-                            <Link
-                              href={`/dashboard/housekeeping/locations/qr/${row.locationId}/print`}
-                              target="_blank"
-                            >
-                              <Printer className="h-4 w-4" />
-                              Εκτύπωση
-                            </Link>
-                          </Button>
+                          {token ? (
+                            <Button size="sm" variant="outline" asChild>
+                              <Link
+                                href={`/dashboard/housekeeping/locations/qr/${row.locationId}/print`}
+                                target="_blank"
+                              >
+                                <Printer className="h-4 w-4" />
+                                Εκτύπωση
+                              </Link>
+                            </Button>
+                          ) : null}
                           <Button
                             size="sm"
                             variant="outline"

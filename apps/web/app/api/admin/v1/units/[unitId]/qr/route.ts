@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateUnitQrUseCase, getUnitQrUseCase } from "@/lib/di/container";
 import {
   requireTenantContext,
@@ -19,9 +19,14 @@ function serializeUnitQr(view: UnitQrView) {
     status: view.status,
     createdAt: view.createdAt?.toISOString() ?? null,
     rotatedAt: view.rotatedAt?.toISOString() ?? null,
-    /** Present only in the response that mints the code — never re-readable. */
+    recoverable: view.recoverable,
     token: view.token,
   };
+}
+
+function withNoStore(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -34,14 +39,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       { tenantId: actor.tenantId, unitId },
       toPermissionActor(actor),
     );
-    if (result.isFailure) return mapResultError(result.getError());
-    return apiSuccess({ data: serializeUnitQr(result.getValue()) });
+    if (result.isFailure) return withNoStore(mapResultError(result.getError()));
+    return withNoStore(apiSuccess({ data: serializeUnitQr(result.getValue()) }));
   } catch (error) {
-    return mapResultError(error instanceof Error ? error : new Error(String(error)));
+    return withNoStore(
+      mapResultError(error instanceof Error ? error : new Error(String(error))),
+    );
   }
 }
 
-/** Mints a code when the unit has none; existing ACTIVE codes are left alone. */
+/** Mints a code when the unit has none; existing ACTIVE codes are recovered when sealed. */
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const tenantId = request.headers.get("x-tenant-id");
@@ -53,9 +60,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       toPermissionActor(actor),
       { ipAddress: getClientIp(request) },
     );
-    if (result.isFailure) return mapResultError(result.getError());
-    return apiSuccess({ data: serializeUnitQr(result.getValue()) });
+    if (result.isFailure) return withNoStore(mapResultError(result.getError()));
+    return withNoStore(apiSuccess({ data: serializeUnitQr(result.getValue()) }));
   } catch (error) {
-    return mapResultError(error instanceof Error ? error : new Error(String(error)));
+    return withNoStore(
+      mapResultError(error instanceof Error ? error : new Error(String(error))),
+    );
   }
 }

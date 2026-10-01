@@ -252,6 +252,8 @@ async function main(): Promise<void> {
       propertyId: PROP_EMPTY,
       cleaningLocationId: first.id,
       tokenHash: hash1,
+      tokenCiphertext: new Uint8Array(32).fill(1),
+      tokenKeyVersion: 1,
       rotate: false,
     });
     if (!issued.issued) throw new Error("expected first QR issue");
@@ -276,6 +278,8 @@ async function main(): Promise<void> {
       propertyId: PROP_EMPTY,
       cleaningLocationId: first.id,
       tokenHash: hash2,
+      tokenCiphertext: new Uint8Array(32).fill(2),
+      tokenKeyVersion: 1,
       rotate: true,
     });
     const oldQr = await withTenantTransaction(TENANT, async (tx) =>

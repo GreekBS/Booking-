@@ -69,6 +69,7 @@ async function main(): Promise<void> {
     PrismaCleaningExecutionRepository,
     PrismaCleaningPhotoRepository,
     CryptoOpaqueTokenFactory,
+    AesHousekeepingQrTokenSealer,
     createCleaningObjectStorage,
     UuidIdGenerator,
     isTalosProductionDatabaseUrl,
@@ -108,6 +109,10 @@ async function main(): Promise<void> {
   const executions = new PrismaCleaningExecutionRepository(turnoverStore);
   const photos = new PrismaCleaningPhotoRepository();
   const tokens = new CryptoOpaqueTokenFactory();
+  const qrSealer = new AesHousekeepingQrTokenSealer(
+    process.env.HOUSEKEEPING_QR_ENCRYPTION_KEY ??
+      Buffer.alloc(32, 5).toString("base64"),
+  );
   const storage = createCleaningObjectStorage();
   if (storage.driver !== "supabase") {
     throw new Error(
@@ -122,6 +127,7 @@ async function main(): Promise<void> {
     qrAccess,
     properties,
     tokens,
+    qrSealer,
     permissions,
     audit,
   );
@@ -129,6 +135,7 @@ async function main(): Promise<void> {
     qrAccess,
     properties,
     tokens,
+    qrSealer,
     permissions,
     audit,
   );
@@ -138,7 +145,7 @@ async function main(): Promise<void> {
     tokens,
     permissions,
   );
-  const getQr = new GetUnitQrUseCase(qrAccess, properties, permissions);
+  const getQr = new GetUnitQrUseCase(qrAccess, properties, qrSealer, permissions);
   const upsertTemplate = new UpsertCleaningChecklistTemplateUseCase(
     checklists,
     permissions,

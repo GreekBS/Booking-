@@ -1,6 +1,6 @@
 # ADR-030: QR Cleaning V1
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-10-01 — sealed recoverable display)
 **Date:** 2026-09-26
 **Supersedes:** none
 **Related:** ADR-029 (Housekeeping Tasks)
@@ -18,23 +18,58 @@ housekeeping state and without touching iCal, the worker, or calendar markers.
 
 ## Decision
 
-### 1. Unit QR codes are opaque bearer identifiers, not credentials
+### 1. Unit / location QR codes are opaque bearer identifiers
 
-`unit_qr_access` holds one ACTIVE row per unit (partial unique index on
-`(tenant_id, unit_id) WHERE status = 'ACTIVE'`). The token is 32 random bytes
-rendered as 64 hex characters; only its SHA-256 hash is stored, reusing the
-`hashToken` helper that backs invitations.
+`unit_qr_access` and `cleaning_location_qr_access` hold one ACTIVE row per
+target (partial unique index on `(tenant_id, unit_id|cleaning_location_id)
+WHERE status = 'ACTIVE'`). The token is 32 random bytes rendered as 64 hex
+characters.
+
+**Verification (scan/resolve)** uses only the SHA-256 `token_hash`, reusing the
+`hashToken` helper that backs invitations. Encrypted recoverable material is
+**never** consulted during resolve.
 
 **A scanned token grants nothing on its own.** `/q/<token>` requires an
 authenticated session; `POST /api/admin/v1/qr/resolve` then resolves the hash
 *within the caller's active tenant* and applies the property ACL. A token from
 another tenant resolves to Not Found.
 
-The consequence of hash-only storage is that an issued code can never be
-re-displayed. Generate returns the plaintext exactly once; viewing an existing
-code shows metadata plus a Rotate action. Rotation revokes the old row and mints
-a new one in a single transaction, so the previous sticker stops working
-immediately.
+#### 1.1 Authorized recovery for permanent display (2026-10 amendment)
+
+Product requirement: property operators need the **same** ACTIVE QR visible on
+the Housekeeping dashboard and printable after refresh / re-login, without
+rotating on every view.
+
+Architecture:
+
+| Material | Purpose |
+|---|---|
+| `token_hash` (SHA-256) | Scan/resolve verification (unchanged) |
+| `token_ciphertext` + `key_version` (AES-256-GCM) | Authorized display/reprint only |
+
+Sealing reuses the channel credential AES-GCM primitive (`sealUtf8Payload` /
+`unsealUtf8Payload`) with a dedicated server-only env key
+`HOUSEKEEPING_QR_ENCRYPTION_KEY` (base64 of 32 random bytes). Fail closed on
+mint/rotate/recover when the key is missing or invalid — never plaintext
+persistence, never silent fallback.
+
+Raw tokens are returned only over authenticated admin APIs (`Cache-Control:
+no-store`) after tenant + property ACL. They are never logged.
+
+**Legacy ACTIVE rows** minted before this amendment have `token_hash` only.
+They remain valid for scanning but are **unrecoverable** for display until the
+operator intentionally rotates once. Migrations must not auto-rotate Production
+stickers.
+
+Rotation still revokes the old row and mints a new hash + sealed secret in one
+transaction.
+
+#### 1.2 Historical note (original V1)
+
+The original design stored **hash only** and returned plaintext exactly once at
+mint. That made reprint without rotation impossible by design. The amendment
+above preserves hash verification while adding sealed recovery for authorized
+operators.
 
 ### 2. Task selection policy
 
@@ -186,11 +221,13 @@ completes fully or leaves no trace. Evidence is private by default. Checklist
 edits cannot rewrite history. Scanning is safe even if a sticker is photographed
 and shared, because the token is not a credential.
 
-**Accepted costs.** A QR code cannot be reprinted without rotating it — the
-honest price of hash-only storage, and the UI says so plainly. A token only
-resolves inside the scanner's *active* tenant, so a user who belongs to several
-workspaces must switch first. Signed URLs mean photo links expire, which is
-correct but requires the client to re-fetch rather than cache URLs.
+**Accepted costs.** Legacy hash-only ACTIVE codes cannot be re-displayed until
+rotated once — intentional, not auto-migrated. Sealed recovery increases the
+blast radius of a combined DB + encryption-key compromise versus hash-only;
+mitigated by ACL, `no-store`, no token logging, and fail-closed key handling. A
+token only resolves inside the scanner's *active* tenant, so a user who belongs
+to several workspaces must switch first. Signed URLs mean photo links expire,
+which is correct but requires the client to re-fetch rather than cache URLs.
 
 **Explicitly out of scope.** iCal, worker activation and calendar housekeeping
 markers are untouched. Cleaning never creates inventory blocks.
@@ -198,7 +235,10 @@ markers are untouched. Cleaning never creates inventory blocks.
 ## Alternatives considered
 
 - **Storing the token in plaintext so codes can be reprinted.** Rejected: it
-  turns a database read into a physical-access grant for every unit.
+  turns a database read into a physical-access grant for every unit. Authorized
+  reprint uses AES-GCM sealed material + ACL instead.
+- **Replacing hash verification with reversible-only storage.** Rejected: scan
+  resolution must remain one-way hash based.
 - **Resolving tokens across tenants.** Rejected: it leaks unit existence across
   tenant boundaries for the cost of one guessed hash.
 - **A separate `cleaning_status` column on Unit.** Rejected: two sources of truth

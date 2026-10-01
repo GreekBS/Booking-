@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useTenant } from "@/hooks/use-tenant";
-import { generateUnitQr, rotateUnitQr } from "@/lib/admin/api";
+import { fetchUnitQr, generateUnitQr, rotateUnitQr } from "@/lib/admin/api";
 import type { UnitQrRecord } from "@/lib/admin/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,10 +12,7 @@ import { buildQrScanUrl } from "./UnitQrSheet";
 
 /**
  * Εκτύπωση-friendly sticker for a unit QR code.
- *
- * On open it asks the API to mint a code. If one is already active the token
- * cannot be recovered (hash-only storage), so the page offers an explicit
- * rotate-and-print instead of silently replacing a live sticker.
+ * Loads existing recoverable QR via GET — does not mint/rotate on open when ACTIVE.
  */
 export function UnitQrPrintPage({ unitId }: { unitId: string }) {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
@@ -23,10 +20,14 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const ensure = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!tenantId) return;
     try {
-      setRecord(await generateUnitQr(tenantId, unitId));
+      let next = await fetchUnitQr(tenantId, unitId);
+      if (next.status !== "ACTIVE") {
+        next = await generateUnitQr(tenantId, unitId);
+      }
+      setRecord(next);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Αποτυχία προετοιμασίας κωδικού QR");
@@ -34,8 +35,8 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
   }, [tenantId, unitId]);
 
   useEffect(() => {
-    void ensure();
-  }, [ensure]);
+    void load();
+  }, [load]);
 
   async function handleRotate() {
     if (!tenantId || busy) return;
@@ -51,10 +52,11 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
 
   if (tenantLoading) return <Skeleton className="m-8 h-96" />;
   if (tenantError) return <ErrorState message={tenantError} />;
-  if (error) return <ErrorState message={error} onRetry={() => void ensure()} />;
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!record) return <Skeleton className="m-8 h-96" />;
 
   const token = record.token;
+  const legacyActive = record.status === "ACTIVE" && !record.recoverable && !token;
 
   return (
     <div className="mx-auto max-w-2xl p-8 print:p-0">
@@ -74,36 +76,37 @@ export function UnitQrPrintPage({ unitId }: { unitId: string }) {
         </Button>
       </div>
 
-      {!token ? (
-        <div className="rounded-lg border bg-muted/40 p-6">
-          <p className="font-medium">Η μονάδα έχει ήδη ενεργό κωδικό QR</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Οι κωδικοί αποθηκεύονται ως μονόδρομα hash και δεν επανεκτυπώνονται. Χρησιμοποιήστε
-            «Αντικατάσταση &amp; εκτύπωση νέου» για αντικατάσταση — το
-            υπάρχον αυτοκόλλητο σταματά αμέσως.
-          </p>
-        </div>
-      ) : (
+      {token ? (
         <article className="rounded-2xl border-2 border-black p-10 text-center">
           <p className="text-sm uppercase tracking-[0.2em] text-neutral-600">
             {record.propertyName}
           </p>
           <h1 className="mt-2 text-4xl font-bold">{record.unitName}</h1>
           <p className="mt-1 text-lg font-medium text-neutral-700">
-            Σαρώστε για έναρξη καθαρισμού
+            Σαρώστε για πρόσβαση στην καθαριότητα
           </p>
 
           <div className="my-8 flex justify-center">
             <QRCodeSVG value={buildQrScanUrl(token)} size={280} level="M" />
           </div>
 
-          <p className="break-all font-mono text-xs text-neutral-500">
-            {buildQrScanUrl(token)}
-          </p>
           <p className="mt-6 text-sm text-neutral-600">
             Συνδεθείτε με λογαριασμό Talos για να καταγράψετε τον καθαρισμό.
           </p>
         </article>
+      ) : legacyActive ? (
+        <div className="rounded-lg border bg-muted/40 p-6">
+          <p className="font-medium">Ενεργός κωδικός χωρίς μόνιμη προβολή</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ο υπάρχων κωδικός QR παραμένει ενεργός, αλλά δημιουργήθηκε πριν
+            ενεργοποιηθεί η μόνιμη προβολή. Αντικαταστήστε τον μία φορά για να
+            εμφανίζεται και να εκτυπώνεται από εδώ.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-muted/40 p-6">
+          <p className="font-medium">Δεν υπάρχει ενεργός κωδικός QR</p>
+        </div>
       )}
     </div>
   );

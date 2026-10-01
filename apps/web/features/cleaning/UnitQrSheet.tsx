@@ -35,9 +35,7 @@ type UnitQrSheetProps = {
 
 /**
  * Δημιουργία / view / print / rotate the unit QR code.
- *
- * Only the token hash is stored, so an existing code can never be re-displayed.
- * Viewing an already-active code therefore shows metadata plus a Αντικατάσταση action.
+ * Recoverable ACTIVE codes are re-displayed after refresh via sealed storage.
  */
 export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) {
   const [record, setRecord] = useState<UnitQrRecord | null>(null);
@@ -111,20 +109,17 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                   <div className="flex justify-center rounded-lg border bg-white p-4">
                     <QRCodeSVG value={buildQrScanUrl(token)} size={196} level="M" />
                   </div>
-                  <p className="break-all rounded bg-muted p-2 font-mono text-xs">
-                    {buildQrScanUrl(token)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Εκτυπώστε τώρα — ο κωδικός αποθηκεύεται ως μονόδρομο hash και δεν
-                    μπορεί να εμφανιστεί ξανά.
+                  <p className="text-center text-xs text-muted-foreground">
+                    Σαρώστε για πρόσβαση στην καθαριότητα
                   </p>
                 </div>
               ) : hasActive ? (
                 <div className="rounded-lg border bg-muted/40 p-4 text-sm">
-                  <p className="font-medium">Υπάρχει ήδη ενεργός κωδικός QR</p>
+                  <p className="font-medium">Ενεργός κωδικός χωρίς μόνιμη προβολή</p>
                   <p className="mt-1 text-muted-foreground">
-                    Οι κωδικοί αποθηκεύονται κρυπτογραφημένοι, οπότε δεν εμφανίζονται ξανά.
-                    Αντικαταστήστε για νέα εκτύπωση· το παλιό αυτοκόλλητο σταματά να λειτουργεί.
+                    Ο υπάρχων κωδικός QR παραμένει ενεργός, αλλά δημιουργήθηκε πριν
+                    ενεργοποιηθεί η μόνιμη προβολή. Αντικαταστήστε τον μία φορά για να
+                    εμφανίζεται και να εκτυπώνεται από εδώ.
                   </p>
                 </div>
               ) : (

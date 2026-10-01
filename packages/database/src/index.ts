@@ -105,6 +105,10 @@ export {
   generateOpaqueToken,
   CryptoOpaqueTokenFactory,
 } from "./repositories/operations/cleaning/cleaningTokens";
+export {
+  AesHousekeepingQrTokenSealer,
+  parseHousekeepingQrEncryptionKey,
+} from "./repositories/operations/cleaning/housekeepingQrCrypto";
 export { PrismaUnitQrAccessRepository } from "./repositories/operations/cleaning/UnitQrAccessRepository";
 export { PrismaCleaningLocationRepository } from "./repositories/operations/cleaning/CleaningLocationRepository";
 export { PrismaCleaningLocationQrAccessRepository } from "./repositories/operations/cleaning/CleaningLocationQrAccessRepository";

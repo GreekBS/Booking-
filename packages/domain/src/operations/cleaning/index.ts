@@ -5,6 +5,7 @@ export * from "./domain/defaultCleaningChecklist";
 export * from "./domain/cleaningTaskPolicy";
 export * from "./domain/cleaningCompletion";
 export * from "./ports/IOpaqueTokenFactory";
+export * from "./ports/IHousekeepingQrTokenSealer";
 export * from "./ports/IUnitQrAccessRepository";
 export * from "./ports/ICleaningLocationRepository";
 export * from "./ports/ICleaningLocationQrAccessRepository";

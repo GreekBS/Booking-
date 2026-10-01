@@ -129,16 +129,19 @@ describe("operator-ui QR cleaning V1", () => {
     expect(sheet).toContain("rotateUnitQr");
     expect(sheet).toContain("QRCodeSVG");
     expect(sheet).toContain("/dashboard/units/qr/");
-    // Hash-only storage: an existing code can never be redisplayed.
-    expect(sheet).toContain("δεν εμφανίζονται ξανά");
+    // Legacy hash-only ACTIVE rows need one intentional replace for permanent display.
+    expect(sheet).toContain("μόνιμη προβολή");
   });
 
-  it("print page is print-friendly and never silently rotates", () => {
+  it("print page is print-friendly, recovers via GET, and never silently rotates", () => {
     const print = read("features/cleaning/UnitQrPrintPage.tsx");
     expect(print).toContain("@media print");
     expect(print).toContain("qr-print-hide");
     expect(print).toContain("window.print()");
+    expect(print).toContain("fetchUnitQr");
     expect(print).toContain("Αντικατάσταση &amp; εκτύπωση νέου");
+    // Opening print must not call generate merely to recover an ACTIVE QR.
+    expect(print).toMatch(/if \(next\.status !== "ACTIVE"\)/);
     expect(
       existsSync(
         join(root, "app/(dashboard)/dashboard/units/qr/[unitId]/print/page.tsx"),

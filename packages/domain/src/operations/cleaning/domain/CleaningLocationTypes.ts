@@ -49,6 +49,9 @@ export interface CleaningLocationQrAccessRecord {
   propertyId: string;
   cleaningLocationId: string;
   tokenHash: string;
+  /** AES-GCM sealed raw token; null on legacy hash-only rows. */
+  tokenCiphertext: Uint8Array | null;
+  tokenKeyVersion: number | null;
   status: UnitQrStatus;
   createdAt: Date;
   rotatedAt: Date | null;

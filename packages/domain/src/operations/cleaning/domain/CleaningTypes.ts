@@ -1,8 +1,9 @@
 /**
  * QR Cleaning V1 shared types (ADR-030).
  *
- * The QR token itself is never stored — only its SHA-256 hash. Photo bytes live
- * in object storage; the database keeps the storage key alone.
+ * Scan/resolve uses SHA-256 tokenHash only. Authorized display/reprint may
+ * recover plaintext via sealed tokenCiphertext (AES-GCM). Raw tokens are never
+ * stored in plaintext. Photo bytes live in object storage.
  */
 
 export const UNIT_QR_STATUSES = ["ACTIVE", "REVOKED"] as const;
@@ -41,6 +42,9 @@ export interface UnitQrAccessRecord {
   propertyId: string;
   unitId: string;
   tokenHash: string;
+  /** AES-GCM sealed raw token; null on legacy hash-only rows. */
+  tokenCiphertext: Uint8Array | null;
+  tokenKeyVersion: number | null;
   status: UnitQrStatus;
   createdAt: Date;
   rotatedAt: Date | null;

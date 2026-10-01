@@ -15,11 +15,22 @@ type QrRow = {
   propertyId: string;
   unitId: string;
   tokenHash: string;
+  tokenCiphertext: Uint8Array | Buffer | null;
+  tokenKeyVersion: number | null;
   status: string;
   createdAt: Date;
   rotatedAt: Date | null;
   revokedAt: Date | null;
 };
+
+function toCipherBytes(
+  value: Uint8Array | Buffer | null,
+): Uint8Array | null {
+  if (value == null) return null;
+  return value instanceof Uint8Array
+    ? value
+    : new Uint8Array(value);
+}
 
 function mapQr(row: QrRow): UnitQrAccessRecord {
   return {
@@ -29,6 +40,8 @@ function mapQr(row: QrRow): UnitQrAccessRecord {
     unitId: row.unitId,
     // CHAR(64) is space padded on read for shorter values; normalize defensively.
     tokenHash: row.tokenHash.trim(),
+    tokenCiphertext: toCipherBytes(row.tokenCiphertext),
+    tokenKeyVersion: row.tokenKeyVersion,
     status: row.status as UnitQrStatus,
     createdAt: row.createdAt,
     rotatedAt: row.rotatedAt,
@@ -108,6 +121,8 @@ export class PrismaUnitQrAccessRepository implements IUnitQrAccessRepository {
             propertyId: command.propertyId,
             unitId: command.unitId,
             tokenHash: command.tokenHash,
+            tokenCiphertext: Buffer.from(command.tokenCiphertext),
+            tokenKeyVersion: command.tokenKeyVersion,
             status: "ACTIVE",
             createdAt: now,
             rotatedAt: existing ? now : null,

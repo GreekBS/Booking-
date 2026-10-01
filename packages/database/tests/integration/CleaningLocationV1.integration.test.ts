@@ -261,6 +261,8 @@ runIntegration("CleaningLocation V1", () => {
       propertyId: PROP_EMPTY,
       cleaningLocationId: first!.id,
       tokenHash: `hash-${first!.id}`.padEnd(64, "a").slice(0, 64),
+      tokenCiphertext: new Uint8Array(32).fill(1),
+      tokenKeyVersion: 1,
       rotate: false,
     });
     expect(issued.issued).toBe(true);
@@ -276,12 +278,15 @@ runIntegration("CleaningLocation V1", () => {
     const activeAfterRename = await qr.findActiveByLocation(TENANT, first!.id);
     expect(activeAfterRename?.id).toBe(issued.record.id);
     expect(activeAfterRename?.tokenHash).toBe(issued.record.tokenHash);
+    expect(activeAfterRename?.tokenCiphertext).not.toBeNull();
 
     const rotated = await qr.issue({
       tenantId: TENANT,
       propertyId: PROP_EMPTY,
       cleaningLocationId: first!.id,
       tokenHash: `rot-${first!.id}`.padEnd(64, "b").slice(0, 64),
+      tokenCiphertext: new Uint8Array(32).fill(2),
+      tokenKeyVersion: 1,
       rotate: true,
     });
     expect(rotated.record.id).not.toBe(issued.record.id);

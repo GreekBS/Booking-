@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { CleaningLocationQrView } from "@hcp/domain";
 import {
   generateCleaningLocationQrUseCase,
@@ -22,8 +22,14 @@ function serializeLocationQr(view: CleaningLocationQrView) {
     status: view.status,
     createdAt: view.createdAt?.toISOString() ?? null,
     rotatedAt: view.rotatedAt?.toISOString() ?? null,
+    recoverable: view.recoverable,
     token: view.token,
   };
+}
+
+function withNoStore(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -36,10 +42,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       { tenantId: actor.tenantId, locationId },
       toPermissionActor(actor),
     );
-    if (result.isFailure) return mapResultError(result.getError());
-    return apiSuccess({ data: serializeLocationQr(result.getValue()) });
+    if (result.isFailure) return withNoStore(mapResultError(result.getError()));
+    return withNoStore(apiSuccess({ data: serializeLocationQr(result.getValue()) }));
   } catch (error) {
-    return mapResultError(error instanceof Error ? error : new Error(String(error)));
+    return withNoStore(
+      mapResultError(error instanceof Error ? error : new Error(String(error))),
+    );
   }
 }
 
@@ -54,9 +62,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       toPermissionActor(actor),
       { ipAddress: getClientIp(request) },
     );
-    if (result.isFailure) return mapResultError(result.getError());
-    return apiSuccess({ data: serializeLocationQr(result.getValue()) });
+    if (result.isFailure) return withNoStore(mapResultError(result.getError()));
+    return withNoStore(apiSuccess({ data: serializeLocationQr(result.getValue()) }));
   } catch (error) {
-    return mapResultError(error instanceof Error ? error : new Error(String(error)));
+    return withNoStore(
+      mapResultError(error instanceof Error ? error : new Error(String(error))),
+    );
   }
 }

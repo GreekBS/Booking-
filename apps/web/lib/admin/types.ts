@@ -583,7 +583,9 @@ export interface UnitQrRecord {
   status: "ACTIVE" | "REVOKED" | "NONE";
   createdAt: string | null;
   rotatedAt: string | null;
-  /** Only present in the response that minted the code. */
+  /** True when sealed ciphertext exists and token was recovered. */
+  recoverable: boolean;
+  /** Present when recoverable (or just minted/rotated). */
   token: string | null;
 }
 
@@ -606,6 +608,9 @@ export interface CleaningLocationQrRecord {
   status: "ACTIVE" | "REVOKED" | "NONE";
   createdAt: string | null;
   rotatedAt: string | null;
+  /** True when sealed ciphertext exists and token was recovered. */
+  recoverable: boolean;
+  /** Present when recoverable (or just minted/rotated). */
   token: string | null;
 }
 

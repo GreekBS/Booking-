@@ -70,6 +70,8 @@ describe("operator-ui CleaningLocation Property.type awareness", () => {
     expect(panel).toContain("showAddRoom");
     expect(panel).toContain("requiresManualResolution");
     expect(panel).toContain("QRCodeSVG");
+    expect(panel).toContain("Σαρώστε για πρόσβαση στην καθαριότητα");
+    expect(panel).toContain("μόνιμη προβολή");
     expect(panel).toContain("sm:flex-row");
     expect(panel).toContain("md:grid-cols-[1fr_auto]");
 

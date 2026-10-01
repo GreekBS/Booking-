@@ -2022,18 +2022,21 @@ model Lead {
   @@map("leads")
 }
 
-/// QR-1: Opaque per-unit QR access token. Only the SHA-256 hash is stored.
+/// Opaque per-unit QR access. SHA-256 tokenHash for scan; optional sealed ciphertext for authorized reprint.
 /// One ACTIVE row per (tenant, unit) is enforced by a partial unique index in SQL.
 model UnitQrAccess {
-  id         String    @id @db.Uuid
-  tenantId   String    @map("tenant_id") @db.Uuid
-  propertyId String    @map("property_id") @db.Uuid
-  unitId     String    @map("unit_id") @db.Uuid
-  tokenHash  String    @unique(map: "unit_qr_access_token_hash_uidx") @map("token_hash") @db.Char(64)
-  status     String    @default("ACTIVE") @db.VarChar(16)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  rotatedAt  DateTime? @map("rotated_at") @db.Timestamptz
-  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz
+  id              String    @id @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  propertyId      String    @map("property_id") @db.Uuid
+  unitId          String    @map("unit_id") @db.Uuid
+  tokenHash       String    @unique(map: "unit_qr_access_token_hash_uidx") @map("token_hash") @db.Char(64)
+  /// AES-256-GCM sealed raw token (IV+tag+ciphertext). Null = legacy hash-only (unrecoverable).
+  tokenCiphertext Bytes?    @map("token_ciphertext")
+  tokenKeyVersion Int?      @map("token_key_version")
+  status          String    @default("ACTIVE") @db.VarChar(16)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  rotatedAt       DateTime? @map("rotated_at") @db.Timestamptz
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
@@ -2226,13 +2229,16 @@ model CleaningLocationStatus {
   @@map("cleaning_location_statuses")
 }
 
-/// Opaque per-location QR access token. Only the SHA-256 hash is stored.
+/// Opaque per-location QR access. SHA-256 tokenHash for scan; optional sealed ciphertext for authorized reprint.
 model CleaningLocationQrAccess {
   id                 String    @id @db.Uuid
   tenantId           String    @map("tenant_id") @db.Uuid
   propertyId         String    @map("property_id") @db.Uuid
   cleaningLocationId String    @map("cleaning_location_id") @db.Uuid
   tokenHash          String    @unique(map: "cleaning_location_qr_access_token_hash_uidx") @map("token_hash") @db.Char(64)
+  /// AES-256-GCM sealed raw token (IV+tag+ciphertext). Null = legacy hash-only (unrecoverable).
+  tokenCiphertext    Bytes?    @map("token_ciphertext")
+  tokenKeyVersion    Int?      @map("token_key_version")
   status             String    @default("ACTIVE") @db.VarChar(16)
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
   rotatedAt          DateTime? @map("rotated_at") @db.Timestamptz
