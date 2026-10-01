@@ -13,8 +13,44 @@ describe("Talos operator Phase 1 design system", () => {
     expect(css).toContain("--primary: 153 43% 21%");
     expect(css).toContain("--background: 40 33% 95%");
     expect(css).toContain("--ops-booking:");
+    expect(css).toContain("--ops-booking-subtle:");
     expect(css).toContain("--ops-hold:");
     expect(css).toContain("--surface:");
+  });
+
+  it("keeps shell content pad and immersive bleed on the same contract", () => {
+    const spacing = read("components/admin/shell-spacing.ts");
+    expect(spacing).toContain('SHELL_CONTENT_PAD = "p-4 md:p-5 lg:p-6"');
+    expect(spacing).toContain('SHELL_CONTENT_BLEED = "-m-4 md:-m-5 lg:-m-6"');
+    expect(spacing).toContain("SHELL_CONTENT_BLEED_X");
+
+    const shell = read("components/admin/admin-shell.tsx");
+    expect(shell).toContain("SHELL_CONTENT_PAD");
+
+    const immersive = read(
+      "features/extranet-calendar/components/shell/ExtranetWorkspaceLayout.tsx",
+    );
+    expect(immersive).toContain("SHELL_CONTENT_BLEED");
+    expect(immersive).not.toContain("lg:-m-8");
+
+    const toolbar = read("components/admin/sticky-toolbar.tsx");
+    expect(toolbar).toContain("SHELL_CONTENT_BLEED_X");
+    expect(toolbar).not.toContain("lg:-mx-8");
+  });
+
+  it("wires focus-visible ring convention on shared primitives", () => {
+    const focus = read("components/ui/focus-ring.ts");
+    expect(focus).toContain("focus-visible:ring-2");
+    expect(focus).toContain("focus-visible:ring-ring");
+
+    const select = read("components/ui/select.tsx");
+    expect(select).toContain("FOCUS_RING_CLASS");
+    expect(select).not.toContain("focus:ring-2");
+
+    const badge = read("components/ui/badge.tsx");
+    expect(badge).toContain("FOCUS_RING_CLASS");
+    expect(badge).toContain("bg-success-subtle");
+    expect(badge).not.toContain("bg-emerald-");
   });
 
   it("wires Manrope/Fraunces on the dashboard layout", () => {

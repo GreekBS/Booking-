@@ -48,13 +48,13 @@ export function CalendarSpanBar({ span }: CalendarSpanBarProps) {
         </div>
         {span.checkInEdge && span.kind === "booking" && (
           <span
-            className="absolute -left-px top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-emerald-400"
+            className="absolute -left-px top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-success"
             aria-hidden
           />
         )}
         {span.checkOutEdge && (
           <span
-            className="absolute -right-px top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-rose-400"
+            className="absolute -right-px top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-danger"
             aria-hidden
           />
         )}

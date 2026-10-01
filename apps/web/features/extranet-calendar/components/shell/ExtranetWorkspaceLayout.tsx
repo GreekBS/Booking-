@@ -1,16 +1,19 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { SHELL_CONTENT_BLEED } from "@/components/admin/shell-spacing";
 
 /**
  * Cancels dashboard main padding and fills the viewport below the admin header.
+ * Bleed must stay in lockstep with SHELL_CONTENT_PAD (AdminShell).
  */
 export function ExtranetWorkspaceLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        "-m-4 h-[calc(100vh-3.5rem)] md:-m-6 lg:-m-8",
+        SHELL_CONTENT_BLEED,
+        "h-[calc(100vh-3.5rem)]",
       )}
     >
       {children}

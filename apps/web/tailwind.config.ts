@@ -80,6 +80,7 @@ const config: Config = {
         ops: {
           booking: "hsl(var(--ops-booking))",
           "booking-fg": "hsl(var(--ops-booking-fg))",
+          "booking-subtle": "hsl(var(--ops-booking-subtle))",
           hold: "hsl(var(--ops-hold))",
           "hold-fg": "hsl(var(--ops-hold-fg))",
           "hold-subtle": "hsl(var(--ops-hold-subtle))",

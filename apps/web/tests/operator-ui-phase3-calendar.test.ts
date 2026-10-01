@@ -68,10 +68,32 @@ describe("Talos operator Phase 3 — Operations Calendar", () => {
   it("visual theme maps to semantic tokens without Booking.com hex", () => {
     const theme = read("features/extranet-calendar/lib/visual-theme.ts");
     expect(theme).toContain("ops-booking");
+    expect(theme).toContain("ops-booking-subtle");
     expect(theme).toContain("ops-hold");
     expect(theme).toContain("LEGEND_SWATCHES");
     expect(theme).not.toMatch(/#[0-9a-fA-F]{3,8}/);
     expect(theme).not.toContain("003580");
+    // Booking chips must not borrow CTA primary-subtle (today column may still use it).
+    expect(theme).toContain("bg-ops-booking-subtle text-ops-booking");
+    expect(theme).not.toContain("bg-primary-subtle text-ops-booking");
+  });
+
+  it("timeline bar styles use ops-* tokens not Tailwind inventory blues/reds", () => {
+    const bars = read("features/availability/lib/bar-styles.ts");
+    expect(bars).toContain("BAR_BOOKING_CLASS");
+    expect(bars).toContain("BAR_HOLD_CLASS");
+    expect(bars).toContain("BAR_OPERATOR_CLASSES");
+    expect(bars).not.toContain("bg-blue-");
+    expect(bars).not.toContain("bg-red-");
+    expect(bars).not.toContain("bg-amber-");
+    expect(bars).not.toContain("bg-violet-");
+    expect(bars).not.toContain("bg-orange-");
+    expect(bars).not.toContain("bg-slate-");
+
+    const legend = read("features/availability/components/CalendarLegend.tsx");
+    expect(legend).toContain("LEGEND_SWATCHES");
+    expect(legend).not.toContain("bg-blue-");
+    expect(legend).not.toContain("bg-emerald-");
   });
 
   it("calendar booking host still uses shared BookingWorkspaceView", () => {

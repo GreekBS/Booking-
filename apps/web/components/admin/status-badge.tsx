@@ -9,11 +9,19 @@ type BadgeVariant =
   | "warning"
   | "destructive"
   | "outline"
-  | "info";
+  | "info"
+  | "danger";
 
 /**
- * Semantic status → badge mapping for Phase 1 surfaces.
- * Domain status strings are never renamed — only presentation.
+ * Domain status → semantic badge.
+ * Ownership: use StatusBadge for domain status strings (booking, payment, HK, channel, …).
+ * Use Badge directly only for non-domain chrome (counts, tags, decorative labels).
+ *
+ * Interaction/CTA blue (primary) must not be used for success outcomes.
+ * DIRTY vs IN_PROGRESS both map to warning today — split in a later HK phase.
+ *
+ * Typography: text-[11px] retained for UI-0 visual stability; UI-1 raises ≥13px floor
+ * (calendar micro-overlays remain an intentional exception elsewhere).
  */
 const statusVariant: Record<string, BadgeVariant> = {
   // Inventory / property
@@ -55,14 +63,6 @@ const statusVariant: Record<string, BadgeVariant> = {
   pending_auth: "warning",
 };
 
-const toneClass: Partial<Record<BadgeVariant, string>> = {
-  success: "border-transparent bg-success-subtle text-success",
-  warning: "border-transparent bg-warning-subtle text-warning-foreground",
-  destructive: "border-transparent bg-danger-subtle text-danger",
-  info: "border-transparent bg-info-subtle text-info",
-  default: "border-transparent bg-primary-subtle text-primary",
-};
-
 interface StatusBadgeProps {
   status: string;
   /** Optional human-readable label; domain `status` still drives the tone. */
@@ -75,12 +75,8 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   const display = label ?? statusLabelEl(status);
   return (
     <Badge
-      variant={variant === "info" ? "secondary" : variant}
-      className={cn(
-        "rounded-md px-2 py-0.5 text-[11px] font-medium",
-        toneClass[variant],
-        className,
-      )}
+      variant={variant}
+      className={cn("rounded-md px-2 py-0.5 text-[11px] font-medium", className)}
     >
       {display}
     </Badge>

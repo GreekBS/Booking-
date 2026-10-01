@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FOCUS_RING_CLASS } from "@/components/ui/focus-ring";
 
 const Sheet = DialogPrimitive.Root;
 const SheetTrigger = DialogPrimitive.Trigger;
@@ -54,7 +55,12 @@ const SheetContent = React.forwardRef<
     <SheetOverlay />
     <DialogPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+      <DialogPrimitive.Close
+        className={cn(
+          "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 disabled:pointer-events-none data-[state=open]:bg-secondary",
+          FOCUS_RING_CLASS,
+        )}
+      >
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

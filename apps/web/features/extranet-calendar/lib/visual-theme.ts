@@ -52,7 +52,7 @@ export const CHIP_BASE_CLASS =
   "inline-flex items-center rounded-md border border-border bg-surface px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground";
 
 export const CHIP_BOOKING_CLASS =
-  "border-ops-booking/30 bg-primary-subtle text-ops-booking";
+  "border-ops-booking/30 bg-ops-booking-subtle text-ops-booking";
 export const CHIP_HOLD_CLASS =
   "border-ops-hold/40 bg-ops-hold-subtle text-ops-hold-fg";
 export const CHIP_MUTED_CLASS =

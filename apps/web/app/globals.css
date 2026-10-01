@@ -5,7 +5,8 @@
 /**
  * Talos Operator design tokens.
  * Warm neutrals + forest primary. Maps to shadcn semantic vars for compatibility.
- * Calendar/workspace hex themes remain isolated until their dedicated redesign phase.
+ * Calendar inventory states live under --ops-* and must stay independent of --primary
+ * so a future CTA/primary remapping does not recolor bookings/holds/blocks.
  */
 @layer base {
   :root {
@@ -66,9 +67,10 @@
     --info-foreground: 205 50% 97%;
     --info-subtle: 205 45% 94%;
 
-    /* Operational inventory states */
+    /* Operational inventory states — independent from --primary / CTA */
     --ops-booking: 153 43% 28%;
     --ops-booking-fg: 40 30% 97%;
+    --ops-booking-subtle: 153 28% 92%;
     --ops-hold: 38 78% 42%;
     --ops-hold-fg: 38 60% 12%;
     --ops-hold-subtle: 40 80% 93%;
@@ -142,6 +144,7 @@
     --info-subtle: 205 35% 16%;
     --ops-booking: 153 40% 45%;
     --ops-booking-fg: 150 20% 8%;
+    --ops-booking-subtle: 153 30% 16%;
     --ops-hold: 38 70% 50%;
     --ops-hold-fg: 38 60% 10%;
     --ops-hold-subtle: 38 40% 16%;

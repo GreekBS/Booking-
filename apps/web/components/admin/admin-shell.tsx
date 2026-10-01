@@ -13,6 +13,7 @@ import {
 import { AdminHeader } from "./admin-header";
 import { BreadcrumbEntityLabelsProvider } from "./breadcrumb-entity-labels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SHELL_CONTENT_PAD } from "./shell-spacing";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -63,7 +64,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex min-w-0 flex-1 flex-col">
             <AdminHeader onMenuClick={() => setMobileOpen(true)} />
-            <main className={cn("flex-1 overflow-y-auto p-4 md:p-5 lg:p-6")}>
+            <main className={cn("flex-1 overflow-y-auto", SHELL_CONTENT_PAD)}>
               {children}
             </main>
           </div>
