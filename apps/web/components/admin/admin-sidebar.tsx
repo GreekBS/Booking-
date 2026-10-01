@@ -162,7 +162,7 @@ export function AdminSidebar({
         {adminNavSections.map((section) => (
           <div key={section.id}>
             {!collapsed && (
-              <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-muted">
+              <p className="mb-1.5 px-2.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-sidebar-muted">
                 {section.label}
               </p>
             )}
@@ -177,11 +177,11 @@ export function AdminSidebar({
                       onClick={onNavigate}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
+                        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                         active
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/45 hover:text-sidebar-accent-foreground",
                         collapsed && "justify-center px-2",
                       )}
                       aria-current={active ? "page" : undefined}
@@ -204,7 +204,7 @@ export function AdminSidebar({
             onClick={() => onCollapsedChange(!collapsed)}
             className={cn(
               "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-medium text-sidebar-muted transition-colors",
-              "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+              "hover:bg-sidebar-accent/45 hover:text-sidebar-accent-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
               collapsed && "justify-center px-2",
             )}

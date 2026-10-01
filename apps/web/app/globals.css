@@ -92,16 +92,16 @@
     --ops-selected-ring: 217 91% 53%;
     --ops-today-marker: 150 6% 48%;
 
-    /* Sidebar — deep forest operational nav (UI-1 leaves structure as-is) */
-    --sidebar-background: 153 43% 14%;
-    --sidebar-foreground: 40 20% 92%;
-    --sidebar-primary: 40 30% 96%;
-    --sidebar-primary-foreground: 153 43% 14%;
-    --sidebar-accent: 153 35% 20%;
-    --sidebar-accent-foreground: 40 30% 96%;
-    --sidebar-border: 153 30% 22%;
-    --sidebar-ring: 40 30% 80%;
-    --sidebar-muted: 153 18% 62%;
+    /* Sidebar — light chrome aligned with UI-1 (UI-2) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 222 36% 15%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 95% 93%;
+    --sidebar-accent-foreground: 217 91% 53%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 53%;
+    --sidebar-muted: 215 16% 47%;
   }
 
   .dark {
@@ -195,7 +195,7 @@
   }
 
   /**
-   * Operator sidebar nav scroll — slim, forest-tinted, idle-subtle.
+   * Operator sidebar nav scroll — slim, token-tinted, idle-subtle.
    * Uses sidebar design tokens; Chromium/WebKit + Firefox thin scrollbar.
    * Appears only when content overflows (overflow-y: auto).
    */

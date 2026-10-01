@@ -84,11 +84,28 @@ describe("Talos operator Phase 1 design system", () => {
     expect(sidebar).toContain("/dashboard/bookings");
     expect(sidebar).toContain("sidebar-nav-scroll");
     expect(sidebar).toContain("overflow-hidden");
+    expect(sidebar).toContain("text-sidebar-primary");
+    expect(sidebar).toContain("text-sm font-medium");
+    expect(sidebar).toContain("text-[12px] font-semibold uppercase");
+    expect(sidebar).toContain("bg-sidebar-accent text-sidebar-accent-foreground");
+    expect(sidebar).toContain("hover:bg-sidebar-accent/45");
+    expect(sidebar).toContain("focus-visible:ring-sidebar-ring");
+    expect(sidebar).not.toContain("text-white");
 
     const css = read("app/globals.css");
     expect(css).toContain(".sidebar-nav-scroll");
     expect(css).toContain("scrollbar-width: thin");
     expect(css).toContain("::-webkit-scrollbar");
+    // UI-2 light sidebar chrome (not forest)
+    expect(css).toContain("--sidebar-background: 0 0% 100%");
+    expect(css).toContain("--sidebar-foreground: 215 25% 27%");
+    expect(css).toContain("--sidebar-primary: 222 36% 15%");
+    expect(css).toContain("--sidebar-accent: 214 95% 93%");
+    expect(css).toContain("--sidebar-accent-foreground: 217 91% 53%");
+    expect(css).toContain("--sidebar-border: 214 32% 91%");
+    expect(css).toContain("--sidebar-ring: 217 91% 53%");
+    expect(css).toContain("--sidebar-muted: 215 16% 47%");
+    expect(css).not.toContain("--sidebar-background: 153 43% 14%");
   });
 
   it("exposes Active Property on mobile header", () => {
