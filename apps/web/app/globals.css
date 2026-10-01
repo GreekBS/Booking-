@@ -3,55 +3,56 @@
 @tailwind utilities;
 
 /**
- * Talos Operator design tokens.
- * Warm neutrals + forest primary. Maps to shadcn semantic vars for compatibility.
+ * Talos Operator design tokens (UI-1).
+ * Cool light canvas + blue primary for CTA/focus/selection.
  * Calendar inventory states live under --ops-* and must stay independent of --primary
- * so a future CTA/primary remapping does not recolor bookings/holds/blocks.
+ * so CTA remapping does not recolor bookings/holds/blocks.
  */
 @layer base {
   :root {
-    /* Warm hospitality canvas */
-    --background: 40 33% 95%;
-    --foreground: 150 12% 12%;
+    /* Cool SaaS canvas ≈ #F7F9FC */
+    --background: 220 33% 98%;
+    --foreground: 222 36% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 150 12% 12%;
+    --card-foreground: 222 36% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 150 12% 12%;
+    --popover-foreground: 222 36% 15%;
 
-    /* Talos forest #1F4D3A */
-    --primary: 153 43% 21%;
-    --primary-foreground: 40 30% 97%;
-    --primary-hover: 153 43% 16%;
-    --primary-subtle: 153 28% 92%;
+    /* Primary ≈ #2563EB / hover #1D4ED8 / subtle #DBEAFE */
+    --primary: 217 91% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 224 76% 48%;
+    --primary-subtle: 214 95% 93%;
 
-    --secondary: 40 18% 92%;
-    --secondary-foreground: 150 12% 18%;
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 222 36% 15%;
 
-    --muted: 40 16% 91%;
-    --muted-foreground: 150 6% 42%;
+    --muted: 220 18% 95%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 153 22% 90%;
-    --accent-foreground: 153 43% 18%;
+    --accent: 214 95% 93%;
+    --accent-foreground: 222 47% 20%;
 
     --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 12% 84%;
-    --border-strong: 40 10% 72%;
-    --input: 40 12% 84%;
-    --ring: 153 43% 28%;
+    /* Border ≈ #E2E8F0 */
+    --border: 214 32% 91%;
+    --border-strong: 215 20% 82%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 53%;
 
     --radius: 0.5rem;
 
-    /* Surfaces */
+    /* Surfaces — white cards on cool canvas */
     --surface: 0 0% 100%;
-    --surface-subtle: 40 22% 93%;
+    --surface-subtle: 220 24% 96%;
     --surface-raised: 0 0% 100%;
 
-    --foreground-muted: 150 6% 42%;
-    --foreground-subtle: 150 5% 55%;
+    --foreground-muted: 215 16% 47%;
+    --foreground-subtle: 215 14% 55%;
 
     /* Status */
     --success: 152 45% 32%;
@@ -86,11 +87,12 @@
     --ops-channel-fg: 0 0% 100%;
     --ops-closed: 40 8% 88%;
     --ops-closed-fg: 150 6% 42%;
-    --ops-selected: 153 28% 90%;
-    --ops-selected-ring: 153 43% 28%;
+    /* Selection/interaction — may track primary blue */
+    --ops-selected: 214 95% 93%;
+    --ops-selected-ring: 217 91% 53%;
     --ops-today-marker: 150 6% 48%;
 
-    /* Sidebar — deep forest operational nav */
+    /* Sidebar — deep forest operational nav (UI-1 leaves structure as-is) */
     --sidebar-background: 153 43% 14%;
     --sidebar-foreground: 40 20% 92%;
     --sidebar-primary: 40 30% 96%;

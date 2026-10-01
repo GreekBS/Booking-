@@ -10,7 +10,7 @@ import { FOCUS_RING_CLASS } from "@/components/ui/focus-ring";
  */
 const badgeVariants = cva(
   cn(
-    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition-colors",
     FOCUS_RING_CLASS,
   ),
   {

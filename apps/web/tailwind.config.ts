@@ -118,8 +118,8 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        surface: "0 1px 2px hsl(150 12% 12% / 0.04), 0 1px 3px hsl(150 12% 12% / 0.06)",
-        raised: "0 2px 8px hsl(150 12% 12% / 0.06), 0 1px 2px hsl(150 12% 12% / 0.04)",
+        surface: "0 1px 2px hsl(222 36% 15% / 0.04), 0 1px 3px hsl(222 36% 15% / 0.05)",
+        raised: "0 2px 8px hsl(222 36% 15% / 0.06), 0 1px 2px hsl(222 36% 15% / 0.04)",
       },
     },
   },

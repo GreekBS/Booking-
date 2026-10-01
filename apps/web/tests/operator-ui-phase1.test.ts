@@ -8,14 +8,23 @@ function read(rel: string): string {
 }
 
 describe("Talos operator Phase 1 design system", () => {
-  it("defines forest primary and warm background tokens", () => {
+  it("defines cool canvas + blue primary while keeping inventory ops-* independent", () => {
     const css = read("app/globals.css");
-    expect(css).toContain("--primary: 153 43% 21%");
-    expect(css).toContain("--background: 40 33% 95%");
-    expect(css).toContain("--ops-booking:");
+    expect(css).toContain("--primary: 217 91% 53%");
+    expect(css).toContain("--primary-hover: 224 76% 48%");
+    expect(css).toContain("--primary-subtle: 214 95% 93%");
+    expect(css).toContain("--background: 220 33% 98%");
+    expect(css).toContain("--foreground: 222 36% 15%");
+    expect(css).toContain("--border: 214 32% 91%");
+    expect(css).toContain("--ops-booking: 153 43% 28%");
     expect(css).toContain("--ops-booking-subtle:");
     expect(css).toContain("--ops-hold:");
+    expect(css).toContain("--ops-selected: 214 95% 93%");
+    expect(css).toContain("--ops-selected-ring: 217 91% 53%");
     expect(css).toContain("--surface:");
+    // Inventory booking must not collapse into CTA primary.
+    expect(css).not.toMatch(/--ops-booking:\s*217 91% 53%/);
+    expect(css.indexOf("--ops-booking: 153 43% 28%")).toBeGreaterThan(-1);
   });
 
   it("keeps shell content pad and immersive bleed on the same contract", () => {

@@ -20,7 +20,7 @@ type BadgeVariant =
  * Interaction/CTA blue (primary) must not be used for success outcomes.
  * DIRTY vs IN_PROGRESS both map to warning today — split in a later HK phase.
  *
- * Typography: text-[11px] retained for UI-0 visual stability; UI-1 raises ≥13px floor
+ * Typography: ≥13px floor for operator readability
  * (calendar micro-overlays remain an intentional exception elsewhere).
  */
 const statusVariant: Record<string, BadgeVariant> = {
@@ -76,7 +76,7 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   return (
     <Badge
       variant={variant}
-      className={cn("rounded-md px-2 py-0.5 text-[11px] font-medium", className)}
+      className={cn("rounded-md px-2 py-0.5 text-[13px] font-medium", className)}
     >
       {display}
     </Badge>

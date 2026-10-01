@@ -23,13 +23,15 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+        <h1 className="text-[1.75rem] font-semibold leading-snug tracking-tight text-foreground">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>
+          <p className="mt-1 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+            {description}
+          </p>
         ) : null}
-        {meta ? <div className="mt-2">{meta}</div> : null}
+        {meta ? <div className="mt-2 text-[13px] text-muted-foreground">{meta}</div> : null}
       </div>
       {actions ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
