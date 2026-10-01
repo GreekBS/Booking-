@@ -276,6 +276,7 @@ import {
   QuoteDirectBookingStayUseCase,
   GetDirectBookingCalendarUseCase,
   CreateDirectBookingHoldUseCase,
+  CreateDirectBookingBookUseCase,
 
   GetTenantSettingsUseCase,
 
@@ -1848,6 +1849,15 @@ export const createBookingUseCase = new CreateBookingUseCase(
   idGenerator,
   resolveOrCreateGuest,
   guestRepository,
+);
+
+export const createDirectBookingBookUseCase = new CreateDirectBookingBookUseCase(
+  directBookingCatalogAdapter,
+  holdRepository,
+  quoteRepository,
+  bookingRepository,
+  createBookingUseCase,
+  storefrontIdempotencyRepository,
 );
 
 

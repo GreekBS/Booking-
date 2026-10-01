@@ -5,6 +5,7 @@ import {
   directBookingPublicKeySchema,
   directBookingCalendarSchema,
   directBookingCreateHoldSchema,
+  directBookingCreateBookSchema,
 } from "@hcp/validators";
 
 describe("direct booking validators", () => {
@@ -91,6 +92,64 @@ describe("direct booking validators", () => {
         guestCount: 2,
         idempotencyKey: "client-key-123456",
         propertyId: "1a975f6c-08b5-497d-94a0-777ff09fa618",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts book payload and rejects price/status/stay/terms=false", () => {
+    const valid = {
+      holdId: "d0ef75e9-63f3-46a0-9fd9-33a5ef374838",
+      guest: {
+        firstName: "Maria",
+        lastName: "Papadopoulos",
+        email: "maria@example.com",
+        phone: "+306912345678",
+        country: "gr",
+      },
+      acceptedTerms: true,
+      idempotencyKey: "book-key-12345678",
+    };
+    const parsed = directBookingCreateBookSchema.parse(valid);
+    expect(parsed.guest.country).toBe("GR");
+
+    expect(
+      directBookingCreateBookSchema.safeParse({ ...valid, acceptedTerms: false }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateBookSchema.safeParse({ ...valid, total: "1.00" }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateBookSchema.safeParse({ ...valid, quoteId: valid.holdId }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateBookSchema.safeParse({
+        ...valid,
+        checkIn: "2026-12-10",
+        checkOut: "2026-12-13",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateBookSchema.safeParse({
+        ...valid,
+        guestCount: 2,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateBookSchema.safeParse({
+        ...valid,
+        status: "confirmed",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      directBookingCreateBookSchema.safeParse({
+        ...valid,
+        specialRequests: "late arrival",
       }).success,
     ).toBe(false);
   });

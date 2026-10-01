@@ -68,7 +68,7 @@ export interface IStorefrontCatalogPort {
   isPublishedUnit(tenantId: string, unitId: string): Promise<boolean>;
 }
 
-export type StorefrontIdempotencyScope = "hold" | "booking" | "dbk_hold";
+export type StorefrontIdempotencyScope = "hold" | "booking" | "dbk_hold" | "dbk_booking";
 
 export interface IStorefrontIdempotencyRepository {
   findResourceId(

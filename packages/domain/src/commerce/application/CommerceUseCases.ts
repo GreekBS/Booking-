@@ -431,11 +431,18 @@ export class CreateQuoteUseCase {
 export interface CreateBookingCommand {
   tenantId: string;
   quoteId: string;
-  guest: { name: string; email: string; phone: string | null };
+  guest: {
+    name: string;
+    email: string;
+    phone: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    country?: string | null;
+  };
   confirmationMode?: ConfirmationMode;
   /**
    * Explicit operator-selected Guest (admin/operator only).
-   * Public/storefront clients must not supply this.
+   * Public/storefront/direct-booking clients must not supply this.
    */
   guestId?: string | null;
 }
@@ -468,8 +475,10 @@ export class CreateBookingUseCase {
         return Result.fail(new ForbiddenError());
       }
 
-      const isStorefront = actor.userId.startsWith("storefront:");
-      if (isStorefront && command.guestId) {
+      const isPublic =
+        actor.userId.startsWith("storefront:") ||
+        actor.userId.startsWith("direct-booking:");
+      if (isPublic && command.guestId) {
         return Result.fail(new ForbiddenError());
       }
 
@@ -492,12 +501,14 @@ export class CreateBookingUseCase {
             id: this.idGenerator.generate(),
             hold,
             quote,
-            guest: command.guest,
+            guest: {
+              name: command.guest.name,
+              email: command.guest.email,
+              phone: command.guest.phone,
+            },
             guestId,
             confirmationMode: command.confirmationMode ?? "manual",
-            mutationOrigin: isStorefront
-              ? mutationOriginDirect()
-              : mutationOriginOperator(),
+            mutationOrigin: isPublic ? mutationOriginDirect() : mutationOriginOperator(),
           });
 
           await this.commerceFlowRepository.saveHoldAndBooking(hold, created);
@@ -505,7 +516,7 @@ export class CreateBookingUseCase {
         },
       );
 
-      if (!isStorefront) {
+      if (!isPublic) {
         await this.auditLogRepository.append({
           tenantId: command.tenantId,
           actorId: actor.userId,
@@ -545,8 +556,11 @@ export class CreateBookingUseCase {
         tenantId: command.tenantId,
         contact: {
           displayName: command.guest.name,
+          firstName: command.guest.firstName,
+          lastName: command.guest.lastName,
           email: command.guest.email,
           phone: command.guest.phone,
+          country: command.guest.country,
         },
       },
       actor,

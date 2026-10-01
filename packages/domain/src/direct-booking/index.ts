@@ -6,3 +6,5 @@ export * from "./application/CheckDirectBookingAvailabilityUseCase";
 export * from "./application/QuoteDirectBookingStayUseCase";
 export * from "./application/GetDirectBookingCalendarUseCase";
 export * from "./application/CreateDirectBookingHoldUseCase";
+export * from "./application/CreateDirectBookingBookUseCase";
+export * from "./application/directBookingActor";

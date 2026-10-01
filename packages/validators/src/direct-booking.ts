@@ -54,6 +54,31 @@ export const directBookingCreateHoldSchema = z
     }
   });
 
+/**
+ * Public Direct Booking book — Hold + guest only.
+ * Stay/price/status come from Hold + persisted Quote; specialRequests deferred (no Booking notes column).
+ */
+export const directBookingCreateBookSchema = z
+  .object({
+    holdId: z.string().uuid(),
+    guest: z
+      .object({
+        firstName: z.string().trim().min(1).max(100),
+        lastName: z.string().trim().min(1).max(100),
+        email: z.string().trim().email().max(255),
+        phone: z.string().trim().min(1).max(50),
+        country: z
+          .string()
+          .trim()
+          .regex(/^[A-Za-z]{2}$/, "country must be ISO 3166-1 alpha-2")
+          .transform((value) => value.toUpperCase()),
+      })
+      .strict(),
+    acceptedTerms: z.literal(true),
+    idempotencyKey: z.string().min(8).max(64),
+  })
+  .strict();
+
 /** Max [from, to) span in days for public Direct Booking calendar browsing. */
 export const DIRECT_BOOKING_CALENDAR_MAX_RANGE_DAYS = 93;
 

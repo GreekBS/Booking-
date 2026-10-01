@@ -72,6 +72,9 @@ export function directBookingError(error: unknown): NextResponse {
       } else if (message.toLowerCase().includes("guest")) {
         code = "GUEST_LIMIT";
         message = "Guest count is not allowed";
+      } else if (message.toLowerCase().includes("terms")) {
+        code = "TERMS_REQUIRED";
+        message = "Terms must be accepted";
       } else {
         message = "Invalid request";
       }
