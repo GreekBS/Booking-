@@ -71,7 +71,10 @@ describe("Talos operator Phase 1 design system", () => {
     expect(dash).not.toContain("Recent activity");
     expect(dash).not.toContain("New property");
     expect(dash).toContain("bookingId=");
-    expect(dash).toMatch(/fetchDashboardOverview\(tenantId,\s*propertyId\)/);
+    expect(dash).toMatch(/fetchDashboardOverview\(tenantId,\s*propertyId/);
+    expect(dash).toContain("DashboardPeriodControl");
+    expect(dash).toContain("periodAnalytics");
+    expect(dash).toContain("ADR");
   });
 
   it("shows a first-property CTA on the zero-property dashboard state", () => {

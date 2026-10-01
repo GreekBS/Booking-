@@ -3,6 +3,11 @@ import type {
   TenantDashboardOverviewReadModel,
   DashboardRecentBookingReadModel,
 } from "@hcp/domain";
+import {
+  occupiedNightsInPeriod,
+  periodDayCount,
+  prorateStayRevenue,
+} from "@hcp/domain";
 import { withTenantTransaction } from "../../client";
 
 function formatDateColumn(value: Date): string {
@@ -60,9 +65,17 @@ const bookingListSelect = {
   unit: { select: { name: true } },
 } as const;
 
+function formatMoney4(n: number): string {
+  return n.toFixed(4);
+}
+
 /**
  * Efficient dashboard aggregates via Prisma count/groupBy/sum.
  * Never loads Quote rows or performs per-booking quote lookups.
+ *
+ * Analytics status policy (locked): confirmed + completed only
+ * for revenue, booking count, occupied nights, occupancy, ADR.
+ * Operational today widgets continue to use non-cancelled.
  */
 export class PrismaTenantDashboardOverviewQuery
   implements ITenantDashboardOverviewQuery
@@ -72,16 +85,22 @@ export class PrismaTenantDashboardOverviewQuery
     allowedPropertyIds: string[] | null;
     todayIso: string;
     arrivalsThroughIso: string;
-    occupancyThroughIso: string;
+    period: import("@hcp/domain").AnalyticsPeriodWindow;
     recentLimit: number;
+    propertyTimezone: string;
   }): Promise<TenantDashboardOverviewReadModel> {
     return withTenantTransaction(input.tenantId, async (tx) => {
       const bookingScope = propertyScopeWhere(input.allowedPropertyIds);
       const propertyScope = propertyIdScopeWhere(input.allowedPropertyIds);
       const today = new Date(`${input.todayIso}T00:00:00.000Z`);
       const todayEnd = new Date(`${input.todayIso}T23:59:59.999Z`);
-      const arrivalsThrough = new Date(`${input.arrivalsThroughIso}T00:00:00.000Z`);
-      const occupancyThrough = new Date(`${input.occupancyThroughIso}T00:00:00.000Z`);
+      const arrivalsThrough = new Date(
+        `${input.arrivalsThroughIso}T00:00:00.000Z`,
+      );
+      const periodStart = new Date(`${input.period.startDate}T00:00:00.000Z`);
+      const periodEndExclusive = new Date(
+        `${input.period.endDateExclusive}T00:00:00.000Z`,
+      );
       const todayListLimit = Math.min(8, input.recentLimit);
 
       const nonCancelled = {
@@ -90,22 +109,26 @@ export class PrismaTenantDashboardOverviewQuery
         status: { not: "cancelled" as const },
       };
 
+      const analyticsStatuses = {
+        tenantId: input.tenantId,
+        ...bookingScope,
+        status: { in: ["confirmed", "completed"] as Array<"confirmed" | "completed"> },
+      };
+
       const [
         propertyCount,
         unitCount,
-        bookingCount,
         arrivalsNext7Days,
         departuresNext7Days,
         arrivalsToday,
         departuresToday,
         inHouseToday,
         activeHoldCount,
-        revenueAgg,
-        currencyRow,
         recentRecords,
         todayArrivalRecords,
         todayDepartureRecords,
-        occupancyBookings,
+        periodBookings,
+        currencyRow,
       ] = await Promise.all([
         tx.property.count({
           where: {
@@ -125,7 +148,6 @@ export class PrismaTenantDashboardOverviewQuery
                 : { propertyId: { in: input.allowedPropertyIds } }),
           },
         }),
-        tx.booking.count({ where: nonCancelled }),
         tx.booking.count({
           where: {
             ...nonCancelled,
@@ -164,24 +186,6 @@ export class PrismaTenantDashboardOverviewQuery
             ...bookingScope,
           },
         }),
-        tx.booking.aggregate({
-          where: {
-            tenantId: input.tenantId,
-            ...bookingScope,
-            status: { in: ["confirmed", "completed"] },
-          },
-          _sum: { totalAmount: true },
-          _count: { _all: true },
-        }),
-        tx.booking.findFirst({
-          where: {
-            tenantId: input.tenantId,
-            ...bookingScope,
-            status: { in: ["confirmed", "completed"] },
-          },
-          select: { currency: true },
-          orderBy: { createdAt: "desc" },
-        }),
         tx.booking.findMany({
           where: nonCancelled,
           orderBy: { createdAt: "desc" },
@@ -206,48 +210,84 @@ export class PrismaTenantDashboardOverviewQuery
           take: todayListLimit,
           select: bookingListSelect,
         }),
+        // Period-overlapping confirmed/completed stays only (bounded by period).
         tx.booking.findMany({
           where: {
-            ...nonCancelled,
-            checkIn: { lt: occupancyThrough },
-            checkOut: { gt: today },
+            ...analyticsStatuses,
+            checkIn: { lt: periodEndExclusive },
+            checkOut: { gt: periodStart },
           },
           select: {
             checkIn: true,
             checkOut: true,
+            totalAmount: true,
+            currency: true,
           },
+        }),
+        tx.booking.findFirst({
+          where: analyticsStatuses,
+          select: { currency: true },
+          orderBy: { createdAt: "desc" },
         }),
       ]);
 
-      let revenue: TenantDashboardOverviewReadModel["revenue"] = null;
-      if (revenueAgg._count._all > 0) {
-        revenue = {
-          total: (revenueAgg._sum.totalAmount ?? 0).toString(),
-          currency: currencyRow?.currency ?? "EUR",
-        };
-      }
-
-      // Same occupancy estimate as prior client: booked nights in next 30d / (units * 30)
-      let bookedNights = 0;
-      for (const b of occupancyBookings) {
+      let occupiedNights = 0;
+      let revenueTotal = 0;
+      let bookingCount = 0;
+      for (const b of periodBookings) {
         const checkIn = formatDateColumn(b.checkIn);
         const checkOut = formatDateColumn(b.checkOut);
-        if (checkOut <= input.todayIso || checkIn >= input.occupancyThroughIso) continue;
-        const start = checkIn > input.todayIso ? checkIn : input.todayIso;
-        bookedNights += Math.max(
-          1,
-          Math.round(
-            (new Date(`${checkOut}T00:00:00.000Z`).getTime() -
-              new Date(`${start}T00:00:00.000Z`).getTime()) /
-              86_400_000,
-          ),
+        const nights = occupiedNightsInPeriod(
+          checkIn,
+          checkOut,
+          input.period.startDate,
+          input.period.endDateExclusive,
+        );
+        if (nights <= 0) continue;
+        bookingCount += 1;
+        occupiedNights += nights;
+        revenueTotal += prorateStayRevenue(
+          b.totalAmount.toString(),
+          checkIn,
+          checkOut,
+          input.period.startDate,
+          input.period.endDateExclusive,
         );
       }
-      const capacityNights = unitCount * 30;
+
+      const currency = currencyRow?.currency ?? "EUR";
+      const periodDays = periodDayCount(
+        input.period.startDate,
+        input.period.endDateExclusive,
+      );
+      const capacityNights = unitCount * periodDays;
       const occupancyPct =
         capacityNights > 0
-          ? Math.min(100, Math.round((bookedNights / capacityNights) * 100))
+          ? Math.min(100, Math.round((occupiedNights / capacityNights) * 100))
           : 0;
+
+      const revenue =
+        bookingCount > 0
+          ? { total: formatMoney4(revenueTotal), currency }
+          : null;
+
+      const adr =
+        occupiedNights > 0
+          ? {
+              amount: formatMoney4(revenueTotal / occupiedNights),
+              currency,
+            }
+          : null;
+
+      const periodAnalytics = {
+        period: input.period,
+        revenue,
+        bookingCount,
+        occupiedNights,
+        occupancyPct,
+        adr,
+        capacityNights,
+      };
 
       return {
         propertyCount,
@@ -261,6 +301,9 @@ export class PrismaTenantDashboardOverviewQuery
         activeHoldCount,
         revenue,
         occupancyPct,
+        periodAnalytics,
+        localToday: input.todayIso,
+        propertyTimezone: input.propertyTimezone,
         recentBookings: recentRecords.map(mapBookingRow),
         todayArrivals: todayArrivalRecords.map(mapBookingRow),
         todayDepartures: todayDepartureRecords.map(mapBookingRow),

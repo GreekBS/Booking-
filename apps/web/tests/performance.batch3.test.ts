@@ -45,7 +45,8 @@ describe("Performance Batch 3 — runtime bottleneck fixes", () => {
     );
     const fetchCalls = source.match(/fetchDashboardOverview/g) ?? [];
     expect(fetchCalls.length).toBe(2); // import + one call site
-    expect(source).toMatch(/\[tenantId, propertyId\]/);
+    // Period-aware reload: tenant, property, and periodQuery drive the effect.
+    expect(source).toMatch(/\[tenantId, propertyId, periodQuery/);
   });
 
   it("Availability uses slim catalog + batch hooks (not full properties)", () => {

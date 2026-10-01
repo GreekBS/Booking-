@@ -87,7 +87,8 @@ describe("Performance Batch 1 — dashboard overview / slim catalog", () => {
     );
     expect(source).toMatch(/Promise\.all/);
     expect(source).toMatch(/bookingHold\.count/);
-    expect(source).toMatch(/_sum:\s*\{\s*totalAmount/);
+    expect(source).toMatch(/prorateStayRevenue|occupiedNightsInPeriod/);
+    expect(source).toMatch(/periodStart|period\.startDate/);
     expect(source).not.toMatch(/prisma\.quote/i);
     expect(source).not.toMatch(/include:\s*\{[^}]*quote/i);
   });

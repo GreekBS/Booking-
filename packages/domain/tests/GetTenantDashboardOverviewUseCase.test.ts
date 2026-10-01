@@ -6,10 +6,12 @@ import type {
 } from "../src/commerce/ports/ITenantDashboardOverviewQuery";
 import { PermissionChecker } from "../src/shared/services/PermissionChecker";
 import { ForbiddenError } from "../src/shared/errors/DomainError";
+import { buildYear } from "../src/commerce/analytics/AnalyticsPeriod";
 
 function emptyOverview(
   overrides: Partial<TenantDashboardOverviewReadModel> = {},
 ): TenantDashboardOverviewReadModel {
+  const period = buildYear(2026);
   return {
     propertyCount: 0,
     unitCount: 0,
@@ -22,6 +24,17 @@ function emptyOverview(
     activeHoldCount: 0,
     revenue: null,
     occupancyPct: 0,
+    periodAnalytics: {
+      period,
+      revenue: null,
+      bookingCount: 0,
+      occupiedNights: 0,
+      occupancyPct: 0,
+      adr: null,
+      capacityNights: 0,
+    },
+    localToday: "2026-10-01",
+    propertyTimezone: "Europe/Athens",
     recentBookings: [],
     todayArrivals: [],
     todayDepartures: [],
@@ -32,19 +45,46 @@ function emptyOverview(
 describe("GetTenantDashboardOverviewUseCase", () => {
   const permissionChecker = new PermissionChecker();
   const getOverview = vi.fn();
+  const getProperty = vi.fn();
+  const getPropertiesByIds = vi.fn();
+  const propertyLocalToday = vi.fn();
 
   const overviewQuery: ITenantDashboardOverviewQuery = {
     getOverview,
   };
 
+  const catalog = {
+    getUnit: vi.fn(),
+    getProperty,
+    getUnitsByIds: vi.fn(),
+    getPropertiesByIds,
+    getUnitPropertyContextsByUnitIds: vi.fn(),
+  };
+
+  const timezone = {
+    propertyLocalToday,
+  };
+
   const useCase = new GetTenantDashboardOverviewUseCase(
     overviewQuery,
     permissionChecker,
+    catalog as never,
+    timezone as never,
   );
 
   beforeEach(() => {
     getOverview.mockReset();
+    getProperty.mockReset();
+    getPropertiesByIds.mockReset();
+    propertyLocalToday.mockReset();
     getOverview.mockResolvedValue(emptyOverview());
+    propertyLocalToday.mockResolvedValue("2026-10-01");
+    getProperty.mockResolvedValue({
+      id: "prop-x",
+      tenantId: "tenant-a",
+      timezone: "Europe/Athens",
+      status: "active",
+    });
   });
 
   it("returns overview for admin with tenant-wide booking read (null property scope)", async () => {
@@ -54,18 +94,6 @@ describe("GetTenantDashboardOverviewUseCase", () => {
       bookingCount: 10,
       activeHoldCount: 3,
       revenue: { total: "1500.0000", currency: "EUR" },
-      recentBookings: [
-        {
-          id: "b1",
-          guestName: "Ada",
-          checkIn: "2026-09-20",
-          checkOut: "2026-09-22",
-          status: "confirmed",
-          totalAmount: "200.0000",
-          currency: "EUR",
-          unitName: "Suite A",
-        },
-      ],
     });
     getOverview.mockResolvedValue(overview);
 
@@ -84,6 +112,35 @@ describe("GetTenantDashboardOverviewUseCase", () => {
         tenantId: "tenant-a",
         allowedPropertyIds: null,
         recentLimit: 8,
+        todayIso: "2026-10-01",
+        period: expect.objectContaining({
+          periodType: "year",
+          year: 2026,
+          startDate: "2026-01-01",
+          endDateExclusive: "2027-01-01",
+        }),
+      }),
+    );
+  });
+
+  it("defaults to Year using property-local today year", async () => {
+    propertyLocalToday.mockResolvedValue("2027-02-10");
+    await useCase.execute(
+      "tenant-a",
+      {
+        userId: "admin-1",
+        role: "admin",
+        propertyIds: null,
+        isSuperAdmin: false,
+      },
+      { propertyId: "prop-x" },
+    );
+    expect(getProperty).toHaveBeenCalledWith("prop-x", "tenant-a");
+    expect(propertyLocalToday).toHaveBeenCalledWith("Europe/Athens");
+    expect(getOverview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        period: expect.objectContaining({ periodType: "year", year: 2027 }),
+        todayIso: "2027-02-10",
       }),
     );
   });

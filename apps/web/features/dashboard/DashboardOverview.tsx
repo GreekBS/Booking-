@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
@@ -17,6 +18,7 @@ import {
   ArrowRight,
   ClipboardList,
   Sparkles,
+  Moon,
 } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import {
@@ -39,6 +41,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { elCommon, elNav, elStatus } from "@/lib/i18n";
+import {
+  analyticsPeriodToSearchParams,
+  type AnalyticsPeriodWindow,
+} from "@hcp/domain";
+import {
+  DashboardPeriodControl,
+  hasAnalyticsPeriodParams,
+  periodQueryFromSearchParams,
+} from "./DashboardPeriodControl";
 
 function formatOpsDate(iso: string): string {
   try {
@@ -53,19 +64,13 @@ function formatOpsDate(iso: string): string {
   }
 }
 
-function todayIsoLocal(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 /**
  * Operational hospitality dashboard — property-scoped via Active Property.
- * Single overview fetch (no quote fan-out).
+ * Analytics period via URL params; default Year (property-local).
  */
 export function DashboardOverview() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { tenantId, tenantName, loading: tenantLoading, error: tenantError } = useTenant();
   const {
     propertyId,
@@ -75,11 +80,14 @@ export function DashboardOverview() {
     error: propertyError,
   } = useActiveProperty();
   const [overview, setOverview] = useState<DashboardOverviewRecord | null>(null);
-  const [housekeeping, setHousekeeping] = useState<HousekeepingTodayBoard | null>(
-    null,
-  );
+  const [housekeeping, setHousekeeping] = useState<HousekeepingTodayBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const periodQuery = useMemo(
+    () => periodQueryFromSearchParams(searchParams),
+    [searchParams],
+  );
 
   const load = useCallback(async () => {
     if (!tenantId || !propertyId) return;
@@ -87,11 +95,15 @@ export function DashboardOverview() {
     setError(null);
     try {
       const [data, hk] = await Promise.all([
-        fetchDashboardOverview(tenantId, propertyId),
+        fetchDashboardOverview(tenantId, propertyId, periodQuery),
         fetchHousekeepingToday(tenantId, propertyId).catch(() => null),
       ]);
       setOverview(data);
       setHousekeeping(hk);
+      if (!hasAnalyticsPeriodParams(searchParams)) {
+        const params = analyticsPeriodToSearchParams(data.periodAnalytics.period);
+        router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης πίνακα ελέγχου");
       setOverview(null);
@@ -99,7 +111,7 @@ export function DashboardOverview() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, propertyId]);
+  }, [tenantId, propertyId, periodQuery, router, searchParams]);
 
   useEffect(() => {
     if (!tenantLoading && !tenantId) {
@@ -113,9 +125,16 @@ export function DashboardOverview() {
     void load();
   }, [load]);
 
-  const todayLabel = useMemo(() => formatOpsDate(todayIsoLocal()), []);
+  const todayLabel = useMemo(() => {
+    const iso = overview?.localToday ?? housekeeping?.localToday;
+    return iso ? formatOpsDate(iso) : "";
+  }, [overview?.localToday, housekeeping?.localToday]);
 
-  // First-property continuity: zero-property tenants need a clear next step on Dashboard only.
+  function onPeriodChange(next: AnalyticsPeriodWindow) {
+    const params = analyticsPeriodToSearchParams(next);
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
+  }
+
   if (
     !tenantLoading &&
     propertyReady &&
@@ -174,14 +193,22 @@ export function DashboardOverview() {
     );
   }
 
-  const revenue = overview.revenue
+  const analytics = overview.periodAnalytics;
+  const revenue = analytics.revenue
     ? {
-        total: Number.parseFloat(overview.revenue.total),
-        currency: overview.revenue.currency,
+        total: Number.parseFloat(analytics.revenue.total),
+        currency: analytics.revenue.currency,
+      }
+    : null;
+  const adr = analytics.adr
+    ? {
+        amount: Number.parseFloat(analytics.adr.amount),
+        currency: analytics.adr.currency,
       }
     : null;
 
   const attentionItems = buildAttention(overview, housekeeping);
+  const period = analytics.period;
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -189,7 +216,7 @@ export function DashboardOverview() {
         title={elNav.operations}
         description={
           property
-            ? `${property.name} · ${housekeeping?.localToday ? formatOpsDate(housekeeping.localToday) : todayLabel}`
+            ? `${property.name} · ${todayLabel || formatOpsDate(overview.localToday)}`
             : `${tenantName} · ${todayLabel}`
         }
         actions={
@@ -202,46 +229,65 @@ export function DashboardOverview() {
         }
       />
 
-      {/* Primary metrics — hierarchy, not equal wall */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Πληρότητα (30 ημ.)"
-          value={`${overview.occupancyPct}%`}
-          hint="Εκτίμηση"
-          icon={Percent}
-          emphasis
+      <Surface variant="panel" padding="md" className="space-y-4">
+        <SurfaceHeader
+          title="Ανάλυση περιόδου"
+          description="Ημερολογιακή περίοδος για έσοδα, κρατήσεις και πληρότητα"
         />
-        <MetricCard
-          label={elNav.revenue}
-          value={revenue ? formatMoney(revenue.total.toFixed(4), revenue.currency) : "—"}
-          hint={
-            revenue
-              ? "Επιβεβαιωμένες & ολοκληρωμένες"
-              : "Δεν υπάρχουν επιβεβαιωμένες κρατήσεις"
-          }
-          icon={DollarSign}
+        <DashboardPeriodControl
+          period={period}
+          localToday={overview.localToday}
+          onChange={onPeriodChange}
         />
-        <MetricCard
-          label={elCommon.bookings}
-          value={overview.bookingCount}
-          hint={`${overview.unitCount} ${elCommon.units.toLowerCase()}`}
-          icon={BookOpen}
-        />
-        <MetricCard
-          label="Ενεργές δεσμεύσεις"
-          value={overview.activeHoldCount}
-          hint="Ανοιχτές δεσμεύσεις αποθέματος"
-          icon={Timer}
-        />
-      </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <MetricCard
+            label={elNav.revenue}
+            value={
+              revenue
+                ? formatMoney(revenue.total.toFixed(4), revenue.currency)
+                : "€0,00"
+            }
+            hint={`${period.displayLabel} · Επιβεβαιωμένες & ολοκληρωμένες`}
+            icon={DollarSign}
+            emphasis
+          />
+          <MetricCard
+            label={elCommon.bookings}
+            value={analytics.bookingCount}
+            hint="Διαμονές στην περίοδο"
+            icon={BookOpen}
+          />
+          <MetricCard
+            label="Διανυκτερεύσεις"
+            value={analytics.occupiedNights}
+            hint="Πωλημένες νύχτες στην περίοδο"
+            icon={Moon}
+          />
+          <MetricCard
+            label="Πληρότητα"
+            value={`${analytics.occupancyPct}%`}
+            hint={`Πλήρες ημερολογιακό διάστημα · ${analytics.capacityNights} νύχτες χωρητικότητας`}
+            icon={Percent}
+          />
+          <MetricCard
+            label="ADR"
+            value={adr ? formatMoney(adr.amount.toFixed(4), adr.currency) : "—"}
+            hint={
+              analytics.occupiedNights > 0
+                ? "Έσοδα / διανυκτερεύσεις"
+                : "Χωρίς διανυκτερεύσεις"
+            }
+            icon={DollarSign}
+          />
+        </div>
+      </Surface>
 
-      {/* Today board */}
       <Surface variant="panel" padding="md">
         <SurfaceHeader
           title={elCommon.today}
           description={
-            housekeeping
-              ? `Τι χρειάζεται προσοχή · ${housekeeping.propertyTimezone}`
+            overview.propertyTimezone
+              ? `Λειτουργικά σήμερα · ${overview.propertyTimezone}`
               : "Τι χρειάζεται προσοχή στο κατάλυμα"
           }
           action={
@@ -254,12 +300,7 @@ export function DashboardOverview() {
           }
         />
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <TodayStat
-            icon={LogIn}
-            label="Αφίξεις"
-            value={overview.arrivalsToday}
-            tone="info"
-          />
+          <TodayStat icon={LogIn} label="Αφίξεις" value={overview.arrivalsToday} tone="info" />
           <TodayStat
             icon={LogOut}
             label="Αναχωρήσεις"
@@ -311,6 +352,14 @@ export function DashboardOverview() {
             </Button>
           </div>
         ) : null}
+
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/60 pt-3 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Timer className="h-3.5 w-3.5" />
+            Ενεργές δεσμεύσεις:{" "}
+            <strong className="text-foreground">{overview.activeHoldCount}</strong>
+          </span>
+        </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <StayList

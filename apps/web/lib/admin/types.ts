@@ -96,6 +96,26 @@ export interface DashboardOverviewRecentBooking {
   unitName: string | null;
 }
 
+export interface DashboardPeriodAnalytics {
+  period: {
+    periodType: "week" | "month" | "quarter" | "half_year" | "year";
+    startDate: string;
+    endDateExclusive: string;
+    year: number;
+    month?: number;
+    quarter?: 1 | 2 | 3 | 4;
+    half?: 1 | 2;
+    weekStart?: string;
+    displayLabel: string;
+  };
+  revenue: { total: string; currency: string } | null;
+  bookingCount: number;
+  occupiedNights: number;
+  occupancyPct: number;
+  adr: { amount: string; currency: string } | null;
+  capacityNights: number;
+}
+
 export interface DashboardOverviewRecord {
   propertyCount: number;
   unitCount: number;
@@ -108,6 +128,9 @@ export interface DashboardOverviewRecord {
   activeHoldCount: number;
   revenue: { total: string; currency: string } | null;
   occupancyPct: number;
+  periodAnalytics: DashboardPeriodAnalytics;
+  localToday: string;
+  propertyTimezone: string;
   recentBookings: DashboardOverviewRecentBooking[];
   todayArrivals: DashboardOverviewRecentBooking[];
   todayDepartures: DashboardOverviewRecentBooking[];

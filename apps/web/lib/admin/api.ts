@@ -300,17 +300,37 @@ const overviewInflight = new Map<
   Promise<import("./types").DashboardOverviewRecord>
 >();
 
+export type DashboardPeriodQuery = {
+  period?: string;
+  year?: string | number;
+  month?: string | number;
+  quarter?: string | number;
+  half?: string | number;
+  week?: string;
+};
+
 export async function fetchDashboardOverview(
   tenantId: string,
   propertyId?: string | null,
+  periodQuery?: DashboardPeriodQuery | null,
 ): Promise<import("./types").DashboardOverviewRecord> {
-  const cacheKey = propertyId ? `${tenantId}:${propertyId}` : tenantId;
+  const params = new URLSearchParams();
+  if (propertyId) params.set("propertyId", propertyId);
+  if (periodQuery?.period) params.set("period", String(periodQuery.period));
+  if (periodQuery?.year != null) params.set("year", String(periodQuery.year));
+  if (periodQuery?.month != null) params.set("month", String(periodQuery.month));
+  if (periodQuery?.quarter != null) {
+    params.set("quarter", String(periodQuery.quarter));
+  }
+  if (periodQuery?.half != null) params.set("half", String(periodQuery.half));
+  if (periodQuery?.week) params.set("week", periodQuery.week);
+
+  const qs = params.toString();
+  const cacheKey = `${tenantId}:${propertyId ?? ""}:${qs}`;
   const existing = overviewInflight.get(cacheKey);
   if (existing) return existing;
 
-  const query = propertyId
-    ? `?propertyId=${encodeURIComponent(propertyId)}`
-    : "";
+  const query = qs ? `?${qs}` : "";
   const pending = adminFetch<import("./types").DashboardOverviewRecord>(
     `/dashboard/overview${query}`,
     { tenantId },

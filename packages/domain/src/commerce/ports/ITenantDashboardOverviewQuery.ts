@@ -2,6 +2,8 @@
  * Read-model query for tenant dashboard overview.
  * Aggregates only — never loads full quote trees or unbounded lists.
  */
+import type { AnalyticsPeriodWindow } from "../analytics/AnalyticsPeriod";
+
 export interface DashboardRecentBookingReadModel {
   id: string;
   guestName: string;
@@ -14,10 +16,28 @@ export interface DashboardRecentBookingReadModel {
   unitName: string | null;
 }
 
+export interface DashboardPeriodAnalyticsReadModel {
+  period: AnalyticsPeriodWindow;
+  /** Confirmed + completed stay-prorated revenue in period. */
+  revenue: { total: string; currency: string } | null;
+  /** Confirmed + completed bookings overlapping period. */
+  bookingCount: number;
+  /** Confirmed + completed occupied nights in period. */
+  occupiedNights: number;
+  /** Occupied nights / (unitCount × period days), 0–100. */
+  occupancyPct: number;
+  /** Revenue / occupied nights; null when occupiedNights === 0. */
+  adr: { amount: string; currency: string } | null;
+  capacityNights: number;
+}
+
 export interface TenantDashboardOverviewReadModel {
   propertyCount: number;
   unitCount: number;
-  /** Non-cancelled bookings (authoritative count). */
+  /**
+   * @deprecated Prefer periodAnalytics.bookingCount — kept briefly for older clients.
+   * Non-cancelled all-time count is no longer the primary KPI.
+   */
   bookingCount: number;
   arrivalsNext7Days: number;
   departuresNext7Days: number;
@@ -29,12 +49,16 @@ export interface TenantDashboardOverviewReadModel {
   inHouseToday: number;
   activeHoldCount: number;
   /**
-   * Sum of Booking.totalAmount for confirmed + completed.
-   * Authoritative persisted booking amounts (not live quote re-fetch).
+   * Period analytics revenue (same as periodAnalytics.revenue).
+   * Kept at top level for MetricCard compatibility.
    */
   revenue: { total: string; currency: string } | null;
-  /** Estimated occupancy % for the next 30 days (same semantics as prior UI). */
+  /** Period occupancy % (same as periodAnalytics.occupancyPct). */
   occupancyPct: number;
+  periodAnalytics: DashboardPeriodAnalyticsReadModel;
+  /** Property-local today used for operational widgets. */
+  localToday: string;
+  propertyTimezone: string;
   recentBookings: DashboardRecentBookingReadModel[];
   /** Today's arrivals (bounded list for ops board). */
   todayArrivals: DashboardRecentBookingReadModel[];
@@ -47,9 +71,12 @@ export interface ITenantDashboardOverviewQuery {
     tenantId: string;
     /** null = all properties; array = assigned-property scope */
     allowedPropertyIds: string[] | null;
+    /** Property-local today YYYY-MM-DD. */
     todayIso: string;
     arrivalsThroughIso: string;
-    occupancyThroughIso: string;
+    /** Analytics period window (normalized). */
+    period: AnalyticsPeriodWindow;
     recentLimit: number;
+    propertyTimezone: string;
   }): Promise<TenantDashboardOverviewReadModel>;
 }

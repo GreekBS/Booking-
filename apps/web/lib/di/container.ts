@@ -2245,6 +2245,8 @@ const tenantDashboardOverviewQuery = new PrismaTenantDashboardOverviewQuery();
 export const getTenantDashboardOverviewUseCase = new GetTenantDashboardOverviewUseCase(
   tenantDashboardOverviewQuery,
   permissionChecker,
+  catalogQueryAdapter,
+  timezoneService,
 );
 
 export const listHoldsUseCase = new ListHoldsUseCase(
