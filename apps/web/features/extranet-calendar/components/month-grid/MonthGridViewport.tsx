@@ -92,7 +92,7 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
         tabIndex={0}
         aria-label="Μηνιαίο ημερολόγιο διαθεσιμότητας. Κλικ για προβολή ή σύρσιμο για επιλογή εύρους."
       >
-        <div className="mx-auto w-full max-w-[1200px] px-3 py-4 sm:px-4">
+        <div className="mx-auto w-full min-w-0 max-w-full px-3 py-4 sm:px-4">
           {emptyVariant ? (
             <TimelineGridEmptyState variant={emptyVariant} />
           ) : selectedUnit ? (

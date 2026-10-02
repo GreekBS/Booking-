@@ -85,7 +85,7 @@ export function monthGridDayCardClassName(input: MonthGridDayCardStyleInput): st
   const neutralSurface = cellType === "available" || cellType === "booked";
 
   return cn(
-    "relative flex min-h-[var(--month-card-min-h)] flex-col rounded-md border p-2 text-left transition-colors duration-100",
+    "relative flex min-h-[var(--month-card-min-h)] min-w-0 w-full flex-col overflow-hidden rounded-md border p-2 text-left transition-colors duration-100",
     // Keyboard DOM focus — dashed offset outline, not selection
     "focus-visible:z-[2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/70",
     occupied

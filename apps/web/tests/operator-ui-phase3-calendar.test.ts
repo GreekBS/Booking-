@@ -41,13 +41,16 @@ describe("Talos operator Phase 3 — Operations Calendar", () => {
     expect(page).not.toContain("properties={properties}");
   });
 
-  it("month section uses deterministic 10-day rows with span overlay", () => {
+  it("month section uses deterministic 9-column rows with span overlay", () => {
     const section = read("features/extranet-calendar/components/month-grid/MonthGridSection.tsx");
     expect(section).toContain("section.rows.map");
-    expect(section).toContain("buildCalendarSpans");
+    expect(section).toContain("buildMonthGridVisualSpans");
     expect(section).toContain("MonthGridSpanBar");
     expect(section).toContain("data-month-grid-row");
+    expect(section).toContain("MONTH_GRID_COLUMNS");
+    expect(section).toContain("minmax(0, 1fr)");
     expect(section).not.toContain("auto-fill");
+    expect(section).not.toContain("4.75rem");
   });
 
   it("day cells use Talos ops semantic tokens with distinct Today / Selected / Focus", () => {

@@ -145,9 +145,9 @@ export const MonthGridDayCard = memo(function MonthGridDayCard({
         onMouseEnter={() => onCellMouseEnter(unit.unitId, date)}
         onClick={handleClick}
       >
-        <div className="flex items-start justify-between gap-1">
+        <div className="flex items-start justify-between gap-1 min-w-0">
           <span className="text-[18px] font-semibold leading-none tabular-nums">{header.day}</span>
-          <span className={cn(DAY_HEADER_WEEKDAY_CLASS, "normal-case")}>{header.dow}</span>
+          <span className={cn(DAY_HEADER_WEEKDAY_CLASS, "min-w-0 truncate normal-case")}>{header.dow}</span>
         </div>
 
         {monthGridOccupancyUsesSpanBar(cellState.type) ? (

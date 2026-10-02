@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { OperatorBlockType } from "@/lib/admin/types";
+import { MONTH_GRID_COLUMNS } from "../lib/month-grid-model";
 import type { TimelineFocus, RackUnit } from "../types";
 
 interface UseExtranetCalendarKeyboardOptions {
@@ -16,7 +17,7 @@ interface UseExtranetCalendarKeyboardOptions {
   onRefresh: () => void;
   onBlockShortcut: (blockType: OperatorBlockType | "manual") => void;
   gridRef: React.RefObject<HTMLElement | null>;
-  /** When true, ArrowUp/Down move ±10 days (month grid rows). */
+  /** When true, ArrowUp/Down move ±MONTH_GRID_COLUMNS days (month grid rows). */
   gridNavigation?: boolean;
 }
 
@@ -144,8 +145,11 @@ export function useExtranetCalendarKeyboard({
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        if (gridNavigation && dateIndex >= 10) {
-          setFocus({ unitId: focus.unitId, date: dates[dateIndex - 10]! });
+        if (gridNavigation && dateIndex >= MONTH_GRID_COLUMNS) {
+          setFocus({
+            unitId: focus.unitId,
+            date: dates[dateIndex - MONTH_GRID_COLUMNS]!,
+          });
           return;
         }
         if (!gridNavigation && unitIndex > 0) {
@@ -156,8 +160,11 @@ export function useExtranetCalendarKeyboard({
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        if (gridNavigation && dateIndex + 10 < dates.length) {
-          setFocus({ unitId: focus.unitId, date: dates[dateIndex + 10]! });
+        if (gridNavigation && dateIndex + MONTH_GRID_COLUMNS < dates.length) {
+          setFocus({
+            unitId: focus.unitId,
+            date: dates[dateIndex + MONTH_GRID_COLUMNS]!,
+          });
           return;
         }
         if (!gridNavigation && unitIndex < units.length - 1) {

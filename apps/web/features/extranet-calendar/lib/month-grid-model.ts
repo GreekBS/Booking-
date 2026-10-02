@@ -1,6 +1,9 @@
 import { addDaysIso, todayIso } from "@/features/availability/lib/calendar-utils";
 
-export const DAYS_PER_ROW = 10;
+/** Presentation column count for every month-grid row (including partial last rows). */
+export const MONTH_GRID_COLUMNS = 9;
+/** @deprecated Use MONTH_GRID_COLUMNS — kept as alias for older imports. */
+export const DAYS_PER_ROW = MONTH_GRID_COLUMNS;
 export const MONTHS_INITIAL = 3;
 export const MONTHS_LOAD_MORE = 3;
 
@@ -61,8 +64,8 @@ function datesInMonth(year: number, monthIndex: number): string[] {
 
 function chunkDates(dates: string[]): MonthGridRow[] {
   const rows: MonthGridRow[] = [];
-  for (let i = 0; i < dates.length; i += DAYS_PER_ROW) {
-    rows.push({ dates: dates.slice(i, i + DAYS_PER_ROW) });
+  for (let i = 0; i < dates.length; i += MONTH_GRID_COLUMNS) {
+    rows.push({ dates: dates.slice(i, i + MONTH_GRID_COLUMNS) });
   }
   return rows;
 }
