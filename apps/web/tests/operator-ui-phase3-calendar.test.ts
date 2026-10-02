@@ -17,16 +17,20 @@ function read(rel: string): string {
 }
 
 describe("Talos operator Phase 3 — Operations Calendar", () => {
-  it("ops bar uses Active Property chip and unit selector without local property Select", () => {
+  it("ops bar uses Active Property chip and unit selector without density toggle", () => {
     const bar = read("features/extranet-calendar/components/shell/CalendarOpsBar.tsx");
     expect(bar).toContain("propertyName");
-    expect(bar).toContain('aria-label="Select unit"');
-    expect(bar).toContain("Period navigation");
-    expect(bar).toContain("Previous month");
-    expect(bar).toContain("Next month");
+    expect(bar).toContain('aria-label="Επιλογή μονάδας"');
+    expect(bar).toContain('aria-label="Πλοήγηση περιόδου"');
+    expect(bar).toContain('aria-label="Προηγούμενος μήνας"');
+    expect(bar).toContain('aria-label="Επόμενος μήνας"');
     expect(bar).toContain("LEGEND_SWATCHES");
     expect(bar).not.toContain("onSelectedPropertyChange");
     expect(bar).not.toContain("selectedPropertyId");
+    expect(bar).not.toContain("Συμπαγές");
+    expect(bar).not.toContain("Άνετο");
+    expect(bar).not.toContain("onDensityChange");
+    expect(bar).not.toContain("density:");
   });
 
   it("page wires Active Property and invalidates on property switch", () => {
@@ -39,6 +43,17 @@ describe("Talos operator Phase 3 — Operations Calendar", () => {
     expect(page).toContain("prevPropertyIdRef");
     expect(page).not.toContain("onSelectedPropertyChange");
     expect(page).not.toContain("properties={properties}");
+    expect(page).toContain("const density = DEFAULT_DENSITY");
+    expect(page).not.toContain("useState<CalendarDensity>");
+    expect(page).not.toContain("onDensityChange");
+    expect(page).not.toContain("setDensity");
+  });
+
+  it("Availability density is permanently compact", () => {
+    const densitySrc = read("features/extranet-calendar/lib/density.ts");
+    expect(densitySrc).toContain('DEFAULT_DENSITY: CalendarDensity = "compact"');
+    expect(densitySrc).toContain("minCellWidthPx: 64");
+    expect(densitySrc).toContain("minCellWidthPx: 72"); // comfortable tokens retained
   });
 
   it("month section uses adaptive columns with span overlay", () => {

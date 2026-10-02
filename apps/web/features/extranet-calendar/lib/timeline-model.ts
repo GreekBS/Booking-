@@ -1,6 +1,6 @@
 import { addDaysIso, buildDateRange, buildMonthSpans, todayIso } from "@/features/availability/lib/calendar-utils";
 import type { MonthSpan } from "@/features/availability/lib/calendar-utils";
-import { getDensityTokens, type CalendarDensity } from "./density";
+import { DEFAULT_DENSITY, getDensityTokens, type CalendarDensity } from "./density";
 
 export { addDaysIso, buildDateRange, todayIso };
 export type { MonthSpan };
@@ -8,7 +8,7 @@ export type { MonthSpan };
 export function buildTimelineModel(
   rangeStart: string,
   rangeDays: number,
-  density: CalendarDensity = "comfortable",
+  density: CalendarDensity = DEFAULT_DENSITY,
 ) {
   const dates = buildDateRange(rangeStart, rangeDays);
   const monthSpans = buildMonthSpans(dates);

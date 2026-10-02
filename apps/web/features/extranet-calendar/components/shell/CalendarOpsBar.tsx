@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OPS_BAR_HEIGHT_PX } from "../../constants";
-import type { CalendarDensity } from "../../lib/density";
 import type { OverlayToggles } from "../../lib/overlay-types";
 import { LEGEND_SWATCHES } from "../../lib/visual-theme";
 import type { RackUnit } from "../../types";
@@ -36,8 +35,6 @@ interface CalendarOpsBarProps {
   units: RackUnit[];
   selectedUnitId: string | null;
   onSelectedUnitChange: (value: string) => void;
-  density: CalendarDensity;
-  onDensityChange: (value: CalendarDensity) => void;
   overlays: OverlayToggles;
   onOverlayToggle: (key: keyof OverlayToggles) => void;
   onPrevPeriod: () => void;
@@ -56,8 +53,6 @@ export function CalendarOpsBar({
   units,
   selectedUnitId,
   onSelectedUnitChange,
-  density,
-  onDensityChange,
   overlays,
   onOverlayToggle,
   onPrevPeriod,
@@ -178,25 +173,6 @@ export function CalendarOpsBar({
             Επεξεργασία ημερομηνιών
           </Button>
         ) : null}
-
-        <div className="hidden items-center gap-0.5 sm:flex">
-          <Button
-            variant={density === "compact" ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 px-2.5 text-xs"
-            onClick={() => onDensityChange("compact")}
-          >
-            Συμπαγές
-          </Button>
-          <Button
-            variant={density === "comfortable" ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 px-2.5 text-xs"
-            onClick={() => onDensityChange("comfortable")}
-          >
-            Άνετο
-          </Button>
-        </div>
 
         {SHOW_OVERLAY_TOOLBAR_CONTROLS ? (
           <>

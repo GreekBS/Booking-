@@ -33,7 +33,7 @@ import { useSelectedUnit } from "./hooks/useSelectedUnit";
 import { useUnitAvailabilityRules } from "./hooks/useUnitAvailabilityRules";
 import { useUnitCalendars } from "./hooks/useUnitCalendars";
 import { useUnitRatePlans } from "./hooks/useUnitRatePlans";
-import { DEFAULT_DENSITY, type CalendarDensity } from "./lib/density";
+import { DEFAULT_DENSITY } from "./lib/density";
 
 function ExtranetCalendarContent() {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
@@ -52,7 +52,8 @@ function ExtranetCalendarContent() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [loadedMonthCount, setLoadedMonthCount] = useState(MONTHS_INITIAL);
   const [anchorMonth, setAnchorMonth] = useState(() => startOfMonthIso(todayIso()));
-  const [density, setDensity] = useState<CalendarDensity>(DEFAULT_DENSITY);
+  /** Availability density is fixed to compact — no operator toggle. */
+  const density = DEFAULT_DENSITY;
   const prevPropertyIdRef = useRef<string | null>(selectedPropertyId);
 
   const loadCatalog = useCallback(async () => {
@@ -233,8 +234,6 @@ function ExtranetCalendarContent() {
           units={units}
           selectedUnitId={selectedUnitId}
           onSelectedUnitChange={handleSelectedUnitChange}
-          density={density}
-          onDensityChange={setDensity}
           overlays={overlays}
           onOverlayToggle={toggleOverlay}
           onPrevPeriod={goPrevPeriod}

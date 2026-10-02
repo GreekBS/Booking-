@@ -58,9 +58,10 @@ describe("resolveMonthGridColumns", () => {
     expect(resolveMonthGridColumns(624, opts)).toBe(9);
   });
 
-  it("keeps default fallback as 9 for SSR contract", () => {
+  it("keeps DEFAULT_DENSITY as compact for Availability adaptive columns", () => {
     expect(MONTH_GRID_COLUMNS_DEFAULT).toBe(9);
     expect(MONTH_GRID_COLUMNS_MIN).toBe(4);
     expect(MONTH_GRID_COLUMNS_MAX).toBe(12);
+    expect(getMonthGridTokens("compact").minCellWidthPx).toBe(64);
   });
 });

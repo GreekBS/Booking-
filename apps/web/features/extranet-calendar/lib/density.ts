@@ -34,7 +34,8 @@ export const DENSITY_TOKENS: Record<CalendarDensity, DensityTokens> = {
   },
 };
 
-export const DEFAULT_DENSITY: CalendarDensity = "comfortable";
+/** Availability always uses compact; comfortable tokens remain for internal reuse. */
+export const DEFAULT_DENSITY: CalendarDensity = "compact";
 
 /** @deprecated Use DENSITY_TOKENS — kept for backwards references during migration */
 export const DAY_WIDTH_PX = DENSITY_TOKENS.comfortable.dayWidthPx;
