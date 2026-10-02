@@ -12,6 +12,7 @@ import {
   TimelineVirtualScrollProvider,
   type TimelineVirtualScrollValue,
 } from "../../context/TimelineVirtualScrollContext";
+import { useMonthGridColumnCount } from "../../hooks/useMonthGridColumnCount";
 import { MonthGridViewport } from "../month-grid/MonthGridViewport";
 import { CalendarWorkspacePanel } from "../workspace/CalendarWorkspacePanel";
 import { TodayOperationsPanel } from "../ops/TodayOperationsPanel";
@@ -70,6 +71,7 @@ export function ExtranetCalendarShell({
 }: ExtranetCalendarShellProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollApiRef = useRef<TimelineVirtualScrollValue>(noopScrollApi);
+  const { columns, measureRef } = useMonthGridColumnCount(density);
 
   return (
     <CalendarOpsActionsProvider>
@@ -96,6 +98,8 @@ export function ExtranetCalendarShell({
               ratePlanReady={ratePlanReady}
               ratePlanLoading={ratePlanLoading}
               onLoadMore={onLoadMore}
+              columns={columns}
+              measureRef={measureRef}
             />
             <TodayOperationsPanel groups={groups} today={today} />
           </div>
@@ -108,6 +112,7 @@ export function ExtranetCalendarShell({
             gridRef={scrollRef}
             onToday={onToday}
             onRefresh={onRefresh}
+            columnsPerRow={columns}
           />
         </div>
       </TimelineVirtualScrollProvider>

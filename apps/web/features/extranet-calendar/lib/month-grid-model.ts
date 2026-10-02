@@ -1,9 +1,18 @@
 import { addDaysIso, todayIso } from "@/features/availability/lib/calendar-utils";
 
-/** Presentation column count for every month-grid row (including partial last rows). */
-export const MONTH_GRID_COLUMNS = 9;
-/** @deprecated Use MONTH_GRID_COLUMNS — kept as alias for older imports. */
-export const DAYS_PER_ROW = MONTH_GRID_COLUMNS;
+/**
+ * SSR / first-paint fallback column count before container measurement.
+ * Not the permanent runtime column count — ResizeObserver resolves the live value.
+ */
+export const MONTH_GRID_COLUMNS_DEFAULT = 9;
+export const MONTH_GRID_COLUMNS_MIN = 4;
+export const MONTH_GRID_COLUMNS_MAX = 12;
+
+/** @deprecated Use MONTH_GRID_COLUMNS_DEFAULT — previously the fixed runtime contract. */
+export const MONTH_GRID_COLUMNS = MONTH_GRID_COLUMNS_DEFAULT;
+/** @deprecated Use MONTH_GRID_COLUMNS_DEFAULT */
+export const DAYS_PER_ROW = MONTH_GRID_COLUMNS_DEFAULT;
+
 export const MONTHS_INITIAL = 3;
 export const MONTHS_LOAD_MORE = 3;
 
@@ -11,10 +20,14 @@ export interface MonthGridRow {
   dates: string[];
 }
 
+/**
+ * Month presentation unit. `dates` is the full month; rows are chunked at
+ * render time from the resolved adaptive column count.
+ */
 export interface MonthGridSection {
   key: string;
   label: string;
-  rows: MonthGridRow[];
+  dates: string[];
 }
 
 export function startOfMonthIso(iso: string): string {
@@ -62,15 +75,28 @@ function datesInMonth(year: number, monthIndex: number): string[] {
   return dates;
 }
 
-function chunkDates(dates: string[]): MonthGridRow[] {
+/** Presentation-only row chunking for the adaptive month grid. */
+export function chunkDates(dates: string[], columns: number): MonthGridRow[] {
+  const cols = Math.max(1, Math.floor(columns));
   const rows: MonthGridRow[] = [];
-  for (let i = 0; i < dates.length; i += MONTH_GRID_COLUMNS) {
-    rows.push({ dates: dates.slice(i, i + MONTH_GRID_COLUMNS) });
+  for (let i = 0; i < dates.length; i += cols) {
+    rows.push({ dates: dates.slice(i, i + cols) });
   }
   return rows;
 }
 
-export function buildMonthGridSections(anchorMonthIso: string, monthCount: number): MonthGridSection[] {
+/** Row length counts for a month with `dayCount` days and `columns` tracks. */
+export function monthGridRowLengths(dayCount: number, columns: number): number[] {
+  return chunkDates(
+    Array.from({ length: dayCount }, (_, i) => String(i + 1)),
+    columns,
+  ).map((row) => row.dates.length);
+}
+
+export function buildMonthGridSections(
+  anchorMonthIso: string,
+  monthCount: number,
+): MonthGridSection[] {
   const anchor = startOfMonthIso(anchorMonthIso);
   const [yearStr, monthStr] = anchor.split("-");
   let year = Number(yearStr);
@@ -84,7 +110,7 @@ export function buildMonthGridSections(anchorMonthIso: string, monthCount: numbe
     sections.push({
       key: `${year}-${mm}`,
       label: monthLabel(year, monthIndex),
-      rows: chunkDates(monthDates),
+      dates: monthDates,
     });
 
     monthIndex += 1;
@@ -98,7 +124,7 @@ export function buildMonthGridSections(anchorMonthIso: string, monthCount: numbe
 }
 
 export function flattenMonthGridDates(sections: MonthGridSection[]): string[] {
-  return sections.flatMap((section) => section.rows.flatMap((row) => row.dates));
+  return sections.flatMap((section) => section.dates);
 }
 
 export function buildMonthGridModel(anchorMonthIso: string, loadedMonthCount: number) {

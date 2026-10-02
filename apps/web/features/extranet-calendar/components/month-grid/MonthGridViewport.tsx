@@ -30,6 +30,10 @@ interface MonthGridViewportProps {
   onLoadMore: () => void;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
   scrollApiRef?: React.MutableRefObject<TimelineVirtualScrollValue>;
+  /** Adaptive column count from container measurement. */
+  columns: number;
+  /** Callback ref for the content-width measure node. */
+  measureRef: (node: HTMLElement | null) => void;
 }
 
 export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportProps>(
@@ -51,6 +55,8 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
       onLoadMore,
       scrollRef: externalScrollRef,
       scrollApiRef,
+      columns,
+      measureRef,
     },
     forwardedRef,
   ) {
@@ -91,41 +97,46 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
         )}
         tabIndex={0}
         aria-label="Μηνιαίο ημερολόγιο διαθεσιμότητας. Κλικ για προβολή ή σύρσιμο για επιλογή εύρους."
+        data-month-grid-columns={columns}
       >
         <div className="mx-auto w-full min-w-0 max-w-full px-3 py-4 sm:px-4">
-          {emptyVariant ? (
-            <TimelineGridEmptyState variant={emptyVariant} />
-          ) : selectedUnit ? (
-            <>
-              <div className="mb-4 border-b border-border pb-3">
-                <h1 className={PROPERTY_NAME_CLASS}>{selectedUnit.unitName}</h1>
-                <p className={PROPERTY_META_CLASS}>{selectedUnit.propertyName}</p>
-              </div>
+          {/* Measure node: content box available to grid tracks (inside horizontal padding). */}
+          <div ref={measureRef} className="w-full min-w-0" data-month-grid-measure="">
+            {emptyVariant ? (
+              <TimelineGridEmptyState variant={emptyVariant} />
+            ) : selectedUnit ? (
+              <>
+                <div className="mb-4 border-b border-border pb-3">
+                  <h1 className={PROPERTY_NAME_CLASS}>{selectedUnit.unitName}</h1>
+                  <p className={PROPERTY_META_CLASS}>{selectedUnit.propertyName}</p>
+                </div>
 
-              {sections.map((section) => (
-                <MonthGridSection
-                  key={section.key}
-                  section={section}
-                  unit={selectedUnit}
-                  today={today}
-                  rules={rules}
-                  calendar={calendar}
-                  loading={loading}
-                  density={density}
-                  overlays={overlays}
-                  ratePlan={ratePlan}
-                  ratePlanReady={ratePlanReady}
-                  ratePlanLoading={ratePlanLoading}
-                />
-              ))}
+                {sections.map((section) => (
+                  <MonthGridSection
+                    key={section.key}
+                    section={section}
+                    unit={selectedUnit}
+                    today={today}
+                    rules={rules}
+                    calendar={calendar}
+                    loading={loading}
+                    density={density}
+                    overlays={overlays}
+                    ratePlan={ratePlan}
+                    ratePlanReady={ratePlanReady}
+                    ratePlanLoading={ratePlanLoading}
+                    columns={columns}
+                  />
+                ))}
 
-              <div className="flex justify-center pb-6 pt-2">
-                <Button type="button" variant="outline" size="sm" onClick={onLoadMore}>
-                  Load more months
-                </Button>
-              </div>
-            </>
-          ) : null}
+                <div className="flex justify-center pb-6 pt-2">
+                  <Button type="button" variant="outline" size="sm" onClick={onLoadMore}>
+                    Load more months
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </div>
         </div>
       </div>
     );

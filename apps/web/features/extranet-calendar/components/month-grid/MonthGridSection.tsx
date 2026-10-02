@@ -5,7 +5,7 @@ import type { AvailabilityRulesRecord, CalendarRecord, RatePlanRecord } from "@/
 import type { CalendarDensity } from "../../lib/density";
 import { getMonthGridTokens } from "../../lib/density";
 import {
-  MONTH_GRID_COLUMNS,
+  chunkDates,
   type MonthGridSection as MonthSection,
 } from "../../lib/month-grid-model";
 import { buildMonthGridVisualSpans } from "../../lib/month-grid-span-layout";
@@ -27,12 +27,14 @@ interface MonthGridSectionProps {
   ratePlan: RatePlanRecord | null | undefined;
   ratePlanReady: boolean;
   ratePlanLoading: boolean;
+  /** Resolved adaptive column count shared with overlay + keyboard. */
+  columns: number;
 }
 
 /**
- * Month of day cards rendered as deterministic MONTH_GRID_COLUMNS-day rows
+ * Month of day cards chunked by the resolved adaptive column count,
  * with a continuous reservation-bar overlay per row.
- * Every row uses the same 9-column grid so partial last rows do not stretch.
+ * Every row uses the same columns track count so partial last rows do not stretch.
  */
 export function MonthGridSection({
   section,
@@ -46,17 +48,22 @@ export function MonthGridSection({
   ratePlan,
   ratePlanReady,
   ratePlanLoading,
+  columns,
 }: MonthGridSectionProps) {
   const tokens = getMonthGridTokens(density);
+  const rows = useMemo(
+    () => chunkDates(section.dates, columns),
+    [section.dates, columns],
+  );
 
   return (
     <section className="mb-8 min-w-0" data-month-section={section.key} aria-label={section.label}>
       <h2 className={MONTH_LABEL_CLASS}>{section.label}</h2>
 
       <div className="mt-3 min-w-0 space-y-2">
-        {section.rows.map((row, rowIndex) => (
+        {rows.map((row, rowIndex) => (
           <MonthGridRow
-            key={`${section.key}-row-${rowIndex}`}
+            key={`${section.key}-row-${rowIndex}-${columns}`}
             dates={row.dates}
             unit={unit}
             today={today}
@@ -70,6 +77,7 @@ export function MonthGridSection({
             ratePlanLoading={ratePlanLoading}
             gapPx={tokens.gapPx}
             barHeightPx={tokens.barHeightPx}
+            columns={columns}
           />
         ))}
       </div>
@@ -91,6 +99,7 @@ interface MonthGridRowProps {
   ratePlanLoading: boolean;
   gapPx: number;
   barHeightPx: number;
+  columns: number;
 }
 
 function MonthGridRow({
@@ -107,13 +116,12 @@ function MonthGridRow({
   ratePlanLoading,
   gapPx,
   barHeightPx,
+  columns,
 }: MonthGridRowProps) {
   const spans = useMemo(() => buildMonthGridVisualSpans(calendar, dates), [calendar, dates]);
 
-  // Fixed column contract: always MONTH_GRID_COLUMNS tracks so trailing dates
-  // occupy leading columns only and never stretch across the row.
   const gridStyle = {
-    gridTemplateColumns: `repeat(${MONTH_GRID_COLUMNS}, minmax(0, 1fr))`,
+    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
     gap: gapPx,
   } as const;
 
@@ -121,7 +129,7 @@ function MonthGridRow({
     <div
       className="relative min-w-0 w-full"
       data-month-grid-row=""
-      data-columns={MONTH_GRID_COLUMNS}
+      data-columns={columns}
     >
       <div className="grid min-w-0 w-full" style={gridStyle}>
         {dates.map((date) => (
@@ -148,7 +156,7 @@ function MonthGridRow({
             <MonthGridSpanBar
               key={`${span.kind}-${span.id}-${span.startIndex}-${span.endIndex}`}
               span={span}
-              columnCount={MONTH_GRID_COLUMNS}
+              columnCount={columns}
               gapPx={gapPx}
               barHeightPx={barHeightPx}
             />

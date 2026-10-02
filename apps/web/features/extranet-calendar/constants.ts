@@ -8,6 +8,9 @@ export const SELECTED_PROPERTY_STORAGE_KEY = "extranet-calendar:selected-propert
 export const SELECTED_UNIT_STORAGE_KEY = "extranet-calendar:selected-unit";
 
 export {
+  MONTH_GRID_COLUMNS_DEFAULT,
+  MONTH_GRID_COLUMNS_MIN,
+  MONTH_GRID_COLUMNS_MAX,
   MONTH_GRID_COLUMNS,
   DAYS_PER_ROW,
   MONTHS_INITIAL,

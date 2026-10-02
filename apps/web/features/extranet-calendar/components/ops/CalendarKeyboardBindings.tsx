@@ -40,6 +40,9 @@ interface CalendarKeyboardBindingsProps {
 
   onRefresh: () => void;
 
+  /** Resolved adaptive month-grid columns for ArrowUp/Down. */
+  columnsPerRow: number;
+
 }
 
 
@@ -57,6 +60,8 @@ export function CalendarKeyboardBindings({
   onToday,
 
   onRefresh,
+
+  columnsPerRow,
 
 }: CalendarKeyboardBindingsProps) {
 
@@ -223,6 +228,8 @@ export function CalendarKeyboardBindings({
     gridRef,
 
     gridNavigation: true,
+
+    columnsPerRow,
 
   });
 

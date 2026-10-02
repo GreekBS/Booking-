@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { OperatorBlockType } from "@/lib/admin/types";
-import { MONTH_GRID_COLUMNS } from "../lib/month-grid-model";
+import { MONTH_GRID_COLUMNS_DEFAULT } from "../lib/month-grid-model";
 import type { TimelineFocus, RackUnit } from "../types";
 
 interface UseExtranetCalendarKeyboardOptions {
@@ -17,8 +17,10 @@ interface UseExtranetCalendarKeyboardOptions {
   onRefresh: () => void;
   onBlockShortcut: (blockType: OperatorBlockType | "manual") => void;
   gridRef: React.RefObject<HTMLElement | null>;
-  /** When true, ArrowUp/Down move ±MONTH_GRID_COLUMNS days (month grid rows). */
+  /** When true, ArrowUp/Down move ±columnsPerRow days (month grid rows). */
   gridNavigation?: boolean;
+  /** Resolved adaptive columns; defaults to SSR fallback until measured. */
+  columnsPerRow?: number;
 }
 
 export function useExtranetCalendarKeyboard({
@@ -34,9 +36,12 @@ export function useExtranetCalendarKeyboard({
   onBlockShortcut,
   gridRef,
   gridNavigation = false,
+  columnsPerRow = MONTH_GRID_COLUMNS_DEFAULT,
 }: UseExtranetCalendarKeyboardOptions) {
   useEffect(() => {
     if (!enabled) return;
+
+    const rowStep = Math.max(1, Math.floor(columnsPerRow));
 
     function isTypingTarget(target: HTMLElement) {
       return (
@@ -145,10 +150,10 @@ export function useExtranetCalendarKeyboard({
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        if (gridNavigation && dateIndex >= MONTH_GRID_COLUMNS) {
+        if (gridNavigation && dateIndex >= rowStep) {
           setFocus({
             unitId: focus.unitId,
-            date: dates[dateIndex - MONTH_GRID_COLUMNS]!,
+            date: dates[dateIndex - rowStep]!,
           });
           return;
         }
@@ -160,10 +165,10 @@ export function useExtranetCalendarKeyboard({
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        if (gridNavigation && dateIndex + MONTH_GRID_COLUMNS < dates.length) {
+        if (gridNavigation && dateIndex + rowStep < dates.length) {
           setFocus({
             unitId: focus.unitId,
-            date: dates[dateIndex + MONTH_GRID_COLUMNS]!,
+            date: dates[dateIndex + rowStep]!,
           });
           return;
         }
@@ -188,6 +193,7 @@ export function useExtranetCalendarKeyboard({
     onBlockShortcut,
     gridRef,
     gridNavigation,
+    columnsPerRow,
   ]);
 }
 
