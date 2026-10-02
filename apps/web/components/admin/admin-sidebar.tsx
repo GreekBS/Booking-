@@ -181,7 +181,7 @@ export function AdminSidebar({
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                         active
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/45 hover:text-sidebar-accent-foreground",
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground",
                         collapsed && "justify-center px-2",
                       )}
                       aria-current={active ? "page" : undefined}
@@ -204,7 +204,7 @@ export function AdminSidebar({
             onClick={() => onCollapsedChange(!collapsed)}
             className={cn(
               "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-medium text-sidebar-muted transition-colors",
-              "hover:bg-sidebar-accent/45 hover:text-sidebar-accent-foreground",
+              "hover:bg-sidebar-accent/30 hover:text-sidebar-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
               collapsed && "justify-center px-2",
             )}

@@ -88,24 +88,31 @@ describe("Talos operator Phase 1 design system", () => {
     expect(sidebar).toContain("text-sm font-medium");
     expect(sidebar).toContain("text-[12px] font-semibold uppercase");
     expect(sidebar).toContain("bg-sidebar-accent text-sidebar-accent-foreground");
-    expect(sidebar).toContain("hover:bg-sidebar-accent/45");
+    expect(sidebar).toContain("hover:bg-sidebar-accent/30");
+    expect(sidebar).toContain("hover:text-sidebar-foreground");
     expect(sidebar).toContain("focus-visible:ring-sidebar-ring");
     expect(sidebar).not.toContain("text-white");
+
+    const shell = read("components/admin/admin-shell.tsx");
+    expect(shell).toContain("lg:pl-3");
+    expect(shell).not.toContain("lg:pl-5");
 
     const css = read("app/globals.css");
     expect(css).toContain(".sidebar-nav-scroll");
     expect(css).toContain("scrollbar-width: thin");
     expect(css).toContain("::-webkit-scrollbar");
-    // UI-2 light sidebar chrome (not forest)
-    expect(css).toContain("--sidebar-background: 0 0% 100%");
-    expect(css).toContain("--sidebar-foreground: 215 25% 27%");
-    expect(css).toContain("--sidebar-primary: 222 36% 15%");
-    expect(css).toContain("--sidebar-accent: 214 95% 93%");
-    expect(css).toContain("--sidebar-accent-foreground: 217 91% 53%");
-    expect(css).toContain("--sidebar-border: 214 32% 91%");
-    expect(css).toContain("--sidebar-ring: 217 91% 53%");
-    expect(css).toContain("--sidebar-muted: 215 16% 47%");
+    // UI-3 calm muted blue sidebar (not white UI-2, not forest, not CTA primary)
+    expect(css).toContain("--sidebar-background: 211 57% 31%");
+    expect(css).toContain("--sidebar-foreground: 210 40% 94%");
+    expect(css).toContain("--sidebar-primary: 210 40% 98%");
+    expect(css).toContain("--sidebar-accent: 211 52% 42%");
+    expect(css).toContain("--sidebar-accent-foreground: 0 0% 100%");
+    expect(css).toContain("--sidebar-border: 211 40% 24%");
+    expect(css).toContain("--sidebar-ring: 213 94% 78%");
+    expect(css).toContain("--sidebar-muted: 210 25% 72%");
+    expect(css).not.toContain("--sidebar-background: 0 0% 100%");
     expect(css).not.toContain("--sidebar-background: 153 43% 14%");
+    expect(css).not.toMatch(/--sidebar-background:\s*217 91% 53%/);
   });
 
   it("exposes Active Property on mobile header", () => {

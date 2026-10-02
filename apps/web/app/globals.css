@@ -92,16 +92,16 @@
     --ops-selected-ring: 217 91% 53%;
     --ops-today-marker: 150 6% 48%;
 
-    /* Sidebar — light chrome aligned with UI-1 (UI-2) */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 222 36% 15%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 95% 93%;
-    --sidebar-accent-foreground: 217 91% 53%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 53%;
-    --sidebar-muted: 215 16% 47%;
+    /* Sidebar — calm muted blue chrome (UI-3); distinct from --primary CTA */
+    --sidebar-background: 211 57% 31%;
+    --sidebar-foreground: 210 40% 94%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 211 57% 31%;
+    --sidebar-accent: 211 52% 42%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 211 40% 24%;
+    --sidebar-ring: 213 94% 78%;
+    --sidebar-muted: 210 25% 72%;
   }
 
   .dark {
