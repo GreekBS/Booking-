@@ -121,7 +121,7 @@ export function useExtranetCalendarKeyboard({
           const first = units[0];
           const today = new Date().toISOString().slice(0, 10);
           const date = dates.includes(today) ? today : dates[0]!;
-          if (first) setFocus({ unitId: first.unitId, date });
+          if (first) setFocus({ unitId: first.unitId, date, scroll: "nearest" });
         }
         return;
       }
@@ -138,13 +138,13 @@ export function useExtranetCalendarKeyboard({
 
       if (event.key === "ArrowLeft" && dateIndex > 0) {
         event.preventDefault();
-        setFocus({ unitId: focus.unitId, date: dates[dateIndex - 1]! });
+        setFocus({ unitId: focus.unitId, date: dates[dateIndex - 1]!, scroll: "nearest" });
         return;
       }
 
       if (event.key === "ArrowRight" && dateIndex < dates.length - 1) {
         event.preventDefault();
-        setFocus({ unitId: focus.unitId, date: dates[dateIndex + 1]! });
+        setFocus({ unitId: focus.unitId, date: dates[dateIndex + 1]!, scroll: "nearest" });
         return;
       }
 
@@ -154,11 +154,16 @@ export function useExtranetCalendarKeyboard({
           setFocus({
             unitId: focus.unitId,
             date: dates[dateIndex - rowStep]!,
+            scroll: "nearest",
           });
           return;
         }
         if (!gridNavigation && unitIndex > 0) {
-          setFocus({ unitId: units[unitIndex - 1]!.unitId, date: focus.date });
+          setFocus({
+            unitId: units[unitIndex - 1]!.unitId,
+            date: focus.date,
+            scroll: "nearest",
+          });
         }
         return;
       }
@@ -169,11 +174,16 @@ export function useExtranetCalendarKeyboard({
           setFocus({
             unitId: focus.unitId,
             date: dates[dateIndex + rowStep]!,
+            scroll: "nearest",
           });
           return;
         }
         if (!gridNavigation && unitIndex < units.length - 1) {
-          setFocus({ unitId: units[unitIndex + 1]!.unitId, date: focus.date });
+          setFocus({
+            unitId: units[unitIndex + 1]!.unitId,
+            date: focus.date,
+            scroll: "nearest",
+          });
         }
       }
     }
@@ -204,5 +214,6 @@ export function focusCellAfterTodayJump(
   unitId: string,
 ) {
   const date = dates.includes(today) ? today : dates[0];
-  if (date) setFocus({ unitId, date });
+  // Explicit Today navigation intentionally centers the target cell.
+  if (date) setFocus({ unitId, date, scroll: "center" });
 }

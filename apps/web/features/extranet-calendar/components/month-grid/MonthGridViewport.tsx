@@ -70,11 +70,16 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
       if (!scrollApiRef) return;
       scrollApiRef.current = {
         scrollToUnitId: () => {},
-        scrollToDate: (date: string) => {
+        scrollToDate: (date: string, options?: ScrollIntoViewOptions) => {
           const el = scrollRef.current?.querySelector(
             `[data-calendar-cell="true"][data-date="${date}"]`,
           ) as HTMLElement | null;
-          el?.scrollIntoView({ block: "center", behavior: "smooth" });
+          el?.scrollIntoView(
+            options ?? {
+              block: "center",
+              behavior: "smooth",
+            },
+          );
         },
       };
     }, [scrollApiRef, scrollRef]);

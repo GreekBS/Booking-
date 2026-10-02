@@ -45,9 +45,18 @@ export interface TimelineSelection {
   openMinStay?: boolean;
 }
 
+/** How CalendarKeyboardBindings should scroll after a focus change. */
+export type FocusScrollMode = "none" | "nearest" | "center";
+
 export interface TimelineFocus {
   unitId: string;
   date: string;
+  /**
+   * Pointer/mouse focus omits this (or uses "none") so clicking a visible cell
+   * does not auto-center the month-grid scroller and steal the click.
+   * Keyboard navigation uses "nearest"; explicit Today uses "center".
+   */
+  scroll?: FocusScrollMode;
 }
 
 export interface RackUnit {

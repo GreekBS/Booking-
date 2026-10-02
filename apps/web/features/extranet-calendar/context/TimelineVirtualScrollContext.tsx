@@ -4,7 +4,7 @@ import { createContext, useContext, type ReactNode } from "react";
 
 export interface TimelineVirtualScrollValue {
   scrollToUnitId: (unitId: string) => void;
-  scrollToDate: (date: string) => void;
+  scrollToDate: (date: string, options?: ScrollIntoViewOptions) => void;
 }
 
 const noop = () => {};
