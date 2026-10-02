@@ -41,8 +41,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <TenantProvider>
       <ActivePropertyProvider>
         <BreadcrumbEntityLabelsProvider>
-        <div className="flex min-h-screen bg-background font-sans lg:pl-3">
-          <div className="hidden h-screen sticky top-0 lg:block">
+        <div className="flex min-h-screen bg-background font-sans">
+          <div className="hidden h-screen sticky top-0 lg:block lg:bg-[hsl(var(--sidebar-rail))] lg:pl-3">
             <AdminSidebar
               pathname={pathname}
               collapsed={collapsed}

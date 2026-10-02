@@ -102,6 +102,8 @@
     --sidebar-border: 211 40% 24%;
     --sidebar-ring: 213 94% 78%;
     --sidebar-muted: 210 25% 72%;
+    /* Desktop outer-left rail only (UI-3.1) ≈ #173A5E — darker than sidebar, not inventory */
+    --sidebar-rail: 211 61% 23%;
   }
 
   .dark {

@@ -95,7 +95,13 @@ describe("Talos operator Phase 1 design system", () => {
 
     const shell = read("components/admin/admin-shell.tsx");
     expect(shell).toContain("lg:pl-3");
+    expect(shell).toContain("lg:bg-[hsl(var(--sidebar-rail))]");
     expect(shell).not.toContain("lg:pl-5");
+    // Outer rail is confined to the sticky desktop sidebar column (not root bg).
+    expect(shell).toMatch(
+      /sticky top-0 lg:block lg:bg-\[hsl\(var\(--sidebar-rail\)\)\] lg:pl-3/,
+    );
+    expect(shell).toContain('flex min-h-screen bg-background font-sans">');
 
     const css = read("app/globals.css");
     expect(css).toContain(".sidebar-nav-scroll");
@@ -110,6 +116,7 @@ describe("Talos operator Phase 1 design system", () => {
     expect(css).toContain("--sidebar-border: 211 40% 24%");
     expect(css).toContain("--sidebar-ring: 213 94% 78%");
     expect(css).toContain("--sidebar-muted: 210 25% 72%");
+    expect(css).toContain("--sidebar-rail: 211 61% 23%");
     expect(css).not.toContain("--sidebar-background: 0 0% 100%");
     expect(css).not.toContain("--sidebar-background: 153 43% 14%");
     expect(css).not.toMatch(/--sidebar-background:\s*217 91% 53%/);
