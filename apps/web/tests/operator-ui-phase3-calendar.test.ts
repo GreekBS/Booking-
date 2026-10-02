@@ -41,17 +41,21 @@ describe("Talos operator Phase 3 — Operations Calendar", () => {
     expect(page).not.toContain("properties={properties}");
   });
 
-  it("month section uses responsive auto-fill grid instead of fixed 10-day rows", () => {
+  it("month section uses deterministic 10-day rows with span overlay", () => {
     const section = read("features/extranet-calendar/components/month-grid/MonthGridSection.tsx");
-    expect(section).toContain("auto-fill");
-    expect(section).toContain("minmax");
-    expect(section).not.toContain("DAYS_PER_ROW");
-    expect(section).not.toContain("section.rows.map");
+    expect(section).toContain("section.rows.map");
+    expect(section).toContain("buildCalendarSpans");
+    expect(section).toContain("MonthGridSpanBar");
+    expect(section).toContain("data-month-grid-row");
+    expect(section).not.toContain("auto-fill");
   });
 
   it("day cells use Talos ops semantic tokens with distinct Today / Selected / Focus", () => {
     const styles = read("features/extranet-calendar/lib/month-grid-cell-styles.ts");
-    expect(styles).toContain("bg-ops-booking");
+    // Booked nights are neutral; reservation bars carry booking color.
+    expect(styles).toContain('case "booked":');
+    expect(styles).toContain("border-border bg-surface text-foreground");
+    expect(styles).not.toMatch(/case "booked":[\s\S]*?bg-ops-booking text-ops-booking-fg/);
     expect(styles).toContain("bg-ops-hold-subtle");
     expect(styles).toContain("bg-ops-blocked");
     expect(styles).toContain("bg-ops-maintenance");
@@ -71,11 +75,15 @@ describe("Talos operator Phase 3 — Operations Calendar", () => {
     expect(theme).toContain("ops-booking-subtle");
     expect(theme).toContain("ops-hold");
     expect(theme).toContain("LEGEND_SWATCHES");
+    expect(theme).toContain("MONTH_GRID_BAR_BOOKING_CLASS");
+    expect(theme).toContain("calendar-booking-bar-bg");
     expect(theme).not.toMatch(/#[0-9a-fA-F]{3,8}/);
     expect(theme).not.toContain("003580");
-    // Booking chips must not borrow CTA primary-subtle (today column may still use it).
+    // Booking chips (non-month-grid) must not borrow CTA primary-subtle.
     expect(theme).toContain("bg-ops-booking-subtle text-ops-booking");
     expect(theme).not.toContain("bg-primary-subtle text-ops-booking");
+    // Legend booked swatch follows month-grid light-blue bar presentation.
+    expect(theme).toContain("calendar-booking-bar-bg");
   });
 
   it("timeline bar styles use ops-* tokens not Tailwind inventory blues/reds", () => {

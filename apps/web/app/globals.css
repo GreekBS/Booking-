@@ -92,6 +92,10 @@
     --ops-selected-ring: 217 91% 53%;
     --ops-today-marker: 150 6% 48%;
 
+    /* Month-grid reservation bar presentation only — does NOT replace --ops-booking */
+    --calendar-booking-bar-bg: 214 95% 93%;
+    --calendar-booking-bar-fg: 224 76% 48%;
+
     /* Sidebar — calm muted blue chrome (UI-3); distinct from --primary CTA */
     --sidebar-background: 211 57% 31%;
     --sidebar-foreground: 210 40% 94%;

@@ -11,6 +11,8 @@ export interface DensityTokens {
 export interface MonthGridTokens {
   cardMinHeightPx: number;
   gapPx: number;
+  /** Continuous reservation strip height inside day cards. */
+  barHeightPx: number;
 }
 
 export const DENSITY_TOKENS: Record<CalendarDensity, DensityTokens> = {
@@ -49,8 +51,8 @@ export function getTimelineHeaderHeightPx(density: CalendarDensity): number {
 }
 
 const MONTH_GRID_TOKENS: Record<CalendarDensity, MonthGridTokens> = {
-  compact: { cardMinHeightPx: 80, gapPx: 6 },
-  comfortable: { cardMinHeightPx: 96, gapPx: 8 },
+  compact: { cardMinHeightPx: 80, gapPx: 6, barHeightPx: 20 },
+  comfortable: { cardMinHeightPx: 96, gapPx: 8, barHeightPx: 24 },
 };
 
 export function getMonthGridTokens(density: CalendarDensity): MonthGridTokens {

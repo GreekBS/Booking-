@@ -11,6 +11,7 @@ import { hasAnyOverlay, type OverlayToggles } from "../../lib/overlay-types";
 import {
   monthGridDayCardClassName,
   monthGridDayPriceClassName,
+  monthGridOccupancyUsesSpanBar,
   monthGridStatusTextClass,
 } from "../../lib/month-grid-cell-styles";
 import { resolveMonthGridDayPrice } from "../../lib/month-grid-price";
@@ -104,7 +105,10 @@ export const MonthGridDayCard = memo(function MonthGridDayCard({
   const statusLabel = occupied ? cellState.label : availabilityState.label;
   const priceAria = dayPrice?.title;
   const ariaLabel = [date, statusLabel, priceAria, overlayAria].filter(Boolean).join(", ");
-  const shortStatus = statusShortLabel(cellState.type, cellState.label);
+  // Guest / hold / block copy lives on the span bar; keep aria-label only.
+  const shortStatus = monthGridOccupancyUsesSpanBar(cellState.type)
+    ? ""
+    : statusShortLabel(cellState.type, cellState.label);
 
   function handleClick() {
     onCellClick(unit.unitId, date);
@@ -146,7 +150,13 @@ export const MonthGridDayCard = memo(function MonthGridDayCard({
           <span className={cn(DAY_HEADER_WEEKDAY_CLASS, "normal-case")}>{header.dow}</span>
         </div>
 
-        {shortStatus ? (
+        {monthGridOccupancyUsesSpanBar(cellState.type) ? (
+          <div
+            className="mt-2 shrink-0"
+            style={{ height: tokens.barHeightPx }}
+            aria-hidden
+          />
+        ) : shortStatus ? (
           <p className={cn("mt-2 line-clamp-2", monthGridStatusTextClass(cellState.type))}>
             {shortStatus}
           </p>

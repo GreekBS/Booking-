@@ -58,9 +58,16 @@ export const CHIP_HOLD_CLASS =
 export const CHIP_MUTED_CLASS =
   "border-border bg-surface-subtle text-muted-foreground";
 
-/** Reservation bar — hero layer (timeline) */
+/** Reservation bar — hero layer (legacy timeline; keeps ops-booking inventory color) */
 export const BAR_BOOKING_CLASS =
   "border border-ops-booking bg-ops-booking text-ops-booking-fg";
+
+/**
+ * Month-grid reservation strip — light Talos blue presentation.
+ * Independent from --ops-booking inventory semantics.
+ */
+export const MONTH_GRID_BAR_BOOKING_CLASS =
+  "border border-[hsl(var(--calendar-booking-bar-fg)/0.28)] bg-[hsl(var(--calendar-booking-bar-bg))] text-[hsl(var(--calendar-booking-bar-fg))]";
 
 export const BAR_HOLD_CLASS =
   "border-2 border-dashed border-ops-hold bg-ops-hold-subtle text-ops-hold-fg";
@@ -76,6 +83,9 @@ export const BAR_OPERATOR_CLASSES = {
 export const BAR_TEXT_PRIMARY_CLASS = "truncate text-[13px] font-semibold leading-tight";
 export const BAR_TEXT_SECONDARY_CLASS = "truncate text-[11px] font-medium leading-tight opacity-90";
 
+export const MONTH_GRID_BAR_TEXT_CLASS =
+  "truncate text-[11px] font-semibold leading-none tracking-tight";
+
 export const PRICE_OVERLAY_CLASS =
   "text-[12px] font-semibold tabular-nums text-foreground";
 
@@ -85,7 +95,12 @@ export const OVERLAY_META_CLASS =
 /** Compact legend swatch helpers */
 export const LEGEND_SWATCHES = [
   { key: "available", label: "Διαθέσιμο", className: "border border-border bg-surface" },
-  { key: "booked", label: "Κρατημένο", className: "bg-ops-booking" },
+  {
+    key: "booked",
+    label: "Κρατημένο",
+    className:
+      "border border-[hsl(var(--calendar-booking-bar-fg)/0.28)] bg-[hsl(var(--calendar-booking-bar-bg))]",
+  },
   { key: "hold", label: "Δέσμευση", className: "border-2 border-dashed border-ops-hold bg-ops-hold-subtle" },
   { key: "manual", label: "Κλειδωμένο", className: "bg-ops-blocked" },
   { key: "maintenance", label: "Συντήρηση", className: "bg-ops-maintenance" },

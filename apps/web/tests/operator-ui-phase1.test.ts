@@ -22,8 +22,11 @@ describe("Talos operator Phase 1 design system", () => {
     expect(css).toContain("--ops-selected: 214 95% 93%");
     expect(css).toContain("--ops-selected-ring: 217 91% 53%");
     expect(css).toContain("--surface:");
-    // Inventory booking must not collapse into CTA primary.
+    expect(css).toContain("--calendar-booking-bar-bg: 214 95% 93%");
+    expect(css).toContain("--calendar-booking-bar-fg: 224 76% 48%");
+    // Inventory booking must not collapse into CTA primary or month-grid bar.
     expect(css).not.toMatch(/--ops-booking:\s*217 91% 53%/);
+    expect(css).not.toMatch(/--ops-booking:\s*214 95% 93%/);
     expect(css.indexOf("--ops-booking: 153 43% 28%")).toBeGreaterThan(-1);
   });
 

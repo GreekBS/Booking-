@@ -14,11 +14,14 @@ export interface MonthGridDayCardStyleInput {
   isLoading?: boolean;
 }
 
-/** Occupancy surfaces — Talos ops tokens; each state remains visually distinct. */
+/**
+ * Occupancy surfaces for non-booking states.
+ * Booked nights stay neutral — reservation bars carry booking identity.
+ */
 function occupancySurfaceClass(cellType: CellVisualType): string {
   switch (cellType) {
     case "booked":
-      return "border-ops-booking bg-ops-booking text-ops-booking-fg";
+      return "border-border bg-surface text-foreground";
     case "held":
       return "border-2 border-dashed border-ops-hold bg-ops-hold-subtle text-ops-hold-fg";
     case "manual":
@@ -56,8 +59,7 @@ export function monthGridDayPriceClassName(
       ? "text-[10px] font-medium text-muted-foreground"
       : cellType === "held"
         ? "text-[11px] font-semibold text-ops-hold-fg"
-        : cellType === "booked" ||
-            cellType === "manual" ||
+        : cellType === "manual" ||
             cellType === "maintenance" ||
             cellType === "cleaning" ||
             cellType === "owner"
@@ -80,6 +82,7 @@ export function monthGridDayCardClassName(input: MonthGridDayCardStyleInput): st
   } = input;
 
   const occupied = cellType !== "available" && cellType !== "closed";
+  const neutralSurface = cellType === "available" || cellType === "booked";
 
   return cn(
     "relative flex min-h-[var(--month-card-min-h)] flex-col rounded-md border p-2 text-left transition-colors duration-100",
@@ -90,12 +93,12 @@ export function monthGridDayCardClassName(input: MonthGridDayCardStyleInput): st
       : availability === "closed"
         ? "border-border bg-ops-closed text-ops-closed-fg"
         : occupancySurfaceClass("available"),
-    !occupied && isWeekend && !isPast && "bg-surface-subtle/80",
-    // Today (unselected, non-occupied): neutral marker — not selection
-    isToday && !isSelected && !occupied && MONTH_GRID_TODAY_CLASS,
-    isPast && !occupied && "opacity-75",
+    neutralSurface && isWeekend && !isPast && "bg-surface-subtle/80",
+    // Today marker on neutral surfaces (available + booked bars)
+    isToday && !isSelected && neutralSurface && MONTH_GRID_TODAY_CLASS,
+    isPast && neutralSurface && "opacity-75",
     isLoading && "animate-pulse",
-    !isPast && !occupied && "hover:border-primary/40 hover:bg-primary-subtle/40",
+    !isPast && neutralSurface && "hover:border-primary/40 hover:bg-primary-subtle/40",
     isSelected &&
       (isDragging
         ? "z-[2] bg-ops-selected ring-2 ring-inset ring-ops-selected-ring"
@@ -107,7 +110,6 @@ export function monthGridDayCardClassName(input: MonthGridDayCardStyleInput): st
 
 export function monthGridStatusTextClass(cellType: CellVisualType): string {
   if (
-    cellType === "booked" ||
     cellType === "manual" ||
     cellType === "maintenance" ||
     cellType === "cleaning" ||
@@ -119,4 +121,16 @@ export function monthGridStatusTextClass(cellType: CellVisualType): string {
     return "text-[11px] font-medium leading-tight text-ops-hold-fg";
   }
   return "text-[11px] font-medium leading-tight text-muted-foreground";
+}
+
+/** Occupancy types represented by the month-grid span overlay (not cell fill text). */
+export function monthGridOccupancyUsesSpanBar(cellType: CellVisualType): boolean {
+  return (
+    cellType === "booked" ||
+    cellType === "held" ||
+    cellType === "manual" ||
+    cellType === "maintenance" ||
+    cellType === "cleaning" ||
+    cellType === "owner"
+  );
 }
