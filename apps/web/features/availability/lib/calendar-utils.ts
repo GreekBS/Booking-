@@ -1,3 +1,5 @@
+import { elWeekdaysInitials } from "@/lib/i18n";
+
 export const CELL_WIDTH_PX = 36;
 export const CELL_HEIGHT_PX = 36;
 export const UNIT_COL_WIDTH_PX = 200;
@@ -97,7 +99,7 @@ export function buildMonthSpans(dates: string[]): MonthSpan[] {
 export function formatHeaderDate(iso: string): { dow: string; day: string; month: string } {
   const d = new Date(`${iso}T00:00:00.000Z`);
   return {
-    dow: d.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
+    dow: elWeekdaysInitials[dayOfWeekUtc(iso)] ?? "",
     day: String(d.getUTCDate()),
     month: d.toLocaleDateString(undefined, { month: "short", timeZone: "UTC" }),
   };

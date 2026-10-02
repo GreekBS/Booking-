@@ -275,6 +275,8 @@ describe("Month-grid continuous reservation bars", () => {
     expect(viewport).toContain("data-month-grid-measure");
     expect(viewport).toContain("measureRef");
     expect(viewport).toContain("columns={columns}");
+    expect(viewport).toContain("elCommon.loadMoreMonths");
+    expect(viewport).not.toContain("Load more months");
 
     const shell = read("features/extranet-calendar/components/shell/ExtranetCalendarShell.tsx");
     expect(shell).toContain("useMonthGridColumnCount");

@@ -13,6 +13,7 @@ export {
   elTaskSource,
   elOperatorBlockType,
   elWeekdaysShort,
+  elWeekdaysInitials,
   elPaymentMethod,
   elCollectionSource,
   elPaymentStatus,

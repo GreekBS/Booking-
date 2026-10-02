@@ -9,7 +9,8 @@ import {
 } from "@/features/extranet-calendar/lib/month-grid-model";
 import { monthGridDayCardClassName } from "@/features/extranet-calendar/lib/month-grid-cell-styles";
 import { LEGEND_SWATCHES } from "@/features/extranet-calendar/lib/visual-theme";
-
+import { formatHeaderDate } from "@/features/availability/lib/calendar-utils";
+import { elCommon, elWeekdaysInitials } from "@/lib/i18n";
 const root = join(__dirname, "..");
 
 function read(rel: string): string {
@@ -54,6 +55,26 @@ describe("Talos operator Phase 3 — Operations Calendar", () => {
     expect(densitySrc).toContain('DEFAULT_DENSITY: CalendarDensity = "compact"');
     expect(densitySrc).toContain("minCellWidthPx: 64");
     expect(densitySrc).toContain("minCellWidthPx: 72"); // comfortable tokens retained
+  });
+
+  it("month-grid localization uses Greek load-more and weekday initials", () => {
+    const viewport = read("features/extranet-calendar/components/month-grid/MonthGridViewport.tsx");
+    expect(viewport).toContain("elCommon.loadMoreMonths");
+    expect(viewport).not.toContain("Load more months");
+    expect(elCommon.loadMoreMonths).toBe("Φόρτωση περισσότερων μηνών");
+
+    expect([...elWeekdaysInitials]).toEqual(["Κυ", "Δε", "Τρ", "Τε", "Πε", "Πα", "Σα"]);
+    // Mon–Sun display order for a week starting 2026-10-05 (Monday).
+    expect(
+      ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11"].map(
+        (iso) => formatHeaderDate(iso).dow,
+      ),
+    ).toEqual(["Δε", "Τρ", "Τε", "Πε", "Πα", "Σα", "Κυ"]);
+    expect(formatHeaderDate("2026-10-05").dow).not.toMatch(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i);
+
+    const utils = read("features/availability/lib/calendar-utils.ts");
+    expect(utils).toContain("elWeekdaysInitials");
+    expect(utils).not.toContain('weekday: "short"');
   });
 
   it("month section uses adaptive columns with span overlay", () => {

@@ -121,6 +121,7 @@ export const elCommon = {
   maxGuests: "Μέγ. επισκέπτες",
   available: "Διαθέσιμο",
   connected: "Συνδεδεμένα",
+  loadMoreMonths: "Φόρτωση περισσότερων μηνών",
 } as const;
 
 /** Sidebar / section navigation. */
@@ -289,6 +290,17 @@ export const elWeekdaysShort = [
   "Πέμ",
   "Παρ",
   "Σάβ",
+] as const;
+
+/** Compact weekday initials (Sun=0 … Sat=6) for Availability month-grid day cells. */
+export const elWeekdaysInitials = [
+  "Κυ",
+  "Δε",
+  "Τρ",
+  "Τε",
+  "Πε",
+  "Πα",
+  "Σα",
 ] as const;
 
 export const elPaymentMethod: Record<string, string> = {

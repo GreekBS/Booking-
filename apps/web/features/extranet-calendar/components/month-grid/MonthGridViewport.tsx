@@ -3,6 +3,7 @@
 import { useRef, useImperativeHandle, forwardRef, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
 import type { AvailabilityRulesRecord, CalendarRecord, RatePlanRecord } from "@/lib/admin/types";
+import { elCommon } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { CalendarDensity } from "../../lib/density";
 import { GRID_CANVAS_CLASS, PROPERTY_META_CLASS, PROPERTY_NAME_CLASS } from "../../lib/visual-theme";
@@ -131,7 +132,7 @@ export const MonthGridViewport = forwardRef<HTMLDivElement, MonthGridViewportPro
 
                 <div className="flex justify-center pb-6 pt-2">
                   <Button type="button" variant="outline" size="sm" onClick={onLoadMore}>
-                    Load more months
+                    {elCommon.loadMoreMonths}
                   </Button>
                 </div>
               </>
