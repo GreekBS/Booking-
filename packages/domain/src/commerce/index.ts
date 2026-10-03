@@ -12,6 +12,7 @@ export * from "./import/ImportAvailabilityPolicy";
 export * from "./import/ReservationImportTypes";
 export * from "./import/IReservationImportRepository";
 export * from "./import/ExpireReservationImportDraftsUseCase";
+export * from "./import/csv";
 
 export * from "./pricing/PricingCalculator";
 
