@@ -53,14 +53,16 @@ CREATE TABLE "channel_listing_mappings" (
 -- CreateIndex
 CREATE INDEX "channel_listing_mappings_tenant_id_connection_id_idx" ON "channel_listing_mappings"("tenant_id","connection_id");
 
+-- Explicit short index names (< PostgreSQL NAMEDATALEN=63).
+-- The Prisma-default long names all truncate to the same identifier and collide on virgin PG.
 -- CreateIndex
-CREATE INDEX "channel_listing_mappings_tenant_id_connection_id_external_listing_id_external_unit_id_idx" ON "channel_listing_mappings"("tenant_id","connection_id","external_listing_id","external_unit_id");
+CREATE INDEX "clm_tenant_conn_ext_listing_unit_idx" ON "channel_listing_mappings"("tenant_id","connection_id","external_listing_id","external_unit_id");
 
 -- CreateIndex (Prisma nullable uniqueness - NULLs do not collide in Postgres)
-CREATE UNIQUE INDEX "channel_listing_mappings_tenant_id_connection_id_external_listing_id_external_unit_id_key" ON "channel_listing_mappings"("tenant_id","connection_id","external_listing_id","external_unit_id");
+CREATE UNIQUE INDEX "clm_tenant_conn_ext_listing_unit_key" ON "channel_listing_mappings"("tenant_id","connection_id","external_listing_id","external_unit_id");
 
 -- Partial unique index to prevent duplicates when external_unit_id IS NULL
-CREATE UNIQUE INDEX "channel_listing_mappings_tenant_id_connection_id_external_listing_id_unit_null_key" ON "channel_listing_mappings"("tenant_id","connection_id","external_listing_id") WHERE "external_unit_id" IS NULL;
+CREATE UNIQUE INDEX "clm_tenant_conn_ext_listing_unit_null_key" ON "channel_listing_mappings"("tenant_id","connection_id","external_listing_id") WHERE "external_unit_id" IS NULL;
 
 -- CreateTable
 CREATE TABLE "external_reservation_links" (

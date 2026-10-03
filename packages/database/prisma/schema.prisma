@@ -1919,9 +1919,10 @@ model ChannelListingMapping {
   externalReservationLinks ExternalReservationLink[]
 
   @@id([tenantId, id])
-  @@unique([tenantId, connectionId, externalListingId, externalUnitId])
+  /// Short mapped name — Prisma defaults exceed PG NAMEDATALEN and collide.
+  @@unique([tenantId, connectionId, externalListingId, externalUnitId], map: "clm_tenant_conn_ext_listing_unit_key")
   @@index([tenantId, connectionId])
-  @@index([tenantId, connectionId, externalListingId, externalUnitId])
+  @@index([tenantId, connectionId, externalListingId, externalUnitId], map: "clm_tenant_conn_ext_listing_unit_idx")
   @@map("channel_listing_mappings")
 }
 
