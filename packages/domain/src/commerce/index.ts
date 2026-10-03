@@ -7,6 +7,12 @@ export * from "./shared/value-objects/GuestCount";
 
 export * from "./availability/AvailabilityEvaluator";
 
+export * from "./import/ImportStayTemporalClass";
+export * from "./import/ImportAvailabilityPolicy";
+export * from "./import/ReservationImportTypes";
+export * from "./import/IReservationImportRepository";
+export * from "./import/ExpireReservationImportDraftsUseCase";
+
 export * from "./pricing/PricingCalculator";
 
 export * from "./booking/domain/QuoteSnapshot";
@@ -36,6 +42,7 @@ export * from "./application/channelImportActor";
 export * from "./ports/IImportNormalizedReservationPort";
 
 export * from "./jobs/ExpireHoldsJobHandler";
+export * from "./jobs/ExpireReservationImportDraftsJobHandler";
 
 export * from "./reservation/types";
 export * from "./reservation/ReservationOrchestrator";

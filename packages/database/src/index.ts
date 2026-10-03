@@ -144,6 +144,7 @@ export { PrismaCalendarBlockRepository } from "./repositories/commerce/CalendarB
 export { PrismaRatePlanRepository } from "./repositories/commerce/RatePlanRepository";
 export { PrismaAvailabilityRulesRepository } from "./repositories/commerce/AvailabilityRulesRepository";
 export { PrismaCommerceFlowRepository } from "./repositories/commerce/CommerceFlowRepository";
+export { PrismaReservationImportRepository } from "./repositories/commerce/ReservationImportRepository";
 export { PrismaCommerceSettingsRepository } from "./repositories/commerce/CommerceSettingsRepository";
 export {
   PrismaPublishableKeyRepository,

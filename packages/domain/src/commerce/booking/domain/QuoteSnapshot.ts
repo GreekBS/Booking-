@@ -1,5 +1,6 @@
 import { ValueObject } from "../../../shared/kernel/ValueObject";
 import type { NightlyLineItem } from "../../pricing/PricingCalculator";
+import type { QuotePricingMode } from "../../shared/types/CommerceTypes";
 
 export interface QuoteSnapshotProps {
   version: number;
@@ -13,6 +14,10 @@ export interface QuoteSnapshotProps {
   taxesAmount: string;
   totalAmount: string;
   quotedAt: Date;
+  /**
+   * Commercial provenance. Optional for v1 snapshots — readers default to `talos_calculated`.
+   */
+  pricingMode?: QuotePricingMode;
 }
 
 export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
@@ -64,6 +69,11 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
     return this.props.quotedAt;
   }
 
+  /** Defaults missing / legacy snapshots to RatePlan-derived pricing. */
+  get pricingMode(): QuotePricingMode {
+    return this.props.pricingMode ?? "talos_calculated";
+  }
+
   static create(props: QuoteSnapshotProps): QuoteSnapshot {
     const lineItems = Object.freeze(
       props.lineItems.map((item) => Object.freeze({ ...item })),
@@ -72,6 +82,7 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
       ...props,
       lineItems,
       quotedAt: new Date(props.quotedAt),
+      pricingMode: props.pricingMode,
     });
   }
 
@@ -88,6 +99,7 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
       taxesAmount: this.taxesAmount,
       totalAmount: this.totalAmount,
       quotedAt: new Date(this.quotedAt),
+      pricingMode: this.pricingMode,
     };
   }
 }

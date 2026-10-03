@@ -42,6 +42,18 @@ export interface AvailabilityReason {
   message: string;
 }
 
+/** Non-blocking diagnostic from availability evaluation (e.g. historical import). */
+export interface AvailabilityWarning {
+  code: string;
+  message: string;
+}
+
+/** Quote commercial provenance — generic, not CSV-specific. */
+export type QuotePricingMode =
+  | "talos_calculated"
+  | "imported_csv"
+  | "operator_entered";
+
 export interface ActiveCalendarBlock {
   blockType: CalendarBlockType;
   status: CalendarBlockStatus;
@@ -103,4 +115,10 @@ export interface GuestDetailsProps {
 
 export const DEFAULT_HOLD_TTL_SECONDS = 900;
 
-export const SNAPSHOT_VERSION = 1;
+/**
+ * Quote snapshot schema version.
+ * v1: original RatePlan snapshots (no pricingMode field).
+ * v2: optional `pricingMode` provenance (`talos_calculated` | `imported_csv` | `operator_entered`).
+ * Readers must treat missing `pricingMode` as `talos_calculated` for backward compatibility.
+ */
+export const SNAPSHOT_VERSION = 2;

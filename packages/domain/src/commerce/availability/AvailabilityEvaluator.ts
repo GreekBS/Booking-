@@ -4,8 +4,15 @@ import { GuestCount } from "../shared/value-objects/GuestCount";
 import type {
   ActiveCalendarBlock,
   AvailabilityReason,
+  AvailabilityWarning,
   UnitAvailabilityRulesProps,
 } from "../shared/types/CommerceTypes";
+import type { AvailabilityEvaluationPolicy } from "../import/ImportAvailabilityPolicy";
+import {
+  bypassesSellabilityRules,
+  bypassesTurnoverBuffer,
+  treatsGuestCapacityAsWarning,
+} from "../import/ImportAvailabilityPolicy";
 
 export interface AvailabilityEvaluationInput {
   stayPeriod: StayPeriod;
@@ -16,6 +23,11 @@ export interface AvailabilityEvaluationInput {
   propertyLocalToday: LocalDate;
   /** Skip blocks tied to these source IDs (e.g. current booking during stay change). */
   excludeSourceIds?: string[];
+  /**
+   * Opt-in evaluation policy. Omitted / `live_sell` preserves existing sell behavior.
+   * Import policies must be passed explicitly — never inferred globally.
+   */
+  policy?: AvailabilityEvaluationPolicy;
 }
 
 export interface NightAvailability {
@@ -26,26 +38,35 @@ export interface NightAvailability {
 export interface AvailabilityEvaluationResult {
   available: boolean;
   reasons: AvailabilityReason[];
+  /** Non-blocking diagnostics (e.g. historical guest-capacity mismatch). */
+  warnings: AvailabilityWarning[];
   nights: NightAvailability[];
 }
 
 const ACTIVE_BLOCK_STATUSES = new Set(["active"]);
 
+export const HISTORICAL_GUEST_CAPACITY_WARNING_CODE = "GUEST_CAPACITY_MISMATCH_HISTORICAL";
+
 export class AvailabilityEvaluator {
   evaluate(input: AvailabilityEvaluationInput): AvailabilityEvaluationResult {
     const reasons: AvailabilityReason[] = [];
+    const warnings: AvailabilityWarning[] = [];
     const nights = input.stayPeriod.nights().map((night) => ({
       date: night.value,
       available: true,
     }));
 
-    this.validateGuestCount(input, reasons);
-    this.validateStayLength(input, reasons);
-    this.validateCheckInDay(input, reasons);
-    this.validateCheckOutDay(input, reasons);
-    this.validateAdvanceWindow(input, reasons);
+    this.validateGuestCount(input, reasons, warnings);
+    if (!bypassesSellabilityRules(input.policy)) {
+      this.validateStayLength(input, reasons);
+      this.validateCheckInDay(input, reasons);
+      this.validateCheckOutDay(input, reasons);
+      this.validateAdvanceWindow(input, reasons);
+    }
     this.validateBlocks(input, nights, reasons);
-    this.validateTurnoverBuffer(input, reasons);
+    if (!bypassesTurnoverBuffer(input.policy)) {
+      this.validateTurnoverBuffer(input, reasons);
+    }
 
     const available = reasons.length === 0;
     if (!available) {
@@ -54,19 +75,30 @@ export class AvailabilityEvaluator {
       }
     }
 
-    return { available, reasons, nights };
+    return { available, reasons, warnings, nights };
   }
 
   private validateGuestCount(
     input: AvailabilityEvaluationInput,
     reasons: AvailabilityReason[],
+    warnings: AvailabilityWarning[],
   ): void {
-    if (input.guestCount.value > input.unitMaxGuests) {
-      reasons.push({
-        code: "GUEST_COUNT_EXCEEDED",
-        message: `Guest count ${input.guestCount.value} exceeds unit max ${input.unitMaxGuests}`,
-      });
+    if (input.guestCount.value <= input.unitMaxGuests) {
+      return;
     }
+
+    if (treatsGuestCapacityAsWarning(input.policy)) {
+      warnings.push({
+        code: HISTORICAL_GUEST_CAPACITY_WARNING_CODE,
+        message: `Guest count ${input.guestCount.value} exceeds unit max ${input.unitMaxGuests} (historical import — non-blocking)`,
+      });
+      return;
+    }
+
+    reasons.push({
+      code: "GUEST_COUNT_EXCEEDED",
+      message: `Guest count ${input.guestCount.value} exceeds unit max ${input.unitMaxGuests}`,
+    });
   }
 
   private validateStayLength(

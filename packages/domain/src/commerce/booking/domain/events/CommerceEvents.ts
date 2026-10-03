@@ -224,3 +224,37 @@ export class BookingGuestCountChangedEvent extends BaseDomainEvent {
     } as unknown as Record<string, unknown>);
   }
 }
+
+/**
+ * Completed booking superseded by an import successor.
+ * Persistence must release this booking's calendar occupancy in the same transaction
+ * as writing supersede metadata and creating the successor (Phase A/D).
+ */
+export class BookingSupersededEvent extends BaseDomainEvent {
+  constructor(
+    bookingId: string,
+    tenantId: string,
+    payload: {
+      supersededByBookingId: string;
+      unitId: string;
+      propertyId: string;
+      checkIn: string;
+      checkOut: string;
+      supersedeReason: string | null;
+      /** Intent for persistence: mark booking calendar block non-active. */
+      releaseBookingCalendarOccupancy: true;
+      mutationOrigin?: MutationOrigin | null;
+    },
+  ) {
+    super("BookingSuperseded", "Booking", bookingId, tenantId, {
+      supersededByBookingId: payload.supersededByBookingId,
+      unitId: payload.unitId,
+      propertyId: payload.propertyId,
+      checkIn: payload.checkIn,
+      checkOut: payload.checkOut,
+      supersedeReason: payload.supersedeReason,
+      releaseBookingCalendarOccupancy: true,
+      ...originPayload(payload.mutationOrigin),
+    });
+  }
+}

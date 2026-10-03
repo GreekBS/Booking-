@@ -97,6 +97,52 @@ enum BookingStatus {
   completed
 }
 
+enum ReservationImportBatchStatus {
+  draft
+  processing
+  completed
+  completed_with_errors
+  failed
+  expired
+  cancelled
+}
+
+enum ReservationImportMissingPriceStrategy {
+  undecided
+  talos_for_all_missing
+  per_row
+}
+
+enum ReservationImportRowStatus {
+  pending
+  ready
+  imported
+  replaced
+  skipped
+  skipped_already_imported
+  failed
+  discarded
+}
+
+enum ReservationImportTemporalClass {
+  historical
+  in_progress
+  future
+}
+
+enum ReservationImportPriceSource {
+  unresolved
+  imported_csv
+  talos_calculated
+  operator_entered
+}
+
+enum ReservationImportConflictResolution {
+  undecided
+  keep_existing
+  keep_csv
+}
+
 enum DowModifierType {
   fixed
   percent
@@ -277,6 +323,8 @@ model Tenant {
   bookingHolds                   BookingHold[]
   quotes                         Quote[]
   bookings                       Booking[]
+  reservationImportBatches       ReservationImportBatch[]
+  reservationImportRows          ReservationImportRow[]
   paymentRecords                 PaymentRecord[]
   payments                       Payment[]
   paymentAllocations             PaymentAllocation[]
@@ -350,6 +398,7 @@ model User {
   uploadedCleaningPhotos      CleaningPhoto[]          @relation("CleaningPhotoUploader")
   messagesCreated             Message[]                @relation("MessageCreator")
   escalationsAnswered         OwnerEscalation[]        @relation("EscalationAnswerer")
+  reservationImportBatches    ReservationImportBatch[]
 
   @@map("users")
 }
@@ -518,6 +567,7 @@ model Unit {
   bookingHolds       BookingHold[]
   quotes             Quote[]
   bookings           Booking[]
+  reservationImportRows ReservationImportRow[]
   tasks              Task[]
   housekeepingStatus UnitHousekeepingStatus?
   qrAccess           UnitQrAccess[]
@@ -874,6 +924,10 @@ model Booking {
   cancelledAt        DateTime?        @map("cancelled_at") @db.Timestamptz
   completedAt        DateTime?        @map("completed_at") @db.Timestamptz
   cancellationReason String?          @map("cancellation_reason") @db.Text
+  /// Import supersede: successor booking that replaced this completed stay.
+  supersededByBookingId String?   @map("superseded_by_booking_id") @db.Uuid
+  supersededAt          DateTime? @map("superseded_at") @db.Timestamptz
+  supersedeReason       String?   @map("supersede_reason") @db.Text
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -882,6 +936,8 @@ model Booking {
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   quote          Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   guest          Guest?          @relation(fields: [guestId], references: [id], onDelete: Restrict)
+  supersededByBooking Booking?  @relation("BookingSupersededBy", fields: [supersededByBookingId], references: [id], onDelete: Restrict)
+  supersededBookings  Booking[] @relation("BookingSupersededBy")
   paymentRecords PaymentRecord[]
   payments       Payment[]
   folios         Folio[]
@@ -891,11 +947,89 @@ model Booking {
   messagingProfile         BookingMessagingProfile?
   messagingAutomationRuns  MessagingAutomationRun[]
   messagingContactTokens   MessagingContactToken[]
+  importRowsCreated        ReservationImportRow[] @relation("ImportRowCreatedBooking")
+  importRowsReplaceTarget  ReservationImportRow[] @relation("ImportRowReplaceBooking")
+  importRowsSuperseded     ReservationImportRow[] @relation("ImportRowSupersededBooking")
 
   @@index([tenantId, unitId, checkIn, checkOut])
   @@index([tenantId, status, createdAt(sort: Desc)])
   @@index([tenantId, guestId])
+  @@index([tenantId, supersededByBookingId])
   @@map("bookings")
+}
+
+/// Operator CSV reservation import batch (draft + durable terminal audit).
+model ReservationImportBatch {
+  id                   String                               @id @default(uuid()) @db.Uuid
+  tenantId             String                               @map("tenant_id") @db.Uuid
+  actorId              String                               @map("actor_id") @db.Uuid
+  sourceNamespace      String                               @default("csv_reservation_import") @map("source_namespace") @db.VarChar(64)
+  filename             String                               @db.VarChar(255)
+  byteSize             Int?                                 @map("byte_size")
+  rowCount             Int                                  @default(0) @map("row_count")
+  status               ReservationImportBatchStatus         @default(draft)
+  missingPriceStrategy ReservationImportMissingPriceStrategy @default(undecided) @map("missing_price_strategy")
+  expiresAt            DateTime                             @map("expires_at") @db.Timestamptz
+  committedAt          DateTime?                            @map("committed_at") @db.Timestamptz
+  createdAt            DateTime                             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime                             @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  rows   ReservationImportRow[]
+
+  @@index([tenantId, status, expiresAt])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("reservation_import_batches")
+}
+
+model ReservationImportRow {
+  id                   String                              @id @default(uuid()) @db.Uuid
+  tenantId             String                              @map("tenant_id") @db.Uuid
+  batchId              String                              @map("batch_id") @db.Uuid
+  rowNumber            Int                                 @map("row_number")
+  sourceNamespace      String                              @default("csv_reservation_import") @map("source_namespace") @db.VarChar(64)
+  externalReference    String                              @map("external_reference") @db.VarChar(64)
+  unitId               String                              @map("unit_id") @db.Uuid
+  checkIn              DateTime                            @map("check_in") @db.Date
+  checkOut             DateTime                            @map("check_out") @db.Date
+  temporalClass        ReservationImportTemporalClass      @map("temporal_class")
+  guestName            String                              @map("guest_name") @db.VarChar(255)
+  guestEmail           String                              @map("guest_email") @db.VarChar(255)
+  guestPhone           String?                             @map("guest_phone") @db.VarChar(50)
+  guestCount           Int                                 @map("guest_count")
+  priceSource          ReservationImportPriceSource        @default(unresolved) @map("price_source")
+  importedTotalAmount  Decimal?                            @map("imported_total_amount") @db.Decimal(19, 4)
+  importedCurrency     String?                             @map("imported_currency") @db.Char(3)
+  operatorTotalAmount  Decimal?                            @map("operator_total_amount") @db.Decimal(19, 4)
+  operatorCurrency     String?                             @map("operator_currency") @db.Char(3)
+  conflictResolution   ReservationImportConflictResolution @default(undecided) @map("conflict_resolution")
+  replaceBookingId     String?                             @map("replace_booking_id") @db.Uuid
+  conflictSnapshot     Json                                @default("{}") @map("conflict_snapshot")
+  conflictGroupId      String?                             @map("conflict_group_id") @db.VarChar(64)
+  recheckRequired      Boolean                             @default(false) @map("recheck_required")
+  status               ReservationImportRowStatus          @default(pending)
+  createdBookingId     String?                             @map("created_booking_id") @db.Uuid
+  supersededBookingId  String?                             @map("superseded_booking_id") @db.Uuid
+  errorCode            String?                             @map("error_code") @db.VarChar(64)
+  errorMessage         String?                             @map("error_message") @db.Text
+  payload              Json                                @default("{}")
+  processedAt          DateTime?                           @map("processed_at") @db.Timestamptz
+  createdAt            DateTime                            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime                            @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  batch             ReservationImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  unit              Unit                   @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  replaceBooking    Booking?               @relation("ImportRowReplaceBooking", fields: [replaceBookingId], references: [id], onDelete: SetNull)
+  createdBooking    Booking?               @relation("ImportRowCreatedBooking", fields: [createdBookingId], references: [id], onDelete: SetNull)
+  supersededBooking Booking?               @relation("ImportRowSupersededBooking", fields: [supersededBookingId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, rowNumber])
+  @@index([tenantId, batchId])
+  @@index([tenantId, status])
+  @@index([tenantId, sourceNamespace, externalReference])
+  @@map("reservation_import_rows")
 }
 
 /// Legacy gateway intent ledger (ADR-015). Not F4 settlement truth — see `Payment` / `payments`.

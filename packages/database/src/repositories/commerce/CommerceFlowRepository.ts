@@ -6,7 +6,12 @@ import {
   saveAggregateWithOutbox,
 } from "../OutboxRepository";
 import { isExclusionViolation } from "./commerceMappers";
-import { persistBookingTx, persistHoldTx, persistQuoteTx } from "./commercePersistence";
+import {
+  persistBookingTx,
+  persistHoldTx,
+  persistQuoteTx,
+  releaseBookingCalendarOccupancyTx,
+} from "./commercePersistence";
 
 export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
   constructor(private readonly outboxRepository: PrismaOutboxRepository) {}
@@ -110,5 +115,11 @@ export class PrismaCommerceFlowRepository implements ICommerceFlowRepository {
       }
       throw error;
     }
+  }
+
+  async releaseBookingCalendarOccupancy(tenantId: string, bookingId: string): Promise<void> {
+    await withTenantTransaction(tenantId, async (tx) => {
+      await releaseBookingCalendarOccupancyTx(tx, tenantId, bookingId);
+    });
   }
 }

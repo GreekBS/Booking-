@@ -1,7 +1,8 @@
-import { Quote } from "../../booking/domain/Quote";
+import { Quote, type FixedTotalQuotePricingMode } from "../../booking/domain/Quote";
 import type { Hold } from "../../booking/domain/Hold";
 import type { Booking } from "../../booking/domain/Booking";
 import type { PricingResult } from "../../pricing/PricingCalculator";
+import type { Money } from "../../shared/value-objects/Money";
 import type { ApplyStayChangeCommand } from "../types";
 
 export interface CreateQuoteFromHoldParams {
@@ -19,6 +20,16 @@ export interface CreateQuoteForStayChangeParams {
   command: ApplyStayChangeCommand;
   pricing: PricingResult;
   propertyTimezone: string;
+}
+
+export interface CreateQuoteFromFixedTotalParams {
+  id: string;
+  snapshotId: string;
+  hold: Hold;
+  propertyTimezone: string;
+  total: Money;
+  pricingMode: FixedTotalQuotePricingMode;
+  quotedAt?: Date;
 }
 
 export class QuoteFactory {
@@ -40,6 +51,18 @@ export class QuoteFactory {
       command: params.command,
       pricing: params.pricing,
       propertyTimezone: params.propertyTimezone,
+    });
+  }
+
+  createFromFixedTotal(params: CreateQuoteFromFixedTotalParams): Quote {
+    return Quote.createFromFixedTotal({
+      id: params.id,
+      snapshotId: params.snapshotId,
+      hold: params.hold,
+      propertyTimezone: params.propertyTimezone,
+      total: params.total,
+      pricingMode: params.pricingMode,
+      quotedAt: params.quotedAt,
     });
   }
 }

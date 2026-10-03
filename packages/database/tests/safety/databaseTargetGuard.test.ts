@@ -196,6 +196,22 @@ describe("databaseTargetGuard", () => {
     expect(env.DIRECT_URL).toBe(LOCAL_URL);
   });
 
+  it("applyIntegrationTestDatabaseEnv clears RUNTIME_DATABASE_URL overrides", () => {
+    const env = {
+      TEST_DATABASE_URL: LOCAL_URL,
+      DATABASE_URL: TALOS_PROD_URL,
+      RUNTIME_DATABASE_URL: TALOS_PROD_URL,
+      RUNTIME_DIRECT_URL: TALOS_PROD_URL,
+      WORKER_DATABASE_URL: TALOS_PROD_URL,
+    } as NodeJS.ProcessEnv;
+
+    expect(applyIntegrationTestDatabaseEnv(env)).toBe("configured");
+    expect(env.DATABASE_URL).toBe(LOCAL_URL);
+    expect(env.RUNTIME_DATABASE_URL).toBeFalsy();
+    expect(env.RUNTIME_DIRECT_URL).toBeFalsy();
+    expect(env.WORKER_DATABASE_URL).toBeFalsy();
+  });
+
   it("resolveWorkerDatabaseUrl refuses Talos Production by default", () => {
     expect(() =>
       resolveWorkerDatabaseUrl({

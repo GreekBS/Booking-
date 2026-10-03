@@ -112,6 +112,8 @@ import {
 
   ExpireHoldsUseCase,
 
+  ExpireReservationImportDraftsUseCase,
+
   CreateQuoteUseCase,
 
   CreateBookingUseCase,
@@ -325,6 +327,8 @@ import {
   EnqueueJobUseCase,
 
   ExpireHoldsJobHandler,
+
+  ExpireReservationImportDraftsJobHandler,
 
   PrepareReservationUseCase,
 
@@ -582,6 +586,8 @@ import {
   PrismaAvailabilityRulesRepository,
 
   PrismaCommerceFlowRepository,
+
+  PrismaReservationImportRepository,
 
   PrismaCatalogQueryAdapter,
 
@@ -1168,6 +1174,7 @@ const availabilityRulesRepository = new PrismaAvailabilityRulesRepository();
 export { availabilityRulesRepository };
 
 const commerceFlowRepository = new PrismaCommerceFlowRepository(outboxRepository);
+const reservationImportRepository = new PrismaReservationImportRepository();
 
 const timezoneService = new TimezoneService();
 
@@ -1299,7 +1306,8 @@ export const releaseHoldUseCase = new ReleaseHoldUseCase(
 
 export const expireHoldsUseCase = new ExpireHoldsUseCase(holdRepository);
 
-
+export const expireReservationImportDraftsUseCase =
+  new ExpireReservationImportDraftsUseCase(reservationImportRepository);
 
 export const createQuoteUseCase = new CreateQuoteUseCase(
   catalogQueryAdapter,
@@ -2287,6 +2295,9 @@ export const jobScheduler = new PrismaJobScheduler(backgroundJobRepository);
 const jobHandlerRegistry = new JobHandlerRegistry();
 jobHandlerRegistry.register(new LoggingJobHandler());
 jobHandlerRegistry.register(new ExpireHoldsJobHandler(expireHoldsUseCase));
+jobHandlerRegistry.register(
+  new ExpireReservationImportDraftsJobHandler(expireReservationImportDraftsUseCase),
+);
 jobHandlerRegistry.register(
   new GenerateHousekeepingTurnoverJobHandler(generateHousekeepingTurnoverUseCase),
 );

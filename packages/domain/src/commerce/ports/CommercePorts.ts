@@ -196,6 +196,12 @@ export interface ICommerceFlowRepository {
   saveHoldAndQuote(hold: Hold, quote: Quote): Promise<void>;
   saveImportReservation(hold: Hold, quote: Quote, booking: Booking): Promise<void>;
   saveStayChange(quote: Quote, booking: Booking): Promise<void>;
+  /**
+   * Release the exact booking calendar occupancy block (blockType=booking, sourceId=bookingId).
+   * Intended for use inside runInTenantTransaction during import supersede (Phase D).
+   * Idempotent when already non-active.
+   */
+  releaseBookingCalendarOccupancy(tenantId: string, bookingId: string): Promise<void>;
 }
 
 export interface PaymentIntentResult {

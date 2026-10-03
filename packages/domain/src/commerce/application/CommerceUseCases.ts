@@ -102,6 +102,7 @@ export class CheckAvailabilityUseCase {
       return Result.ok({
         available: evaluation.available,
         reasons: evaluation.reasons,
+        warnings: evaluation.warnings,
         nights: evaluation.nights,
       });
     } catch (error) {

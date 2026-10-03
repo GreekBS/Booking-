@@ -1,10 +1,11 @@
 import { AggregateRoot } from "../../../shared/kernel/Entity";
-import { ConflictError } from "../../../shared/errors/DomainError";
+import { ConflictError, ValidationError } from "../../../shared/errors/DomainError";
 import { Money } from "../../shared/value-objects/Money";
 import { QuoteSnapshot } from "./QuoteSnapshot";
 import type { Hold } from "./Hold";
 import type { Booking } from "./Booking";
 import type { PricingResult } from "../../pricing/PricingCalculator";
+import type { QuotePricingMode } from "../../shared/types/CommerceTypes";
 import { SNAPSHOT_VERSION } from "../../shared/types/CommerceTypes";
 import { STAY_CHANGE_QUOTE_TTL_MS, type ApplyStayChangeCommand } from "../../reservation/types";
 import { QuoteCreatedEvent } from "./events/CommerceEvents";
@@ -40,6 +41,19 @@ export interface CreateQuoteForStayChangeProps {
   propertyTimezone: string;
   feesAmount?: string;
   taxesAmount?: string;
+}
+
+export type FixedTotalQuotePricingMode = Exclude<QuotePricingMode, "talos_calculated">;
+
+export interface CreateQuoteFromFixedTotalProps {
+  id: string;
+  snapshotId: string;
+  hold: Hold;
+  propertyTimezone: string;
+  /** Commercial total preserved exactly — no RatePlan recalculation. */
+  total: Money;
+  pricingMode: FixedTotalQuotePricingMode;
+  quotedAt?: Date;
 }
 
 export class Quote extends AggregateRoot<QuoteProps> {
@@ -101,6 +115,7 @@ export class Quote extends AggregateRoot<QuoteProps> {
       taxesAmount,
       totalAmount: totalWithFees.amount,
       quotedAt: props.pricing.quotedAt,
+      pricingMode: "talos_calculated",
     });
 
     const quote = new Quote({
@@ -113,6 +128,78 @@ export class Quote extends AggregateRoot<QuoteProps> {
       snapshot,
       expiresAt: new Date(hold.expiresAt),
       createdAt: props.pricing.quotedAt,
+    });
+
+    quote.addDomainEvent(
+      new QuoteCreatedEvent(quote.id, quote.tenantId, {
+        holdId: quote.holdId,
+        unitId: quote.unitId,
+        propertyId: quote.propertyId,
+        totalAmount: snapshot.totalAmount,
+        currency: snapshot.currency,
+      }),
+    );
+
+    return quote;
+  }
+
+  /**
+   * Immutable Quote from a fixed commercial total (CSV import / operator entry).
+   * Does not invoke RatePlan / StayPricingEngine.
+   * Preserves amount + currency exactly (no FX).
+   */
+  static createFromFixedTotal(props: CreateQuoteFromFixedTotalProps): Quote {
+    const hold = props.hold;
+    const quotedAt = props.quotedAt ?? new Date();
+    hold.assertValidForQuote(quotedAt);
+
+    if (props.total.isZero() || props.total.isNegative()) {
+      throw new ValidationError("Fixed quote total must be positive");
+    }
+    if (props.pricingMode !== "imported_csv" && props.pricingMode !== "operator_entered") {
+      throw new ValidationError("Fixed quote requires imported_csv or operator_entered pricing mode");
+    }
+
+    const currency = props.total.currency;
+    const totalAmount = props.total.amount;
+    const checkIn = hold.stayPeriod.checkIn.value;
+    const checkOut = hold.stayPeriod.checkOut.value;
+
+    // Single synthetic line covering the stay — not a RatePlan nightly breakdown.
+    const lineItems = [
+      {
+        date: checkIn,
+        baseAmount: totalAmount,
+        adjustedAmount: totalAmount,
+        currency,
+      },
+    ];
+
+    const snapshot = QuoteSnapshot.create({
+      version: SNAPSHOT_VERSION,
+      checkIn,
+      checkOut,
+      propertyTimezone: props.propertyTimezone,
+      currency,
+      lineItems,
+      subtotalAmount: totalAmount,
+      feesAmount: Money.zero(currency).amount,
+      taxesAmount: Money.zero(currency).amount,
+      totalAmount,
+      quotedAt,
+      pricingMode: props.pricingMode,
+    });
+
+    const quote = new Quote({
+      id: props.id,
+      tenantId: hold.tenantId,
+      holdId: hold.id,
+      unitId: hold.unitId,
+      propertyId: hold.propertyId,
+      snapshotId: props.snapshotId,
+      snapshot,
+      expiresAt: new Date(hold.expiresAt),
+      createdAt: quotedAt,
     });
 
     quote.addDomainEvent(
@@ -150,6 +237,7 @@ export class Quote extends AggregateRoot<QuoteProps> {
       taxesAmount,
       totalAmount: totalWithFees.amount,
       quotedAt,
+      pricingMode: "talos_calculated",
     });
 
     const quote = new Quote({

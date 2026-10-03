@@ -14,6 +14,7 @@ import {
   BookingCreatedEvent,
   BookingGuestCountChangedEvent,
   BookingStayChangedEvent,
+  BookingSupersededEvent,
   BookingUnitChangedEvent,
   type StayChangeEventPayload,
 } from "./events/CommerceEvents";
@@ -39,6 +40,20 @@ export interface BookingProps {
   confirmedAt: Date | null;
   cancelledAt: Date | null;
   completedAt: Date | null;
+  /**
+   * Import supersede metadata (domain only in A0 — persistence is Phase A).
+   * Optional on reconstitute so existing DB mappers compile without schema columns.
+   */
+  supersededByBookingId?: string | null;
+  supersededAt?: Date | null;
+  supersedeReason?: string | null;
+}
+
+export interface SupersedeForImportProps {
+  supersededByBookingId: string;
+  reason?: string | null;
+  at?: Date;
+  mutationOrigin?: MutationOrigin | null;
 }
 
 export interface CreateBookingProps {
@@ -106,6 +121,50 @@ export class Booking extends AggregateRoot<BookingProps> {
     return this.props.confirmationMode;
   }
 
+  get supersededByBookingId(): string | null {
+    return this.props.supersededByBookingId ?? null;
+  }
+
+  get supersededAt(): Date | null {
+    return this.props.supersededAt ?? null;
+  }
+
+  get supersedeReason(): string | null {
+    return this.props.supersedeReason ?? null;
+  }
+
+  get isSuperseded(): boolean {
+    return this.supersededByBookingId != null && this.supersededAt != null;
+  }
+
+  /**
+   * Persistence contract: when true, the booking calendar block must become non-active
+   * in the same transaction that persists supersede metadata (Phase A/D).
+   */
+  get requiresCalendarOccupancyRelease(): boolean {
+    return this.isSuperseded;
+  }
+
+  get confirmedAt(): Date | null {
+    return this.props.confirmedAt;
+  }
+
+  get cancelledAt(): Date | null {
+    return this.props.cancelledAt;
+  }
+
+  get completedAt(): Date | null {
+    return this.props.completedAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   static create(props: CreateBookingProps): Booking {
     const now = props.now ?? new Date();
     const { hold, quote } = props;
@@ -140,6 +199,9 @@ export class Booking extends AggregateRoot<BookingProps> {
       confirmedAt: null,
       cancelledAt: null,
       completedAt: null,
+      supersededByBookingId: null,
+      supersededAt: null,
+      supersedeReason: null,
     });
 
     booking.addDomainEvent(
@@ -169,6 +231,9 @@ export class Booking extends AggregateRoot<BookingProps> {
       confirmedAt: props.confirmedAt ? new Date(props.confirmedAt) : null,
       cancelledAt: props.cancelledAt ? new Date(props.cancelledAt) : null,
       completedAt: props.completedAt ? new Date(props.completedAt) : null,
+      supersededByBookingId: props.supersededByBookingId ?? null,
+      supersededAt: props.supersededAt ? new Date(props.supersededAt) : null,
+      supersedeReason: props.supersedeReason ?? null,
     });
   }
 
@@ -243,6 +308,74 @@ export class Booking extends AggregateRoot<BookingProps> {
     }
     this.transitionTo("completed", at);
     this.props.completedAt = at;
+  }
+
+  /**
+   * Import-safe historical lifecycle step: confirm (if pending) then complete.
+   * Reuses existing state transitions — does not reopen or rewrite stay/price.
+   */
+  finalizeAsHistoricalImport(
+    at: Date = new Date(),
+    mutationOrigin?: MutationOrigin | null,
+  ): void {
+    if (this.props.status === "pending") {
+      this.confirm(at, mutationOrigin);
+    }
+    if (this.props.status === "confirmed") {
+      this.complete(at);
+      return;
+    }
+    if (this.props.status === "completed") {
+      return;
+    }
+    throw new ConflictError(
+      `Cannot finalize historical import booking in status ${this.props.status}`,
+    );
+  }
+
+  /**
+   * Supersede a completed booking for import replacement.
+   * Does not cancel, hard-delete, or alter stay/guest/quote.
+   * Emits BookingSupersededEvent — calendar occupancy release is a persistence concern.
+   */
+  supersedeForImport(props: SupersedeForImportProps): void {
+    if (this.props.status !== "completed") {
+      throw new ConflictError(
+        `Only completed bookings can be superseded for import (status: ${this.props.status})`,
+      );
+    }
+    if (this.isSuperseded) {
+      throw new ConflictError("Booking has already been superseded");
+    }
+
+    const successorId = props.supersededByBookingId.trim();
+    if (!successorId) {
+      throw new ValidationError("supersededByBookingId is required");
+    }
+    if (successorId === this.id) {
+      throw new ValidationError("Booking cannot supersede itself");
+    }
+
+    const at = props.at ?? new Date();
+    const reason = props.reason?.trim() ? props.reason.trim() : null;
+
+    this.props.supersededByBookingId = successorId;
+    this.props.supersededAt = at;
+    this.props.supersedeReason = reason;
+    this.props.updatedAt = at;
+
+    this.addDomainEvent(
+      new BookingSupersededEvent(this.id, this.tenantId, {
+        supersededByBookingId: successorId,
+        unitId: this.unitId,
+        propertyId: this.propertyId,
+        checkIn: this.props.checkIn,
+        checkOut: this.props.checkOut,
+        supersedeReason: reason,
+        releaseBookingCalendarOccupancy: true,
+        mutationOrigin: props.mutationOrigin ?? null,
+      }),
+    );
   }
 
   applyStayChange(

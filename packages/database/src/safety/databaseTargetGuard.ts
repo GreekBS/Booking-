@@ -166,17 +166,35 @@ export function resolveWorkerDatabaseUrl(
  * used by integration suites with the resolved integration URL — or clear DB URLs
  * so suites skip without mutating an unintended target.
  */
+function clearProcessDatabaseUrl(
+  env: NodeJS.ProcessEnv,
+  key: string,
+): void {
+  // Blank then delete — on some hosts inherited env keys resist delete alone.
+  env[key] = "";
+  delete env[key];
+}
+
+/**
+ * Clear runtime/worker URL overrides that would otherwise win over DATABASE_URL
+ * inside resolveRuntimeDatabaseUrl() / worker resolvers during integration tests.
+ */
+function clearRuntimeDatabaseOverrides(env: NodeJS.ProcessEnv): void {
+  clearProcessDatabaseUrl(env, "RUNTIME_DATABASE_URL");
+  clearProcessDatabaseUrl(env, "RUNTIME_DIRECT_URL");
+  clearProcessDatabaseUrl(env, WORKER_DATABASE_URL_ENV);
+  clearProcessDatabaseUrl(env, "WORKER_LISTEN_DATABASE_URL");
+}
+
 export function applyIntegrationTestDatabaseEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): "configured" | "missing" {
   const resolved = resolveIntegrationTestDatabaseUrl(env);
 
   if (!resolved) {
-    // Blank then delete — on some hosts inherited env keys resist delete alone.
-    env.DATABASE_URL = "";
-    env.DIRECT_URL = "";
-    delete env.DATABASE_URL;
-    delete env.DIRECT_URL;
+    clearProcessDatabaseUrl(env, "DATABASE_URL");
+    clearProcessDatabaseUrl(env, "DIRECT_URL");
+    clearRuntimeDatabaseOverrides(env);
     return "missing";
   }
 
@@ -188,5 +206,8 @@ export function applyIntegrationTestDatabaseEnv(
   } else {
     env.DIRECT_URL = resolved;
   }
+  // @hcp/database client prefers RUNTIME_DATABASE_URL over DATABASE_URL.
+  // Leaving a Production runtime URL set would bypass TEST_DATABASE_URL remap.
+  clearRuntimeDatabaseOverrides(env);
   return "configured";
 }

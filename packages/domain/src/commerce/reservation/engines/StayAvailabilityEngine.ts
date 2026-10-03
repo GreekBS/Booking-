@@ -12,6 +12,7 @@ import type {
 } from "../../ports/CommercePorts";
 import { resolveUnitContext } from "../../application/commerceAccess";
 import { Result } from "../../../shared/kernel/Result";
+import type { AvailabilityEvaluationPolicy } from "../../import/ImportAvailabilityPolicy";
 
 const DEFAULT_RULES: UnitAvailabilityRulesProps = {
   minNights: 1,
@@ -30,6 +31,8 @@ export interface EvaluateStayAvailabilityParams {
   checkOut: string;
   guestCount: number;
   excludeSourceIds?: string[];
+  /** Opt-in import policy. Omit for unchanged live-sell behavior. */
+  policy?: AvailabilityEvaluationPolicy;
 }
 
 export class StayAvailabilityEngine {
@@ -64,6 +67,7 @@ export class StayAvailabilityEngine {
       activeBlocks: blocks,
       propertyLocalToday: LocalDate.create(today),
       excludeSourceIds: params.excludeSourceIds,
+      policy: params.policy,
     });
 
     return Result.ok({ ...result, propertyId: property.id });

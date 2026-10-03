@@ -254,7 +254,12 @@ describe("QuoteDirectBookingStayUseCase", () => {
     const Money = (await import("../../src/commerce/shared/value-objects/Money")).Money;
     const orchestrator = {
       evaluateAvailability: vi.fn().mockResolvedValue(
-        Result.ok({ available: true, reasons: [], nights: [{ date: "2026-10-01", available: true }] }),
+        Result.ok({
+          available: true,
+          reasons: [],
+          warnings: [],
+          nights: [{ date: "2026-10-01", available: true }],
+        }),
       ),
       priceStay: vi.fn().mockResolvedValue(
         Result.ok({

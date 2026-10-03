@@ -75,6 +75,7 @@ export function quoteToDomain(record: PrismaQuote): Quote {
     taxesAmount: string;
     totalAmount: string;
     quotedAt: string;
+    pricingMode?: "talos_calculated" | "imported_csv" | "operator_entered";
   };
 
   return Quote.reconstitute({
@@ -96,6 +97,14 @@ export function quoteToDomain(record: PrismaQuote): Quote {
       taxesAmount: raw.taxesAmount,
       totalAmount: raw.totalAmount,
       quotedAt: new Date(raw.quotedAt),
+      // Optional v2 field — missing on legacy snapshots → talos_calculated via getter.
+      pricingMode:
+        "pricingMode" in raw &&
+        (raw.pricingMode === "talos_calculated" ||
+          raw.pricingMode === "imported_csv" ||
+          raw.pricingMode === "operator_entered")
+          ? raw.pricingMode
+          : undefined,
     }),
     expiresAt: record.expiresAt,
     createdAt: record.createdAt,
@@ -127,6 +136,9 @@ export function bookingToDomain(record: PrismaBooking): Booking {
     confirmedAt: record.confirmedAt,
     cancelledAt: record.cancelledAt,
     completedAt: record.completedAt,
+    supersededByBookingId: record.supersededByBookingId ?? null,
+    supersededAt: record.supersededAt ?? null,
+    supersedeReason: record.supersedeReason ?? null,
   });
 }
 

@@ -126,11 +126,35 @@ export async function persistBookingTx(tx: TransactionClient, booking: Booking):
         ...(booking.status === "completed" && !existing.completedAt
           ? { completedAt: new Date() }
           : {}),
+        ...(booking.supersededByBookingId != null
+          ? {
+              supersededByBookingId: booking.supersededByBookingId,
+              supersededAt: booking.supersededAt,
+              supersedeReason: booking.supersedeReason,
+            }
+          : {}),
       },
     });
   }
 
   await syncBookingCalendarBlockTx(tx, booking, checkIn, checkOut, isCreate);
+}
+
+/** Release exact booking inventory occupancy (sourceId = bookingId, blockType = booking). */
+export async function releaseBookingCalendarOccupancyTx(
+  tx: TransactionClient,
+  tenantId: string,
+  bookingId: string,
+): Promise<void> {
+  await tx.unitCalendarBlock.updateMany({
+    where: {
+      tenantId,
+      sourceId: bookingId,
+      blockType: "booking",
+      status: "active",
+    },
+    data: { status: "cancelled" },
+  });
 }
 
 async function syncHoldCalendarBlockTx(
@@ -196,9 +220,12 @@ async function syncBookingCalendarBlockTx(
     },
   });
 
-  const blockStatus = mapCalendarBlockStatusForBooking(booking.status);
+  // Superseded completed bookings must not retain active inventory occupancy.
+  const blockStatus = booking.isSuperseded
+    ? ("cancelled" as const)
+    : mapCalendarBlockStatusForBooking(booking.status);
 
-  if (isCreate && booking.status !== "cancelled") {
+  if (isCreate && booking.status !== "cancelled" && !booking.isSuperseded) {
     await tx.unitCalendarBlock.create({
       data: {
         tenantId: booking.tenantId,
