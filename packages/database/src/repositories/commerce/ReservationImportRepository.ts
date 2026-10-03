@@ -40,6 +40,11 @@ function batchToRecord(record: PrismaBatch): ReservationImportBatchRecord {
   };
 }
 
+function parseReplaceBookingIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string" && v.length > 0);
+}
+
 function rowToRecord(record: PrismaRow): ReservationImportRowRecord {
   return {
     id: record.id,
@@ -63,6 +68,7 @@ function rowToRecord(record: PrismaRow): ReservationImportRowRecord {
     operatorCurrency: record.operatorCurrency,
     conflictResolution: record.conflictResolution,
     replaceBookingId: record.replaceBookingId,
+    replaceBookingIds: parseReplaceBookingIds(record.replaceBookingIds),
     conflictSnapshot: (record.conflictSnapshot ?? {}) as Record<string, unknown>,
     conflictGroupId: record.conflictGroupId,
     recheckRequired: record.recheckRequired,
@@ -232,6 +238,7 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
         operatorCurrency: input.operatorCurrency ?? null,
         conflictResolution: input.conflictResolution ?? "undecided",
         replaceBookingId: input.replaceBookingId ?? null,
+        replaceBookingIds: (input.replaceBookingIds ?? []) as Prisma.InputJsonValue,
         conflictSnapshot: (input.conflictSnapshot ?? {}) as Prisma.InputJsonValue,
         conflictGroupId: input.conflictGroupId ?? null,
         recheckRequired: input.recheckRequired ?? false,
@@ -306,6 +313,9 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
             : {}),
           ...(patch.replaceBookingId !== undefined
             ? { replaceBookingId: patch.replaceBookingId }
+            : {}),
+          ...(patch.replaceBookingIds !== undefined
+            ? { replaceBookingIds: patch.replaceBookingIds as Prisma.InputJsonValue }
             : {}),
           ...(patch.conflictSnapshot !== undefined
             ? { conflictSnapshot: patch.conflictSnapshot as Prisma.InputJsonValue }

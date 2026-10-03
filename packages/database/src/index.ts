@@ -145,6 +145,7 @@ export { PrismaRatePlanRepository } from "./repositories/commerce/RatePlanReposi
 export { PrismaAvailabilityRulesRepository } from "./repositories/commerce/AvailabilityRulesRepository";
 export { PrismaCommerceFlowRepository } from "./repositories/commerce/CommerceFlowRepository";
 export { PrismaReservationImportRepository } from "./repositories/commerce/ReservationImportRepository";
+export { PrismaCsvImportUnitResolver } from "./adapters/PrismaCsvImportUnitResolver";
 export { PrismaCommerceSettingsRepository } from "./repositories/commerce/CommerceSettingsRepository";
 export {
   PrismaPublishableKeyRepository,

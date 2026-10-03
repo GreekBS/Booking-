@@ -1,14 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import { Result, EXPIRE_HOLDS_JOB_TYPE } from "@hcp/domain";
+import { Result, EXPIRE_HOLDS_JOB_TYPE, EXPIRE_RESERVATION_IMPORT_DRAFTS_JOB_TYPE } from "@hcp/domain";
 import {
   SchedulerRunner,
   createIcalPollSchedulerHook,
   createHoldExpirySchedulerHook,
+  createReservationImportDraftExpirySchedulerHook,
   createProviderRetrievalSchedulerHook,
   buildExpireHoldsIdempotencyKey,
+  buildExpireReservationImportDraftsIdempotencyKey,
   buildSchedulerHooks,
   ICAL_POLL_SCHEDULER_HOOK_NAME,
   HOLD_EXPIRY_SCHEDULER_HOOK_NAME,
+  RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_HOOK_NAME,
   PROVIDER_RETRIEVAL_SCHEDULER_FORBIDDEN_IMPORT_PATTERNS,
   providerRetrievalHookName,
 } from "../src/scheduler";
@@ -145,6 +148,41 @@ describe("worker scheduler batch", () => {
     expect(result?.enqueued).toBe(1);
   });
 
+  it("F2: reservation-import draft expiry scheduling enqueues durable cleanup job", async () => {
+    const now = new Date("2026-10-04T12:00:30.000Z");
+    const key = buildExpireReservationImportDraftsIdempotencyKey(now);
+    expect(key).toBe("expire_reservation_import_drafts:2026-10-04T12:00");
+
+    const execute = vi.fn().mockResolvedValue(
+      Result.ok({
+        id: "ri1",
+        status: "pending",
+        jobType: EXPIRE_RESERVATION_IMPORT_DRAFTS_JOB_TYPE,
+      }),
+    );
+    const hook = createReservationImportDraftExpirySchedulerHook({
+      enabled: true,
+      intervalMs: 300_000,
+      enqueueJob: { execute },
+    });
+    const result = await hook.run({
+      signal: new AbortController().signal,
+      now: () => now,
+    });
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({
+      jobType: EXPIRE_RESERVATION_IMPORT_DRAFTS_JOB_TYPE,
+      payload: { limit: 100 },
+      idempotencyKey: key,
+    });
+    expect(result?.enqueued).toBe(1);
+  });
+
+  it("F3: reservation-import expiry cadence defaults to 5 minutes and is independent of 72h TTL", () => {
+    const config = loadWorkerSchedulerConfig({} as NodeJS.ProcessEnv);
+    expect(config.reservationImportDraftExpirySchedulerEnabled).toBe(true);
+    expect(config.reservationImportDraftExpirySchedulerIntervalMs).toBe(300_000);
+  });
+
   it("G: hold-expiry scheduler failure does not stop other worker processing", async () => {
     const holdHook = createHoldExpirySchedulerHook({
       enabled: true,
@@ -275,7 +313,7 @@ describe("worker scheduler batch", () => {
     ).toThrow(PRODUCTION_DB_REFUSAL_MESSAGE);
   });
 
-  it("buildSchedulerHooks wires iCal + hold expiry + housekeeping turnover from config", () => {
+  it("buildSchedulerHooks wires iCal + hold + reservation-import + housekeeping from config", () => {
     const hooks = buildSchedulerHooks(
       {
         icalSchedulerEnabled: true,
@@ -283,6 +321,9 @@ describe("worker scheduler batch", () => {
         holdExpirySchedulerEnabled: false,
         holdExpirySchedulerIntervalMs: 60_000,
         holdExpiryJobLimit: 50,
+        reservationImportDraftExpirySchedulerEnabled: true,
+        reservationImportDraftExpirySchedulerIntervalMs: 300_000,
+        reservationImportDraftExpiryJobLimit: 100,
         housekeepingTurnoverSchedulerEnabled: false,
         housekeepingTurnoverSchedulerIntervalMs: 300_000,
         housekeepingTurnoverJobLimit: 200,
@@ -297,11 +338,13 @@ describe("worker scheduler batch", () => {
     expect(hooks.map((h) => h.name)).toEqual([
       ICAL_POLL_SCHEDULER_HOOK_NAME,
       HOLD_EXPIRY_SCHEDULER_HOOK_NAME,
+      RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_HOOK_NAME,
       "housekeeping_turnover_scheduler",
     ]);
     expect(hooks[0]?.enabled).toBe(true);
     expect(hooks[1]?.enabled).toBe(false);
-    expect(hooks[2]?.enabled).toBe(false);
+    expect(hooks[2]?.enabled).toBe(true);
+    expect(hooks[3]?.enabled).toBe(false);
   });
 
   it("prevents overlapping in-process scheduler executions", async () => {

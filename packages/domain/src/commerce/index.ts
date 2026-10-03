@@ -13,6 +13,9 @@ export * from "./import/ReservationImportTypes";
 export * from "./import/IReservationImportRepository";
 export * from "./import/ExpireReservationImportDraftsUseCase";
 export * from "./import/csv";
+export * from "./import/ReservationImportConflictGraph";
+export * from "./import/CreateReservationImportDraftUseCase";
+export * from "./import/ReservationImportDraftDecisionUseCases";
 
 export * from "./pricing/PricingCalculator";
 

@@ -114,6 +114,14 @@ import {
 
   ExpireReservationImportDraftsUseCase,
 
+  CreateReservationImportDraftUseCase,
+  ListReservationImportDraftsUseCase,
+  GetReservationImportDraftUseCase,
+  DiscardReservationImportDraftUseCase,
+  UpdateReservationImportMissingPriceStrategyUseCase,
+  UpdateReservationImportRowDecisionUseCase,
+  RecheckReservationImportDraftUseCase,
+
   CreateQuoteUseCase,
 
   CreateBookingUseCase,
@@ -588,6 +596,7 @@ import {
   PrismaCommerceFlowRepository,
 
   PrismaReservationImportRepository,
+  PrismaCsvImportUnitResolver,
 
   PrismaCatalogQueryAdapter,
 
@@ -1308,6 +1317,80 @@ export const expireHoldsUseCase = new ExpireHoldsUseCase(holdRepository);
 
 export const expireReservationImportDraftsUseCase =
   new ExpireReservationImportDraftsUseCase(reservationImportRepository);
+
+const csvImportUnitResolver = new PrismaCsvImportUnitResolver();
+
+const reservationImportPricingPort = {
+  async previewTotal(input: {
+    tenantId: string;
+    unitId: string;
+    checkIn: string;
+    checkOut: string;
+  }): Promise<{ amount: string; currency: string } | null> {
+    const priced = await reservationOrchestrator.priceStay(
+      input.tenantId,
+      input.unitId,
+      input.checkIn,
+      input.checkOut,
+    );
+    if (priced.isFailure) return null;
+    const value = priced.getValue();
+    return { amount: value.total.amount, currency: value.currency };
+  },
+};
+
+export const createReservationImportDraftUseCase =
+  new CreateReservationImportDraftUseCase(
+    reservationImportRepository,
+    csvImportUnitResolver,
+    catalogQueryAdapter,
+    calendarBlockRepository,
+    availabilityRulesRepository,
+    timezoneService,
+    reservationImportPricingPort,
+    idGenerator,
+    permissionChecker,
+  );
+
+export const listReservationImportDraftsUseCase =
+  new ListReservationImportDraftsUseCase(
+    reservationImportRepository,
+    permissionChecker,
+  );
+
+export const getReservationImportDraftUseCase =
+  new GetReservationImportDraftUseCase(
+    reservationImportRepository,
+    permissionChecker,
+  );
+
+export const discardReservationImportDraftUseCase =
+  new DiscardReservationImportDraftUseCase(
+    reservationImportRepository,
+    permissionChecker,
+  );
+
+export const updateReservationImportMissingPriceStrategyUseCase =
+  new UpdateReservationImportMissingPriceStrategyUseCase(
+    reservationImportRepository,
+    createReservationImportDraftUseCase,
+    permissionChecker,
+  );
+
+export const updateReservationImportRowDecisionUseCase =
+  new UpdateReservationImportRowDecisionUseCase(
+    reservationImportRepository,
+    createReservationImportDraftUseCase,
+    permissionChecker,
+    reservationImportPricingPort,
+  );
+
+export const recheckReservationImportDraftUseCase =
+  new RecheckReservationImportDraftUseCase(
+    reservationImportRepository,
+    createReservationImportDraftUseCase,
+    permissionChecker,
+  );
 
 export const createQuoteUseCase = new CreateQuoteUseCase(
   catalogQueryAdapter,

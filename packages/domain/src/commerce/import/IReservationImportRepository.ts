@@ -24,6 +24,7 @@ export interface UpdateReservationImportRowInput {
   operatorCurrency?: string | null;
   conflictResolution?: ReservationImportConflictResolution;
   replaceBookingId?: string | null;
+  replaceBookingIds?: string[];
   conflictSnapshot?: Record<string, unknown>;
   conflictGroupId?: string | null;
   recheckRequired?: boolean;

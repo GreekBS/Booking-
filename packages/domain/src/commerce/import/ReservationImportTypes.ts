@@ -3,8 +3,14 @@ import type { ImportStayTemporalClass } from "./ImportStayTemporalClass";
 /** V1 CSV operator import namespace — extensible for future sources. */
 export const CSV_RESERVATION_IMPORT_NAMESPACE = "csv_reservation_import";
 
-/** Draft lifetime: exactly 7 hours from server createdAt. */
-export const RESERVATION_IMPORT_DRAFT_TTL_MS = 7 * 60 * 60 * 1000;
+/**
+ * Canonical reservation-import draft lifetime.
+ * Exactly 72 hours (3 days) from server `createdAt`.
+ * Logical expiry is independent of worker physical cleanup.
+ */
+export const RESERVATION_IMPORT_DRAFT_TTL_HOURS = 72;
+export const RESERVATION_IMPORT_DRAFT_TTL_MS =
+  RESERVATION_IMPORT_DRAFT_TTL_HOURS * 60 * 60 * 1000;
 
 export type ReservationImportBatchStatus =
   | "draft"
@@ -97,7 +103,10 @@ export interface ReservationImportRowRecord {
   operatorTotalAmount: string | null;
   operatorCurrency: string | null;
   conflictResolution: ReservationImportConflictResolution;
+  /** Legacy single replace target (1:1). Prefer replaceBookingIds for multi-overlap. */
   replaceBookingId: string | null;
+  /** Bookings to supersede when conflictResolution is keep_csv (may be multiple). */
+  replaceBookingIds: string[];
   /** Observed conflicting booking / same-CSV group snapshot for recheck. */
   conflictSnapshot: Record<string, unknown>;
   conflictGroupId: string | null;
@@ -148,6 +157,7 @@ export interface CreateReservationImportRowInput {
   operatorCurrency?: string | null;
   conflictResolution?: ReservationImportConflictResolution;
   replaceBookingId?: string | null;
+  replaceBookingIds?: string[];
   conflictSnapshot?: Record<string, unknown>;
   conflictGroupId?: string | null;
   recheckRequired?: boolean;

@@ -25,6 +25,11 @@ export type WorkerSchedulerConfig = {
    */
   holdExpirySchedulerIntervalMs: number;
   holdExpiryJobLimit: number;
+  /** CSV reservation-import draft physical cleanup — independent of 72h draft lifetime. */
+  reservationImportDraftExpirySchedulerEnabled: boolean;
+  /** Default 5 minutes. */
+  reservationImportDraftExpirySchedulerIntervalMs: number;
+  reservationImportDraftExpiryJobLimit: number;
   /** Housekeeping turnover reconcile — off by default until Production activation. */
   housekeepingTurnoverSchedulerEnabled: boolean;
   housekeepingTurnoverSchedulerIntervalMs: number;
@@ -60,6 +65,11 @@ const MIN_ICAL_SCHEDULER_INTERVAL_MS = 60_000;
 /** 60s — prompt hold release without busy-looping. */
 export const DEFAULT_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 60_000;
 const MIN_HOLD_EXPIRY_SCHEDULER_INTERVAL_MS = 10_000;
+
+/** 5 minutes — physical cleanup of expired reservation-import drafts (TTL remains 72h). */
+export const DEFAULT_RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_INTERVAL_MS =
+  5 * 60 * 1000;
+const MIN_RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_INTERVAL_MS = 60_000;
 
 /** 5 minutes — turnover reconcile for property-local departures. */
 export const DEFAULT_HOUSEKEEPING_TURNOVER_SCHEDULER_INTERVAL_MS = 5 * 60 * 1000;
@@ -175,6 +185,23 @@ export function loadWorkerSchedulerConfig(
     ),
     holdExpiryJobLimit: clampMin(
       parseIntEnv(env, "WORKER_HOLD_EXPIRY_JOB_LIMIT", 100),
+      1,
+    ),
+    reservationImportDraftExpirySchedulerEnabled: parseBoolEnv(
+      env,
+      "WORKER_RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_ENABLED",
+      true,
+    ),
+    reservationImportDraftExpirySchedulerIntervalMs: clampMin(
+      parseIntEnv(
+        env,
+        "WORKER_RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_INTERVAL_MS",
+        DEFAULT_RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_INTERVAL_MS,
+      ),
+      MIN_RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_INTERVAL_MS,
+    ),
+    reservationImportDraftExpiryJobLimit: clampMin(
+      parseIntEnv(env, "WORKER_RESERVATION_IMPORT_DRAFT_EXPIRY_JOB_LIMIT", 100),
       1,
     ),
     // Default off — activate explicitly; HT-2 ships code only (no Production worker activation).

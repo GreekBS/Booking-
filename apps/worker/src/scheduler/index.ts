@@ -10,6 +10,11 @@ export {
   HOLD_EXPIRY_SCHEDULER_HOOK_NAME,
 } from "./holdExpiryScheduler";
 export {
+  createReservationImportDraftExpirySchedulerHook,
+  buildExpireReservationImportDraftsIdempotencyKey,
+  RESERVATION_IMPORT_DRAFT_EXPIRY_SCHEDULER_HOOK_NAME,
+} from "./reservationImportDraftExpiryScheduler";
+export {
   createProviderRetrievalSchedulerHook,
   providerRetrievalHookName,
   PROVIDER_RETRIEVAL_SCHEDULER_FORBIDDEN_IMPORT_PATTERNS,

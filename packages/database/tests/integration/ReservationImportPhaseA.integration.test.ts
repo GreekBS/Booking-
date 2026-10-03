@@ -161,7 +161,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     await commerceFlow.releaseBookingCalendarOccupancy(tenantA, oldId);
   });
 
-  it("creates draft batch with exactly 7h expiry and lists only resumable drafts", async () => {
+  it("creates draft batch with exactly 72h expiry and lists only resumable drafts", async () => {
     const now = new Date("2026-10-03T10:00:00.000Z");
     const batch = await imports.createBatch({
       id: randomUUID(),
@@ -195,6 +195,50 @@ runIntegration("Reservation import Phase A persistence", () => {
         new Date(batch.expiresAt.getTime()),
       ),
     ).rejects.toThrow(/expired/i);
+
+    // Worker independence: rows still present (not physically cleaned) but mutations blocked.
+    const rowId = randomUUID();
+    await imports.createRows([
+      {
+        id: rowId,
+        tenantId: tenantA,
+        batchId: batch.id,
+        rowNumber: 1,
+        externalReference: "TTL-ROW",
+        unitId: unitA,
+        checkIn: "2026-12-01",
+        checkOut: "2026-12-03",
+        temporalClass: "future",
+        guestName: "TTL",
+        guestEmail: "ttl@test.com",
+        guestCount: 1,
+      },
+    ]);
+    await withTenantTransaction(tenantA, async (tx) => {
+      await tx.reservationImportBatch.update({
+        where: { id: batch.id },
+        data: { expiresAt: new Date("2026-10-03T10:00:00.000Z"), status: "draft" },
+      });
+    });
+    const stillDraft = await imports.findBatchById(batch.id, tenantA);
+    expect(stillDraft?.status).toBe("draft");
+    expect(await imports.listRowsForBatch(batch.id, tenantA)).toHaveLength(1);
+    await expect(
+      imports.updateRow(
+        rowId,
+        tenantA,
+        { conflictResolution: "keep_csv" },
+        new Date("2026-10-06T10:00:00.000Z"),
+      ),
+    ).rejects.toThrow(/expired/i);
+    expect(
+      (
+        await imports.listResumableDrafts(
+          tenantA,
+          new Date("2026-10-06T10:00:00.000Z"),
+        )
+      ).some((b) => b.id === batch.id),
+    ).toBe(false);
   });
 
   it("enforces tenant isolation for batches", async () => {

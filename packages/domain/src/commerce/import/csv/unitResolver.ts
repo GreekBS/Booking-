@@ -15,7 +15,7 @@ export interface CsvImportUnitCandidate {
   id: string;
   propertyId: string;
   name: string;
-  slug: string;
+  slug: string | null;
 }
 
 /**
@@ -50,7 +50,7 @@ export function createInMemoryCsvImportUnitResolver(
       const byNameOrSlug = candidates.filter(
         (c) =>
           normalizeUnitKey(c.name) === needle ||
-          normalizeUnitKey(c.slug) === needle,
+          (c.slug != null && normalizeUnitKey(c.slug) === needle),
       );
       if (byNameOrSlug.length === 1) {
         return {

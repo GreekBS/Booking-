@@ -1005,6 +1005,8 @@ model ReservationImportRow {
   operatorCurrency     String?                             @map("operator_currency") @db.Char(3)
   conflictResolution   ReservationImportConflictResolution @default(undecided) @map("conflict_resolution")
   replaceBookingId     String?                             @map("replace_booking_id") @db.Uuid
+  /// Multi-booking supersede targets for keep_csv (Phase B2). Empty array when undecided/keep_existing.
+  replaceBookingIds    Json                                @default("[]") @map("replace_booking_ids")
   conflictSnapshot     Json                                @default("{}") @map("conflict_snapshot")
   conflictGroupId      String?                             @map("conflict_group_id") @db.VarChar(64)
   recheckRequired      Boolean                             @default(false) @map("recheck_required")
