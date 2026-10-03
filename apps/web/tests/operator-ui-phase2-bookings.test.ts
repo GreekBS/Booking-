@@ -10,7 +10,7 @@ function read(rel: string): string {
 describe("Talos operator Phase 2 — bookings workspace", () => {
   it("Bookings list uses Phase 1 surfaces, labeled filters, and clear filters", () => {
     const page = read("features/bookings/BookingsPage.tsx");
-    expect(page).toContain("Νέα κράτηση");
+    expect(page).toContain("BookingCreateMenu");
     expect(page).toContain("elCommon.clearFilters");
     expect(page).toContain("elCommon.checkIn");
     expect(page).toContain("elCommon.checkOut");

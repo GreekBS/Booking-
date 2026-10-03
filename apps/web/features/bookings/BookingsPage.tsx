@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Plus,
   RefreshCw,
   Search,
   X,
@@ -33,6 +31,8 @@ import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Pagination } from "@/components/admin/pagination";
 import { BookingDetailDrawer } from "@/features/bookings/BookingDetailDrawer";
+import { BookingCreateMenu } from "@/features/reservation-import/BookingCreateMenu";
+import { ReservationImportDraftList } from "@/features/reservation-import/ReservationImportDraftList";
 import { UnsavedChangesDialog } from "@/features/workspace/components/UnsavedChangesDialog";
 import { WorkspaceProvider, useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
@@ -336,15 +336,10 @@ function BookingsPageContent() {
             ? `${reservationCountLabel(total)} · ${property.name}`
             : "Κέντρο κρατήσεων"
         }
-        actions={
-          <Button asChild size="sm">
-            <Link href="/dashboard/bookings/new">
-              <Plus className="h-4 w-4" />
-              Νέα κράτηση
-            </Link>
-          </Button>
-        }
+        actions={<BookingCreateMenu />}
       />
+
+      {tenantId ? <ReservationImportDraftList tenantId={tenantId} /> : null}
 
       <Surface variant="panel" padding="sm" className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
@@ -461,7 +456,7 @@ function BookingsPageContent() {
         <EmptyState
           title="Δεν βρέθηκαν κρατήσεις"
           description="Προσαρμόστε τα φίλτρα ή δημιουργήστε χειροκίνητη κράτηση."
-          action={{ label: "Νέα κράτηση", href: "/dashboard/bookings/new" }}
+          actions={<BookingCreateMenu align="center" />}
         />
       ) : (
         <Surface variant="panel" padding="none" className={loading && initialized ? "opacity-60" : ""}>

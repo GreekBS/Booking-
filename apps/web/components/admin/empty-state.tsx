@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ interface EmptyStateProps {
   title: string;
   description: string;
   action?: { label: string; onClick?: () => void; href?: string };
+  /** Optional custom action area (e.g. shared create menu). Takes precedence over `action`. */
+  actions?: ReactNode;
   className?: string;
   compact?: boolean;
 }
@@ -15,6 +18,7 @@ export function EmptyState({
   title,
   description,
   action,
+  actions,
   className,
   compact = false,
 }: EmptyStateProps) {
@@ -31,7 +35,9 @@ export function EmptyState({
       </div>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <p className="mt-1 max-w-sm text-xs text-muted-foreground sm:text-sm">{description}</p>
-      {action ? (
+      {actions ? (
+        <div className="mt-4">{actions}</div>
+      ) : action ? (
         <Button
           size="sm"
           className="mt-4"
