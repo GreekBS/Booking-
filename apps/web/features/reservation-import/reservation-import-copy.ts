@@ -1,7 +1,10 @@
-/** Operator-facing Greek copy for CSV reservation-import (B3.1). */
+/** Operator-facing Greek copy for CSV reservation-import (B3.1 / B3.2). */
 
 export const RESERVATION_IMPORT_DRAFT_TTL_MESSAGE =
   "Το πρόχειρο θα διατηρηθεί για 3 ημέρες.";
+
+export const RESERVATION_IMPORT_DRAFT_TTL_AFTER_CREATE =
+  "Το πρόχειρο θα διατηρηθεί για 3 ημέρες μετά τη δημιουργία του.";
 
 export const RESERVATION_IMPORT_DISCARD_TITLE = "Απόρριψη πρόχειρης εισαγωγής";
 
@@ -25,3 +28,18 @@ export const RESERVATION_IMPORT_DISCARD_ERROR =
 
 export const RESERVATION_IMPORT_DISCARD_SUCCESS =
   "Η πρόχειρη εισαγωγή απορρίφθηκε.";
+
+export const RESERVATION_IMPORT_CREATE_SUCCESS =
+  "Η πρόχειρη εισαγωγή δημιουργήθηκε.";
+
+export const RESERVATION_IMPORT_CREATE_ERROR =
+  "Αποτυχία δημιουργίας πρόχειρης εισαγωγής.";
+
+export const RESERVATION_IMPORT_UNSUPPORTED_FILE =
+  "Επιτρέπονται μόνο αρχεία CSV.";
+
+export const RESERVATION_IMPORT_FILE_TOO_LARGE =
+  "Το αρχείο υπερβαίνει το όριο των 2 MB.";
+
+export const RESERVATION_IMPORT_UNPERSISTED_WARNING =
+  "Ορισμένες γραμμές δεν αποθηκεύτηκαν στο πρόχειρο (π.χ. άγνωστη μονάδα). Ελέγξτε τις πριν συνεχίσετε.";

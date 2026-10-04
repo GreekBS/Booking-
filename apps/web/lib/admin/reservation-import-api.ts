@@ -1,3 +1,9 @@
+import type {
+  CsvImportCanonicalField,
+  CsvImportDateFormat,
+  CsvImportDelimiter,
+  CsvImportIssue,
+} from "@hcp/domain";
 import { AdminApiError, adminFetch } from "@/lib/admin/api";
 
 /** Batch DTO from B2 reservation-import serializers. */
@@ -102,4 +108,49 @@ export async function discardReservationImportDraft(
     { method: "POST", tenantId, body: "{}" },
   );
   return payload.batch;
+}
+
+export interface ReservationImportUnpersistedRow {
+  rowNumber: number;
+  errors: CsvImportIssue[];
+  warnings: CsvImportIssue[];
+}
+
+export interface CreateReservationImportDraftResponse {
+  batch: ReservationImportBatchDto;
+  rows: ReservationImportRowDto[];
+  unpersisted: ReservationImportUnpersistedRow[];
+  parseIssues: CsvImportIssue[];
+}
+
+export interface CreateReservationImportDraftInput {
+  file: File;
+  columnMapping?: Record<string, CsvImportCanonicalField | null>;
+  dateFormat?: CsvImportDateFormat;
+  delimiter?: CsvImportDelimiter;
+}
+
+/**
+ * Multipart create — body is FormData; adminFetch must not force JSON Content-Type.
+ */
+export async function createReservationImportDraft(
+  tenantId: string,
+  input: CreateReservationImportDraftInput,
+): Promise<CreateReservationImportDraftResponse> {
+  const form = new FormData();
+  form.append("file", input.file, input.file.name || "import.csv");
+  if (input.delimiter !== undefined) {
+    form.append("delimiter", input.delimiter);
+  }
+  if (input.dateFormat !== undefined) {
+    form.append("dateFormat", input.dateFormat);
+  }
+  if (input.columnMapping !== undefined) {
+    form.append("columnMapping", JSON.stringify(input.columnMapping));
+  }
+  return adminFetch<CreateReservationImportDraftResponse>("/reservation-imports", {
+    method: "POST",
+    tenantId,
+    body: form,
+  });
 }

@@ -19,7 +19,12 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
   const { tenantId, ...init } = options;
   const headers = new Headers(init.headers);
 
-  if (init.body && !headers.has("Content-Type")) {
+  // FormData must keep browser-generated multipart boundary — never force JSON.
+  if (
+    init.body &&
+    !(init.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
   if (tenantId) {

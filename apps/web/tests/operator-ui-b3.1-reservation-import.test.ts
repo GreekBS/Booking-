@@ -51,9 +51,9 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
 
     const landing = read("features/reservation-import/ReservationImportLandingPage.tsx");
     expect(landing).toContain("Εισαγωγή κρατήσεων από CSV");
-    expect(landing).toContain("Μεταφόρτωση CSV — σύντομα");
-    expect(landing).not.toContain("type=\"file\"");
-    expect(landing).not.toContain("FormData");
+    // B3.2 replaced the B3.1 “coming soon” shell with the upload workflow.
+    expect(landing).toContain("ReservationImportUpload");
+    expect(landing).toContain("Δημιουργία πρόχειρης εισαγωγής");
 
     const draft = read("features/reservation-import/ReservationImportDraftPage.tsx");
     expect(draft).toContain("RESERVATION_IMPORT_DRAFT_TTL_MESSAGE");
@@ -81,7 +81,7 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     expect(list).not.toContain("unresolved");
   });
 
-  it("API client covers list/get/discard only for B3.1", () => {
+  it("API client covers list/get/discard and does not invent recheck/update", () => {
     const api = read("lib/admin/reservation-import-api.ts");
     expect(api).toContain("listReservationImportDrafts");
     expect(api).toContain("getReservationImportDraft");
@@ -90,7 +90,6 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     expect(api).toContain("/discard");
     expect(api).not.toContain("recheckReservationImport");
     expect(api).not.toContain("/recheck");
-    expect(api).not.toContain("columnMapping");
     expect(api).not.toContain("function updateReservationImport");
   });
 
