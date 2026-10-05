@@ -16,6 +16,8 @@ import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { elCommon } from "@/lib/i18n";
 import {
+  RESERVATION_IMPORT_DECISION_ERROR,
+  RESERVATION_IMPORT_DECISION_SUCCESS,
   RESERVATION_IMPORT_DISCARD_DESCRIPTION,
   RESERVATION_IMPORT_DISCARD_ERROR,
   RESERVATION_IMPORT_DISCARD_SUCCESS,
@@ -28,8 +30,10 @@ import {
   RESERVATION_IMPORT_RECHECK_ERROR,
   RESERVATION_IMPORT_RECHECK_LABEL,
   RESERVATION_IMPORT_RECHECK_SUCCESS,
+  RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR,
   RESERVATION_IMPORT_REVIEW_TITLE,
 } from "./reservation-import-copy";
+import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
 import { ReservationImportRejectedRowCard } from "./ReservationImportRejectedRowCard";
 import { ReservationImportReviewRowCard } from "./ReservationImportReviewRowCard";
 import {
@@ -41,7 +45,7 @@ import {
 import { useReservationImportReview } from "./useReservationImportReview";
 
 /**
- * B3.3b review page — display, tabs, recheck refetch; conflict/price actions in B3.3c/d.
+ * B3.3 review page — display, tabs, conflict decisions (B3.3c); pricing in B3.3d.
  */
 export function ReservationImportDraftPage() {
   const params = useParams<{ batchId: string }>();
@@ -54,8 +58,13 @@ export function ReservationImportDraftPage() {
     refreshing,
     rechecking,
     discarding,
+    decidingRowId,
+    decisionBusy,
+    refetchFailed,
+    refetch,
     recheck,
     discard,
+    decideConflict,
     reload,
   } = useReservationImportReview(tenantId, batchId);
 
@@ -158,6 +167,25 @@ export function ReservationImportDraftPage() {
       toastError(RESERVATION_IMPORT_RECHECK_ERROR);
       setLiveMessage(RESERVATION_IMPORT_RECHECK_ERROR);
     }
+  }
+
+  async function handleDecideConflict(
+    rowId: string,
+    resolution: Exclude<ReservationImportConflictResolutionDto, "undecided">,
+  ) {
+    const result = await decideConflict(rowId, resolution);
+    if (result.ok) {
+      toastSuccess(RESERVATION_IMPORT_DECISION_SUCCESS);
+      setLiveMessage(RESERVATION_IMPORT_DECISION_SUCCESS);
+      return;
+    }
+    if (result.phase === "refetch") {
+      toastError(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      return;
+    }
+    toastError(RESERVATION_IMPORT_DECISION_ERROR);
+    setLiveMessage(RESERVATION_IMPORT_DECISION_ERROR);
   }
 
   return (
@@ -289,6 +317,9 @@ export function ReservationImportDraftPage() {
                     allRows={rows}
                     conflictBookings={conflictBookings ?? []}
                     unitLabel={unitLabel}
+                    decidingRowId={decidingRowId}
+                    decisionBusy={decisionBusy}
+                    onDecideConflict={handleDecideConflict}
                   />
                 ))
               )}
@@ -296,6 +327,22 @@ export function ReservationImportDraftPage() {
           );
         })}
       </Tabs>
+
+      {refetchFailed ? (
+        <Surface variant="attention" padding="sm" className="space-y-2">
+          <p className="text-sm text-foreground" role="alert">
+            {RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={refreshing}
+            onClick={() => void refetch()}
+          >
+            Ανανέωση από τον διακομιστή
+          </Button>
+        </Surface>
+      ) : null}
 
       {refreshing ? (
         <p className="text-xs text-muted-foreground" role="status">

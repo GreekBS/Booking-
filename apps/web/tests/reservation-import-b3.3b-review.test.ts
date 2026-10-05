@@ -222,9 +222,11 @@ describe("B3.3b — review utils & wiring", () => {
 
   it("hard blocker Greek labels", () => {
     expect(nonBookingBlockerLabel("maintenance")).toBe("Συντήρηση");
-    const card = read("features/reservation-import/ReservationImportReviewRowCard.tsx");
-    expect(card).toContain("Μη-κρατησιακό μπλοκ");
-    expect(card).not.toContain("keep_existing");
+    const panel = read(
+      "features/reservation-import/ReservationImportConflictDecisionPanel.tsx",
+    );
+    expect(panel).toContain("Μη-κρατησιακό μπλοκ");
+    expect(panel).toContain("rowAllowsConflictDecision");
   });
 
   it("rejected tab UI is read-only", () => {

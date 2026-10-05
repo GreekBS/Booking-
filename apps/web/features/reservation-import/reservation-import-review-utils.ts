@@ -197,3 +197,66 @@ export function peerRowsForRow(
     .map((id) => byId.get(id))
     .filter((r): r is ReservationImportRowDto => !!r);
 }
+
+/** Durable / terminal statuses that must not re-enter conflict decision UX. */
+const NON_DECISION_STATUSES = new Set([
+  "imported",
+  "replaced",
+  "skipped_already_imported",
+  "discarded",
+]);
+
+export function conflictResolutionLabel(resolution: string): string {
+  switch (resolution) {
+    case "keep_existing":
+      return "Διατήρηση υπάρχουσας";
+    case "keep_csv":
+      return "Διατήρηση CSV";
+    case "undecided":
+      return "Δεν έχει επιλεγεί";
+    default:
+      return resolution;
+  }
+}
+
+export function rowHasHardBlockers(row: ReservationImportRowDto): boolean {
+  return parseConflictSnapshot(row.conflictSnapshot).nonBookingBlockers.length > 0;
+}
+
+export function rowHasExistingBookingConflicts(row: ReservationImportRowDto): boolean {
+  const snap = parseConflictSnapshot(row.conflictSnapshot);
+  if (snap.existingBookingIds.length > 0) return true;
+  return snap.overlaps.some((o) => o.otherKind === "existing_booking");
+}
+
+export function rowHasPeerConflicts(row: ReservationImportRowDto): boolean {
+  return parseConflictSnapshot(row.conflictSnapshot).peerImportRowIds.length > 0;
+}
+
+/**
+ * Whether B3.3c may show keep_existing / keep_csv controls for this row.
+ * Hard blockers and durable imported identities never get decision buttons.
+ */
+export function rowAllowsConflictDecision(row: ReservationImportRowDto): boolean {
+  if (NON_DECISION_STATUSES.has(row.status)) return false;
+  if (row.errorCode === "ALREADY_IMPORTED" && !rowHasExistingBookingConflicts(row)) {
+    return false;
+  }
+  if (rowHasHardBlockers(row)) return false;
+  return rowHasExistingBookingConflicts(row) || rowHasPeerConflicts(row);
+}
+
+/** Peer row ids that share a conflict with this row (for disabling during PATCH). */
+export function relatedConflictRowIds(
+  row: ReservationImportRowDto,
+  allRows: ReservationImportRowDto[],
+): string[] {
+  const snap = parseConflictSnapshot(row.conflictSnapshot);
+  const related = new Set<string>([row.id, ...snap.peerImportRowIds]);
+  for (const other of allRows) {
+    if (other.id === row.id) continue;
+    const otherSnap = parseConflictSnapshot(other.conflictSnapshot);
+    if (otherSnap.peerImportRowIds.includes(row.id)) related.add(other.id);
+  }
+  return [...related];
+}

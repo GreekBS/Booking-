@@ -59,3 +59,40 @@ export const RESERVATION_IMPORT_PHASE_C_PLACEHOLDER =
   "Η ολοκλήρωση εισαγωγής θα είναι διαθέσιμη στην επόμενη φάση (Phase C).";
 
 export const RESERVATION_IMPORT_REVIEW_TITLE = "Ανασκόπηση πρόχειρης εισαγωγής";
+
+/** B3.3c conflict decision copy */
+export const RESERVATION_IMPORT_CONFLICT_PROMPT =
+  "Υπάρχει σύγκρουση στις ημερομηνίες. Ποια κράτηση θέλετε να διατηρήσετε;";
+
+export const RESERVATION_IMPORT_KEEP_EXISTING_LABEL = "Διατήρηση υπάρχουσας";
+
+export const RESERVATION_IMPORT_KEEP_CSV_LABEL = "Διατήρηση CSV";
+
+export const RESERVATION_IMPORT_DECISION_UNDECIDED = "Δεν έχει επιλεγεί";
+
+export const RESERVATION_IMPORT_KEEP_CSV_CONFIRM_TITLE =
+  "Διατήρηση της κράτησης CSV;";
+
+export const RESERVATION_IMPORT_KEEP_CSV_CONFIRM_ONE =
+  "Η κράτηση CSV θα επιλεγεί για εισαγωγή αντί της υπάρχουσας κράτησης που επικαλύπτεται στις ίδιες ημερομηνίες. Η υπάρχουσα κράτηση δεν θα αλλάξει ακόμη. Η τελική αντικατάσταση θα γίνει μόνο κατά την ολοκλήρωση της εισαγωγής.";
+
+export const RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY = (count: number) =>
+  `Η κράτηση CSV θα επιλεγεί για εισαγωγή αντί των ${count} υπαρχουσών κρατήσεων που επικαλύπτονται στις ίδιες ημερομηνίες. Οι υπάρχουσες κρατήσεις δεν θα αλλάξουν ακόμη. Η τελική αντικατάσταση θα γίνει μόνο κατά την ολοκλήρωση της εισαγωγής.`;
+
+export const RESERVATION_IMPORT_KEEP_CSV_CONFIRM_PEERS =
+  "Η κράτηση CSV αυτής της γραμμής θα επιλεγεί έναντι άλλων επικαλυπτόμενων γραμμών CSV. Η τελική εισαγωγή θα γίνει μόνο κατά την ολοκλήρωση της εισαγωγής.";
+
+export const RESERVATION_IMPORT_DECISION_SUCCESS =
+  "Η απόφαση σύγκρουσης αποθηκεύτηκε.";
+
+export const RESERVATION_IMPORT_DECISION_ERROR =
+  "Αποτυχία αποθήκευσης απόφασης σύγκρουσης.";
+
+export const RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR =
+  "Η απόφαση μπορεί να αποθηκεύτηκε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
+
+export const RESERVATION_IMPORT_HARD_BLOCKER_NO_DECISION =
+  "Αυτή η κράτηση δεν μπορεί να προχωρήσει μέχρι να επιλυθεί το μπλοκ ημερολογίου εκτός αυτής της εισαγωγής.";
+
+export const RESERVATION_IMPORT_KEEP_CSV_NOT_YET_REPLACED =
+  "Η υπάρχουσα κράτηση δεν διαγράφεται τώρα. Η αντικατάσταση γίνεται μόνο στην ολοκλήρωση εισαγωγής.";

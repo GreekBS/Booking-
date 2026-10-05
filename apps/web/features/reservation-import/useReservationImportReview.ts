@@ -7,6 +7,8 @@ import {
   isReservationImportExpiredError,
   isReservationImportNotFoundError,
   recheckReservationImportDraft,
+  updateReservationImportRowDecision,
+  type ReservationImportConflictResolutionDto,
   type ReservationImportDraftDetail,
 } from "@/lib/admin/reservation-import-api";
 import {
@@ -23,6 +25,10 @@ export type ReviewLoadState =
   | { kind: "not_found" }
   | { kind: "error"; message: string };
 
+export type ConflictDecisionResult =
+  | { ok: true }
+  | { ok: false; phase: "patch" | "refetch" };
+
 export function useReservationImportReview(tenantId: string | null, batchId: string) {
   const [state, setState] = useState<ReviewLoadState>({ kind: "loading" });
   const [unitNameById, setUnitNameById] = useState<Map<string, string>>(new Map());
@@ -30,6 +36,8 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
   const [refreshing, setRefreshing] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  const [decidingRowId, setDecidingRowId] = useState<string | null>(null);
+  const [refetchFailed, setRefetchFailed] = useState(false);
 
   const loadCatalog = useCallback(async (tid: string) => {
     try {
@@ -46,22 +54,28 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     }
   }, []);
 
-  const refetch = useCallback(async () => {
-    if (!tenantId || !batchId) return;
+  const refetch = useCallback(async (): Promise<boolean> => {
+    if (!tenantId || !batchId) return false;
     setRefreshing(true);
     try {
       const detail = await getReservationImportDraft(tenantId, batchId);
       setState({ kind: "ready", detail });
+      setRefetchFailed(false);
+      return true;
     } catch (error) {
       if (isReservationImportExpiredError(error)) {
         setState({ kind: "expired" });
-        return;
+        setRefetchFailed(false);
+        return false;
       }
       if (isReservationImportNotFoundError(error)) {
         setState({ kind: "not_found" });
-        return;
+        setRefetchFailed(false);
+        return false;
       }
-      setState({ kind: "error", message: RESERVATION_IMPORT_LOAD_DRAFT_ERROR });
+      // Keep previous ready detail if present; do not invent success.
+      setRefetchFailed(true);
+      return false;
     } finally {
       setRefreshing(false);
     }
@@ -70,6 +84,7 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
   const load = useCallback(async () => {
     if (!tenantId || !batchId) return;
     setState({ kind: "loading" });
+    setRefetchFailed(false);
     try {
       const detail = await getReservationImportDraft(tenantId, batchId);
       setState({ kind: "ready", detail });
@@ -96,8 +111,7 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     setRechecking(true);
     try {
       await recheckReservationImportDraft(tenantId, batchId);
-      await refetch();
-      return true;
+      return await refetch();
     } catch {
       return false;
     } finally {
@@ -119,9 +133,35 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     }
   }, [tenantId, batchId]);
 
+  const decideConflict = useCallback(
+    async (
+      rowId: string,
+      conflictResolution: Exclude<ReservationImportConflictResolutionDto, "undecided">,
+    ): Promise<ConflictDecisionResult> => {
+      if (!tenantId || !batchId) return { ok: false, phase: "patch" };
+      setDecidingRowId(rowId);
+      try {
+        await updateReservationImportRowDecision(tenantId, batchId, rowId, {
+          conflictResolution,
+        });
+      } catch {
+        setDecidingRowId(null);
+        return { ok: false, phase: "patch" };
+      }
+
+      try {
+        const ok = await refetch();
+        if (!ok) return { ok: false, phase: "refetch" };
+        return { ok: true };
+      } finally {
+        setDecidingRowId(null);
+      }
+    },
+    [tenantId, batchId, refetch],
+  );
+
   function unitLabel(unitId: string): string {
     if (unitNameById.has(unitId)) return unitNameById.get(unitId)!;
-    if (catalogError) return `Μονάδα ${unitId.slice(0, 8)}…`;
     return `Μονάδα ${unitId.slice(0, 8)}…`;
   }
 
@@ -132,9 +172,13 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     refreshing,
     rechecking,
     discarding,
+    decidingRowId,
+    decisionBusy: decidingRowId !== null || refreshing,
+    refetchFailed,
     refetch,
     recheck,
     discard,
+    decideConflict,
     reload: load,
   };
 }

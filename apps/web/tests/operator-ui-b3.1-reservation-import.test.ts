@@ -64,8 +64,7 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     expect(draft).toContain('router.push("/dashboard/bookings")');
     expect(draft).not.toContain("localStorage");
     expect(draft).not.toContain("sessionStorage");
-    expect(draft).not.toContain("keep_existing");
-    expect(draft).not.toContain("keep_csv");
+    expect(draft).toContain("decideConflict");
     expect(draft).not.toContain("Ολοκλήρωση εισαγωγής");
   });
 
