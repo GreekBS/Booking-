@@ -464,7 +464,7 @@ function validateGuest(guest: GuestDetailsProps): void {
   if (!guest.name.trim()) {
     throw new ValidationError("Guest name is required");
   }
-  if (!guest.email.trim()) {
-    throw new ValidationError("Guest email is required");
+  if (guest.email != null && !guest.email.trim()) {
+    throw new ValidationError("Guest email cannot be blank");
   }
 }

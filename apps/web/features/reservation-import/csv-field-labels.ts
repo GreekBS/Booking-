@@ -2,6 +2,7 @@ import type { CsvImportCanonicalField } from "@hcp/domain";
 import {
   CSV_IMPORT_OPTIONAL_FIELDS,
   CSV_IMPORT_REQUIRED_FIELDS,
+  csvImportRequiredFieldsForProperty,
 } from "@hcp/domain";
 
 export const CSV_FIELD_LABELS_EL: Record<CsvImportCanonicalField, string> = {
@@ -23,8 +24,15 @@ export function csvFieldLabelEl(field: CsvImportCanonicalField): string {
   return CSV_FIELD_LABELS_EL[field] ?? field;
 }
 
-export function isRequiredCsvField(field: CsvImportCanonicalField): boolean {
-  return (CSV_IMPORT_REQUIRED_FIELDS as readonly string[]).includes(field);
+export function isRequiredCsvField(
+  field: CsvImportCanonicalField,
+  bookableUnitCount?: number,
+): boolean {
+  const required =
+    bookableUnitCount == null
+      ? CSV_IMPORT_REQUIRED_FIELDS
+      : csvImportRequiredFieldsForProperty(bookableUnitCount);
+  return (required as readonly string[]).includes(field);
 }
 
 export const ALL_CSV_CANONICAL_FIELDS: readonly CsvImportCanonicalField[] = [

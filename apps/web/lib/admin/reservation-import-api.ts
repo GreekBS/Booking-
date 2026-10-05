@@ -10,6 +10,7 @@ import { AdminApiError, adminFetch } from "@/lib/admin/api";
 export interface ReservationImportBatchDto {
   id: string;
   tenantId: string;
+  propertyId: string;
   actorId: string;
   sourceNamespace: string;
   filename: string;
@@ -36,7 +37,7 @@ export interface ReservationImportRowDto {
   checkOut: string;
   temporalClass: string;
   guestName: string;
-  guestEmail: string;
+  guestEmail: string | null;
   guestPhone: string | null;
   guestCount: number;
   priceSource: string;
@@ -117,9 +118,10 @@ export function isReservationImportNotFoundError(error: unknown): boolean {
 
 export async function listReservationImportDrafts(
   tenantId: string,
+  propertyId: string,
 ): Promise<ReservationImportBatchDto[]> {
   const payload = await adminFetch<{ data: ReservationImportBatchDto[] }>(
-    "/reservation-imports",
+    `/reservation-imports?propertyId=${encodeURIComponent(propertyId)}`,
     { tenantId },
   );
   return payload.data ?? [];
@@ -252,6 +254,7 @@ export interface CreateReservationImportDraftResponse {
 
 export interface CreateReservationImportDraftInput {
   file: File;
+  propertyId: string;
   columnMapping?: Record<string, CsvImportCanonicalField | null>;
   dateFormat?: CsvImportDateFormat;
   delimiter?: CsvImportDelimiter;
@@ -266,6 +269,7 @@ export async function createReservationImportDraft(
 ): Promise<CreateReservationImportDraftResponse> {
   const form = new FormData();
   form.append("file", input.file, input.file.name || "import.csv");
+  form.append("propertyId", input.propertyId);
   if (input.delimiter !== undefined) {
     form.append("delimiter", input.delimiter);
   }

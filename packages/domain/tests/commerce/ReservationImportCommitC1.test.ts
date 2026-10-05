@@ -34,6 +34,7 @@ function makeBatch(
   return {
     id: overrides.id ?? randomUUID(),
     tenantId: overrides.tenantId ?? "tenant-a",
+    propertyId: overrides.propertyId ?? "prop-a",
     actorId: "actor-a",
     sourceNamespace: "csv_reservation_import",
     filename: "t.csv",

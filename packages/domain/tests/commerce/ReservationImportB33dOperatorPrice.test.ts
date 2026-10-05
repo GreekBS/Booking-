@@ -29,6 +29,7 @@ function makeBatch(
   return {
     id: overrides.id ?? randomUUID(),
     tenantId: overrides.tenantId ?? "tenant-a",
+    propertyId: overrides.propertyId ?? "prop-a",
     actorId: overrides.actorId ?? "actor-a",
     sourceNamespace: "csv_reservation_import",
     filename: overrides.filename ?? "t.csv",
@@ -102,6 +103,7 @@ class MemoryImports implements IReservationImportRepository {
     const batch = makeBatch({
       id: input.id,
       tenantId: input.tenantId,
+      propertyId: input.propertyId,
       actorId: input.actorId,
       filename: input.filename,
       createdAt: now,
@@ -215,6 +217,7 @@ describe("B3.3d operator-entered import price validation", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: "tenant-a",
+      propertyId: "prop-a",
       actorId: "actor-a",
       filename: "p.csv",
     });
@@ -256,6 +259,7 @@ describe("B3.3d operator-entered import price validation", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: "tenant-a",
+      propertyId: "prop-a",
       actorId: "actor-a",
       filename: "p.csv",
     });

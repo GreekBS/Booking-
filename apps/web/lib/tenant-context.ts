@@ -310,7 +310,7 @@ export function serializeBooking(booking: {
   quoteSnapshotId: string;
   stayPeriod: { checkIn: { value: string }; checkOut: { value: string } };
   guestCount: { value: number };
-  guest: { name: string; email: string; phone: string | null };
+  guest: { name: string; email: string | null; phone: string | null };
   guestId?: string | null;
   status: string;
   confirmationMode: string;

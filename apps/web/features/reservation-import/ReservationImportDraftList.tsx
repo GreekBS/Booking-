@@ -26,10 +26,12 @@ import {
 
 interface ReservationImportDraftListProps {
   tenantId: string;
+  propertyId: string;
 }
 
 export function ReservationImportDraftList({
   tenantId,
+  propertyId,
 }: ReservationImportDraftListProps) {
   const [drafts, setDrafts] = useState<ReservationImportBatchDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function ReservationImportDraftList({
     setLoading(true);
     setError(null);
     try {
-      const data = await listReservationImportDrafts(tenantId);
+      const data = await listReservationImportDrafts(tenantId, propertyId);
       setDrafts(data);
     } catch {
       setDrafts(null);
@@ -51,7 +53,7 @@ export function ReservationImportDraftList({
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, propertyId]);
 
   useEffect(() => {
     void load();

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CSV_IMPORT_MAX_BYTES,
   CSV_IMPORT_MAX_DATA_ROWS,
-  CSV_IMPORT_REQUIRED_FIELDS,
+  csvImportRequiredFieldsForProperty,
   inspectCsvImport,
   parseAndValidateCsvImport,
   type CsvImportCanonicalField,
@@ -71,7 +71,11 @@ function needsDateFormat(result: CsvImportParseResult | null): boolean {
   );
 }
 
-export function useReservationImportWizard(tenantId: string | null) {
+export function useReservationImportWizard(
+  tenantId: string | null,
+  propertyId: string | null,
+  bookableUnitCount: number,
+) {
   const [file, setFile] = useState<File | null>(null);
   const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
   const [inspectIssues, setInspectIssues] = useState<CsvImportIssue[]>([]);
@@ -97,6 +101,11 @@ export function useReservationImportWizard(tenantId: string | null) {
   const [lastCreateResult, setLastCreateResult] =
     useState<CreateReservationImportDraftResponse | null>(null);
 
+  const effectiveRequiredFields = useMemo(
+    () => csvImportRequiredFieldsForProperty(bookableUnitCount),
+    [bookableUnitCount],
+  );
+
   const resetFileState = useCallback(() => {
     setFile(null);
     setFileBytes(null);
@@ -114,6 +123,11 @@ export function useReservationImportWizard(tenantId: string | null) {
     setLastCreateResult(null);
   }, []);
 
+  // Active property switch — never retain unit/mapping state from previous property.
+  useEffect(() => {
+    resetFileState();
+  }, [propertyId, resetFileState]);
+
   const recompute = useCallback(
     (input: {
       bytes: Uint8Array;
@@ -126,6 +140,7 @@ export function useReservationImportWizard(tenantId: string | null) {
       const inspect = inspectCsvImport(input.bytes, {
         delimiter: delim,
         columnMapping: input.mapping,
+        bookableUnitCount,
       });
       setInspectIssues(inspect.issues);
       setHeaderMapping(inspect.headerMapping);
@@ -136,11 +151,12 @@ export function useReservationImportWizard(tenantId: string | null) {
         delimiter: delim,
         dateFormat: input.dateFormat === "" ? undefined : input.dateFormat,
         columnMapping: input.mapping,
+        bookableUnitCount,
       });
       setParseResult(parsed);
       return { inspect, parsed };
     },
-    [],
+    [bookableUnitCount],
   );
 
   const selectFile = useCallback(
@@ -162,7 +178,7 @@ export function useReservationImportWizard(tenantId: string | null) {
         setFile(next);
         setFileBytes(buffer);
 
-        const inspect = inspectCsvImport(buffer);
+        const inspect = inspectCsvImport(buffer, { bookableUnitCount });
         setInspectIssues(inspect.issues);
         setHeaderMapping(inspect.headerMapping);
         setAutoMappedSnapshot(inspect.headerMapping?.autoMapped ?? {});
@@ -176,6 +192,7 @@ export function useReservationImportWizard(tenantId: string | null) {
         const parsed = parseAndValidateCsvImport({
           content: buffer,
           columnMapping: mapping,
+          bookableUnitCount,
         });
         setParseResult(parsed);
         setLocalError(null);
@@ -183,7 +200,7 @@ export function useReservationImportWizard(tenantId: string | null) {
         setLocalError("Αποτυχία ανάγνωσης αρχείου CSV.");
       }
     },
-    [resetFileState],
+    [resetFileState, bookableUnitCount],
   );
 
   const updateColumnMapping = useCallback(
@@ -231,6 +248,7 @@ export function useReservationImportWizard(tenantId: string | null) {
       // Remap from fresh auto when delimiter changes headers order/identity
       const inspect = inspectCsvImport(fileBytes, {
         delimiter: value === "" ? undefined : value,
+        bookableUnitCount,
       });
       const mapping = inspect.headerMapping
         ? mappingFromHeaders(inspect.headerMapping)
@@ -249,9 +267,9 @@ export function useReservationImportWizard(tenantId: string | null) {
   );
 
   const missingRequiredFields = useMemo(() => {
-    if (!headerMapping) return [...CSV_IMPORT_REQUIRED_FIELDS];
+    if (!headerMapping) return [...effectiveRequiredFields];
     return headerMapping.missingRequiredFields;
-  }, [headerMapping]);
+  }, [headerMapping, effectiveRequiredFields]);
 
   const dateFormatRequired = needsDateFormat(parseResult);
 
@@ -300,7 +318,7 @@ export function useReservationImportWizard(tenantId: string | null) {
     warning: string | null;
     error: string | null;
   }> => {
-    if (!tenantId || !file || !canCreate || creating) {
+    if (!tenantId || !propertyId || !file || !canCreate || creating) {
       return { batchId: null, warning: null, error: null };
     }
     setCreating(true);
@@ -309,6 +327,7 @@ export function useReservationImportWizard(tenantId: string | null) {
     try {
       const result = await createReservationImportDraft(tenantId, {
         file,
+        propertyId,
         columnMapping,
         dateFormat: dateFormat === "" ? undefined : dateFormat,
         delimiter:
@@ -335,6 +354,7 @@ export function useReservationImportWizard(tenantId: string | null) {
     }
   }, [
     tenantId,
+    propertyId,
     file,
     canCreate,
     creating,

@@ -289,7 +289,7 @@ describe("CSV import B1 — unit resolver contract", () => {
       { id: "u3", propertyId: "p1", name: "Dup", slug: "dup-a" },
       { id: "u4", propertyId: "p1", name: "Dup", slug: "dup-b" },
     ]);
-    const map = await resolveCsvImportUnitRefs(resolver, "t1", [
+    const map = await resolveCsvImportUnitRefs(resolver, "t1", "p1", [
       "Sea View",
       "missing",
       "Dup",

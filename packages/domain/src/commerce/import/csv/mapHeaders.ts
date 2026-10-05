@@ -29,6 +29,7 @@ function issue(
 export function mapCsvImportHeaders(
   headers: string[],
   columnMapping?: Record<string, CsvImportCanonicalField | null>,
+  requiredFields: readonly CsvImportCanonicalField[] = CSV_IMPORT_REQUIRED_FIELDS,
 ): CsvImportHeaderMappingResult {
   const issues: CsvImportIssue[] = [];
   const normalizedHeaders = headers.map(normalizeCsvHeader);
@@ -114,7 +115,7 @@ export function mapCsvImportHeaders(
   const mappedFields = new Set(
     Object.values(mapping).filter((v): v is CsvImportCanonicalField => v != null),
   );
-  const missingRequiredFields = CSV_IMPORT_REQUIRED_FIELDS.filter(
+  const missingRequiredFields = requiredFields.filter(
     (f) => !mappedFields.has(f),
   );
   for (const field of missingRequiredFields) {

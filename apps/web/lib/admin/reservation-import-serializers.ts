@@ -20,6 +20,7 @@ export function serializeReservationImportBatch(batch: ReservationImportBatchRec
   return {
     id: batch.id,
     tenantId: batch.tenantId,
+    propertyId: batch.propertyId,
     actorId: batch.actorId,
     sourceNamespace: batch.sourceNamespace,
     filename: batch.filename,

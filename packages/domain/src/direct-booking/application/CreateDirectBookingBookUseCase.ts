@@ -219,6 +219,7 @@ export class CreateDirectBookingBookUseCase {
 
     const expectedName = `${command.guest.firstName} ${command.guest.lastName}`.trim();
     if (
+      booking.guest.email == null ||
       booking.guest.email.toLowerCase() !== command.guest.email.trim().toLowerCase() ||
       booking.guest.name.trim() !== expectedName
     ) {
@@ -250,6 +251,6 @@ function mapBookDto(booking: Booking, quote: Quote): DirectBookingBookDto {
     guestCount: booking.guestCount.value,
     currency: quote.snapshot.currency,
     total: quote.snapshot.totalAmount,
-    guestEmail: booking.guest.email,
+    guestEmail: booking.guest.email ?? "",
   };
 }

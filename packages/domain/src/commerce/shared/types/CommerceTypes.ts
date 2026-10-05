@@ -109,7 +109,8 @@ export interface RatePlanProps {
 
 export interface GuestDetailsProps {
   name: string;
-  email: string;
+  /** Stay contact email — optional (CSV imports may omit). Never synthesize. */
+  email: string | null;
   phone: string | null;
 }
 

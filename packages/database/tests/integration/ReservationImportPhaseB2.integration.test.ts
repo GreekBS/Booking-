@@ -178,6 +178,7 @@ runIntegration("Reservation import Phase B2", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "persist.csv",
       now: new Date("2026-10-04T08:00:00.000Z"),
@@ -283,6 +284,7 @@ runIntegration("Reservation import Phase B2", () => {
     const result = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "temporal.csv",
         content: csv,
         dateFormat: "iso",
@@ -304,6 +306,7 @@ runIntegration("Reservation import Phase B2", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "ttl.csv",
       now: createdAt,
@@ -385,6 +388,7 @@ runIntegration("Reservation import Phase B2", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "price.csv",
         content: csv,
         dateFormat: "iso",
@@ -455,6 +459,7 @@ runIntegration("Reservation import Phase B2", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "multi-conflict.csv",
         content: csv,
         dateFormat: "iso",
@@ -500,6 +505,7 @@ runIntegration("Reservation import Phase B2", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "peers.csv",
         content: csv,
         dateFormat: "iso",
@@ -541,6 +547,7 @@ runIntegration("Reservation import Phase B2", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "owner.csv",
         content: csv,
         dateFormat: "iso",
@@ -562,6 +569,7 @@ runIntegration("Reservation import Phase B2", () => {
         data: {
           id: durableBatchId,
           tenantId: tenantA,
+          propertyId: propertyA,
           actorId: actorA,
           sourceNamespace: "csv_reservation_import",
           filename: "durable.csv",
@@ -605,6 +613,7 @@ runIntegration("Reservation import Phase B2", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "again.csv",
         content: csv,
         dateFormat: "iso",
@@ -633,6 +642,7 @@ runIntegration("Reservation import Phase B2", () => {
     const conflictDraft = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "rechk.csv",
         content: conflictCsv,
         dateFormat: "iso",
@@ -677,6 +687,7 @@ runIntegration("Reservation import Phase B2", () => {
     const expireBatch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "to-expire.csv",
       now: new Date("2026-10-01T00:00:00.000Z"),
@@ -714,6 +725,7 @@ runIntegration("Reservation import Phase B2", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "iso.csv",
     });

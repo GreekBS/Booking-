@@ -216,7 +216,7 @@ export interface BookingRecord {
   checkIn: string;
   checkOut: string;
   guestCount: number;
-  guest: { name: string; email: string; phone: string | null };
+  guest: { name: string; email: string | null; phone: string | null };
   /** CRM Guest identity link (nullable for legacy / recovery). */
   guestId?: string | null;
   /** Minimal linked Guest identity when authorized to read CRM Guest. */

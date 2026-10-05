@@ -16,23 +16,36 @@ export type CsvImportCanonicalField =
   | "channelSource"
   | "notes";
 
+/**
+ * Always-required CSV columns (header mapping + cell presence).
+ * `unitRef` is conditionally required for multi-unit properties (enforced in B2
+ * with active property scope). `guestEmail` is optional end-to-end.
+ */
 export const CSV_IMPORT_REQUIRED_FIELDS: readonly CsvImportCanonicalField[] = [
   "externalReference",
-  "unitRef",
   "guestName",
-  "guestEmail",
   "checkIn",
   "checkOut",
   "guestCount",
 ] as const;
 
 export const CSV_IMPORT_OPTIONAL_FIELDS: readonly CsvImportCanonicalField[] = [
+  "unitRef",
+  "guestEmail",
   "guestPhone",
   "totalAmount",
   "currency",
   "channelSource",
   "notes",
 ] as const;
+
+/** Effective required fields for mapping UX given bookable unit count on the active property. */
+export function csvImportRequiredFieldsForProperty(bookableUnitCount: number): readonly CsvImportCanonicalField[] {
+  if (bookableUnitCount >= 2) {
+    return [...CSV_IMPORT_REQUIRED_FIELDS, "unitRef"] as const;
+  }
+  return CSV_IMPORT_REQUIRED_FIELDS;
+}
 
 export type CsvImportIssueSeverity = "error" | "warning";
 
@@ -117,9 +130,19 @@ export interface CsvImportParseOptions {
   /**
    * Precomputed unit resolutions keyed by trimmed unitRef.
    * When omitted, unitId stays null and UNIT_UNRESOLVED is not emitted
-   * (resolution is a B2 concern); UNIT_REF_MISSING still applies.
+   * (resolution is a B2 concern).
    */
   unitResolutions?: ReadonlyMap<string, CsvImportUnitResolution>;
+  /**
+   * When the active property has exactly one bookable unit, apply this
+   * resolution to rows with empty unitRef.
+   */
+  defaultUnitResolution?: Extract<CsvImportUnitResolution, { status: "resolved" }> | null;
+  /**
+   * Bookable unit count on the active property. When >= 2 and unitResolutions
+   * are provided, empty unitRef fails closed.
+   */
+  bookableUnitCount?: number;
 }
 
 export type CsvImportUnitResolution =

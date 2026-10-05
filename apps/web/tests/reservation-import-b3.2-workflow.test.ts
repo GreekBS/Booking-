@@ -103,14 +103,28 @@ describe("B3.2 — source contracts & UI wiring", () => {
     expect(CSV_FIELD_LABELS_EL.unitRef).toContain("μονάδα");
   });
 
-  it("create API appends exact multipart fields", () => {
+  it("create API appends exact multipart fields including propertyId", () => {
     const api = read("lib/admin/reservation-import-api.ts");
     expect(api).toContain('form.append("file"');
+    expect(api).toContain('form.append("propertyId"');
     expect(api).toContain('form.append("delimiter"');
     expect(api).toContain('form.append("dateFormat"');
     expect(api).toContain('form.append("columnMapping"');
     expect(api).toContain("JSON.stringify(input.columnMapping)");
     expect(api).toContain("createReservationImportDraft");
+  });
+
+  it("C4: landing scopes to Active Property (no second selector); wizard resets on switch", () => {
+    const landing = read("features/reservation-import/ReservationImportLandingPage.tsx");
+    expect(landing).toContain("useActiveProperty");
+    expect(landing).toContain("Ενεργό κατάλυμα:");
+    expect(landing).toContain("bookableUnitCount");
+    expect(landing).not.toContain("<select");
+    expect(landing).not.toContain("propertySelector");
+    const wizard = read("features/reservation-import/useReservationImportWizard.ts");
+    expect(wizard).toContain("resetFileState");
+    expect(wizard).toContain("[propertyId, resetFileState]");
+    expect(wizard).toContain("csvImportRequiredFieldsForProperty");
   });
 
   it("adminFetch skips JSON Content-Type for FormData", () => {
@@ -447,7 +461,9 @@ describe("B3.2 — multipart adminFetch + create draft request", () => {
 describe("B3.2 — duplicate submit + rejectedRows warning wiring", () => {
   it("wizard disables create while pending and surfaces rejectedRows warning", () => {
     const wizard = read("features/reservation-import/useReservationImportWizard.ts");
-    expect(wizard).toContain("if (!tenantId || !file || !canCreate || creating)");
+    expect(wizard).toContain(
+      "if (!tenantId || !propertyId || !file || !canCreate || creating)",
+    );
     expect(wizard).toContain("setCreating(true)");
     expect(wizard).toContain("RESERVATION_IMPORT_UNPERSISTED_WARNING");
     expect(wizard).toContain("result.rejectedRows");

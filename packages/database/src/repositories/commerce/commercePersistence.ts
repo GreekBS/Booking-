@@ -86,7 +86,7 @@ export async function persistBookingTx(tx: TransactionClient, booking: Booking):
         holdId: booking.holdId,
         quoteSnapshotId: booking.quoteSnapshotId,
         guestName: booking.guest.name,
-        guestEmail: booking.guest.email,
+        guestEmail: booking.guest.email ?? null,
         guestPhone: booking.guest.phone,
         guestCount: booking.guestCount.value,
         guestId: booking.guestId,
@@ -113,7 +113,7 @@ export async function persistBookingTx(tx: TransactionClient, booking: Booking):
         currency: await resolveBookingCurrency(tx, booking),
         status: booking.status as BookingStatus,
         guestName: booking.guest.name,
-        guestEmail: booking.guest.email,
+        guestEmail: booking.guest.email ?? null,
         guestPhone: booking.guest.phone,
         // Preserve existing guestId unless booking carries a new link
         ...(booking.guestId != null ? { guestId: booking.guestId } : {}),

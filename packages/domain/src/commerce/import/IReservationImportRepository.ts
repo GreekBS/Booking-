@@ -61,6 +61,7 @@ export interface IReservationImportRepository {
   listResumableDrafts(
     tenantId: string,
     now?: Date,
+    propertyId?: string,
   ): Promise<ReservationImportBatchRecord[]>;
 
   updateBatch(

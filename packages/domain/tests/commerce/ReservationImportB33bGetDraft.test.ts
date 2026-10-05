@@ -14,6 +14,7 @@ function makeBatch(id: string): ReservationImportBatchRecord {
   return {
     id,
     tenantId: "tenant-a",
+    propertyId: "prop-1",
     actorId: "actor-1",
     sourceNamespace: "csv_reservation_import",
     filename: "t.csv",

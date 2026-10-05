@@ -125,7 +125,7 @@ export function bookingToDomain(record: PrismaBooking): Booking {
     guestCount: record.guestCount,
     guest: {
       name: record.guestName,
-      email: record.guestEmail,
+      email: record.guestEmail ?? null,
       phone: record.guestPhone,
     },
     guestId: record.guestId ?? null,

@@ -22,6 +22,11 @@ export interface ValidateCsvImportRowInput {
   dateFormat?: CsvImportDateFormat;
   propertyLocalToday?: string;
   unitResolution?: CsvImportUnitResolution | null;
+  /**
+   * When unitRef is empty, apply this single-unit auto-resolution
+   * (active property has exactly one bookable unit).
+   */
+  defaultUnitResolution?: Extract<CsvImportUnitResolution, { status: "resolved" }> | null;
   /** When true, emit UNIT_UNRESOLVED if resolution missing/failed. */
   requireUnitResolution?: boolean;
 }
@@ -45,15 +50,12 @@ export function validateCsvImportRow(
   if (!externalReference) {
     errors.push(rowError(input.rowNumber, "REQUIRED_EXTERNAL_REFERENCE", "externalReference", "External reservation reference is required"));
   }
-  if (!unitRef) {
-    errors.push(rowError(input.rowNumber, "REQUIRED_UNIT_REF", "unitRef", "Unit reference is required"));
-  }
+  // unitRef is optional at B1; multi-unit requirement is enforced property-scoped in B2.
   if (!guestName) {
     errors.push(rowError(input.rowNumber, "REQUIRED_GUEST_NAME", "guestName", "Guest name is required"));
   }
-  if (!guestEmail) {
-    errors.push(rowError(input.rowNumber, "REQUIRED_GUEST_EMAIL", "guestEmail", "Guest email is required"));
-  } else if (!EMAIL_RE.test(guestEmail)) {
+  // guestEmail is optional; non-empty values must still be valid.
+  if (guestEmail && !EMAIL_RE.test(guestEmail)) {
     errors.push(rowError(input.rowNumber, "INVALID_GUEST_EMAIL", "guestEmail", `Invalid guest email: ${guestEmail}`));
   }
 
@@ -180,14 +182,24 @@ export function validateCsvImportRow(
         { candidateIds: input.unitResolution.candidateIds },
       ),
     );
+  } else if (!unitRef && input.defaultUnitResolution) {
+    unitId = input.defaultUnitResolution.unitId;
+    propertyId = input.defaultUnitResolution.propertyId;
+  } else if (!unitRef && input.requireUnitResolution) {
+    errors.push(
+      rowError(
+        input.rowNumber,
+        "REQUIRED_UNIT_REF",
+        "unitRef",
+        "Unit reference is required for multi-unit properties",
+      ),
+    );
   }
 
   const structurallyImportable =
     errors.length === 0 &&
     externalReference != null &&
-    unitRef != null &&
     guestName != null &&
-    guestEmail != null &&
     checkIn != null &&
     checkOut != null &&
     guestCount != null &&

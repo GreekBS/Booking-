@@ -30,6 +30,7 @@ function batchToRecord(record: PrismaBatch): ReservationImportBatchRecord {
   return {
     id: record.id,
     tenantId: record.tenantId,
+    propertyId: record.propertyId,
     actorId: record.actorId,
     sourceNamespace: record.sourceNamespace,
     filename: record.filename,
@@ -112,6 +113,7 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
         data: {
           id: input.id,
           tenantId: input.tenantId,
+          propertyId: input.propertyId,
           actorId: input.actorId,
           sourceNamespace: input.sourceNamespace ?? CSV_RESERVATION_IMPORT_NAMESPACE,
           filename: input.filename,
@@ -143,6 +145,7 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
   async listResumableDrafts(
     tenantId: string,
     now: Date = new Date(),
+    propertyId?: string,
   ): Promise<ReservationImportBatchRecord[]> {
     return withTenantTransaction(tenantId, async (tx) => {
       const records = await tx.reservationImportBatch.findMany({
@@ -150,6 +153,7 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
           tenantId,
           status: "draft",
           expiresAt: { gt: now },
+          ...(propertyId ? { propertyId } : {}),
         },
         orderBy: { createdAt: "desc" },
       });
@@ -248,7 +252,7 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
         checkOut: toDateColumn(input.checkOut),
         temporalClass: input.temporalClass,
         guestName: input.guestName,
-        guestEmail: input.guestEmail,
+        guestEmail: input.guestEmail ?? null,
         guestPhone: input.guestPhone ?? null,
         guestCount: input.guestCount,
         priceSource: input.priceSource ?? "unresolved",

@@ -1,13 +1,14 @@
 import type { CsvImportDateFormat, CsvImportDelimiter } from "./constants";
 import { mapCsvImportHeaders } from "./mapHeaders";
 import { parseCsvImportFile } from "./parseCsvFile";
-import type {
-  CsvImportCanonicalField,
-  CsvImportCanonicalRow,
-  CsvImportHeaderMappingResult,
-  CsvImportIssue,
-  CsvImportParseOptions,
-  CsvImportParseResult,
+import {
+  csvImportRequiredFieldsForProperty,
+  type CsvImportCanonicalField,
+  type CsvImportCanonicalRow,
+  type CsvImportHeaderMappingResult,
+  type CsvImportIssue,
+  type CsvImportParseOptions,
+  type CsvImportParseResult,
 } from "./types";
 import { validateCsvImportRow } from "./validateRow";
 
@@ -40,7 +41,13 @@ export function parseAndValidateCsvImport(
     };
   }
 
-  const headerMapping = mapCsvImportHeaders(file.headers, input.columnMapping);
+  const headerMapping = mapCsvImportHeaders(
+    file.headers,
+    input.columnMapping,
+    input.bookableUnitCount != null
+      ? csvImportRequiredFieldsForProperty(input.bookableUnitCount)
+      : undefined,
+  );
   const issues: CsvImportIssue[] = [...fileIssues, ...headerMapping.issues];
 
   // If mapping has blocking ambiguity / empty headers / duplicates — still parse
@@ -71,6 +78,11 @@ export function parseAndValidateCsvImport(
       unitRef && input.unitResolutions
         ? input.unitResolutions.get(unitRef) ?? null
         : null;
+    const requireUnitResolution = Boolean(input.unitResolutions);
+    const defaultUnitResolution =
+      !unitRef && input.defaultUnitResolution
+        ? input.defaultUnitResolution
+        : null;
 
     const row = validateCsvImportRow({
       rowNumber: i + 1,
@@ -79,7 +91,8 @@ export function parseAndValidateCsvImport(
       dateFormat: input.dateFormat,
       propertyLocalToday: input.propertyLocalToday,
       unitResolution,
-      requireUnitResolution: Boolean(input.unitResolutions),
+      defaultUnitResolution,
+      requireUnitResolution,
     });
     rows.push(row);
     issues.push(...row.errors, ...row.warnings);
@@ -106,7 +119,11 @@ export function parseAndValidateCsvImport(
 /** Inspect headers + suggested mapping without full row validation. */
 export function inspectCsvImport(
   content: Uint8Array | string,
-  options: { delimiter?: CsvImportDelimiter; columnMapping?: CsvImportParseOptions["columnMapping"] } = {},
+  options: {
+    delimiter?: CsvImportDelimiter;
+    columnMapping?: CsvImportParseOptions["columnMapping"];
+    bookableUnitCount?: number;
+  } = {},
 ): {
   ok: boolean;
   delimiter: CsvImportDelimiter | null;
@@ -129,7 +146,13 @@ export function inspectCsvImport(
     };
   }
 
-  const headerMapping = mapCsvImportHeaders(file.headers, options.columnMapping);
+  const headerMapping = mapCsvImportHeaders(
+    file.headers,
+    options.columnMapping,
+    options.bookableUnitCount != null
+      ? csvImportRequiredFieldsForProperty(options.bookableUnitCount)
+      : undefined,
+  );
   const sampleRows = file.records.slice(0, 5).map((record) => {
     const raw: Record<string, string> = {};
     for (let c = 0; c < file.headers.length; c++) {

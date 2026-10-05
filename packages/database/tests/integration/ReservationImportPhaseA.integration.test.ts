@@ -166,6 +166,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "reservations.csv",
       byteSize: 128,
@@ -245,6 +246,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "a.csv",
     });
@@ -265,6 +267,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "rows.csv",
       rowCount: 2,
@@ -337,6 +340,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "concurrent.csv",
     });
@@ -394,12 +398,14 @@ runIntegration("Reservation import Phase A persistence", () => {
     const b1 = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "one.csv",
     });
     const b2 = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "two.csv",
     });
@@ -444,6 +450,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     const draft = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "expire-me.csv",
       now,
@@ -488,6 +495,7 @@ runIntegration("Reservation import Phase A persistence", () => {
     const live = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "cancel-me.csv",
     });

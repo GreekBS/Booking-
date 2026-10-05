@@ -175,6 +175,7 @@ runIntegration("Reservation import B3.3a", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "blocked.csv",
         content: csv,
         dateFormat: "iso",
@@ -207,6 +208,7 @@ runIntegration("Reservation import B3.3a", () => {
     const created2 = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "blocked2.csv",
         content: csv.replace("BLK-1", "BLK-2"),
         dateFormat: "iso",
@@ -249,6 +251,7 @@ runIntegration("Reservation import B3.3a", () => {
     const blocked = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "maint.csv",
         content: [
           "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
@@ -272,6 +275,7 @@ runIntegration("Reservation import B3.3a", () => {
     const pair = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "pair.csv",
         content: pairCsv,
         dateFormat: "iso",
@@ -314,6 +318,7 @@ runIntegration("Reservation import B3.3a", () => {
     const boundary = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "boundary.csv",
         content: boundaryCsv,
         dateFormat: "iso",
@@ -361,6 +366,7 @@ runIntegration("Reservation import B3.3a", () => {
     const draft = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "chain.csv",
         content: csv,
         dateFormat: "iso",
@@ -437,6 +443,7 @@ runIntegration("Reservation import B3.3a", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "multi.csv",
         content: [
           "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
@@ -472,6 +479,7 @@ runIntegration("Reservation import B3.3a", () => {
     const draft = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "recheck.csv",
         content: csv,
         dateFormat: "iso",
@@ -535,6 +543,7 @@ runIntegration("Reservation import B3.3a", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "rej.csv",
         content: csv,
         dateFormat: "iso",
@@ -596,6 +605,7 @@ runIntegration("Reservation import B3.3a", () => {
     const expireDraft = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "rej-exp.csv",
         content: csv,
         dateFormat: "iso",
@@ -625,6 +635,7 @@ runIntegration("Reservation import B3.3a", () => {
     const draft = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "conc.csv",
         content: csv,
         dateFormat: "iso",
@@ -700,6 +711,7 @@ runIntegration("Reservation import B3.3a", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "enrich.csv",
         content: csv,
         dateFormat: "iso",
@@ -733,6 +745,7 @@ runIntegration("Reservation import B3.3a", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: tenantA,
+      propertyId: propertyA,
       actorId: actorA,
       filename: "cascade.csv",
     });

@@ -30,6 +30,7 @@ interface ReservationImportMappingProps {
   dateFormat: CsvImportDateFormat | "";
   dateFormatRequired: boolean;
   missingRequiredFields: readonly CsvImportCanonicalField[];
+  bookableUnitCount?: number;
   disabled?: boolean;
   onMap: (header: string, field: CsvImportCanonicalField | null | "") => void;
   onDateFormatChange: (value: CsvImportDateFormat | "") => void;
@@ -51,6 +52,7 @@ export function ReservationImportMapping({
   dateFormat,
   dateFormatRequired,
   missingRequiredFields,
+  bookableUnitCount,
   disabled,
   onMap,
   onDateFormatChange,
@@ -171,7 +173,9 @@ export function ReservationImportMapping({
                       {ALL_CSV_CANONICAL_FIELDS.map((field) => (
                         <SelectItem key={field} value={field}>
                           {csvFieldLabelEl(field)}
-                          {isRequiredCsvField(field) ? " · υποχρεωτικό" : ""}
+                          {isRequiredCsvField(field, bookableUnitCount)
+                            ? " · υποχρεωτικό"
+                            : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

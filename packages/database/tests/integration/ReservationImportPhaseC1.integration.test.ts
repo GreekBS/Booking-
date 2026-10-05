@@ -244,6 +244,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "normal.csv",
         content: csv,
         dateFormat: "iso",
@@ -288,6 +289,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "hist.csv",
         content: csv,
         dateFormat: "iso",
@@ -322,6 +324,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "prices.csv",
         content: csv,
         dateFormat: "iso",
@@ -409,6 +412,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "keep.csv",
         content: csv,
         dateFormat: "iso",
@@ -471,6 +475,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "multi.csv",
         content: csv,
         dateFormat: "iso",
@@ -576,6 +581,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "stale.csv",
         content: csv,
         dateFormat: "iso",
@@ -634,6 +640,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "live.csv",
         content: csv,
         dateFormat: "iso",
@@ -671,6 +678,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "block.csv",
         content: csv,
         dateFormat: "iso",
@@ -715,6 +723,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "peers.csv",
         content: csv,
         dateFormat: "iso",
@@ -753,6 +762,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "dup.csv",
         content: csv,
         dateFormat: "iso",
@@ -804,6 +814,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "idem.csv",
         content: csv,
         dateFormat: "iso",
@@ -839,6 +850,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "tiso.csv",
         content: csv,
         dateFormat: "iso",
@@ -868,6 +880,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "rb.csv",
         content: csv,
         dateFormat: "iso",
@@ -904,6 +917,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "rej.csv",
         content: csv,
         dateFormat: "iso",
@@ -936,6 +950,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const created = await createDraft.execute(
       {
         tenantId: tenantA,
+        propertyId: propertyA,
         filename: "imm.csv",
         content: csv,
         dateFormat: "iso",

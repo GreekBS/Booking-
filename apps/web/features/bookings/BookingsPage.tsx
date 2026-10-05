@@ -339,7 +339,9 @@ function BookingsPageContent() {
         actions={<BookingCreateMenu />}
       />
 
-      {tenantId ? <ReservationImportDraftList tenantId={tenantId} /> : null}
+      {tenantId && propertyId ? (
+        <ReservationImportDraftList tenantId={tenantId} propertyId={propertyId} />
+      ) : null}
 
       <Surface variant="panel" padding="sm" className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">

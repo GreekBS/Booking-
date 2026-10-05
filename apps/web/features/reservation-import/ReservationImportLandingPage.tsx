@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { Button } from "@/components/ui/button";
-import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import {
+  renderActivePropertyGate,
+  useActiveProperty,
+} from "@/hooks/use-active-property";
+import { useTenant } from "@/hooks/use-tenant";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { elCommon } from "@/lib/i18n";
 import { ReservationImportMapping } from "./ReservationImportMapping";
@@ -21,12 +25,29 @@ import {
 import { useReservationImportWizard } from "./useReservationImportWizard";
 
 /**
- * B3.2 CSV import workflow: select → inspect/map → preview → create draft → redirect.
+ * B3.2 / C4 CSV import workflow: active-property scoped select → inspect/map → preview → create draft.
  */
 export function ReservationImportLandingPage() {
   const router = useRouter();
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
-  const wizard = useReservationImportWizard(tenantId);
+  const {
+    propertyId,
+    property,
+    properties,
+    ready: propertyReady,
+    error: propertyError,
+  } = useActiveProperty();
+
+  const bookableUnitCount = useMemo(() => {
+    if (!property) return 0;
+    return (property.units ?? []).filter((u) => u.status === "active").length;
+  }, [property]);
+
+  const wizard = useReservationImportWizard(
+    tenantId,
+    propertyId,
+    bookableUnitCount,
+  );
   const createFocusRef = useRef<HTMLButtonElement>(null);
   const mappingHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -36,10 +57,14 @@ export function ReservationImportLandingPage() {
     }
   }, [wizard.file, wizard.headerMapping]);
 
-  const gate = renderTenantGate({
+  const gate = renderActivePropertyGate({
+    tenantLoading,
+    tenantError,
     tenantId,
-    loading: tenantLoading,
-    error: tenantError,
+    propertyReady,
+    propertyError,
+    propertyId,
+    properties,
   });
   if (gate) return gate;
 
@@ -71,6 +96,18 @@ export function ReservationImportLandingPage() {
         }
       />
 
+      {property ? (
+        <p className="text-sm text-muted-foreground" data-testid="import-active-property">
+          Ενεργό κατάλυμα:{" "}
+          <span className="font-medium text-foreground">{property.name}</span>
+          {bookableUnitCount === 1
+            ? " · μία μονάδα (unitRef προαιρετικό)"
+            : bookableUnitCount > 1
+              ? ` · ${bookableUnitCount} μονάδες (unitRef υποχρεωτικό)`
+              : " · χωρίς ενεργές μονάδες"}
+        </p>
+      ) : null}
+
       <Surface variant="panel" padding="md" className="space-y-4">
         <SurfaceHeader
           title="1. Αρχείο CSV"
@@ -78,39 +115,26 @@ export function ReservationImportLandingPage() {
         />
         <ReservationImportUpload
           file={wizard.file}
-          disabled={wizard.creating}
           error={wizard.localError}
           maxBytes={wizard.limits.maxBytes}
           maxRows={wizard.limits.maxRows}
           onFileChange={(f) => void wizard.selectFile(f)}
         />
-        {wizard.file &&
-        !wizard.headerMapping &&
-        wizard.fileOrMappingErrors.length > 0 ? (
-          <ul
-            className="space-y-1 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive"
-            role="alert"
-          >
-            {wizard.fileOrMappingErrors.slice(0, 8).map((issue, idx) => (
-              <li key={`${issue.code}-${idx}`}>{csvIssueMessageEl(issue)}</li>
-            ))}
-          </ul>
-        ) : null}
       </Surface>
 
       {wizard.file && wizard.headerMapping ? (
         <Surface variant="panel" padding="md" className="space-y-4">
           <SurfaceHeader
             title="2. Αντιστοίχιση στηλών"
-            description="Επιβεβαιώστε ή διορθώστε την αντιστοίχιση των στηλών CSV στα πεδία TALOS."
+            description="Επιβεβαιώστε ή διορθώστε την αντιστοίχιση πριν τη δημιουργία πρόχειρης εισαγωγής."
           />
-          <h3
+          <h2
             ref={mappingHeadingRef}
             tabIndex={-1}
             className="sr-only"
           >
             Αντιστοίχιση στηλών
-          </h3>
+          </h2>
           <ReservationImportMapping
             headerMapping={wizard.headerMapping}
             columnMapping={wizard.columnMapping}
@@ -120,54 +144,54 @@ export function ReservationImportLandingPage() {
             dateFormat={wizard.dateFormat}
             dateFormatRequired={wizard.dateFormatRequired}
             missingRequiredFields={wizard.missingRequiredFields}
-            disabled={wizard.creating}
+            bookableUnitCount={bookableUnitCount}
             onMap={wizard.updateColumnMapping}
-            onDateFormatChange={wizard.updateDateFormat}
             onDelimiterChange={wizard.updateDelimiterOverride}
+            onDateFormatChange={wizard.updateDateFormat}
           />
         </Surface>
       ) : null}
 
-      {wizard.file && wizard.parseResult && wizard.headerMapping ? (
+      {wizard.parseResult ? (
         <Surface variant="panel" padding="md" className="space-y-4">
-          <SurfaceHeader
-            title="3. Προεπισκόπηση"
-            description="Ελέγξτε έγκυρες γραμμές και σφάλματα πριν τη δημιουργία προχείρου."
-          />
+          <SurfaceHeader title="3. Προεπισκόπηση" />
           <ReservationImportPreview
             parseResult={wizard.parseResult}
             structuralRowErrors={wizard.structuralRowErrors}
             fileOrMappingErrors={wizard.fileOrMappingErrors}
           />
-
-          {wizard.createError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {wizard.createError}
-            </p>
+          {wizard.fileOrMappingErrors.length > 0 ||
+          wizard.structuralRowErrors.length > 0 ? (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
+              {[...wizard.fileOrMappingErrors, ...wizard.structuralRowErrors]
+                .slice(0, 8)
+                .map((issue, idx) => (
+                  <li key={`${issue.code}-${idx}`}>
+                    {csvIssueMessageEl(issue)}
+                  </li>
+                ))}
+            </ul>
           ) : null}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground" aria-live="polite">
-              {wizard.canCreate
-                ? "Έτοιμο για δημιουργία πρόχειρης εισαγωγής."
-                : "Διορθώστε τα σφάλματα αντιστοίχισης/δομής για να συνεχίσετε."}
-            </p>
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               ref={createFocusRef}
-              type="button"
               disabled={!wizard.canCreate || wizard.creating}
               onClick={() => void handleCreate()}
-              aria-busy={wizard.creating || undefined}
             >
               {wizard.creating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Δημιουργία…
                 </>
               ) : (
                 "Δημιουργία πρόχειρης εισαγωγής"
               )}
             </Button>
+            {wizard.createError ? (
+              <p className="text-sm text-destructive" role="alert">
+                {wizard.createError}
+              </p>
+            ) : null}
           </div>
         </Surface>
       ) : null}

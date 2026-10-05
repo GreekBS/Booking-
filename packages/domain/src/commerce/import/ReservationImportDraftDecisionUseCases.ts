@@ -40,10 +40,13 @@ export class ListReservationImportDraftsUseCase {
     tenantId: string,
     actor: ActorContext,
     now: Date = new Date(),
+    propertyId?: string,
   ): Promise<Result<ReservationImportBatchRecord[], Error>> {
     try {
       assertBookingCreate(this.permissionChecker, actor, tenantId);
-      return Result.ok(await this.imports.listResumableDrafts(tenantId, now));
+      return Result.ok(
+        await this.imports.listResumableDrafts(tenantId, now, propertyId),
+      );
     } catch (e) {
       return Result.fail(e instanceof Error ? e : new Error(String(e)));
     }

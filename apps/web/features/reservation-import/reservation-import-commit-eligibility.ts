@@ -59,6 +59,7 @@ function mapBatch(dto: ReservationImportBatchDto): ReservationImportBatchRecord 
   return {
     id: dto.id,
     tenantId: dto.tenantId,
+    propertyId: dto.propertyId,
     actorId: dto.actorId,
     sourceNamespace: dto.sourceNamespace,
     filename: dto.filename,

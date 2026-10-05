@@ -31,6 +31,7 @@ function makeBatch(
   return {
     id: overrides.id ?? randomUUID(),
     tenantId: overrides.tenantId ?? "tenant-a",
+    propertyId: overrides.propertyId ?? "prop-a",
     actorId: overrides.actorId ?? "actor-a",
     sourceNamespace: "csv_reservation_import",
     filename: overrides.filename ?? "t.csv",
@@ -104,6 +105,7 @@ class MemoryImports implements IReservationImportRepository {
     const batch = makeBatch({
       id: input.id,
       tenantId: input.tenantId,
+      propertyId: input.propertyId,
       actorId: input.actorId,
       filename: input.filename,
       createdAt: now,
@@ -120,12 +122,17 @@ class MemoryImports implements IReservationImportRepository {
     return b && b.tenantId === tenantId ? b : null;
   }
 
-  async listResumableDrafts(tenantId: string, now: Date = new Date()) {
+  async listResumableDrafts(
+    tenantId: string,
+    now: Date = new Date(),
+    propertyId?: string,
+  ) {
     return [...this.batches.values()].filter(
       (b) =>
         b.tenantId === tenantId &&
         b.status === "draft" &&
-        b.expiresAt.getTime() > now.getTime(),
+        b.expiresAt.getTime() > now.getTime() &&
+        (propertyId == null || b.propertyId === propertyId),
     );
   }
 
@@ -301,6 +308,7 @@ describe("ReservationImport B2 decisions + logical expiry", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: "tenant-a",
+      propertyId: "prop-a",
       actorId: "actor-a",
       filename: "x.csv",
       now: new Date("2026-10-03T10:00:00.000Z"),
@@ -346,6 +354,7 @@ describe("ReservationImport B2 decisions + logical expiry", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: "tenant-a",
+      propertyId: "prop-a",
       actorId: "actor-a",
       filename: "chain.csv",
       now: new Date("2026-10-03T10:00:00.000Z"),
@@ -424,6 +433,7 @@ describe("ReservationImport B2 decisions + logical expiry", () => {
     const batch = await imports.createBatch({
       id: randomUUID(),
       tenantId: "tenant-a",
+      propertyId: "prop-a",
       actorId: "actor-a",
       filename: "expired.csv",
       now: createdAt,
@@ -493,14 +503,17 @@ describe("ReservationImport B2 decisions + logical expiry", () => {
 describe("CsvImportUnitResolver contract (in-memory)", () => {
   it("resolves unambiguous unit refs", async () => {
     const resolver: ICsvImportUnitResolver = {
-      async resolve(_tenantId, unitRef) {
+      async listBookableUnits(_t: string, propertyId: string) {
+        return [{ id: "unit-1", propertyId, name: "Unit", slug: "unit" }];
+      },
+      async resolve(_tenantId, propertyId, unitRef) {
         if (unitRef === "Studio A") {
-          return { status: "resolved", unitId: "unit-a", propertyId: "prop-a" };
+          return { status: "resolved", unitId: "unit-a", propertyId };
         }
         return { status: "ambiguous", candidateIds: ["1", "2"] };
       },
     };
-    expect((await resolver.resolve("t", "Studio A")).status).toBe("resolved");
-    expect((await resolver.resolve("t", "Amb")).status).toBe("ambiguous");
+    expect((await resolver.resolve("t", "prop-a", "Studio A")).status).toBe("resolved");
+    expect((await resolver.resolve("t", "prop-a", "Amb")).status).toBe("ambiguous");
   });
 });

@@ -55,6 +55,8 @@ export interface ReservationImportPricingPort {
 
 export interface CreateReservationImportDraftCommand {
   tenantId: string;
+  /** Active workspace property — durable import scope (server-validated). */
+  propertyId: string;
   filename: string;
   content: Uint8Array | string;
   byteSize?: number;
@@ -107,6 +109,42 @@ export class CreateReservationImportDraftUseCase {
       );
 
       const now = command.now ?? new Date();
+
+      if (!command.propertyId?.trim()) {
+        return Result.fail(new ValidationError("propertyId is required"));
+      }
+
+      const scopedProperty = await this.catalog.getProperty(
+        command.propertyId,
+        command.tenantId,
+      );
+      if (!scopedProperty) {
+        return Result.fail(
+          new ValidationError("Property not found for tenant"),
+        );
+      }
+
+      const bookableUnits = await this.unitResolver.listBookableUnits(
+        command.tenantId,
+        command.propertyId,
+      );
+      if (bookableUnits.length === 0) {
+        return Result.fail(
+          new ValidationError(
+            "Active property has no bookable units for CSV import",
+          ),
+        );
+      }
+
+      const defaultUnitResolution =
+        bookableUnits.length === 1
+          ? {
+              status: "resolved" as const,
+              unitId: bookableUnits[0]!.id,
+              propertyId: bookableUnits[0]!.propertyId,
+            }
+          : null;
+
       const unitRefsProbe = parseAndValidateCsvImport({
         content: command.content,
         delimiter: command.delimiter,
@@ -126,7 +164,12 @@ export class CreateReservationImportDraftUseCase {
       const resolutions = await resolveCsvImportUnitRefs(
         this.unitResolver,
         command.tenantId,
+        command.propertyId,
         unitRefsProbe.rows.map((r) => r.unitRef).filter((v): v is string => Boolean(v)),
+      );
+
+      const today = await this.timezoneService.propertyLocalToday(
+        scopedProperty.timezone,
       );
 
       const parsed = parseAndValidateCsvImport({
@@ -135,12 +178,16 @@ export class CreateReservationImportDraftUseCase {
         dateFormat: command.dateFormat,
         columnMapping: command.columnMapping,
         unitResolutions: resolutions,
+        defaultUnitResolution,
+        bookableUnitCount: bookableUnits.length,
+        propertyLocalToday: today,
       });
 
       const batchId = this.idGenerator.generate();
       const batch = await this.imports.createBatch({
         id: batchId,
         tenantId: command.tenantId,
+        propertyId: command.propertyId,
         actorId: actor.userId,
         filename: command.filename,
         byteSize: command.byteSize ?? null,
@@ -159,7 +206,6 @@ export class CreateReservationImportDraftUseCase {
           !row.checkOut ||
           !row.externalReference ||
           !row.guestName ||
-          !row.guestEmail ||
           row.guestCount == null
         ) {
           rejectedInputs.push({
@@ -183,7 +229,7 @@ export class CreateReservationImportDraftUseCase {
         }
 
         const unit = await this.catalog.getUnit(row.unitId, command.tenantId);
-        if (!unit) {
+        if (!unit || unit.propertyId !== command.propertyId) {
           rejectedInputs.push({
             id: this.idGenerator.generate(),
             tenantId: command.tenantId,
@@ -203,7 +249,7 @@ export class CreateReservationImportDraftUseCase {
               {
                 code: "UNIT_NOT_FOUND",
                 severity: "error",
-                message: "Unit not found",
+                message: "Unit not found in active property",
                 rowNumber: row.rowNumber,
                 field: "unitRef",
               },
@@ -233,7 +279,6 @@ export class CreateReservationImportDraftUseCase {
           });
           continue;
         }
-        const today = await this.timezoneService.propertyLocalToday(property.timezone);
         const temporalClass =
           row.temporalClass ??
           classifyImportStayTemporalClass(row.checkIn, row.checkOut, today);

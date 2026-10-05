@@ -43,9 +43,15 @@ export async function GET(request: NextRequest) {
   try {
     const tenantId = request.headers.get("x-tenant-id");
     const actor = await requireTenantContext(tenantId);
+    const propertyId = request.nextUrl.searchParams.get("propertyId") ?? undefined;
+    if (propertyId != null && propertyId.trim() === "") {
+      throw new ValidationError("propertyId cannot be empty");
+    }
     const result = await listReservationImportDraftsUseCase.execute(
       actor.tenantId,
       toPermissionActor(actor),
+      new Date(),
+      propertyId ?? undefined,
     );
     if (result.isFailure) return mapResultError(result.getError());
     return apiSuccess({
@@ -70,6 +76,12 @@ export async function POST(request: NextRequest) {
         `CSV exceeds the ${Math.round(CSV_IMPORT_MAX_BYTES / (1024 * 1024))}MB limit`,
       );
     }
+
+    const propertyIdRaw = form.get("propertyId");
+    if (typeof propertyIdRaw !== "string" || !propertyIdRaw.trim()) {
+      throw new ValidationError("propertyId is required");
+    }
+    const propertyId = propertyIdRaw.trim();
 
     const delimiterRaw = form.get("delimiter");
     const dateFormatRaw = form.get("dateFormat");
@@ -113,6 +125,7 @@ export async function POST(request: NextRequest) {
     const result = await createReservationImportDraftUseCase.execute(
       {
         tenantId: actor.tenantId,
+        propertyId,
         filename: file.name || "import.csv",
         content: new Uint8Array(await file.arrayBuffer()),
         byteSize: file.size,

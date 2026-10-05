@@ -69,6 +69,7 @@ export function isResumableImportBatchStatus(
 export interface ReservationImportBatchRecord {
   id: string;
   tenantId: string;
+  propertyId: string;
   actorId: string;
   sourceNamespace: string;
   filename: string;
@@ -94,7 +95,7 @@ export interface ReservationImportRowRecord {
   checkOut: string;
   temporalClass: ImportStayTemporalClass;
   guestName: string;
-  guestEmail: string;
+  guestEmail: string | null;
   guestPhone: string | null;
   guestCount: number;
   priceSource: ReservationImportPriceSource;
@@ -155,6 +156,7 @@ export interface CreateReservationImportRejectedRowInput {
 export interface CreateReservationImportBatchInput {
   id: string;
   tenantId: string;
+  propertyId: string;
   actorId: string;
   filename: string;
   byteSize?: number | null;
@@ -176,7 +178,7 @@ export interface CreateReservationImportRowInput {
   checkOut: string;
   temporalClass: ImportStayTemporalClass;
   guestName: string;
-  guestEmail: string;
+  guestEmail?: string | null;
   guestPhone?: string | null;
   guestCount: number;
   sourceNamespace?: string;
