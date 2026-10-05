@@ -14,6 +14,7 @@ export * from "./import/IReservationImportRepository";
 export * from "./import/ExpireReservationImportDraftsUseCase";
 export * from "./import/csv";
 export * from "./import/ReservationImportConflictGraph";
+export * from "./import/ReservationImportExclusivity";
 export * from "./import/CreateReservationImportDraftUseCase";
 export * from "./import/ReservationImportDraftDecisionUseCases";
 

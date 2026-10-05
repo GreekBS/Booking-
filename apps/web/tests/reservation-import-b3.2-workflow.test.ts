@@ -379,9 +379,13 @@ describe("B3.2 — multipart adminFetch + create draft request", () => {
             updatedAt: "2026-10-04T00:00:00.000Z",
           },
           rows: [],
-          unpersisted: [
+          rejectedRows: [
             {
+              id: "rej-1",
+              tenantId: "t1",
+              batchId: "batch-1",
               rowNumber: 1,
+              payload: { unitRef: "Unknown" },
               errors: [
                 {
                   code: "UNIT_NOT_FOUND",
@@ -392,6 +396,7 @@ describe("B3.2 — multipart adminFetch + create draft request", () => {
                 },
               ],
               warnings: [],
+              createdAt: "2026-10-04T00:00:00.000Z",
             },
           ],
           parseIssues: [],
@@ -424,7 +429,7 @@ describe("B3.2 — multipart adminFetch + create draft request", () => {
     });
 
     expect(result.batch.id).toBe("batch-1");
-    expect(result.unpersisted).toHaveLength(1);
+    expect(result.rejectedRows).toHaveLength(1);
     const init = fetchMock.mock.calls[0]![1]!;
     expect(init.body).toBeInstanceOf(FormData);
     const body = init.body as FormData;
@@ -439,12 +444,13 @@ describe("B3.2 — multipart adminFetch + create draft request", () => {
   });
 });
 
-describe("B3.2 — duplicate submit + unpersisted warning wiring", () => {
-  it("wizard disables create while pending and surfaces unpersisted warning", () => {
+describe("B3.2 — duplicate submit + rejectedRows warning wiring", () => {
+  it("wizard disables create while pending and surfaces rejectedRows warning", () => {
     const wizard = read("features/reservation-import/useReservationImportWizard.ts");
     expect(wizard).toContain("if (!tenantId || !file || !canCreate || creating)");
     expect(wizard).toContain("setCreating(true)");
     expect(wizard).toContain("RESERVATION_IMPORT_UNPERSISTED_WARNING");
+    expect(wizard).toContain("result.rejectedRows");
     expect(wizard).toContain("structuralRowErrors.length > 0");
     const landing = read("features/reservation-import/ReservationImportLandingPage.tsx");
     expect(landing).toContain("disabled={!wizard.canCreate || wizard.creating}");

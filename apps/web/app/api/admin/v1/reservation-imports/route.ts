@@ -23,6 +23,7 @@ import {
 import { apiError, apiSuccess, mapResultError } from "@/lib/api-error-handler";
 import {
   serializeReservationImportBatch,
+  serializeReservationImportRejectedRow,
   serializeReservationImportRow,
 } from "@/lib/admin/reservation-import-serializers";
 
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       {
         batch: serializeReservationImportBatch(value.batch),
         rows: value.rows.map(serializeReservationImportRow),
-        unpersisted: value.unpersisted,
+        rejectedRows: value.rejectedRows.map(serializeReservationImportRejectedRow),
         parseIssues: value.parseIssues,
       },
       201,

@@ -1,5 +1,6 @@
 import type {
   ReservationImportBatchRecord,
+  ReservationImportRejectedRowRecord,
   ReservationImportRowRecord,
 } from "@hcp/domain";
 
@@ -57,5 +58,20 @@ export function serializeReservationImportRow(row: ReservationImportRowRecord) {
     processedAt: row.processedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function serializeReservationImportRejectedRow(
+  row: ReservationImportRejectedRowRecord,
+) {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    batchId: row.batchId,
+    rowNumber: row.rowNumber,
+    payload: row.payload,
+    errors: row.errors,
+    warnings: row.warnings,
+    createdAt: row.createdAt.toISOString(),
   };
 }

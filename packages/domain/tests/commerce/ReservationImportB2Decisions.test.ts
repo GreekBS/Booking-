@@ -97,6 +97,7 @@ function makeRow(
 class MemoryImports implements IReservationImportRepository {
   batches = new Map<string, ReservationImportBatchRecord>();
   rows = new Map<string, ReservationImportRowRecord>();
+  rejected = new Map<string, import("../../src/commerce/import/ReservationImportTypes").ReservationImportRejectedRowRecord>();
 
   async createBatch(input: CreateReservationImportBatchInput) {
     const now = input.now ?? new Date();
@@ -147,6 +148,9 @@ class MemoryImports implements IReservationImportRepository {
   async cancelDraft(batchId: string, tenantId: string) {
     const b = await this.findBatchById(batchId, tenantId);
     if (!b) throw new Error("not found");
+    for (const [id, r] of this.rejected) {
+      if (r.batchId === batchId && r.tenantId === tenantId) this.rejected.delete(id);
+    }
     const next = { ...b, status: "cancelled" as const };
     this.batches.set(batchId, next);
     return next;
@@ -191,6 +195,87 @@ class MemoryImports implements IReservationImportRepository {
 
   async findDurableByExternalReference() {
     return null;
+  }
+
+  async createRejectedRows(
+    inputs: import("../../src/commerce/import/ReservationImportTypes").CreateReservationImportRejectedRowInput[],
+  ) {
+    const out = [];
+    for (const input of inputs) {
+      const row = {
+        id: input.id,
+        tenantId: input.tenantId,
+        batchId: input.batchId,
+        rowNumber: input.rowNumber,
+        payload: input.payload ?? {},
+        errors: input.errors ?? [],
+        warnings: input.warnings ?? [],
+        createdAt: new Date(),
+      };
+      this.rejected.set(row.id, row);
+      out.push(row);
+    }
+    return out;
+  }
+
+  async listRejectedRowsForBatch(batchId: string, tenantId: string) {
+    return [...this.rejected.values()]
+      .filter((r) => r.batchId === batchId && r.tenantId === tenantId)
+      .sort((a, b) => a.rowNumber - b.rowNumber);
+  }
+
+  async applyConflictDecisionAtomic(input: {
+    tenantId: string;
+    batchId: string;
+    rowId: string;
+    conflictResolution: import("../../src/commerce/import/ReservationImportTypes").ReservationImportConflictResolution;
+    replaceBookingIds: string[];
+    replaceBookingId: string | null;
+    priceSource?: import("../../src/commerce/import/ReservationImportTypes").ReservationImportPriceSource;
+    operatorTotalAmount?: string | null;
+    operatorCurrency?: string | null;
+    now?: Date;
+  }) {
+    const { importRowsOverlap } = await import(
+      "../../src/commerce/import/ReservationImportExclusivity"
+    );
+    const now = input.now ?? new Date();
+    const primary = this.rows.get(input.rowId);
+    if (!primary || primary.tenantId !== input.tenantId || primary.batchId !== input.batchId) {
+      throw new Error("row not found");
+    }
+    await this.updateRow(
+      input.rowId,
+      input.tenantId,
+      {
+        conflictResolution: input.conflictResolution,
+        replaceBookingIds: input.replaceBookingIds,
+        replaceBookingId: input.replaceBookingId,
+        priceSource: input.priceSource,
+        operatorTotalAmount: input.operatorTotalAmount,
+        operatorCurrency: input.operatorCurrency,
+      },
+      now,
+    );
+    if (input.conflictResolution === "keep_csv") {
+      for (const peer of this.rows.values()) {
+        if (peer.id === input.rowId) continue;
+        if (peer.batchId !== input.batchId || peer.tenantId !== input.tenantId) continue;
+        if (peer.conflictResolution !== "keep_csv") continue;
+        if (!importRowsOverlap(primary, peer)) continue;
+        await this.updateRow(
+          peer.id,
+          input.tenantId,
+          {
+            conflictResolution: "keep_existing",
+            replaceBookingIds: [],
+            replaceBookingId: null,
+          },
+          now,
+        );
+      }
+    }
+    return this.listRowsForBatch(input.batchId, input.tenantId);
   }
 
   async expireDrafts() {
@@ -248,6 +333,83 @@ describe("ReservationImport B2 decisions + logical expiry", () => {
     const updated = result.getValue();
     expect(updated.replaceBookingIds).toEqual(["booking-1", "booking-2"]);
     expect(updated.replaceBookingId).toBe("booking-1");
+  });
+
+  it("keep_csv demotes overlapping peer keep_csv but not non-overlapping chain peer", async () => {
+    const imports = new MemoryImports();
+    const batch = await imports.createBatch({
+      id: randomUUID(),
+      tenantId: "tenant-a",
+      actorId: "actor-a",
+      filename: "chain.csv",
+      now: new Date("2026-10-03T10:00:00.000Z"),
+    });
+    const a = makeRow(batch.id, {
+      id: randomUUID(),
+      rowNumber: 1,
+      checkIn: "2026-10-10",
+      checkOut: "2026-10-12",
+      conflictResolution: "undecided",
+      conflictSnapshot: {
+        version: 1,
+        existingBookingIds: [],
+        peerImportRowIds: [],
+        nonBookingBlockers: [],
+        overlaps: [],
+      },
+    });
+    const b = makeRow(batch.id, {
+      id: randomUUID(),
+      rowNumber: 2,
+      checkIn: "2026-10-11",
+      checkOut: "2026-10-13",
+      conflictResolution: "keep_csv",
+      conflictSnapshot: {
+        version: 1,
+        existingBookingIds: [],
+        peerImportRowIds: [],
+        nonBookingBlockers: [],
+        overlaps: [],
+      },
+    });
+    const c = makeRow(batch.id, {
+      id: randomUUID(),
+      rowNumber: 3,
+      checkIn: "2026-10-12",
+      checkOut: "2026-10-14",
+      conflictResolution: "keep_csv",
+      conflictSnapshot: {
+        version: 1,
+        existingBookingIds: [],
+        peerImportRowIds: [],
+        nonBookingBlockers: [],
+        overlaps: [],
+      },
+    });
+    imports.rows.set(a.id, a);
+    imports.rows.set(b.id, b);
+    imports.rows.set(c.id, c);
+
+    const createDraft = {
+      preflightRows: async ({ rows }: { rows: ReservationImportRowRecord[] }) => rows,
+    } as unknown as CreateReservationImportDraftUseCase;
+
+    const useCase = new UpdateReservationImportRowDecisionUseCase(imports, createDraft);
+    const result = await useCase.execute(
+      {
+        batchId: batch.id,
+        rowId: a.id,
+        tenantId: "tenant-a",
+        conflictResolution: "keep_csv",
+        now: new Date("2026-10-03T11:00:00.000Z"),
+      },
+      actor,
+    );
+    if (result.isFailure) throw result.getError();
+
+    expect(imports.rows.get(a.id)!.conflictResolution).toBe("keep_csv");
+    expect(imports.rows.get(b.id)!.conflictResolution).toBe("keep_existing");
+    expect(imports.rows.get(c.id)!.conflictResolution).toBe("keep_csv");
   });
 
   it("blocks decisions after expiresAt even when rows are still present (no worker cleanup)", async () => {

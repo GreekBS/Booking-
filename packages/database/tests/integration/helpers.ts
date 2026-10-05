@@ -21,6 +21,7 @@ export async function truncateIntegrationTables(): Promise<void> {
   });
   for (const { id: tenantId } of intTenants) {
     await withTenantTransaction(tenantId, async (tx) => {
+      await tx.reservationImportRejectedRow.deleteMany({ where: { tenantId } });
       await tx.reservationImportRow.deleteMany({ where: { tenantId } });
       await tx.reservationImportBatch.deleteMany({ where: { tenantId } });
       await tx.booking.deleteMany({ where: { tenantId } });
@@ -60,6 +61,7 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.customerBillingProfile.deleteMany();
   await prisma.businessFiscalProfile.deleteMany();
   await prisma.taxRule.deleteMany({ where: { tenantId: { not: null } } });
+  await prisma.reservationImportRejectedRow.deleteMany();
   await prisma.reservationImportRow.deleteMany();
   await prisma.reservationImportBatch.deleteMany();
   await prisma.booking.deleteMany();

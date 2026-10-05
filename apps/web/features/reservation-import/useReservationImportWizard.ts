@@ -318,8 +318,8 @@ export function useReservationImportWizard(tenantId: string | null) {
       });
       setLastCreateResult(result);
       const warning =
-        result.unpersisted.length > 0
-          ? `${RESERVATION_IMPORT_UNPERSISTED_WARNING} (${result.unpersisted.length})`
+        result.rejectedRows.length > 0
+          ? `${RESERVATION_IMPORT_UNPERSISTED_WARNING} (${result.rejectedRows.length})`
           : null;
       if (warning) setCreateWarning(warning);
       return { batchId: result.batch.id, warning, error: null };

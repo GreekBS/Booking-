@@ -122,6 +122,28 @@ export interface ReservationImportRowRecord {
   updatedAt: Date;
 }
 
+/** Durable create-time exclusions that never became reservation_import_rows. */
+export interface ReservationImportRejectedRowRecord {
+  id: string;
+  tenantId: string;
+  batchId: string;
+  rowNumber: number;
+  payload: Record<string, unknown>;
+  errors: unknown[];
+  warnings: unknown[];
+  createdAt: Date;
+}
+
+export interface CreateReservationImportRejectedRowInput {
+  id: string;
+  tenantId: string;
+  batchId: string;
+  rowNumber: number;
+  payload?: Record<string, unknown>;
+  errors?: unknown[];
+  warnings?: unknown[];
+}
+
 export interface CreateReservationImportBatchInput {
   id: string;
   tenantId: string;

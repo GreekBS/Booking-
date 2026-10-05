@@ -36,7 +36,13 @@ import {
   type ReservationImportConflictNode,
   type ReservationImportConflictSnapshot,
 } from "./ReservationImportConflictGraph";
+import {
+  arePeerConflictsResolved,
+  buildRejectedRowPayload,
+  isImportAvailabilityNonFatalCode,
+} from "./ReservationImportExclusivity";
 import { StayPeriod } from "../shared/value-objects/StayPeriod";
+import type { ReservationImportRejectedRowRecord } from "./ReservationImportTypes";
 
 export interface ReservationImportPricingPort {
   previewTotal(input: {
@@ -62,11 +68,8 @@ export interface CreateReservationImportDraftCommand {
 export interface CreateReservationImportDraftResult {
   batch: ReservationImportBatchRecord;
   rows: ReservationImportRowRecord[];
-  unpersisted: Array<{
-    rowNumber: number;
-    errors: CsvImportIssue[];
-    warnings: CsvImportIssue[];
-  }>;
+  /** Durable create-time exclusions (unit/catalog failures, etc.). */
+  rejectedRows: ReservationImportRejectedRowRecord[];
   parseIssues: CsvImportIssue[];
 }
 
@@ -145,7 +148,8 @@ export class CreateReservationImportDraftUseCase {
         now,
       });
 
-      const unpersisted: CreateReservationImportDraftResult["unpersisted"] = [];
+      const rejectedInputs: Parameters<IReservationImportRepository["createRejectedRows"]>[0] =
+        [];
       const createInputs: Parameters<IReservationImportRepository["createRows"]>[0] = [];
 
       for (const row of parsed.rows) {
@@ -158,8 +162,20 @@ export class CreateReservationImportDraftUseCase {
           !row.guestEmail ||
           row.guestCount == null
         ) {
-          unpersisted.push({
+          rejectedInputs.push({
+            id: this.idGenerator.generate(),
+            tenantId: command.tenantId,
+            batchId,
             rowNumber: row.rowNumber,
+            payload: buildRejectedRowPayload({
+              externalReference: row.externalReference,
+              unitRef: row.unitRef,
+              guestName: row.guestName,
+              guestEmail: row.guestEmail,
+              checkIn: row.checkIn,
+              checkOut: row.checkOut,
+              guestCount: row.guestCount,
+            }),
             errors: row.errors,
             warnings: row.warnings,
           });
@@ -168,8 +184,20 @@ export class CreateReservationImportDraftUseCase {
 
         const unit = await this.catalog.getUnit(row.unitId, command.tenantId);
         if (!unit) {
-          unpersisted.push({
+          rejectedInputs.push({
+            id: this.idGenerator.generate(),
+            tenantId: command.tenantId,
+            batchId,
             rowNumber: row.rowNumber,
+            payload: buildRejectedRowPayload({
+              externalReference: row.externalReference,
+              unitRef: row.unitRef,
+              guestName: row.guestName,
+              guestEmail: row.guestEmail,
+              checkIn: row.checkIn,
+              checkOut: row.checkOut,
+              guestCount: row.guestCount,
+            }),
             errors: [
               ...row.errors,
               {
@@ -186,8 +214,20 @@ export class CreateReservationImportDraftUseCase {
         }
         const property = await this.catalog.getProperty(unit.propertyId, command.tenantId);
         if (!property) {
-          unpersisted.push({
+          rejectedInputs.push({
+            id: this.idGenerator.generate(),
+            tenantId: command.tenantId,
+            batchId,
             rowNumber: row.rowNumber,
+            payload: buildRejectedRowPayload({
+              externalReference: row.externalReference,
+              unitRef: row.unitRef,
+              guestName: row.guestName,
+              guestEmail: row.guestEmail,
+              checkIn: row.checkIn,
+              checkOut: row.checkOut,
+              guestCount: row.guestCount,
+            }),
             errors: row.errors,
             warnings: row.warnings,
           });
@@ -233,6 +273,10 @@ export class CreateReservationImportDraftUseCase {
 
       let rows =
         createInputs.length > 0 ? await this.imports.createRows(createInputs) : [];
+      const rejectedRows =
+        rejectedInputs.length > 0
+          ? await this.imports.createRejectedRows(rejectedInputs)
+          : [];
       await this.imports.updateBatch(
         batchId,
         command.tenantId,
@@ -251,7 +295,7 @@ export class CreateReservationImportDraftUseCase {
       return Result.ok({
         batch: refreshed!,
         rows,
-        unpersisted,
+        rejectedRows,
         parseIssues: parsed.issues,
       });
     } catch (error) {
@@ -333,7 +377,7 @@ export class CreateReservationImportDraftUseCase {
         if (availabilityResult.isSuccess) {
           const evalResult = availabilityResult.getValue();
           const nonBlockReasons = evalResult.reasons.filter(
-            (r) => r.code !== "DATES_BLOCKED" && r.code !== "TURNOVER_BUFFER",
+            (r) => !isImportAvailabilityNonFatalCode(r.code),
           );
           if (nonBlockReasons.length > 0) {
             errorCode = nonBlockReasons[0]!.code;
@@ -456,10 +500,7 @@ export class CreateReservationImportDraftUseCase {
             snapshot.existingBookingIds.every((id) =>
               (row.replaceBookingIds ?? []).includes(id),
             ));
-        const peerConflictsResolved =
-          snapshot.peerImportRowIds.length === 0 ||
-          row.conflictResolution === "keep_existing" ||
-          row.conflictResolution === "keep_csv";
+        const peerConflictsResolved = arePeerConflictsResolved(row, rows, snapshot);
 
         if (snapshot.nonBookingBlockers.length > 0) {
           status = "failed";

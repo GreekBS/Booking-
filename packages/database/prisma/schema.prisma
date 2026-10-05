@@ -325,6 +325,7 @@ model Tenant {
   bookings                       Booking[]
   reservationImportBatches       ReservationImportBatch[]
   reservationImportRows          ReservationImportRow[]
+  reservationImportRejectedRows  ReservationImportRejectedRow[]
   paymentRecords                 PaymentRecord[]
   payments                       Payment[]
   paymentAllocations             PaymentAllocation[]
@@ -977,10 +978,29 @@ model ReservationImportBatch {
   tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actor  User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
   rows   ReservationImportRow[]
+  rejectedRows ReservationImportRejectedRow[]
 
   @@index([tenantId, status, expiresAt])
   @@index([tenantId, createdAt(sort: Desc)])
   @@map("reservation_import_batches")
+}
+
+model ReservationImportRejectedRow {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  batchId   String   @map("batch_id") @db.Uuid
+  rowNumber Int      @map("row_number")
+  payload   Json     @default("{}")
+  errors    Json     @default("[]")
+  warnings  Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  batch  ReservationImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, rowNumber])
+  @@index([tenantId, batchId])
+  @@map("reservation_import_rejected_rows")
 }
 
 model ReservationImportRow {

@@ -9,6 +9,7 @@ import {
   type ReservationImportConflictResolution,
   type ReservationImportMissingPriceStrategy,
   type ReservationImportPriceSource,
+  type ReservationImportRejectedRowRecord,
   type ReservationImportRowRecord,
 } from "./ReservationImportTypes";
 import type { IReservationImportRepository } from "./IReservationImportRepository";
@@ -57,7 +58,14 @@ export class GetReservationImportDraftUseCase {
     actor: ActorContext,
     now: Date = new Date(),
   ): Promise<
-    Result<{ batch: ReservationImportBatchRecord; rows: ReservationImportRowRecord[] }, Error>
+    Result<
+      {
+        batch: ReservationImportBatchRecord;
+        rows: ReservationImportRowRecord[];
+        rejectedRows: ReservationImportRejectedRowRecord[];
+      },
+      Error
+    >
   > {
     try {
       assertBookingCreate(this.permissionChecker, actor, tenantId);
@@ -67,7 +75,8 @@ export class GetReservationImportDraftUseCase {
         return Result.fail(new ValidationError("Import draft has expired"));
       }
       const rows = await this.imports.listRowsForBatch(batchId, tenantId);
-      return Result.ok({ batch, rows });
+      const rejectedRows = await this.imports.listRejectedRowsForBatch(batchId, tenantId);
+      return Result.ok({ batch, rows, rejectedRows });
     } catch (e) {
       return Result.fail(e instanceof Error ? e : new Error(String(e)));
     }
@@ -220,27 +229,41 @@ export class UpdateReservationImportRowDecisionUseCase {
         replaceBookingIds = [...snapshot.existingBookingIds];
         replaceBookingId = replaceBookingIds[0] ?? null;
         if (snapshot.existingBookingIds.length === 0 && snapshot.peerImportRowIds.length > 0) {
-          // import↔import only — keep_csv means this row wins; peers must choose keep_existing
           replaceBookingIds = [];
           replaceBookingId = null;
         }
       }
 
-      await this.imports.updateRow(
-        input.rowId,
-        input.tenantId,
-        {
-          priceSource,
-          operatorTotalAmount,
-          operatorCurrency,
+      // Conflict decisions use atomic unit locking + peer demotion for exclusivity.
+      // Price-only updates still use single-row update.
+      let refreshed: ReservationImportRowRecord[];
+      if (input.conflictResolution !== undefined) {
+        refreshed = await this.imports.applyConflictDecisionAtomic({
+          tenantId: input.tenantId,
+          batchId: input.batchId,
+          rowId: input.rowId,
           conflictResolution,
           replaceBookingIds,
           replaceBookingId,
-        },
-        now,
-      );
+          priceSource,
+          operatorTotalAmount,
+          operatorCurrency,
+          now,
+        });
+      } else {
+        await this.imports.updateRow(
+          input.rowId,
+          input.tenantId,
+          {
+            priceSource,
+            operatorTotalAmount,
+            operatorCurrency,
+          },
+          now,
+        );
+        refreshed = await this.imports.listRowsForBatch(input.batchId, input.tenantId);
+      }
 
-      const refreshed = await this.imports.listRowsForBatch(input.batchId, input.tenantId);
       const preflighted = await this.createDraft.preflightRows({
         tenantId: input.tenantId,
         rows: refreshed,

@@ -1,8 +1,10 @@
 import type {
   CreateReservationImportBatchInput,
+  CreateReservationImportRejectedRowInput,
   CreateReservationImportRowInput,
   ReservationImportBatchRecord,
   ReservationImportMissingPriceStrategy,
+  ReservationImportRejectedRowRecord,
   ReservationImportRowRecord,
   ReservationImportRowStatus,
   ReservationImportConflictResolution,
@@ -91,6 +93,32 @@ export interface IReservationImportRepository {
   findDurableByExternalReference(
     lookup: DurableImportIdentityLookup,
   ): Promise<ReservationImportRowRecord | null>;
+
+  createRejectedRows(
+    inputs: CreateReservationImportRejectedRowInput[],
+  ): Promise<ReservationImportRejectedRowRecord[]>;
+
+  listRejectedRowsForBatch(
+    batchId: string,
+    tenantId: string,
+  ): Promise<ReservationImportRejectedRowRecord[]>;
+
+  /**
+   * Atomically apply keep_csv / keep_existing for a unit: lock rows, demote
+   * overlapping keep_csv peers, return all batch rows after updates.
+   */
+  applyConflictDecisionAtomic(input: {
+    tenantId: string;
+    batchId: string;
+    rowId: string;
+    conflictResolution: ReservationImportConflictResolution;
+    replaceBookingIds: string[];
+    replaceBookingId: string | null;
+    priceSource?: ReservationImportPriceSource;
+    operatorTotalAmount?: string | null;
+    operatorCurrency?: string | null;
+    now?: Date;
+  }): Promise<ReservationImportRowRecord[]>;
 
   /**
    * Mark expired drafts and remove disposable workflow rows.

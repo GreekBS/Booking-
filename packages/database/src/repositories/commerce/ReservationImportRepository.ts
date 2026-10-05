@@ -1,8 +1,10 @@
 import type {
   CreateReservationImportBatchInput,
+  CreateReservationImportRejectedRowInput,
   CreateReservationImportRowInput,
   IReservationImportRepository,
   ReservationImportBatchRecord,
+  ReservationImportRejectedRowRecord,
   ReservationImportRowRecord,
   UpdateReservationImportBatchInput,
   UpdateReservationImportRowInput,
@@ -12,10 +14,12 @@ import {
   CSV_RESERVATION_IMPORT_NAMESPACE,
   computeReservationImportDraftExpiresAt,
   DURABLE_IMPORT_ROW_STATUSES,
+  importRowsOverlap,
   ValidationError,
 } from "@hcp/domain";
 import type {
   ReservationImportBatch as PrismaBatch,
+  ReservationImportRejectedRow as PrismaRejectedRow,
   ReservationImportRow as PrismaRow,
   Prisma,
 } from "@prisma/client";
@@ -81,6 +85,19 @@ function rowToRecord(record: PrismaRow): ReservationImportRowRecord {
     processedAt: record.processedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+  };
+}
+
+function rejectedToRecord(record: PrismaRejectedRow): ReservationImportRejectedRowRecord {
+  return {
+    id: record.id,
+    tenantId: record.tenantId,
+    batchId: record.batchId,
+    rowNumber: record.rowNumber,
+    payload: (record.payload ?? {}) as Record<string, unknown>,
+    errors: Array.isArray(record.errors) ? (record.errors as unknown[]) : [],
+    warnings: Array.isArray(record.warnings) ? (record.warnings as unknown[]) : [],
+    createdAt: record.createdAt,
   };
 }
 
@@ -197,6 +214,9 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
           batchId,
           status: { notIn: [...DURABLE_IMPORT_ROW_STATUSES] },
         },
+      });
+      await tx.reservationImportRejectedRow.deleteMany({
+        where: { tenantId, batchId },
       });
 
       const updated = await tx.reservationImportBatch.update({
@@ -361,6 +381,155 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
     });
   }
 
+  async createRejectedRows(
+    inputs: CreateReservationImportRejectedRowInput[],
+  ): Promise<ReservationImportRejectedRowRecord[]> {
+    if (inputs.length === 0) return [];
+    const tenantId = inputs[0]!.tenantId;
+    return withTenantTransaction(tenantId, async (tx) => {
+      await tx.reservationImportRejectedRow.createMany({
+        data: inputs.map((input) => ({
+          id: input.id,
+          tenantId: input.tenantId,
+          batchId: input.batchId,
+          rowNumber: input.rowNumber,
+          payload: (input.payload ?? {}) as Prisma.InputJsonValue,
+          errors: (input.errors ?? []) as Prisma.InputJsonValue,
+          warnings: (input.warnings ?? []) as Prisma.InputJsonValue,
+        })),
+      });
+      const rows = await tx.reservationImportRejectedRow.findMany({
+        where: {
+          tenantId,
+          id: { in: inputs.map((i) => i.id) },
+        },
+        orderBy: { rowNumber: "asc" },
+      });
+      return rows.map(rejectedToRecord);
+    });
+  }
+
+  async listRejectedRowsForBatch(
+    batchId: string,
+    tenantId: string,
+  ): Promise<ReservationImportRejectedRowRecord[]> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.reservationImportRejectedRow.findMany({
+        where: { tenantId, batchId },
+        orderBy: { rowNumber: "asc" },
+      });
+      return rows.map(rejectedToRecord);
+    });
+  }
+
+  async applyConflictDecisionAtomic(input: {
+    tenantId: string;
+    batchId: string;
+    rowId: string;
+    conflictResolution: import("@hcp/domain").ReservationImportConflictResolution;
+    replaceBookingIds: string[];
+    replaceBookingId: string | null;
+    priceSource?: import("@hcp/domain").ReservationImportPriceSource;
+    operatorTotalAmount?: string | null;
+    operatorCurrency?: string | null;
+    now?: Date;
+  }): Promise<ReservationImportRowRecord[]> {
+    const now = input.now ?? new Date();
+    return withTenantTransaction(input.tenantId, async (tx) => {
+      const batch = await tx.reservationImportBatch.findFirst({
+        where: { id: input.batchId, tenantId: input.tenantId },
+      });
+      if (!batch) {
+        throw new ValidationError("Import draft not found");
+      }
+      if (batch.status === "draft" && batch.expiresAt.getTime() <= now.getTime()) {
+        throw new ValidationError("Import draft has expired");
+      }
+
+      const target = await tx.reservationImportRow.findFirst({
+        where: {
+          id: input.rowId,
+          tenantId: input.tenantId,
+          batchId: input.batchId,
+        },
+      });
+      if (!target) {
+        throw new ValidationError("Import row not found");
+      }
+
+      // Lock all import rows for this unit in the batch (exclusivity concurrency).
+      await tx.$queryRaw`
+        SELECT id FROM reservation_import_rows
+        WHERE tenant_id = ${input.tenantId}::uuid
+          AND batch_id = ${input.batchId}::uuid
+          AND unit_id = ${target.unitId}::uuid
+        FOR UPDATE
+      `;
+
+      const unitRows = await tx.reservationImportRow.findMany({
+        where: {
+          tenantId: input.tenantId,
+          batchId: input.batchId,
+          unitId: target.unitId,
+        },
+      });
+
+      const primary = rowToRecord(target);
+      const peers = unitRows.map(rowToRecord);
+
+      await tx.reservationImportRow.update({
+        where: { id: input.rowId },
+        data: {
+          conflictResolution: input.conflictResolution,
+          replaceBookingIds: input.replaceBookingIds as Prisma.InputJsonValue,
+          replaceBookingId: input.replaceBookingId,
+          ...(input.priceSource !== undefined ? { priceSource: input.priceSource } : {}),
+          ...(input.operatorTotalAmount !== undefined
+            ? { operatorTotalAmount: input.operatorTotalAmount }
+            : {}),
+          ...(input.operatorCurrency !== undefined
+            ? { operatorCurrency: input.operatorCurrency }
+            : {}),
+          updatedAt: now,
+        },
+      });
+
+      if (input.conflictResolution === "keep_csv") {
+        for (const peer of peers) {
+          if (peer.id === input.rowId) continue;
+          if (peer.conflictResolution !== "keep_csv") continue;
+          if (!importRowsOverlap(primary, peer)) continue;
+          await tx.reservationImportRow.update({
+            where: { id: peer.id },
+            data: {
+              conflictResolution: "keep_existing",
+              replaceBookingIds: [] as unknown as Prisma.InputJsonValue,
+              replaceBookingId: null,
+              updatedAt: now,
+            },
+          });
+        }
+      }
+
+      const all = await tx.reservationImportRow.findMany({
+        where: { tenantId: input.tenantId, batchId: input.batchId },
+        orderBy: { rowNumber: "asc" },
+      });
+      const records = all.map(rowToRecord);
+      const dual = records.filter((r) => r.conflictResolution === "keep_csv");
+      for (let i = 0; i < dual.length; i++) {
+        for (let j = i + 1; j < dual.length; j++) {
+          if (importRowsOverlap(dual[i]!, dual[j]!)) {
+            throw new ValidationError(
+              "Overlapping CSV rows cannot both keep_csv for the same unit",
+            );
+          }
+        }
+      }
+      return records;
+    });
+  }
+
   async expireDrafts(
     now: Date = new Date(),
     limit = 100,
@@ -388,7 +557,13 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
             status: { notIn: [...DURABLE_IMPORT_ROW_STATUSES] },
           },
         });
-        discardedRows += deleted.count;
+        const deletedRejected = await tx.reservationImportRejectedRow.deleteMany({
+          where: {
+            tenantId: batch.tenantId,
+            batchId: batch.id,
+          },
+        });
+        discardedRows += deleted.count + deletedRejected.count;
 
         const updated = await tx.reservationImportBatch.updateMany({
           where: {

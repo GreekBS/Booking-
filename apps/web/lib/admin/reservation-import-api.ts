@@ -61,9 +61,21 @@ export interface ReservationImportRowDto {
   updatedAt: string;
 }
 
+export interface ReservationImportRejectedRowDto {
+  id: string;
+  tenantId: string;
+  batchId: string;
+  rowNumber: number;
+  payload: Record<string, unknown>;
+  errors: unknown[];
+  warnings: unknown[];
+  createdAt: string;
+}
+
 export interface ReservationImportDraftDetail {
   batch: ReservationImportBatchDto;
   rows: ReservationImportRowDto[];
+  rejectedRows: ReservationImportRejectedRowDto[];
 }
 
 export function isReservationImportExpiredError(error: unknown): boolean {
@@ -110,16 +122,10 @@ export async function discardReservationImportDraft(
   return payload.batch;
 }
 
-export interface ReservationImportUnpersistedRow {
-  rowNumber: number;
-  errors: CsvImportIssue[];
-  warnings: CsvImportIssue[];
-}
-
 export interface CreateReservationImportDraftResponse {
   batch: ReservationImportBatchDto;
   rows: ReservationImportRowDto[];
-  unpersisted: ReservationImportUnpersistedRow[];
+  rejectedRows: ReservationImportRejectedRowDto[];
   parseIssues: CsvImportIssue[];
 }
 
