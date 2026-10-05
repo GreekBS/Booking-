@@ -7,16 +7,21 @@ import {
   isReservationImportExpiredError,
   isReservationImportNotFoundError,
   recheckReservationImportDraft,
+  updateReservationImportMissingPriceStrategy,
   updateReservationImportRowDecision,
   type ReservationImportConflictResolutionDto,
   type ReservationImportDraftDetail,
+  type ReservationImportPriceSourceDto,
 } from "@/lib/admin/reservation-import-api";
 import {
   fetchPropertyUnitCatalog,
   flattenCatalogUnits,
   invalidatePropertyUnitCatalogCache,
 } from "@/lib/admin/api";
-import { RESERVATION_IMPORT_LOAD_DRAFT_ERROR } from "./reservation-import-copy";
+import {
+  RESERVATION_IMPORT_LOAD_DRAFT_ERROR,
+  RESERVATION_IMPORT_MANUAL_CURRENCY_DEFAULT,
+} from "./reservation-import-copy";
 
 export type ReviewLoadState =
   | { kind: "loading" }
@@ -25,9 +30,12 @@ export type ReviewLoadState =
   | { kind: "not_found" }
   | { kind: "error"; message: string };
 
-export type ConflictDecisionResult =
+export type MutationRefetchResult =
   | { ok: true }
   | { ok: false; phase: "patch" | "refetch" };
+
+export type ConflictDecisionResult = MutationRefetchResult;
+export type PriceDecisionResult = MutationRefetchResult;
 
 export function useReservationImportReview(tenantId: string | null, batchId: string) {
   const [state, setState] = useState<ReviewLoadState>({ kind: "loading" });
@@ -37,6 +45,8 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
   const [rechecking, setRechecking] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [decidingRowId, setDecidingRowId] = useState<string | null>(null);
+  const [pricingRowId, setPricingRowId] = useState<string | null>(null);
+  const [pricingBatch, setPricingBatch] = useState(false);
   const [refetchFailed, setRefetchFailed] = useState(false);
 
   const loadCatalog = useCallback(async (tid: string) => {
@@ -73,7 +83,6 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
         setRefetchFailed(false);
         return false;
       }
-      // Keep previous ready detail if present; do not invent success.
       setRefetchFailed(true);
       return false;
     } finally {
@@ -160,10 +169,76 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     [tenantId, batchId, refetch],
   );
 
+  const setRowPrice = useCallback(
+    async (
+      rowId: string,
+      body: {
+        priceSource: Extract<
+          ReservationImportPriceSourceDto,
+          "talos_calculated" | "operator_entered"
+        >;
+        operatorTotalAmount?: string | null;
+        operatorCurrency?: string | null;
+      },
+    ): Promise<PriceDecisionResult> => {
+      if (!tenantId || !batchId) return { ok: false, phase: "patch" };
+      setPricingRowId(rowId);
+      try {
+        await updateReservationImportRowDecision(tenantId, batchId, rowId, {
+          priceSource: body.priceSource,
+          operatorTotalAmount: body.operatorTotalAmount,
+          operatorCurrency:
+            body.priceSource === "operator_entered"
+              ? (body.operatorCurrency ?? RESERVATION_IMPORT_MANUAL_CURRENCY_DEFAULT)
+              : body.operatorCurrency,
+        });
+      } catch {
+        setPricingRowId(null);
+        return { ok: false, phase: "patch" };
+      }
+
+      try {
+        const ok = await refetch();
+        if (!ok) return { ok: false, phase: "refetch" };
+        return { ok: true };
+      } finally {
+        setPricingRowId(null);
+      }
+    },
+    [tenantId, batchId, refetch],
+  );
+
+  const setMissingPriceStrategy = useCallback(async (): Promise<PriceDecisionResult> => {
+    if (!tenantId || !batchId) return { ok: false, phase: "patch" };
+    setPricingBatch(true);
+    try {
+      await updateReservationImportMissingPriceStrategy(
+        tenantId,
+        batchId,
+        "talos_for_all_missing",
+      );
+    } catch {
+      setPricingBatch(false);
+      return { ok: false, phase: "patch" };
+    }
+
+    try {
+      const ok = await refetch();
+      if (!ok) return { ok: false, phase: "refetch" };
+      return { ok: true };
+    } finally {
+      setPricingBatch(false);
+    }
+  }, [tenantId, batchId, refetch]);
+
   function unitLabel(unitId: string): string {
     if (unitNameById.has(unitId)) return unitNameById.get(unitId)!;
     return `Μονάδα ${unitId.slice(0, 8)}…`;
   }
+
+  const pricingBusy = pricingRowId !== null || pricingBatch;
+  const decisionBusy =
+    decidingRowId !== null || pricingBusy || refreshing || rechecking;
 
   return {
     state,
@@ -173,12 +248,17 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     rechecking,
     discarding,
     decidingRowId,
-    decisionBusy: decidingRowId !== null || refreshing,
+    pricingRowId,
+    pricingBatch,
+    decisionBusy,
+    pricingBusy,
     refetchFailed,
     refetch,
     recheck,
     discard,
     decideConflict,
+    setRowPrice,
+    setMissingPriceStrategy,
     reload: load,
   };
 }

@@ -260,3 +260,48 @@ export function relatedConflictRowIds(
   }
   return [...related];
 }
+
+const NON_PRICING_STATUSES = new Set([
+  "imported",
+  "replaced",
+  "skipped_already_imported",
+  "discarded",
+  "skipped",
+]);
+
+/**
+ * Whether B3.3d may show pricing actions for this row.
+ * Hard-blocked / keep_existing skipped / terminal rows never get pricing controls.
+ */
+export function rowAllowsPriceDecision(row: ReservationImportRowDto): boolean {
+  if (NON_PRICING_STATUSES.has(row.status)) return false;
+  if (rowHasHardBlockers(row)) return false;
+  if (row.status !== "pending" && row.status !== "ready") return false;
+  return true;
+}
+
+export function rowNeedsPriceDecision(row: ReservationImportRowDto): boolean {
+  return rowAllowsPriceDecision(row) && row.priceSource === "unresolved";
+}
+
+export function countEligibleUnresolvedPrices(rows: ReservationImportRowDto[]): number {
+  return rows.filter(rowNeedsPriceDecision).length;
+}
+
+export function rowHasTalosPriceUnavailable(row: ReservationImportRowDto): boolean {
+  return (
+    row.priceSource === "unresolved" &&
+    (row.errorCode === "TALOS_PRICE_UNAVAILABLE" ||
+      (row.errorMessage?.toLowerCase().includes("talos") ?? false))
+  );
+}
+
+/** Client-side UX validation for manual total (backend remains authoritative). */
+export function validateManualImportTotalAmount(raw: string): string | null {
+  const trimmed = raw.trim().replace(",", ".");
+  if (!trimmed) return "required";
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) return "malformed";
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n <= 0) return "non_positive";
+  return null;
+}

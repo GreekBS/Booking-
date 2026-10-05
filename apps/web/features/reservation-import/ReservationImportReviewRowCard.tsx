@@ -8,11 +8,13 @@ import type {
   ReservationImportRowDto,
 } from "@/lib/admin/reservation-import-api";
 import { ReservationImportConflictDecisionPanel } from "./ReservationImportConflictDecisionPanel";
+import { ReservationImportPriceDecisionPanel } from "./ReservationImportPriceDecisionPanel";
 import {
   formatImportStayRange,
   formatRowPriceAmount,
   priceDisplayKind,
   priceDisplayLabel,
+  rowAllowsPriceDecision,
   rowHasExistingBookingConflicts,
   rowHasHardBlockers,
   rowHasPeerConflicts,
@@ -25,11 +27,14 @@ type Props = {
   conflictBookings: ReservationImportConflictBookingDto[];
   unitLabel: (unitId: string) => string;
   decidingRowId?: string | null;
+  pricingRowId?: string | null;
   decisionBusy?: boolean;
   onDecideConflict?: (
     rowId: string,
     resolution: Exclude<ReservationImportConflictResolutionDto, "undecided">,
   ) => Promise<void>;
+  onUseTalosPrice?: (rowId: string) => Promise<void>;
+  onSaveManualPrice?: (rowId: string, amount: string, currency: string) => Promise<void>;
 };
 
 export function ReservationImportReviewRowCard({
@@ -38,8 +43,11 @@ export function ReservationImportReviewRowCard({
   conflictBookings,
   unitLabel,
   decidingRowId = null,
+  pricingRowId = null,
   decisionBusy = false,
   onDecideConflict,
+  onUseTalosPrice,
+  onSaveManualPrice,
 }: Props) {
   const priceKind = priceDisplayKind(row);
   const priceAmount = formatRowPriceAmount(row);
@@ -48,8 +56,10 @@ export function ReservationImportReviewRowCard({
     rowHasExistingBookingConflicts(row) ||
     rowHasPeerConflicts(row) ||
     row.conflictResolution !== "undecided";
+  const showPricePanel = rowAllowsPriceDecision(row) && onUseTalosPrice && onSaveManualPrice;
 
   const rowDeciding = decidingRowId === row.id;
+  const rowPricing = pricingRowId === row.id;
 
   return (
     <Surface variant="panel" padding="md" className="space-y-3">
@@ -94,6 +104,16 @@ export function ReservationImportReviewRowCard({
         <p className="text-sm text-destructive" role="alert">
           {row.errorMessage ?? row.errorCode}
         </p>
+      ) : null}
+
+      {showPricePanel ? (
+        <ReservationImportPriceDecisionPanel
+          row={row}
+          disabled={decisionBusy}
+          deciding={rowPricing}
+          onUseTalos={() => onUseTalosPrice(row.id)}
+          onSaveManual={(amount, currency) => onSaveManualPrice(row.id, amount, currency)}
+        />
       ) : null}
 
       {showConflictPanel && onDecideConflict ? (

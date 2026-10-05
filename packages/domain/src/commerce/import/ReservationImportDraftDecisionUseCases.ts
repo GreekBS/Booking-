@@ -13,6 +13,7 @@ import {
   type ReservationImportRejectedRowRecord,
   type ReservationImportRowRecord,
 } from "./ReservationImportTypes";
+import { normalizeOperatorEnteredImportPrice } from "./ReservationImportOperatorPrice";
 import type { IBookingRepository } from "../ports/CommercePorts";
 import type { IReservationImportRepository } from "./IReservationImportRepository";
 import { collectConflictBookingIdsFromImportRows } from "./ReservationImportExclusivity";
@@ -243,6 +244,13 @@ export class UpdateReservationImportRowDecisionUseCase {
         }
         operatorTotalAmount = priced.amount;
         operatorCurrency = priced.currency;
+      } else if (priceSource === "operator_entered") {
+        const normalized = normalizeOperatorEnteredImportPrice({
+          amount: operatorTotalAmount,
+          currency: operatorCurrency,
+        });
+        operatorTotalAmount = normalized.amount;
+        operatorCurrency = normalized.currency;
       }
 
       const conflictResolution = input.conflictResolution ?? row.conflictResolution;

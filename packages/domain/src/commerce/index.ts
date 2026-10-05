@@ -10,6 +10,7 @@ export * from "./availability/AvailabilityEvaluator";
 export * from "./import/ImportStayTemporalClass";
 export * from "./import/ImportAvailabilityPolicy";
 export * from "./import/ReservationImportTypes";
+export * from "./import/ReservationImportOperatorPrice";
 export * from "./import/IReservationImportRepository";
 export * from "./import/ExpireReservationImportDraftsUseCase";
 export * from "./import/csv";

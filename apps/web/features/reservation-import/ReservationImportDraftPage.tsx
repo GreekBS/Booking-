@@ -26,18 +26,25 @@ import {
   RESERVATION_IMPORT_EXPIRED_MESSAGE,
   RESERVATION_IMPORT_NOT_FOUND_MESSAGE,
   RESERVATION_IMPORT_PHASE_C_PLACEHOLDER,
+  RESERVATION_IMPORT_PRICE_BATCH_ERROR,
+  RESERVATION_IMPORT_PRICE_BATCH_SUCCESS,
+  RESERVATION_IMPORT_PRICE_ERROR,
+  RESERVATION_IMPORT_PRICE_SUCCESS,
   RESERVATION_IMPORT_RECHECK_DESCRIPTION,
   RESERVATION_IMPORT_RECHECK_ERROR,
   RESERVATION_IMPORT_RECHECK_LABEL,
   RESERVATION_IMPORT_RECHECK_SUCCESS,
   RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR,
   RESERVATION_IMPORT_REVIEW_TITLE,
+  RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT,
+  RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL,
 } from "./reservation-import-copy";
 import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
 import { ReservationImportRejectedRowCard } from "./ReservationImportRejectedRowCard";
 import { ReservationImportReviewRowCard } from "./ReservationImportReviewRowCard";
 import {
   computeReadinessCounts,
+  countEligibleUnresolvedPrices,
   filterRowsForTab,
   tabCounts,
   type ReviewTabId,
@@ -45,7 +52,7 @@ import {
 import { useReservationImportReview } from "./useReservationImportReview";
 
 /**
- * B3.3 review page — display, tabs, conflict decisions (B3.3c); pricing in B3.3d.
+ * B3.3 review page — conflicts (B3.3c) + missing-price decisions (B3.3d).
  */
 export function ReservationImportDraftPage() {
   const params = useParams<{ batchId: string }>();
@@ -59,12 +66,16 @@ export function ReservationImportDraftPage() {
     rechecking,
     discarding,
     decidingRowId,
+    pricingRowId,
+    pricingBatch,
     decisionBusy,
     refetchFailed,
     refetch,
     recheck,
     discard,
     decideConflict,
+    setRowPrice,
+    setMissingPriceStrategy,
     reload,
   } = useReservationImportReview(tenantId, batchId);
 
@@ -146,6 +157,7 @@ export function ReservationImportDraftPage() {
   const { batch, rows, rejectedRows, conflictBookings } = detail;
   const counts = computeReadinessCounts(rows, rejectedRows);
   const tabs = tabCounts(rows, rejectedRows);
+  const unresolvedEligible = countEligibleUnresolvedPrices(rows);
   async function handleDiscard() {
     const ok = await discard();
     if (ok) {
@@ -186,6 +198,58 @@ export function ReservationImportDraftPage() {
     }
     toastError(RESERVATION_IMPORT_DECISION_ERROR);
     setLiveMessage(RESERVATION_IMPORT_DECISION_ERROR);
+  }
+
+  async function handleUseTalosPrice(rowId: string) {
+    const result = await setRowPrice(rowId, { priceSource: "talos_calculated" });
+    if (result.ok) {
+      toastSuccess(RESERVATION_IMPORT_PRICE_SUCCESS);
+      setLiveMessage(RESERVATION_IMPORT_PRICE_SUCCESS);
+      return;
+    }
+    if (result.phase === "refetch") {
+      toastError(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      return;
+    }
+    toastError(RESERVATION_IMPORT_PRICE_ERROR);
+    setLiveMessage(RESERVATION_IMPORT_PRICE_ERROR);
+  }
+
+  async function handleSaveManualPrice(rowId: string, amount: string, currency: string) {
+    const result = await setRowPrice(rowId, {
+      priceSource: "operator_entered",
+      operatorTotalAmount: amount,
+      operatorCurrency: currency,
+    });
+    if (result.ok) {
+      toastSuccess(RESERVATION_IMPORT_PRICE_SUCCESS);
+      setLiveMessage(RESERVATION_IMPORT_PRICE_SUCCESS);
+      return;
+    }
+    if (result.phase === "refetch") {
+      toastError(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      return;
+    }
+    toastError(RESERVATION_IMPORT_PRICE_ERROR);
+    setLiveMessage(RESERVATION_IMPORT_PRICE_ERROR);
+  }
+
+  async function handleTalosAllMissing() {
+    const result = await setMissingPriceStrategy();
+    if (result.ok) {
+      toastSuccess(RESERVATION_IMPORT_PRICE_BATCH_SUCCESS);
+      setLiveMessage(RESERVATION_IMPORT_PRICE_BATCH_SUCCESS);
+      return;
+    }
+    if (result.phase === "refetch") {
+      toastError(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR);
+      return;
+    }
+    toastError(RESERVATION_IMPORT_PRICE_BATCH_ERROR);
+    setLiveMessage(RESERVATION_IMPORT_PRICE_BATCH_ERROR);
   }
 
   return (
@@ -275,7 +339,31 @@ export function ReservationImportDraftPage() {
           <span className="rounded-md bg-muted px-2 py-1">
             Απορριφθείσες: <strong>{counts.rejected}</strong>
           </span>
+          {unresolvedEligible > 0 ? (
+            <span className="rounded-md bg-muted px-2 py-1">
+              Χωρίς τιμή: <strong>{unresolvedEligible}</strong>
+            </span>
+          ) : null}
         </div>
+
+        {unresolvedEligible > 0 ? (
+          <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+            <p className="text-sm text-muted-foreground">
+              {RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={decisionBusy || pricingBatch}
+              onClick={() => void handleTalosAllMissing()}
+            >
+              {pricingBatch
+                ? "Εφαρμογή…"
+                : RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL}
+            </Button>
+          </div>
+        ) : null}
 
         <p className="text-xs text-muted-foreground">{RESERVATION_IMPORT_PHASE_C_PLACEHOLDER}</p>
       </Surface>
@@ -318,8 +406,11 @@ export function ReservationImportDraftPage() {
                     conflictBookings={conflictBookings ?? []}
                     unitLabel={unitLabel}
                     decidingRowId={decidingRowId}
+                    pricingRowId={pricingRowId}
                     decisionBusy={decisionBusy}
                     onDecideConflict={handleDecideConflict}
+                    onUseTalosPrice={handleUseTalosPrice}
+                    onSaveManualPrice={handleSaveManualPrice}
                   />
                 ))
               )}

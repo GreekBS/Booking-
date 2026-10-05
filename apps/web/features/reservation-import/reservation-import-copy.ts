@@ -96,3 +96,44 @@ export const RESERVATION_IMPORT_HARD_BLOCKER_NO_DECISION =
 
 export const RESERVATION_IMPORT_KEEP_CSV_NOT_YET_REPLACED =
   "Η υπάρχουσα κράτηση δεν διαγράφεται τώρα. Η αντικατάσταση γίνεται μόνο στην ολοκλήρωση εισαγωγής.";
+
+/** B3.3d pricing copy */
+export const RESERVATION_IMPORT_PRICE_MISSING_LABEL = "Χωρίς τιμή";
+
+export const RESERVATION_IMPORT_USE_TALOS_PRICE_LABEL = "Χρήση τιμής TALOS";
+
+export const RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL =
+  "Χρήση τιμής TALOS για όλες τις κρατήσεις χωρίς τιμή";
+
+export const RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT =
+  "Εφαρμόζεται μόνο σε κρατήσεις χωρίς τιμή. Οι τιμές CSV και οι χειροκίνητες τιμές δεν αλλάζουν.";
+
+export const RESERVATION_IMPORT_MANUAL_PRICE_LABEL = "Χειροκίνητη τιμή";
+
+export const RESERVATION_IMPORT_MANUAL_PRICE_FIELD =
+  "Συνολική τιμή κράτησης";
+
+export const RESERVATION_IMPORT_MANUAL_PRICE_HINT =
+  "Ορίστε τη συνολική τιμή για ολόκληρη τη διαμονή.";
+
+export const RESERVATION_IMPORT_MANUAL_PRICE_SAVE = "Αποθήκευση τιμής";
+
+export const RESERVATION_IMPORT_MANUAL_PRICE_EDIT = "Επεξεργασία τιμής";
+
+export const RESERVATION_IMPORT_PRICE_SUCCESS = "Η τιμή αποθηκεύτηκε.";
+
+export const RESERVATION_IMPORT_PRICE_ERROR = "Αποτυχία αποθήκευσης τιμής.";
+
+export const RESERVATION_IMPORT_PRICE_BATCH_SUCCESS =
+  "Οι τιμές TALOS εφαρμόστηκαν στις κρατήσεις χωρίς τιμή.";
+
+export const RESERVATION_IMPORT_PRICE_BATCH_ERROR =
+  "Αποτυχία εφαρμογής τιμών TALOS για όλες τις κρατήσεις χωρίς τιμή.";
+
+export const RESERVATION_IMPORT_TALOS_UNAVAILABLE =
+  "Δεν ήταν δυνατός ο υπολογισμός τιμής από το TALOS. Μπορείτε να ορίσετε τη συνολική τιμή χειροκίνητα.";
+
+export const RESERVATION_IMPORT_MANUAL_PRICE_INVALID =
+  "Εισαγάγετε έγκυρη συνολική τιμή μεγαλύτερη από το μηδέν.";
+
+export const RESERVATION_IMPORT_MANUAL_CURRENCY_DEFAULT = "EUR";
