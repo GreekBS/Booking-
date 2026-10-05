@@ -122,6 +122,14 @@ export interface ReservationImportRowRecord {
   updatedAt: Date;
 }
 
+/** Read-only booking display enrichment for import review (not conflict authority). */
+export interface ReservationImportConflictBookingRecord {
+  id: string;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+}
+
 /** Durable create-time exclusions that never became reservation_import_rows. */
 export interface ReservationImportRejectedRowRecord {
   id: string;

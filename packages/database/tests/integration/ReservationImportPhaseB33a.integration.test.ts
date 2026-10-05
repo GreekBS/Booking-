@@ -65,7 +65,11 @@ runIntegration("Reservation import B3.3a", () => {
     { generate: () => randomUUID() },
     permissionChecker,
   );
-  const getDraft = new GetReservationImportDraftUseCase(imports, permissionChecker);
+  const getDraft = new GetReservationImportDraftUseCase(
+    imports,
+    permissionChecker,
+    bookingRepository,
+  );
   const discardDraft = new DiscardReservationImportDraftUseCase(imports, permissionChecker);
   const updateDecision = new UpdateReservationImportRowDecisionUseCase(
     imports,
@@ -667,6 +671,62 @@ runIntegration("Reservation import B3.3a", () => {
     }
     // At least one attempt should complete without throwing dual-keep_csv into DB
     expect(r1.isSuccess || r2.isSuccess).toBe(true);
+  });
+
+  it("B3.3b GET enriches conflictBookings tenant-scoped from conflict snapshots", async () => {
+    const bookingId = "550e8400-e29b-41d4-a716-446655441099";
+    const foreignBookingId = "550e8400-e29b-41d4-a716-446655441199";
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId,
+      checkIn: "2026-11-20",
+      checkOut: "2026-11-24",
+    });
+    await createConfirmedBooking({
+      tenantId: tenantB,
+      propertyId: propertyB,
+      unitId: unitB,
+      bookingId: foreignBookingId,
+      checkIn: "2026-11-20",
+      checkOut: "2026-11-24",
+    });
+
+    const csv = [
+      "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
+      `ENR-1,${unitA},Guest,g@test.com,2026-11-21,2026-11-23,2,100,EUR`,
+    ].join("\n");
+    const created = await createDraft.execute(
+      {
+        tenantId: tenantA,
+        filename: "enrich.csv",
+        content: csv,
+        dateFormat: "iso",
+        now: new Date("2026-10-04T08:00:00.000Z"),
+      },
+      actor,
+    );
+    expect(created.isSuccess).toBe(true);
+    const batchId = created.getValue().batch.id;
+
+    const detail = await getDraft.execute(
+      batchId,
+      tenantA,
+      actor,
+      new Date("2026-10-04T08:05:00.000Z"),
+    );
+    expect(detail.isSuccess).toBe(true);
+    const { conflictBookings, rows } = detail.getValue();
+    expect(rows).toHaveLength(1);
+    expect(conflictBookings).toHaveLength(1);
+    expect(conflictBookings[0]).toMatchObject({
+      id: bookingId,
+      guestName: "Existing Guest",
+      checkIn: "2026-11-20",
+      checkOut: "2026-11-24",
+    });
+    expect(conflictBookings.map((b) => b.id)).not.toContain(foreignBookingId);
   });
 
   it("local schema: rejected-row cascade on batch delete + tenant policy identity", async () => {

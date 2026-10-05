@@ -43,3 +43,19 @@ export const RESERVATION_IMPORT_FILE_TOO_LARGE =
 
 export const RESERVATION_IMPORT_UNPERSISTED_WARNING =
   "Ορισμένες γραμμές δεν αποθηκεύτηκαν στο πρόχειρο (π.χ. άγνωστη μονάδα). Ελέγξτε τις πριν συνεχίσετε.";
+
+export const RESERVATION_IMPORT_RECHECK_LABEL = "Επανέλεγχος συγκρούσεων";
+
+export const RESERVATION_IMPORT_RECHECK_DESCRIPTION =
+  "Η διαθεσιμότητα και οι συγκρούσεις μπορεί να έχουν αλλάξει από την ανέβασμα του CSV.";
+
+export const RESERVATION_IMPORT_RECHECK_SUCCESS =
+  "Οι συγκρούσεις επανελέγχθηκαν. Ελέγξτε τις γραμμές που χρειάζονται ενέργεια.";
+
+export const RESERVATION_IMPORT_RECHECK_ERROR =
+  "Αποτυχία επανελέγχου συγκρούσεων.";
+
+export const RESERVATION_IMPORT_PHASE_C_PLACEHOLDER =
+  "Η ολοκλήρωση εισαγωγής θα είναι διαθέσιμη στην επόμενη φάση (Phase C).";
+
+export const RESERVATION_IMPORT_REVIEW_TITLE = "Ανασκόπηση πρόχειρης εισαγωγής";

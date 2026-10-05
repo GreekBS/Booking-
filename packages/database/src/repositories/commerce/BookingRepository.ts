@@ -38,6 +38,17 @@ export class PrismaBookingRepository implements IBookingRepository {
     });
   }
 
+  async findByIds(ids: string[], tenantId: string): Promise<Booking[]> {
+    if (ids.length === 0) return [];
+    return withTenantTransaction(tenantId, async (tx) => {
+      const records = await tx.booking.findMany({
+        where: { tenantId, id: { in: ids } },
+        orderBy: { checkIn: "asc" },
+      });
+      return records.map(bookingToDomain);
+    });
+  }
+
   async findByUnit(
     unitId: string,
     tenantId: string,

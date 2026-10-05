@@ -94,6 +94,25 @@ export function arePeerConflictsResolved(
   return findOverlappingKeepCsvPeers(row, allRows).length === 0;
 }
 
+/** Unique booking ids referenced in row conflict snapshots (for review enrichment). */
+export function collectConflictBookingIdsFromImportRows(
+  rows: ReservationImportRowRecord[],
+): string[] {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const snapshot = parseConflictSnapshot(row.conflictSnapshot);
+    for (const id of snapshot.existingBookingIds) {
+      ids.add(id);
+    }
+    for (const overlap of snapshot.overlaps) {
+      if (overlap.otherKind === "existing_booking") {
+        ids.add(overlap.otherId);
+      }
+    }
+  }
+  return [...ids].sort();
+}
+
 export function buildRejectedRowPayload(input: {
   externalReference: string | null;
   unitRef: string | null;

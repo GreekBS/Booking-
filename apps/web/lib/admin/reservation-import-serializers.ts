@@ -1,8 +1,20 @@
 import type {
   ReservationImportBatchRecord,
+  ReservationImportConflictBookingRecord,
   ReservationImportRejectedRowRecord,
   ReservationImportRowRecord,
 } from "@hcp/domain";
+
+export function serializeReservationImportConflictBooking(
+  booking: ReservationImportConflictBookingRecord,
+) {
+  return {
+    id: booking.id,
+    guestName: booking.guestName,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+  };
+}
 
 export function serializeReservationImportBatch(batch: ReservationImportBatchRecord) {
   return {

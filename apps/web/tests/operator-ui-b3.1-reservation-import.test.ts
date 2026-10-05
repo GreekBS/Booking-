@@ -58,11 +58,15 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     const draft = read("features/reservation-import/ReservationImportDraftPage.tsx");
     expect(draft).toContain("RESERVATION_IMPORT_DRAFT_TTL_MESSAGE");
     expect(draft).toContain("expiresAt");
-    expect(draft).toContain("discardReservationImportDraft");
+    expect(draft).toContain("useReservationImportReview");
+    expect(draft).toContain("conflictBookings");
     expect(draft).toContain("RESERVATION_IMPORT_EXPIRED_MESSAGE");
     expect(draft).toContain('router.push("/dashboard/bookings")');
     expect(draft).not.toContain("localStorage");
     expect(draft).not.toContain("sessionStorage");
+    expect(draft).not.toContain("keep_existing");
+    expect(draft).not.toContain("keep_csv");
+    expect(draft).not.toContain("Ολοκλήρωση εισαγωγής");
   });
 
   it("draft list uses list API fields only and ConfirmDialog discard", () => {
@@ -81,16 +85,18 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     expect(list).not.toContain("unresolved");
   });
 
-  it("API client covers list/get/discard and does not invent recheck/update", () => {
+  it("API client covers list/get/discard and B3.3b mutation helpers", () => {
     const api = read("lib/admin/reservation-import-api.ts");
     expect(api).toContain("listReservationImportDrafts");
     expect(api).toContain("getReservationImportDraft");
     expect(api).toContain("discardReservationImportDraft");
     expect(api).toContain("/reservation-imports");
     expect(api).toContain("/discard");
-    expect(api).not.toContain("recheckReservationImport");
-    expect(api).not.toContain("/recheck");
-    expect(api).not.toContain("function updateReservationImport");
+    expect(api).toContain("recheckReservationImportDraft");
+    expect(api).toContain("/recheck");
+    expect(api).toContain("updateReservationImportRowDecision");
+    expect(api).toContain("updateReservationImportMissingPriceStrategy");
+    expect(api).toContain("conflictBookings");
   });
 
   it("does not invent client-side createdAt+72h expiry authority", () => {

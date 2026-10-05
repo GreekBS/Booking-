@@ -11,6 +11,7 @@ import {
 import { apiError, apiSuccess, mapResultError } from "@/lib/api-error-handler";
 import {
   serializeReservationImportBatch,
+  serializeReservationImportConflictBooking,
   serializeReservationImportRejectedRow,
   serializeReservationImportRow,
 } from "@/lib/admin/reservation-import-serializers";
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       batch: serializeReservationImportBatch(value.batch),
       rows: value.rows.map(serializeReservationImportRow),
       rejectedRows: value.rejectedRows.map(serializeReservationImportRejectedRow),
+      conflictBookings: value.conflictBookings.map(serializeReservationImportConflictBooking),
     });
   } catch (error) {
     return apiError(error);

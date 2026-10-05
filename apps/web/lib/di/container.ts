@@ -1362,6 +1362,7 @@ export const getReservationImportDraftUseCase =
   new GetReservationImportDraftUseCase(
     reservationImportRepository,
     permissionChecker,
+    bookingRepository,
   );
 
 export const discardReservationImportDraftUseCase =

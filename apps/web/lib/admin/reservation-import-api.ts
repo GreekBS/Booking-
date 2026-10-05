@@ -72,11 +72,35 @@ export interface ReservationImportRejectedRowDto {
   createdAt: string;
 }
 
+export interface ReservationImportConflictBookingDto {
+  id: string;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+}
+
 export interface ReservationImportDraftDetail {
   batch: ReservationImportBatchDto;
   rows: ReservationImportRowDto[];
   rejectedRows: ReservationImportRejectedRowDto[];
+  conflictBookings: ReservationImportConflictBookingDto[];
 }
+
+export type ReservationImportMissingPriceStrategyDto =
+  | "undecided"
+  | "talos_for_all_missing"
+  | "per_row";
+
+export type ReservationImportConflictResolutionDto =
+  | "undecided"
+  | "keep_existing"
+  | "keep_csv";
+
+export type ReservationImportPriceSourceDto =
+  | "unresolved"
+  | "imported_csv"
+  | "talos_calculated"
+  | "operator_entered";
 
 export function isReservationImportExpiredError(error: unknown): boolean {
   if (!(error instanceof AdminApiError)) return false;
@@ -105,10 +129,13 @@ export async function getReservationImportDraft(
   tenantId: string,
   batchId: string,
 ): Promise<ReservationImportDraftDetail> {
-  return adminFetch<ReservationImportDraftDetail>(
-    `/reservation-imports/${encodeURIComponent(batchId)}`,
-    { tenantId },
-  );
+  const payload = await adminFetch<
+    ReservationImportDraftDetail & { conflictBookings?: ReservationImportConflictBookingDto[] }
+  >(`/reservation-imports/${encodeURIComponent(batchId)}`, { tenantId });
+  return {
+    ...payload,
+    conflictBookings: payload.conflictBookings ?? [],
+  };
 }
 
 export async function discardReservationImportDraft(
@@ -120,6 +147,50 @@ export async function discardReservationImportDraft(
     { method: "POST", tenantId, body: "{}" },
   );
   return payload.batch;
+}
+
+export async function updateReservationImportMissingPriceStrategy(
+  tenantId: string,
+  batchId: string,
+  missingPriceStrategy: ReservationImportMissingPriceStrategyDto,
+): Promise<{ batch: ReservationImportBatchDto; rows: ReservationImportRowDto[] }> {
+  return adminFetch(`/reservation-imports/${encodeURIComponent(batchId)}`, {
+    method: "PATCH",
+    tenantId,
+    body: JSON.stringify({ missingPriceStrategy }),
+  });
+}
+
+export async function updateReservationImportRowDecision(
+  tenantId: string,
+  batchId: string,
+  rowId: string,
+  body: {
+    conflictResolution?: ReservationImportConflictResolutionDto;
+    priceSource?: ReservationImportPriceSourceDto;
+    operatorTotalAmount?: string | null;
+    operatorCurrency?: string | null;
+  },
+): Promise<{ row: ReservationImportRowDto }> {
+  return adminFetch(
+    `/reservation-imports/${encodeURIComponent(batchId)}/rows/${encodeURIComponent(rowId)}`,
+    {
+      method: "PATCH",
+      tenantId,
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function recheckReservationImportDraft(
+  tenantId: string,
+  batchId: string,
+): Promise<{ batch: ReservationImportBatchDto; rows: ReservationImportRowDto[] }> {
+  return adminFetch(`/reservation-imports/${encodeURIComponent(batchId)}/recheck`, {
+    method: "POST",
+    tenantId,
+    body: "{}",
+  });
 }
 
 export interface CreateReservationImportDraftResponse {

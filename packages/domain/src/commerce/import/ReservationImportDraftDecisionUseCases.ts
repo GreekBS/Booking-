@@ -6,13 +6,16 @@ import { PERMISSIONS } from "@hcp/permissions";
 import {
   canResumeReservationImportDraft,
   type ReservationImportBatchRecord,
+  type ReservationImportConflictBookingRecord,
   type ReservationImportConflictResolution,
   type ReservationImportMissingPriceStrategy,
   type ReservationImportPriceSource,
   type ReservationImportRejectedRowRecord,
   type ReservationImportRowRecord,
 } from "./ReservationImportTypes";
+import type { IBookingRepository } from "../ports/CommercePorts";
 import type { IReservationImportRepository } from "./IReservationImportRepository";
+import { collectConflictBookingIdsFromImportRows } from "./ReservationImportExclusivity";
 import type { CreateReservationImportDraftUseCase } from "./CreateReservationImportDraftUseCase";
 import {
   parseConflictSnapshot,
@@ -50,6 +53,7 @@ export class GetReservationImportDraftUseCase {
   constructor(
     private readonly imports: IReservationImportRepository,
     private readonly permissionChecker: PermissionChecker = new PermissionChecker(),
+    private readonly bookings?: IBookingRepository,
   ) {}
 
   async execute(
@@ -63,6 +67,7 @@ export class GetReservationImportDraftUseCase {
         batch: ReservationImportBatchRecord;
         rows: ReservationImportRowRecord[];
         rejectedRows: ReservationImportRejectedRowRecord[];
+        conflictBookings: ReservationImportConflictBookingRecord[];
       },
       Error
     >
@@ -76,10 +81,33 @@ export class GetReservationImportDraftUseCase {
       }
       const rows = await this.imports.listRowsForBatch(batchId, tenantId);
       const rejectedRows = await this.imports.listRejectedRowsForBatch(batchId, tenantId);
-      return Result.ok({ batch, rows, rejectedRows });
+      const conflictBookings = await this.loadConflictBookings(rows, tenantId);
+      return Result.ok({ batch, rows, rejectedRows, conflictBookings });
     } catch (e) {
       return Result.fail(e instanceof Error ? e : new Error(String(e)));
     }
+  }
+
+  private async loadConflictBookings(
+    rows: ReservationImportRowRecord[],
+    tenantId: string,
+  ): Promise<ReservationImportConflictBookingRecord[]> {
+    if (!this.bookings) return [];
+    const ids = collectConflictBookingIdsFromImportRows(rows);
+    if (ids.length === 0) return [];
+    const bookings = await this.bookings.findByIds(ids, tenantId);
+    const byId = new Map(
+      bookings.map((b) => [
+        b.id,
+        {
+          id: b.id,
+          guestName: b.guest.name,
+          checkIn: b.stayPeriod.checkIn.value,
+          checkOut: b.stayPeriod.checkOut.value,
+        } satisfies ReservationImportConflictBookingRecord,
+      ]),
+    );
+    return ids.filter((id) => byId.has(id)).map((id) => byId.get(id)!);
   }
 }
 

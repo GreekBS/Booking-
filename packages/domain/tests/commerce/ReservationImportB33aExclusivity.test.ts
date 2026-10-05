@@ -3,6 +3,7 @@ import {
   arePeerConflictsResolved,
   assertKeepCsvExclusivity,
   buildRejectedRowPayload,
+  collectConflictBookingIdsFromImportRows,
   findKeepCsvExclusivityViolations,
   findOverlappingKeepCsvPeers,
   importRowsOverlap,
@@ -166,6 +167,34 @@ describe("B3.3a exclusivity helpers", () => {
     expect(arePeerConflictsResolved(a, [a, b])).toBe(false);
     const bSkip = { ...b, conflictResolution: "keep_existing" as const };
     expect(arePeerConflictsResolved(a, [a, bSkip])).toBe(true);
+  });
+
+  it("collectConflictBookingIds dedupes existingBookingIds and overlap peers", () => {
+    const b1 = "550e8400-e29b-41d4-a716-446655440101";
+    const b2 = "550e8400-e29b-41d4-a716-446655440102";
+    const rows = [
+      row({
+        id: "r1",
+        conflictSnapshot: {
+          version: 1,
+          existingBookingIds: [b1, b2],
+          peerImportRowIds: [],
+          nonBookingBlockers: [],
+          overlaps: [{ otherKind: "existing_booking", otherId: b1, checkIn: "x", checkOut: "y" }],
+        },
+      }),
+      row({
+        id: "r2",
+        conflictSnapshot: {
+          version: 1,
+          existingBookingIds: [b2],
+          peerImportRowIds: [],
+          nonBookingBlockers: [],
+          overlaps: [],
+        },
+      }),
+    ];
+    expect(collectConflictBookingIdsFromImportRows(rows)).toEqual([b1, b2].sort((a, c) => a.localeCompare(c)));
   });
 
   it("builds minimized rejected payload without raw CSV", () => {
