@@ -193,6 +193,56 @@ export async function recheckReservationImportDraft(
   });
 }
 
+export interface ReservationImportCommitSummaryDto {
+  imported: number;
+  skipped: number;
+  createdBookingIds: string[];
+  supersededBookingIds: string[];
+  skippedRowIds: string[];
+}
+
+export interface ReservationImportCommitResponse {
+  alreadyCompleted: boolean;
+  batch: ReservationImportBatchDto;
+  rows: ReservationImportRowDto[];
+  summary: ReservationImportCommitSummaryDto;
+}
+
+/** Phase C2 — whole-batch commit. No pricing/conflict decisions in the body. */
+export async function commitReservationImportDraft(
+  tenantId: string,
+  batchId: string,
+): Promise<ReservationImportCommitResponse> {
+  return adminFetch(
+    `/reservation-imports/${encodeURIComponent(batchId)}/commit`,
+    {
+      method: "POST",
+      tenantId,
+      body: "{}",
+    },
+  );
+}
+
+export function isReservationImportStaleCommitError(error: unknown): boolean {
+  if (!(error instanceof AdminApiError)) return false;
+  return error.status === 409 || error.code === "CONFLICT";
+}
+
+export function isReservationImportCommitNotReadyError(error: unknown): boolean {
+  if (!(error instanceof AdminApiError)) return false;
+  if (error.status !== 400) return false;
+  if (isReservationImportExpiredError(error)) return true;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("commit blocked") ||
+    msg.includes("not commit-eligible") ||
+    msg.includes("recheck") ||
+    msg.includes("expired") ||
+    msg.includes("pending") ||
+    msg.includes("unresolved")
+  );
+}
+
 export interface CreateReservationImportDraftResponse {
   batch: ReservationImportBatchDto;
   rows: ReservationImportRowDto[];

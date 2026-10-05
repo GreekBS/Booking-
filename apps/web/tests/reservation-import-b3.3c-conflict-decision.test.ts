@@ -427,12 +427,14 @@ describe("B3.3c — conflict decision UI", () => {
     expect(panel).not.toContain("priceSource");
   });
 
-  it("no Phase C action exists", () => {
+  it("Phase C2 commit is separate from conflict decision row cards", () => {
     const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
-    expect(page).not.toContain("Ολοκλήρωση εισαγωγής");
-    expect(page).toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
+    expect(page).toContain("RESERVATION_IMPORT_COMMIT_LABEL");
+    expect(page).toContain("evaluateClientCommitEligibility");
     expect(page).not.toContain("Booking.create");
-    expect(page).not.toContain("/commit");
+    expect(page).not.toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
+    const card = read("features/reservation-import/ReservationImportReviewRowCard.tsx");
+    expect(card).not.toContain("/commit");
   });
 
   it("current decision labels render from GET conflictResolution", () => {

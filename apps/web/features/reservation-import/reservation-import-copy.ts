@@ -55,10 +55,51 @@ export const RESERVATION_IMPORT_RECHECK_SUCCESS =
 export const RESERVATION_IMPORT_RECHECK_ERROR =
   "Αποτυχία επανελέγχου συγκρούσεων.";
 
-export const RESERVATION_IMPORT_PHASE_C_PLACEHOLDER =
-  "Η ολοκλήρωση εισαγωγής θα είναι διαθέσιμη στην επόμενη φάση (Phase C).";
-
 export const RESERVATION_IMPORT_REVIEW_TITLE = "Ανασκόπηση πρόχειρης εισαγωγής";
+
+/** Phase C2 — commit workflow copy */
+export const RESERVATION_IMPORT_COMMIT_LABEL = "Ολοκλήρωση εισαγωγής";
+
+export const RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE = "Ολοκλήρωση εισαγωγής;";
+
+export const RESERVATION_IMPORT_COMMIT_CONFIRM_BODY = (
+  importCount: number,
+  skipCount: number,
+  replacementCount: number,
+) => {
+  const parts = [
+    `Θα δημιουργηθούν ${importCount} κρατήσεις από τις έτοιμες γραμμές.`,
+    skipCount > 0
+      ? `${skipCount} γραμμές θα παραλειφθούν χωρίς δημιουργία κράτησης.`
+      : null,
+    replacementCount > 0
+      ? `${replacementCount} υπάρχουσες κρατήσεις που επιλέχθηκαν με «Διατήρηση CSV» θα αντικατασταθούν (supersede) από τις εισαγόμενες — δεν διαγράφονται οριστικά.`
+      : null,
+    "Η ενέργεια εφαρμόζει τις ήδη αποθηκευμένες αποφάσεις τιμής και σύγκρουσης.",
+  ];
+  return parts.filter(Boolean).join(" ");
+};
+
+export const RESERVATION_IMPORT_COMMIT_SUCCESS =
+  "Η εισαγωγή ολοκληρώθηκε επιτυχώς.";
+
+export const RESERVATION_IMPORT_COMMIT_ERROR =
+  "Αποτυχία ολοκλήρωσης εισαγωγής.";
+
+export const RESERVATION_IMPORT_COMMIT_STALE_ERROR =
+  "Η διαθεσιμότητα ή οι συγκρούσεις άλλαξαν. Δεν δημιουργήθηκε καμία κράτηση. Ελέγξτε ξανά και δοκιμάστε πάλι.";
+
+export const RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR =
+  "Η εισαγωγή δεν είναι ακόμη έτοιμη για ολοκλήρωση. Ανανεώστε και ολοκληρώστε τις εκκρεμότητες.";
+
+export const RESERVATION_IMPORT_COMMIT_REFETCH_ERROR =
+  "Η ολοκλήρωση μπορεί να πέτυχε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
+
+export const RESERVATION_IMPORT_COMPLETED_TITLE = "Η εισαγωγή ολοκληρώθηκε";
+
+export const RESERVATION_IMPORT_BACK_TO_BOOKINGS = "Πίσω στις κρατήσεις";
+
+export const RESERVATION_IMPORT_FINAL_SUMMARY_TITLE = "Σύνοψη πριν την ολοκλήρωση";
 
 /** B3.3c conflict decision copy */
 export const RESERVATION_IMPORT_CONFLICT_PROMPT =

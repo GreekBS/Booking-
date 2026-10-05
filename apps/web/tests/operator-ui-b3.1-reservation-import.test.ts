@@ -65,7 +65,8 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     expect(draft).not.toContain("localStorage");
     expect(draft).not.toContain("sessionStorage");
     expect(draft).toContain("decideConflict");
-    expect(draft).not.toContain("Ολοκλήρωση εισαγωγής");
+    expect(draft).toContain("RESERVATION_IMPORT_COMMIT_LABEL");
+    expect(draft).toContain("evaluateClientCommitEligibility");
   });
 
   it("draft list uses list API fields only and ConfirmDialog discard", () => {

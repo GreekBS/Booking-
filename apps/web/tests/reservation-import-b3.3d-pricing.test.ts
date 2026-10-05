@@ -313,9 +313,14 @@ describe("B3.3d — missing price decision UI", () => {
     expect(page).toContain('aria-live="polite"');
   });
 
-  it("no Phase C action", () => {
+  it("Phase C2 commit remains gated outside pricing panels", () => {
     const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
-    expect(page).not.toContain("Ολοκλήρωση εισαγωγής");
-    expect(page).toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
+    expect(page).toContain("RESERVATION_IMPORT_COMMIT_LABEL");
+    expect(page).toContain("evaluateClientCommitEligibility");
+    expect(page).not.toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
+    const panel = read(
+      "features/reservation-import/ReservationImportPriceDecisionPanel.tsx",
+    );
+    expect(panel).not.toContain("RESERVATION_IMPORT_COMMIT_LABEL");
   });
 });

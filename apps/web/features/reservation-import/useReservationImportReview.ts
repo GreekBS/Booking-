@@ -4,14 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import {
   discardReservationImportDraft,
   getReservationImportDraft,
+  isReservationImportCommitNotReadyError,
   isReservationImportExpiredError,
   isReservationImportNotFoundError,
+  isReservationImportStaleCommitError,
+  commitReservationImportDraft,
   recheckReservationImportDraft,
   updateReservationImportMissingPriceStrategy,
   updateReservationImportRowDecision,
   type ReservationImportConflictResolutionDto,
   type ReservationImportDraftDetail,
   type ReservationImportPriceSourceDto,
+  type ReservationImportCommitSummaryDto,
 } from "@/lib/admin/reservation-import-api";
 import {
   fetchPropertyUnitCatalog,
@@ -37,6 +41,17 @@ export type MutationRefetchResult =
 export type ConflictDecisionResult = MutationRefetchResult;
 export type PriceDecisionResult = MutationRefetchResult;
 
+export type CommitMutationResult =
+  | {
+      ok: true;
+      alreadyCompleted: boolean;
+      summary: ReservationImportCommitSummaryDto;
+    }
+  | {
+      ok: false;
+      phase: "commit" | "stale" | "not_ready" | "refetch" | "expired" | "not_found";
+    };
+
 export function useReservationImportReview(tenantId: string | null, batchId: string) {
   const [state, setState] = useState<ReviewLoadState>({ kind: "loading" });
   const [unitNameById, setUnitNameById] = useState<Map<string, string>>(new Map());
@@ -44,6 +59,9 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
   const [refreshing, setRefreshing] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  const [committing, setCommitting] = useState(false);
+  const [lastCommitSummary, setLastCommitSummary] =
+    useState<ReservationImportCommitSummaryDto | null>(null);
   const [decidingRowId, setDecidingRowId] = useState<string | null>(null);
   const [pricingRowId, setPricingRowId] = useState<string | null>(null);
   const [pricingBatch, setPricingBatch] = useState(false);
@@ -231,6 +249,59 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     }
   }, [tenantId, batchId, refetch]);
 
+  const commit = useCallback(async (): Promise<CommitMutationResult> => {
+    if (!tenantId || !batchId) return { ok: false, phase: "commit" };
+    setCommitting(true);
+    try {
+      const response = await commitReservationImportDraft(tenantId, batchId);
+      setLastCommitSummary(response.summary);
+      const ok = await refetch();
+      if (!ok) {
+        // Commit may have succeeded — surface payload so UI is not empty.
+        setState({
+          kind: "ready",
+          detail: {
+            batch: response.batch,
+            rows: response.rows,
+            rejectedRows: [],
+            conflictBookings: [],
+          },
+        });
+        return { ok: false, phase: "refetch" };
+      }
+      return {
+        ok: true,
+        alreadyCompleted: response.alreadyCompleted,
+        summary: response.summary,
+      };
+    } catch (error) {
+      if (isReservationImportExpiredError(error)) {
+        setState({ kind: "expired" });
+        return { ok: false, phase: "expired" };
+      }
+      if (isReservationImportNotFoundError(error)) {
+        setState({ kind: "not_found" });
+        return { ok: false, phase: "not_found" };
+      }
+      if (isReservationImportStaleCommitError(error)) {
+        try {
+          await recheckReservationImportDraft(tenantId, batchId);
+        } catch {
+          // Recheck best-effort; still refetch below.
+        }
+        await refetch();
+        return { ok: false, phase: "stale" };
+      }
+      if (isReservationImportCommitNotReadyError(error)) {
+        await refetch();
+        return { ok: false, phase: "not_ready" };
+      }
+      return { ok: false, phase: "commit" };
+    } finally {
+      setCommitting(false);
+    }
+  }, [tenantId, batchId, refetch]);
+
   function unitLabel(unitId: string): string {
     if (unitNameById.has(unitId)) return unitNameById.get(unitId)!;
     return `Μονάδα ${unitId.slice(0, 8)}…`;
@@ -238,7 +309,11 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
 
   const pricingBusy = pricingRowId !== null || pricingBatch;
   const decisionBusy =
-    decidingRowId !== null || pricingBusy || refreshing || rechecking;
+    decidingRowId !== null ||
+    pricingBusy ||
+    refreshing ||
+    rechecking ||
+    committing;
 
   return {
     state,
@@ -247,6 +322,8 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     refreshing,
     rechecking,
     discarding,
+    committing,
+    lastCommitSummary,
     decidingRowId,
     pricingRowId,
     pricingBatch,
@@ -256,6 +333,7 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
     refetch,
     recheck,
     discard,
+    commit,
     decideConflict,
     setRowPrice,
     setMissingPriceStrategy,

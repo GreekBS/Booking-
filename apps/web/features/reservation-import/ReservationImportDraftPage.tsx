@@ -16,6 +16,16 @@ import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { elCommon } from "@/lib/i18n";
 import {
+  RESERVATION_IMPORT_BACK_TO_BOOKINGS,
+  RESERVATION_IMPORT_COMMIT_CONFIRM_BODY,
+  RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE,
+  RESERVATION_IMPORT_COMMIT_ERROR,
+  RESERVATION_IMPORT_COMMIT_LABEL,
+  RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR,
+  RESERVATION_IMPORT_COMMIT_REFETCH_ERROR,
+  RESERVATION_IMPORT_COMMIT_STALE_ERROR,
+  RESERVATION_IMPORT_COMMIT_SUCCESS,
+  RESERVATION_IMPORT_COMPLETED_TITLE,
   RESERVATION_IMPORT_DECISION_ERROR,
   RESERVATION_IMPORT_DECISION_SUCCESS,
   RESERVATION_IMPORT_DISCARD_DESCRIPTION,
@@ -24,8 +34,8 @@ import {
   RESERVATION_IMPORT_DISCARD_TITLE,
   RESERVATION_IMPORT_DRAFT_TTL_MESSAGE,
   RESERVATION_IMPORT_EXPIRED_MESSAGE,
+  RESERVATION_IMPORT_FINAL_SUMMARY_TITLE,
   RESERVATION_IMPORT_NOT_FOUND_MESSAGE,
-  RESERVATION_IMPORT_PHASE_C_PLACEHOLDER,
   RESERVATION_IMPORT_PRICE_BATCH_ERROR,
   RESERVATION_IMPORT_PRICE_BATCH_SUCCESS,
   RESERVATION_IMPORT_PRICE_ERROR,
@@ -42,6 +52,7 @@ import {
 import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
 import { ReservationImportRejectedRowCard } from "./ReservationImportRejectedRowCard";
 import { ReservationImportReviewRowCard } from "./ReservationImportReviewRowCard";
+import { evaluateClientCommitEligibility } from "./reservation-import-commit-eligibility";
 import {
   computeReadinessCounts,
   countEligibleUnresolvedPrices,
@@ -52,7 +63,7 @@ import {
 import { useReservationImportReview } from "./useReservationImportReview";
 
 /**
- * B3.3 review page — conflicts (B3.3c) + missing-price decisions (B3.3d).
+ * B3.3 review + Phase C2 commit — conflicts, pricing, atomic whole-batch commit.
  */
 export function ReservationImportDraftPage() {
   const params = useParams<{ batchId: string }>();
@@ -65,6 +76,8 @@ export function ReservationImportDraftPage() {
     refreshing,
     rechecking,
     discarding,
+    committing,
+    lastCommitSummary,
     decidingRowId,
     pricingRowId,
     pricingBatch,
@@ -73,6 +86,7 @@ export function ReservationImportDraftPage() {
     refetch,
     recheck,
     discard,
+    commit,
     decideConflict,
     setRowPrice,
     setMissingPriceStrategy,
@@ -80,6 +94,7 @@ export function ReservationImportDraftPage() {
   } = useReservationImportReview(tenantId, batchId);
 
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [commitOpen, setCommitOpen] = useState(false);
   const [tab, setTab] = useState<ReviewTabId>("all");
   const [liveMessage, setLiveMessage] = useState("");
 
@@ -155,9 +170,17 @@ export function ReservationImportDraftPage() {
 
   const { detail } = state;
   const { batch, rows, rejectedRows, conflictBookings } = detail;
+  const isCompleted = batch.status === "completed";
   const counts = computeReadinessCounts(rows, rejectedRows);
   const tabs = tabCounts(rows, rejectedRows);
   const unresolvedEligible = countEligibleUnresolvedPrices(rows);
+  const commitGate = evaluateClientCommitEligibility(detail, {
+    refetchFailed,
+    mutationBusy: decisionBusy,
+  });
+  const canCommit = !isCompleted && commitGate.kind === "eligible";
+  const previewCounts = commitGate.counts;
+
   async function handleDiscard() {
     const ok = await discard();
     if (ok) {
@@ -179,6 +202,38 @@ export function ReservationImportDraftPage() {
       toastError(RESERVATION_IMPORT_RECHECK_ERROR);
       setLiveMessage(RESERVATION_IMPORT_RECHECK_ERROR);
     }
+  }
+
+  async function handleCommit() {
+    const result = await commit();
+    setCommitOpen(false);
+    if (result.ok) {
+      toastSuccess(RESERVATION_IMPORT_COMMIT_SUCCESS);
+      setLiveMessage(RESERVATION_IMPORT_COMMIT_SUCCESS);
+      return;
+    }
+    if (result.phase === "stale") {
+      toastError(RESERVATION_IMPORT_COMMIT_STALE_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_COMMIT_STALE_ERROR);
+      setTab("action");
+      return;
+    }
+    if (result.phase === "not_ready") {
+      toastError(RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR);
+      setTab("action");
+      return;
+    }
+    if (result.phase === "refetch") {
+      toastError(RESERVATION_IMPORT_COMMIT_REFETCH_ERROR);
+      setLiveMessage(RESERVATION_IMPORT_COMMIT_REFETCH_ERROR);
+      return;
+    }
+    if (result.phase === "expired" || result.phase === "not_found") {
+      return;
+    }
+    toastError(RESERVATION_IMPORT_COMMIT_ERROR);
+    setLiveMessage(RESERVATION_IMPORT_COMMIT_ERROR);
   }
 
   async function handleDecideConflict(
@@ -252,6 +307,20 @@ export function ReservationImportDraftPage() {
     setLiveMessage(RESERVATION_IMPORT_PRICE_BATCH_ERROR);
   }
 
+  const completedImported =
+    lastCommitSummary?.imported ??
+    rows.filter((r) => r.status === "imported").length;
+  const completedSkipped =
+    lastCommitSummary?.skipped ??
+    rows.filter(
+      (r) =>
+        r.status === "skipped_already_imported" ||
+        (r.status === "skipped" && r.processedAt != null),
+    ).length;
+  const completedSuperseded =
+    lastCommitSummary?.supersededBookingIds.length ??
+    previewCounts.replacementBookingCount;
+
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-8">
       <div aria-live="polite" className="sr-only">
@@ -259,114 +328,218 @@ export function ReservationImportDraftPage() {
       </div>
 
       <PageHeader
-        title={RESERVATION_IMPORT_REVIEW_TITLE}
+        title={
+          isCompleted ? RESERVATION_IMPORT_COMPLETED_TITLE : RESERVATION_IMPORT_REVIEW_TITLE
+        }
         description={batch.filename || "import.csv"}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href="/dashboard/bookings">{elCommon.back}</Link>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={rechecking || refreshing}
-              onClick={() => void handleRecheck()}
-            >
-              {rechecking ? "Επανέλεγχος…" : RESERVATION_IMPORT_RECHECK_LABEL}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setDiscardOpen(true)}
-            >
-              Απόρριψη
-            </Button>
+            {!isCompleted ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={rechecking || refreshing || committing}
+                  onClick={() => void handleRecheck()}
+                >
+                  {rechecking ? "Επανέλεγχος…" : RESERVATION_IMPORT_RECHECK_LABEL}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={committing || discarding}
+                  onClick={() => setDiscardOpen(true)}
+                >
+                  Απόρριψη
+                </Button>
+              </>
+            ) : null}
           </div>
         }
       />
 
-      <Surface variant="attention" padding="sm">
-        <p className="text-sm text-foreground" role="status">
-          {RESERVATION_IMPORT_DRAFT_TTL_MESSAGE}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Λήγει: {formatOperatorDateTime(batch.expiresAt)}
-        </p>
-      </Surface>
+      {!isCompleted ? (
+        <Surface variant="attention" padding="sm">
+          <p className="text-sm text-foreground" role="status">
+            {RESERVATION_IMPORT_DRAFT_TTL_MESSAGE}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Λήγει: {formatOperatorDateTime(batch.expiresAt)}
+          </p>
+        </Surface>
+      ) : null}
 
-      <Surface variant="panel" padding="md" className="space-y-4">
-        <SurfaceHeader
-          title="Σύνοψη προχείρου"
-          description={RESERVATION_IMPORT_RECHECK_DESCRIPTION}
-        />
-        <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              {elCommon.status}
-            </dt>
-            <dd className="mt-0.5">
-              <StatusBadge status={batch.status} label="Πρόχειρο" />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Δημιουργήθηκε
-            </dt>
-            <dd className="mt-0.5">{formatOperatorDateTime(batch.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Λήγει
-            </dt>
-            <dd className="mt-0.5">{formatOperatorDateTime(batch.expiresAt)}</dd>
-          </div>
-        </dl>
+      {isCompleted ? (
+        <Surface variant="panel" padding="md" className="space-y-4">
+          <SurfaceHeader
+            title={RESERVATION_IMPORT_COMPLETED_TITLE}
+            description="Η πρόχειρη εισαγωγή ολοκληρώθηκε και δεν μπορεί να τροποποιηθεί."
+          />
+          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                {elCommon.status}
+              </dt>
+              <dd className="mt-0.5">
+                <StatusBadge status={batch.status} label="Ολοκληρωμένη" />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Ολοκληρώθηκε
+              </dt>
+              <dd className="mt-0.5">
+                {batch.committedAt
+                  ? formatOperatorDateTime(batch.committedAt)
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Εισήχθησαν
+              </dt>
+              <dd className="mt-0.5 font-medium">{completedImported}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Παραλείφθηκαν
+              </dt>
+              <dd className="mt-0.5 font-medium">{completedSkipped}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Αντικαταστάσεις
+              </dt>
+              <dd className="mt-0.5 font-medium">{completedSuperseded}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Νέες κρατήσεις
+              </dt>
+              <dd className="mt-0.5 font-medium">
+                {lastCommitSummary?.createdBookingIds.length ?? completedImported}
+              </dd>
+            </div>
+          </dl>
+          <Button size="sm" asChild>
+            <Link href="/dashboard/bookings">{RESERVATION_IMPORT_BACK_TO_BOOKINGS}</Link>
+          </Button>
+        </Surface>
+      ) : (
+        <Surface variant="panel" padding="md" className="space-y-4">
+          <SurfaceHeader
+            title="Σύνοψη προχείρου"
+            description={RESERVATION_IMPORT_RECHECK_DESCRIPTION}
+          />
+          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                {elCommon.status}
+              </dt>
+              <dd className="mt-0.5">
+                <StatusBadge status={batch.status} label="Πρόχειρο" />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Δημιουργήθηκε
+              </dt>
+              <dd className="mt-0.5">{formatOperatorDateTime(batch.createdAt)}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Λήγει
+              </dt>
+              <dd className="mt-0.5">{formatOperatorDateTime(batch.expiresAt)}</dd>
+            </div>
+          </dl>
 
-        <div className="flex flex-wrap gap-2 text-sm">
-          <span className="rounded-md bg-muted px-2 py-1">
-            Αποδεκτές: <strong>{counts.accepted}</strong>
-          </span>
-          <span className="rounded-md bg-muted px-2 py-1">
-            Έτοιμες: <strong>{counts.ready}</strong>
-          </span>
-          <span className="rounded-md bg-muted px-2 py-1">
-            Παραλείφθηκαν: <strong>{counts.skipped}</strong>
-          </span>
-          <span className="rounded-md bg-muted px-2 py-1">
-            Χρειάζονται ενέργεια: <strong>{counts.needAction}</strong>
-          </span>
-          <span className="rounded-md bg-muted px-2 py-1">
-            Απορριφθείσες: <strong>{counts.rejected}</strong>
-          </span>
-          {unresolvedEligible > 0 ? (
+          <div className="flex flex-wrap gap-2 text-sm">
             <span className="rounded-md bg-muted px-2 py-1">
-              Χωρίς τιμή: <strong>{unresolvedEligible}</strong>
+              Αποδεκτές: <strong>{counts.accepted}</strong>
             </span>
-          ) : null}
-        </div>
+            <span className="rounded-md bg-muted px-2 py-1">
+              Έτοιμες: <strong>{counts.ready}</strong>
+            </span>
+            <span className="rounded-md bg-muted px-2 py-1">
+              Παραλείφθηκαν: <strong>{counts.skipped}</strong>
+            </span>
+            <span className="rounded-md bg-muted px-2 py-1">
+              Χρειάζονται ενέργεια: <strong>{counts.needAction}</strong>
+            </span>
+            <span className="rounded-md bg-muted px-2 py-1">
+              Απορριφθείσες: <strong>{counts.rejected}</strong>
+            </span>
+            {unresolvedEligible > 0 ? (
+              <span className="rounded-md bg-muted px-2 py-1">
+                Χωρίς τιμή: <strong>{unresolvedEligible}</strong>
+              </span>
+            ) : null}
+          </div>
 
-        {unresolvedEligible > 0 ? (
-          <div className="space-y-2 rounded-md border bg-muted/20 p-3">
-            <p className="text-sm text-muted-foreground">
-              {RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT}
-            </p>
+          {unresolvedEligible > 0 ? (
+            <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+              <p className="text-sm text-muted-foreground">
+                {RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={decisionBusy || pricingBatch}
+                onClick={() => void handleTalosAllMissing()}
+              >
+                {pricingBatch
+                  ? "Εφαρμογή…"
+                  : RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL}
+              </Button>
+            </div>
+          ) : null}
+
+          <div className="space-y-3 rounded-md border p-3">
+            <h3 className="text-sm font-medium">{RESERVATION_IMPORT_FINAL_SUMMARY_TITLE}</h3>
+            <ul className="grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
+              <li>
+                Προς εισαγωγή:{" "}
+                <strong className="text-foreground">{previewCounts.importCount}</strong>
+              </li>
+              <li>
+                Προς παράλειψη:{" "}
+                <strong className="text-foreground">{previewCounts.skipCount}</strong>
+              </li>
+              <li>
+                Απορριφθείσες:{" "}
+                <strong className="text-foreground">{previewCounts.rejectedCount}</strong>
+              </li>
+              <li>
+                Αντικαταστάσεις υπαρχουσών:{" "}
+                <strong className="text-foreground">
+                  {previewCounts.replacementBookingCount}
+                </strong>
+              </li>
+            </ul>
+
+            {commitGate.kind === "blocked" ? (
+              <p className="text-sm text-amber-800 dark:text-amber-200" role="status">
+                {commitGate.message}
+              </p>
+            ) : null}
+
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              disabled={decisionBusy || pricingBatch}
-              onClick={() => void handleTalosAllMissing()}
+              disabled={!canCommit}
+              onClick={() => setCommitOpen(true)}
             >
-              {pricingBatch
-                ? "Εφαρμογή…"
-                : RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL}
+              {committing ? "Ολοκλήρωση…" : RESERVATION_IMPORT_COMMIT_LABEL}
             </Button>
           </div>
-        ) : null}
-
-        <p className="text-xs text-muted-foreground">{RESERVATION_IMPORT_PHASE_C_PLACEHOLDER}</p>
-      </Surface>
+        </Surface>
+      )}
 
       <Tabs
         value={tab}
@@ -405,9 +578,9 @@ export function ReservationImportDraftPage() {
                     allRows={rows}
                     conflictBookings={conflictBookings ?? []}
                     unitLabel={unitLabel}
-                    decidingRowId={decidingRowId}
-                    pricingRowId={pricingRowId}
-                    decisionBusy={decisionBusy}
+                    decidingRowId={isCompleted ? null : decidingRowId}
+                    pricingRowId={isCompleted ? null : pricingRowId}
+                    decisionBusy={isCompleted || decisionBusy}
                     onDecideConflict={handleDecideConflict}
                     onUseTalosPrice={handleUseTalosPrice}
                     onSaveManualPrice={handleSaveManualPrice}
@@ -441,18 +614,37 @@ export function ReservationImportDraftPage() {
         </p>
       ) : null}
 
-      <ConfirmDialog
-        open={discardOpen}
-        onOpenChange={(open) => {
-          if (!open && !discarding) setDiscardOpen(false);
-        }}
-        title={RESERVATION_IMPORT_DISCARD_TITLE}
-        description={RESERVATION_IMPORT_DISCARD_DESCRIPTION}
-        confirmLabel="Απόρριψη"
-        destructive
-        loading={discarding}
-        onConfirm={handleDiscard}
-      />
+      {!isCompleted ? (
+        <>
+          <ConfirmDialog
+            open={discardOpen}
+            onOpenChange={(open) => {
+              if (!open && !discarding) setDiscardOpen(false);
+            }}
+            title={RESERVATION_IMPORT_DISCARD_TITLE}
+            description={RESERVATION_IMPORT_DISCARD_DESCRIPTION}
+            confirmLabel="Απόρριψη"
+            destructive
+            loading={discarding}
+            onConfirm={handleDiscard}
+          />
+          <ConfirmDialog
+            open={commitOpen}
+            onOpenChange={(open) => {
+              if (!open && !committing) setCommitOpen(false);
+            }}
+            title={RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE}
+            description={RESERVATION_IMPORT_COMMIT_CONFIRM_BODY(
+              previewCounts.importCount,
+              previewCounts.skipCount,
+              previewCounts.replacementBookingCount,
+            )}
+            confirmLabel={RESERVATION_IMPORT_COMMIT_LABEL}
+            loading={committing}
+            onConfirm={handleCommit}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

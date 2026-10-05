@@ -282,10 +282,11 @@ describe("B3.3b — review utils & wiring", () => {
     expect(hook).toMatch(/unitId\.slice\(0, 8\)/);
   });
 
-  it("no Phase C commit action", () => {
+  it("Phase C2 commit action is wired on draft page", () => {
     const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
-    expect(page).not.toContain("Ολοκλήρωση εισαγωγής");
-    expect(page).toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
+    expect(page).toContain("RESERVATION_IMPORT_COMMIT_LABEL");
+    expect(page).toContain("evaluateClientCommitEligibility");
+    expect(page).not.toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
   });
 
   it("accessible tabs and live region for recheck", () => {
