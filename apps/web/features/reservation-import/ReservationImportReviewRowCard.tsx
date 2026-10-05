@@ -2,6 +2,7 @@
 
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Surface } from "@/components/admin/surface";
+import Link from "next/link";
 import type {
   ReservationImportConflictBookingDto,
   ReservationImportConflictResolutionDto,
@@ -9,7 +10,9 @@ import type {
 } from "@/lib/admin/reservation-import-api";
 import { ReservationImportConflictDecisionPanel } from "./ReservationImportConflictDecisionPanel";
 import { ReservationImportPriceDecisionPanel } from "./ReservationImportPriceDecisionPanel";
+import { RESERVATION_IMPORT_VIEW_BOOKING_LABEL } from "./reservation-import-copy";
 import {
+  bookingDrawerHref,
   formatImportStayRange,
   formatRowPriceAmount,
   priceDisplayKind,
@@ -103,6 +106,17 @@ export function ReservationImportReviewRowCard({
       {row.errorCode || row.errorMessage ? (
         <p className="text-sm text-destructive" role="alert">
           {row.errorMessage ?? row.errorCode}
+        </p>
+      ) : null}
+
+      {row.createdBookingId ? (
+        <p className="text-sm">
+          <Link
+            href={bookingDrawerHref(row.createdBookingId)}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            {RESERVATION_IMPORT_VIEW_BOOKING_LABEL}
+          </Link>
         </p>
       ) : null}
 

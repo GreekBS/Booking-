@@ -99,6 +99,10 @@ export const RESERVATION_IMPORT_COMPLETED_TITLE = "Η εισαγωγή ολοκ�
 
 export const RESERVATION_IMPORT_BACK_TO_BOOKINGS = "Πίσω στις κρατήσεις";
 
+export const RESERVATION_IMPORT_VIEW_BOOKING_LABEL = "Προβολή κράτησης";
+
+export const RESERVATION_IMPORT_CREATED_BOOKINGS_TITLE = "Δημιουργημένες κρατήσεις";
+
 export const RESERVATION_IMPORT_FINAL_SUMMARY_TITLE = "Σύνοψη πριν την ολοκλήρωση";
 
 /** B3.3c conflict decision copy */

@@ -26,6 +26,7 @@ import {
   RESERVATION_IMPORT_COMMIT_STALE_ERROR,
   RESERVATION_IMPORT_COMMIT_SUCCESS,
   RESERVATION_IMPORT_COMPLETED_TITLE,
+  RESERVATION_IMPORT_CREATED_BOOKINGS_TITLE,
   RESERVATION_IMPORT_DECISION_ERROR,
   RESERVATION_IMPORT_DECISION_SUCCESS,
   RESERVATION_IMPORT_DISCARD_DESCRIPTION,
@@ -48,12 +49,15 @@ import {
   RESERVATION_IMPORT_REVIEW_TITLE,
   RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT,
   RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL,
+  RESERVATION_IMPORT_VIEW_BOOKING_LABEL,
 } from "./reservation-import-copy";
 import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
 import { ReservationImportRejectedRowCard } from "./ReservationImportRejectedRowCard";
 import { ReservationImportReviewRowCard } from "./ReservationImportReviewRowCard";
 import { evaluateClientCommitEligibility } from "./reservation-import-commit-eligibility";
 import {
+  bookingDrawerHref,
+  collectCreatedBookingIds,
   computeReadinessCounts,
   countEligibleUnresolvedPrices,
   filterRowsForTab,
@@ -320,6 +324,11 @@ export function ReservationImportDraftPage() {
   const completedSuperseded =
     lastCommitSummary?.supersededBookingIds.length ??
     previewCounts.replacementBookingCount;
+  const completedRejected = rejectedRows.length;
+  const createdBookingIds = collectCreatedBookingIds({
+    summaryIds: lastCommitSummary?.createdBookingIds,
+    rows,
+  });
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-8">
@@ -418,13 +427,43 @@ export function ReservationImportDraftPage() {
             </div>
             <div>
               <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Απορριφθείσες
+              </dt>
+              <dd className="mt-0.5 font-medium">{completedRejected}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
                 Νέες κρατήσεις
               </dt>
               <dd className="mt-0.5 font-medium">
-                {lastCommitSummary?.createdBookingIds.length ?? completedImported}
+                {createdBookingIds.length > 0
+                  ? createdBookingIds.length
+                  : completedImported}
               </dd>
             </div>
           </dl>
+
+          {createdBookingIds.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                {RESERVATION_IMPORT_CREATED_BOOKINGS_TITLE}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {createdBookingIds.map((bookingId, index) => (
+                  <li key={bookingId}>
+                    <Link
+                      href={bookingDrawerHref(bookingId)}
+                      className="text-sm text-primary underline-offset-4 hover:underline"
+                    >
+                      {RESERVATION_IMPORT_VIEW_BOOKING_LABEL}
+                      {createdBookingIds.length > 1 ? ` #${index + 1}` : ""}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <Button size="sm" asChild>
             <Link href="/dashboard/bookings">{RESERVATION_IMPORT_BACK_TO_BOOKINGS}</Link>
           </Button>

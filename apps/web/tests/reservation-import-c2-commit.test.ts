@@ -193,6 +193,7 @@ describe("Phase C2 — commit route contract", () => {
     expect(route).not.toContain("messagingActivation");
     expect(route).not.toContain("whatsapp");
     expect(route).not.toContain("payment");
+    expect(route).toContain("createLogger");
   });
 });
 

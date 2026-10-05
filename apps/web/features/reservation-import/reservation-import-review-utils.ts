@@ -305,3 +305,28 @@ export function validateManualImportTotalAmount(raw: string): string | null {
   if (!Number.isFinite(n) || n <= 0) return "non_positive";
   return null;
 }
+
+/** Existing Bookings drawer deep-link — do not invent a second navigation path. */
+export function bookingDrawerHref(bookingId: string): string {
+  return `/dashboard/bookings?bookingId=${encodeURIComponent(bookingId)}`;
+}
+
+/** Deduplicate created booking ids from commit summary and/or imported rows. */
+export function collectCreatedBookingIds(input: {
+  summaryIds?: string[] | null;
+  rows: Array<{ createdBookingId: string | null }>;
+}): string[] {
+  const fromSummary = (input.summaryIds ?? []).filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  if (fromSummary.length > 0) {
+    return [...new Set(fromSummary)];
+  }
+  return [
+    ...new Set(
+      input.rows
+        .map((r) => r.createdBookingId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  ];
+}
