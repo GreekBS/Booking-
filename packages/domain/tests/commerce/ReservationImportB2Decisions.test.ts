@@ -281,6 +281,12 @@ class MemoryImports implements IReservationImportRepository {
   async expireDrafts() {
     return { expiredBatches: 0, discardedRows: 0 };
   }
+
+  async lockDraftForCommit(batchId: string, tenantId: string) {
+    const batch = await this.findBatchById(batchId, tenantId);
+    const rows = batch ? await this.listRowsForBatch(batchId, tenantId) : [];
+    return { batch, rows };
+  }
 }
 
 const actor: ActorContext = {

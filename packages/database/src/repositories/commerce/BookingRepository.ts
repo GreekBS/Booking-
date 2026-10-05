@@ -49,6 +49,25 @@ export class PrismaBookingRepository implements IBookingRepository {
     });
   }
 
+  async lockByIdsForUpdate(ids: string[], tenantId: string): Promise<Booking[]> {
+    if (ids.length === 0) return [];
+    const sorted = [...new Set(ids)].sort();
+    return withTenantTransaction(tenantId, async (tx) => {
+      await tx.$queryRaw`
+        SELECT id FROM bookings
+        WHERE tenant_id = ${tenantId}::uuid
+          AND id = ANY(${sorted}::uuid[])
+        ORDER BY id ASC
+        FOR UPDATE
+      `;
+      const records = await tx.booking.findMany({
+        where: { tenantId, id: { in: sorted } },
+        orderBy: { id: "asc" },
+      });
+      return records.map(bookingToDomain);
+    });
+  }
+
   async findByUnit(
     unitId: string,
     tenantId: string,

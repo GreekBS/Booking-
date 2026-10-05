@@ -18,6 +18,10 @@ export * from "./import/ReservationImportConflictGraph";
 export * from "./import/ReservationImportExclusivity";
 export * from "./import/CreateReservationImportDraftUseCase";
 export * from "./import/ReservationImportDraftDecisionUseCases";
+export * from "./import/ReservationImportCommitEligibility";
+export * from "./import/ReservationImportCommitPricing";
+export * from "./import/ReservationImportCommitRevalidation";
+export * from "./import/CommitReservationImportBatchUseCase";
 
 export * from "./pricing/PricingCalculator";
 

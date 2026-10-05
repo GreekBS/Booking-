@@ -43,7 +43,11 @@ export interface CreateQuoteForStayChangeProps {
   taxesAmount?: string;
 }
 
-export type FixedTotalQuotePricingMode = Exclude<QuotePricingMode, "talos_calculated">;
+/**
+ * Fixed-total quotes may carry any commercial provenance, including a
+ * previously frozen TALOS total (no RatePlan recalculation at commit).
+ */
+export type FixedTotalQuotePricingMode = QuotePricingMode;
 
 export interface CreateQuoteFromFixedTotalProps {
   id: string;
@@ -156,8 +160,14 @@ export class Quote extends AggregateRoot<QuoteProps> {
     if (props.total.isZero() || props.total.isNegative()) {
       throw new ValidationError("Fixed quote total must be positive");
     }
-    if (props.pricingMode !== "imported_csv" && props.pricingMode !== "operator_entered") {
-      throw new ValidationError("Fixed quote requires imported_csv or operator_entered pricing mode");
+    if (
+      props.pricingMode !== "imported_csv" &&
+      props.pricingMode !== "operator_entered" &&
+      props.pricingMode !== "talos_calculated"
+    ) {
+      throw new ValidationError(
+        "Fixed quote requires imported_csv, operator_entered, or talos_calculated pricing mode",
+      );
     }
 
     const currency = props.total.currency;

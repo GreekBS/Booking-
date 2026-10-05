@@ -125,4 +125,17 @@ export interface IReservationImportRepository {
    * Preserves durable terminal rows / bookings. Idempotent.
    */
   expireDrafts(now?: Date, limit?: number): Promise<{ expiredBatches: number; discardedRows: number }>;
+
+  /**
+   * Lock batch + all rows FOR UPDATE (deterministic row_number order).
+   * Must run inside an active tenant transaction (joins ALS TX).
+   * Returns null batch when not found. Caller interprets completed/expired.
+   */
+  lockDraftForCommit(
+    batchId: string,
+    tenantId: string,
+  ): Promise<{
+    batch: ReservationImportBatchRecord | null;
+    rows: ReservationImportRowRecord[];
+  }>;
 }

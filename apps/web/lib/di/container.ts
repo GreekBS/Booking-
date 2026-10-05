@@ -121,6 +121,7 @@ import {
   UpdateReservationImportMissingPriceStrategyUseCase,
   UpdateReservationImportRowDecisionUseCase,
   RecheckReservationImportDraftUseCase,
+  CommitReservationImportBatchUseCase,
 
   CreateQuoteUseCase,
 
@@ -1415,6 +1416,20 @@ export const resolveOrCreateGuest = new ResolveOrCreateGuest(
   idGenerator,
   permissionChecker,
 );
+
+export const commitReservationImportBatchUseCase =
+  new CommitReservationImportBatchUseCase(
+    reservationImportRepository,
+    commerceFlowRepository,
+    bookingRepository,
+    catalogQueryAdapter,
+    calendarBlockRepository,
+    availabilityRulesRepository,
+    timezoneService,
+    resolveOrCreateGuest,
+    idGenerator,
+    permissionChecker,
+  );
 
 export const getGuestUseCase = new GetGuestUseCase(
   guestRepository,

@@ -582,4 +582,44 @@ export class PrismaReservationImportRepository implements IReservationImportRepo
 
     return { expiredBatches, discardedRows };
   }
+
+  async lockDraftForCommit(
+    batchId: string,
+    tenantId: string,
+  ): Promise<{
+    batch: ReservationImportBatchRecord | null;
+    rows: ReservationImportRowRecord[];
+  }> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const lockedBatches = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM reservation_import_batches
+        WHERE id = ${batchId}::uuid
+          AND tenant_id = ${tenantId}::uuid
+        FOR UPDATE
+      `;
+      if (lockedBatches.length === 0) {
+        return { batch: null, rows: [] };
+      }
+
+      await tx.$queryRaw`
+        SELECT id FROM reservation_import_rows
+        WHERE tenant_id = ${tenantId}::uuid
+          AND batch_id = ${batchId}::uuid
+        ORDER BY row_number ASC
+        FOR UPDATE
+      `;
+
+      const batch = await tx.reservationImportBatch.findFirst({
+        where: { id: batchId, tenantId },
+      });
+      const rows = await tx.reservationImportRow.findMany({
+        where: { tenantId, batchId },
+        orderBy: { rowNumber: "asc" },
+      });
+      return {
+        batch: batch ? batchToRecord(batch) : null,
+        rows: rows.map(rowToRecord),
+      };
+    });
+  }
 }

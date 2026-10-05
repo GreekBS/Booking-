@@ -87,6 +87,11 @@ export interface IBookingRepository {
   findById(id: string, tenantId: string): Promise<Booking | null>;
   /** Tenant-scoped batch load for import conflict review enrichment. */
   findByIds(ids: string[], tenantId: string): Promise<Booking[]>;
+  /**
+   * Lock bookings FOR UPDATE in sorted UUID order (joins active tenant TX).
+   * Missing ids are omitted — caller enforces completeness.
+   */
+  lockByIdsForUpdate(ids: string[], tenantId: string): Promise<Booking[]>;
   findByUnit(unitId: string, tenantId: string, range?: CalendarDateRange): Promise<Booking[]>;
   /** Batched bookings for calendar — one query across unitIds. */
   findByUnits(
