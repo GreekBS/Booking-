@@ -18,6 +18,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": root,
+      "server-only": path.join(root, "tests/shims/server-only.ts"),
     },
   },
 });

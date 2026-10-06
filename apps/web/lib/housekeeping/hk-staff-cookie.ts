@@ -1,3 +1,5 @@
+import "server-only";
+
 import { cookies } from "next/headers";
 import {
   HK_STAFF_COOKIE_NAME,

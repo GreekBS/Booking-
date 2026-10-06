@@ -3,10 +3,8 @@ import {
   normalizePropertyWebsiteUrl,
   assertSafeWebsiteRedirectUrl,
 } from "../../../src/catalog/domain/propertyWebsiteUrl";
-import {
-  HmacHkStaffCapabilitySigner,
-  HK_STAFF_CAPABILITY_TTL_SECONDS,
-} from "../../../src/operations/cleaning/domain/HkStaffCapability";
+import { HK_STAFF_CAPABILITY_TTL_SECONDS } from "../../../src/operations/cleaning/domain/HkStaffCapability";
+import { HmacHkStaffCapabilitySigner } from "../../../src/operations/cleaning/domain/HmacHkStaffCapabilitySigner";
 import { ValidationError } from "../../../src/shared/errors/DomainError";
 
 describe("normalizePropertyWebsiteUrl", () => {

@@ -99,4 +99,31 @@ describe("public QR vs authenticated checklist separation", () => {
     expect(unlock).not.toMatch(/pinHash|passwordHash/);
     expect(unlock).not.toContain("requireTenantContext");
   });
+
+  it("wires HMAC signer via server-only web module, not domain barrel", () => {
+    const container = readFileSync(join(root, "lib/di/container.ts"), "utf8");
+    const signerWrap = readFileSync(
+      join(root, "lib/housekeeping/hmac-hk-staff-capability-signer.ts"),
+      "utf8",
+    );
+    const secret = readFileSync(
+      join(root, "lib/housekeeping/hk-staff-secret.ts"),
+      "utf8",
+    );
+    const cookie = readFileSync(
+      join(root, "lib/housekeeping/hk-staff-cookie.ts"),
+      "utf8",
+    );
+
+    expect(container).toContain(
+      'from "@/lib/housekeeping/hmac-hk-staff-capability-signer"',
+    );
+    expect(container).not.toMatch(
+      /HmacHkStaffCapabilitySigner[^]*from ["']@hcp\/domain["']/,
+    );
+    expect(signerWrap).toContain('import "server-only"');
+    expect(signerWrap).toContain('@hcp/domain/hk-staff-signer');
+    expect(secret).toContain('import "server-only"');
+    expect(cookie).toContain('import "server-only"');
+  });
 });

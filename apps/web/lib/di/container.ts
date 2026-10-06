@@ -190,7 +190,6 @@ import {
   UnlockHousekeepingStaffUseCase,
   GetStaffHousekeepingStatusUseCase,
   MarkStaffHousekeepingStatusUseCase,
-  HmacHkStaffCapabilitySigner,
   GetCleaningChecklistTemplateUseCase,
   UpsertCleaningChecklistTemplateUseCase,
   ResolveCleaningContextUseCase,
@@ -1911,6 +1910,7 @@ export const resolveCleaningQrUseCase = new ResolveCleaningQrUseCase(
 );
 
 import { resolveHkStaffCapabilitySecret } from "@/lib/housekeeping/hk-staff-secret";
+import { HmacHkStaffCapabilitySigner } from "@/lib/housekeeping/hmac-hk-staff-capability-signer";
 
 export const hkStaffCapabilitySigner = new HmacHkStaffCapabilitySigner(
   resolveHkStaffCapabilitySecret(),

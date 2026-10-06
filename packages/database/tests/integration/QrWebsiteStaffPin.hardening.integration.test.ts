@@ -9,7 +9,6 @@ import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import {
   ForbiddenError,
-  HmacHkStaffCapabilitySigner,
   NotFoundError,
   ResolvePublicQrRouteUseCase,
   UnlockHousekeepingStaffUseCase,
@@ -21,6 +20,7 @@ import {
   type IAuditLogRepository,
   type AuditEntry,
 } from "@hcp/domain";
+import { HmacHkStaffCapabilitySigner } from "@hcp/domain/hk-staff-signer";
 import {
   PrismaCleaningLocationRepository,
   PrismaCleaningLocationQrAccessRepository,

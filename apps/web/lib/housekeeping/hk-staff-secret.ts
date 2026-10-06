@@ -8,6 +8,8 @@
  * NEXTAUTH_SECRET (namespaced), else an explicit test/dev fallback when
  * NODE_ENV=test or ALLOW_HK_STAFF_DEV_SECRET=true.
  */
+import "server-only";
+
 export function resolveHkStaffCapabilitySecret(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
