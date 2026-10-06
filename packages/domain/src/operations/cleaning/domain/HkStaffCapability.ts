@@ -7,6 +7,12 @@ export const HK_STAFF_CAPABILITY_TYP = "hk_staff" as const;
 export const HK_STAFF_CAPABILITY_TTL_SECONDS = 30 * 60; // 30 minutes
 export const HK_STAFF_COOKIE_NAME = "talos_hk_staff";
 
+/**
+ * Audit metadata.actorType for QR staff capability mutations.
+ * Paired with AuditEntry.actorId = null (no fake User UUID).
+ */
+export const HK_STAFF_AUDIT_ACTOR_TYPE = "HK_STAFF" as const;
+
 export interface HkStaffCapabilityClaims {
   typ: typeof HK_STAFF_CAPABILITY_TYP;
   v: 1;

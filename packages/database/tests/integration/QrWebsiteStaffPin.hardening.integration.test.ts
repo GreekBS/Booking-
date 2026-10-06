@@ -120,16 +120,20 @@ runIntegration("QR Website / Staff PIN housekeeping hardening", () => {
     lookup,
     staffPin,
   );
+  const tenantTx = {
+    runInTenantTransaction: <T>(tenantId: string, fn: () => Promise<T>) =>
+      withTenantTransaction(tenantId, () => fn()),
+  };
   const markStatus = new MarkStaffHousekeepingStatusUseCase(
     locations,
     unitHk,
     getStatus,
     lookup,
     audit,
+    tenantTx,
   );
 
   let token204 = "";
-  let token205 = "";
   let hash204 = "";
 
   beforeAll(async () => {
@@ -249,7 +253,6 @@ runIntegration("QR Website / Staff PIN housekeeping hardening", () => {
     const minted205 = generateOpaqueToken();
     token204 = minted204.token;
     hash204 = minted204.tokenHash;
-    token205 = minted205.token;
 
     await locationQr.issue({
       tenantId: TENANT,
@@ -358,11 +361,14 @@ runIntegration("QR Website / Staff PIN housekeeping hardening", () => {
     const dirtyAudit = audit.entries.find(
       (e) => e.action === "housekeeping.marked_dirty",
     );
+    expect(dirtyAudit?.actorId).toBeNull();
+    expect(dirtyAudit?.metadata?.actorType).toBe("HK_STAFF");
     expect(dirtyAudit?.metadata?.source).toBe("QR_STAFF");
     const auditJson = JSON.stringify(audit.entries);
     expect(auditJson).not.toContain("1234");
     expect(auditJson).not.toContain("5678");
     expect(auditJson).not.toContain("9999");
+    expect(auditJson).not.toContain("hk_staff");
     expect(auditJson).not.toMatch(/"pin"\s*:/);
     expect(auditJson).not.toMatch(/pinHash/i);
     expect(auditJson).not.toMatch(/capabilityToken/i);
@@ -386,6 +392,135 @@ runIntegration("QR Website / Staff PIN housekeeping hardening", () => {
     expect(dbClean.loc?.status).toBe("CLEAN");
     expect(dbClean.unit?.status).toBe("CLEAN");
     expect(dbClean.loc?.source).toBe("QR_STAFF");
+
+    const cleanAudit = audit.entries.find(
+      (e) => e.action === "housekeeping.marked_clean",
+    );
+    expect(cleanAudit?.actorId).toBeNull();
+    expect(cleanAudit?.metadata?.actorType).toBe("HK_STAFF");
+    expect(cleanAudit?.metadata?.source).toBe("QR_STAFF");
+  });
+
+  it("1b) Prisma audit persist: null actorId + HK_STAFF + QR_STAFF (linked unit)", async () => {
+    const { PrismaAuditLogRepository } = await import("../../src");
+    const prismaAudit = new PrismaAuditLogRepository();
+    const markWithPrismaAudit = new MarkStaffHousekeepingStatusUseCase(
+      locations,
+      unitHk,
+      getStatus,
+      lookup,
+      prismaAudit,
+      tenantTx,
+    );
+
+    const unlocked = await unlock.execute({
+      token: token204,
+      pin: "1234",
+      now: new Date("2026-10-06T12:05:00.000Z"),
+    });
+    expect(unlocked.isSuccess).toBe(true);
+    const { claims } = unlocked.getValue();
+
+    const before = await getStatus.execute({ claims });
+    expect(before.isSuccess).toBe(true);
+    const startStatus = before.getValue().status;
+    const startVersion = before.getValue().version;
+    const target = startStatus === "CLEAN" ? "DIRTY" : "CLEAN";
+
+    const marked = await markWithPrismaAudit.execute({
+      claims,
+      target,
+      expectedVersion: startVersion,
+    });
+    expect(marked.isSuccess).toBe(true);
+    expect(marked.getValue().status).toBe(target);
+
+    const persisted = await withTenantTransaction(TENANT, async (tx) => {
+      const loc = await tx.cleaningLocationStatus.findUnique({
+        where: { cleaningLocationId: LOC_204 },
+      });
+      const unit = await tx.unitHousekeepingStatus.findUnique({
+        where: { unitId: UNIT_204 },
+      });
+      const audits = await tx.auditLog.findMany({
+        where: {
+          tenantId: TENANT,
+          resourceType: "cleaning_location_status",
+          resourceId: LOC_204,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      });
+      return { loc, unit, audits };
+    });
+
+    expect(persisted.loc?.status).toBe(target);
+    expect(persisted.loc?.source).toBe("QR_STAFF");
+    expect(persisted.unit?.status).toBe(target);
+    expect(persisted.unit?.source).toBe("QR_STAFF");
+
+    const latest = persisted.audits[0];
+    expect(latest).toBeTruthy();
+    expect(latest.actorId).toBeNull();
+    expect(latest.action).toBe(
+      target === "CLEAN"
+        ? "housekeeping.marked_clean"
+        : "housekeeping.marked_dirty",
+    );
+    const meta = latest.metadata as Record<string, unknown>;
+    expect(meta.actorType).toBe("HK_STAFF");
+    expect(meta.source).toBe("QR_STAFF");
+    expect(meta.unitId).toBe(UNIT_204);
+    expect(JSON.stringify(meta)).not.toMatch(/pin|secret|capability/i);
+  });
+
+  it("1c) audit failure rolls back location+unit (no partial success)", async () => {
+    class FailingAudit implements IAuditLogRepository {
+      async append(): Promise<void> {
+        throw new Error("forced audit persistence failure");
+      }
+    }
+    const markFailing = new MarkStaffHousekeepingStatusUseCase(
+      locations,
+      unitHk,
+      getStatus,
+      lookup,
+      new FailingAudit(),
+      tenantTx,
+    );
+
+    const unlocked = await unlock.execute({
+      token: token204,
+      pin: "1234",
+      now: new Date("2026-10-06T12:06:00.000Z"),
+    });
+    const { claims } = unlocked.getValue();
+
+    const before = await getStatus.execute({ claims });
+    expect(before.isSuccess).toBe(true);
+    const priorStatus = before.getValue().status;
+    const priorVersion = before.getValue().version;
+    const target = priorStatus === "CLEAN" ? "DIRTY" : "CLEAN";
+
+    const failed = await markFailing.execute({
+      claims,
+      target,
+      expectedVersion: priorVersion,
+    });
+    expect(failed.isFailure).toBe(true);
+    expect(failed.getError().message).toContain("forced audit persistence failure");
+
+    const after = await withTenantTransaction(TENANT, async (tx) => ({
+      loc: await tx.cleaningLocationStatus.findUnique({
+        where: { cleaningLocationId: LOC_204 },
+      }),
+      unit: await tx.unitHousekeepingStatus.findUnique({
+        where: { unitId: UNIT_204 },
+      }),
+    }));
+    expect(after.loc?.status).toBe(priorStatus);
+    expect(after.unit?.status).toBe(priorStatus);
+    expect(after.loc?.version).toBe(priorVersion);
   });
 
   it("2) multi-room isolation: 204 capability cannot mutate 205", async () => {

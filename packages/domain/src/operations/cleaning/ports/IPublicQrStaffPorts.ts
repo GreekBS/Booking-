@@ -1,5 +1,16 @@
 import type { UnitHousekeepingStatusValue } from "../../domain/TaskTypes";
 
+/**
+ * Runs work in a tenant-scoped DB transaction when the infrastructure provides one.
+ * Nested repository calls that also open tenant transactions must join this TX.
+ */
+export interface ITenantTransactionRunner {
+  runInTenantTransaction<T>(
+    tenantId: string,
+    fn: () => Promise<T>,
+  ): Promise<T>;
+}
+
 /** Row returned by SECURITY DEFINER lookup_active_cleaning_qr_by_token_hash. */
 export interface PublicCleaningQrLookupRow {
   kind: "location" | "unit";

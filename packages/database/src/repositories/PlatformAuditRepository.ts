@@ -92,20 +92,28 @@ export class PrismaPlatformAuditRepository implements IPlatformAuditRepository {
       : [];
     const tenantName = new Map(tenants.map((t) => [t.id, t.name]));
 
-    const data: PlatformAuditLogRow[] = rows.map((row) => ({
-      id: row.id,
-      createdAt: row.createdAt,
-      action: row.action,
-      resourceType: row.resourceType,
-      resourceId: row.resourceId,
-      tenantId: row.tenantId,
-      tenantName: row.tenantId ? (tenantName.get(row.tenantId) ?? null) : null,
-      actorId: row.actorId,
-      actorName: row.actor.name,
-      actorEmail: row.actor.email,
-      ipAddress: row.ipAddress,
-      metadata: sanitizeAuditMetadata(row.metadata) as Record<string, unknown>,
-    }));
+    const data: PlatformAuditLogRow[] = rows.map((row) => {
+      const metadata = sanitizeAuditMetadata(row.metadata) as Record<
+        string,
+        unknown
+      >;
+      const actorType =
+        typeof metadata.actorType === "string" ? metadata.actorType : null;
+      return {
+        id: row.id,
+        createdAt: row.createdAt,
+        action: row.action,
+        resourceType: row.resourceType,
+        resourceId: row.resourceId,
+        tenantId: row.tenantId,
+        tenantName: row.tenantId ? (tenantName.get(row.tenantId) ?? null) : null,
+        actorId: row.actorId,
+        actorName: row.actor?.name ?? actorType,
+        actorEmail: row.actor?.email ?? null,
+        ipAddress: row.ipAddress,
+        metadata,
+      };
+    });
 
     return { data, total, page, limit };
   }

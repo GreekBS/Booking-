@@ -36,7 +36,12 @@ export * from "./MutationOrigin";
 
 export interface AuditEntry {
   tenantId: string | null;
-  actorId: string;
+  /**
+   * User UUID when an Auth.js/operator actor performed the action.
+   * Null for truthful system/capability actors (e.g. QR staff HK_STAFF) —
+   * identity details belong in metadata (actorType / source), not a fake user.
+   */
+  actorId: string | null;
   action: string;
   resourceType: string;
   resourceId: string | null;

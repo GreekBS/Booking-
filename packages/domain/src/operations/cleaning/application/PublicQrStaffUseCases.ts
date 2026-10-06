@@ -18,12 +18,14 @@ import type { IUnitHousekeepingStatusRepository } from "../../ports/IUnitHouseke
 import type {
   IPublicCleaningQrLookup,
   IPropertyStaffPinRepository,
+  ITenantTransactionRunner,
   StaffHousekeepingStatusView,
 } from "../ports/IPublicQrStaffPorts";
 import type {
   HkStaffCapabilityClaims,
   IHkStaffCapabilitySigner,
 } from "../domain/HkStaffCapability";
+import { HK_STAFF_AUDIT_ACTOR_TYPE } from "../domain/HkStaffCapability";
 import { canManageCleaningConfigOnProperty } from "./cleaningAccess";
 
 export const STAFF_PIN_MAX_ATTEMPTS = 5;
@@ -387,6 +389,11 @@ export class MarkStaffHousekeepingStatusUseCase {
     private readonly getStatus: GetStaffHousekeepingStatusUseCase,
     private readonly lookup: IPublicCleaningQrLookup,
     private readonly audit?: IAuditLogRepository,
+    /**
+     * When provided, location + linked unit + audit commit atomically.
+     * Required in Production DI so audit failure cannot leave a committed mark.
+     */
+    private readonly transactions?: ITenantTransactionRunner,
   ) {}
 
   async execute(input: {
@@ -410,69 +417,82 @@ export class MarkStaffHousekeepingStatusUseCase {
         return Result.fail(new ForbiddenError("Housekeeping capability is no longer valid"));
       }
 
-      const previous = await this.locations.ensureStatusInitialized({
-        tenantId: input.claims.tenantId,
-        propertyId: input.claims.propertyId,
-        locationId: input.claims.locationId,
-      });
-
-      if (input.target === "CLEAN") {
-        await this.locations.markClean({
-          tenantId: input.claims.tenantId,
-          locationId: input.claims.locationId,
-          expectedVersion: input.expectedVersion,
-          source: "QR_STAFF",
-          updatedByUserId: null,
-        });
-      } else {
-        await this.locations.markDirty({
-          tenantId: input.claims.tenantId,
-          locationId: input.claims.locationId,
-          expectedVersion: input.expectedVersion,
-          source: "QR_STAFF",
-          updatedByUserId: null,
-        });
-      }
-
-      // Keep commercial unit readiness in sync when linked.
-      if (input.claims.unitId) {
-        const unitStatus = await this.unitHousekeeping.ensureInitialized({
+      const runMutation = async (): Promise<void> => {
+        const previous = await this.locations.ensureStatusInitialized({
           tenantId: input.claims.tenantId,
           propertyId: input.claims.propertyId,
-          unitId: input.claims.unitId,
+          locationId: input.claims.locationId,
         });
-        const expectedUnitVersion = unitStatus.version;
-        if (input.target === "CLEAN") {
-          unitStatus.markClean(expectedUnitVersion, "QR_STAFF", null);
-        } else {
-          unitStatus.markDirty(expectedUnitVersion, "QR_STAFF", null);
-        }
-        await this.unitHousekeeping.saveWithExpectedVersion(
-          unitStatus,
-          expectedUnitVersion,
-        );
-      }
 
-      if (this.audit) {
-        await this.audit.append({
-          tenantId: input.claims.tenantId,
-          actorId: "hk_staff",
-          action:
-            input.target === "CLEAN"
-              ? "housekeeping.marked_clean"
-              : "housekeeping.marked_dirty",
-          resourceType: "cleaning_location_status",
-          resourceId: input.claims.locationId,
-          ipAddress: null,
-          metadata: {
+        if (input.target === "CLEAN") {
+          await this.locations.markClean({
+            tenantId: input.claims.tenantId,
+            locationId: input.claims.locationId,
+            expectedVersion: input.expectedVersion,
             source: "QR_STAFF",
-            previousStatus: previous.status,
-            newStatus: input.target,
-            qrAccessId: input.claims.qrAccessId,
-            unitId: input.claims.unitId,
+            updatedByUserId: null,
+          });
+        } else {
+          await this.locations.markDirty({
+            tenantId: input.claims.tenantId,
+            locationId: input.claims.locationId,
+            expectedVersion: input.expectedVersion,
+            source: "QR_STAFF",
+            updatedByUserId: null,
+          });
+        }
+
+        // Keep commercial unit readiness in sync when linked.
+        if (input.claims.unitId) {
+          const unitStatus = await this.unitHousekeeping.ensureInitialized({
+            tenantId: input.claims.tenantId,
             propertyId: input.claims.propertyId,
-          },
-        });
+            unitId: input.claims.unitId,
+          });
+          const expectedUnitVersion = unitStatus.version;
+          if (input.target === "CLEAN") {
+            unitStatus.markClean(expectedUnitVersion, "QR_STAFF", null);
+          } else {
+            unitStatus.markDirty(expectedUnitVersion, "QR_STAFF", null);
+          }
+          await this.unitHousekeeping.saveWithExpectedVersion(
+            unitStatus,
+            expectedUnitVersion,
+          );
+        }
+
+        if (this.audit) {
+          await this.audit.append({
+            tenantId: input.claims.tenantId,
+            // Truthful capability actor: no Auth.js user — identity in metadata.
+            actorId: null,
+            action:
+              input.target === "CLEAN"
+                ? "housekeeping.marked_clean"
+                : "housekeeping.marked_dirty",
+            resourceType: "cleaning_location_status",
+            resourceId: input.claims.locationId,
+            ipAddress: null,
+            metadata: {
+              actorType: HK_STAFF_AUDIT_ACTOR_TYPE,
+              source: "QR_STAFF",
+              previousStatus: previous.status,
+              newStatus: input.target,
+              qrAccessId: input.claims.qrAccessId,
+              unitId: input.claims.unitId,
+              propertyId: input.claims.propertyId,
+            },
+          });
+        }
+      };
+
+      if (this.transactions) {
+        await this.transactions.runInTenantTransaction(
+          input.claims.tenantId,
+          runMutation,
+        );
+      } else {
+        await runMutation();
       }
 
       return this.getStatus.execute({ claims: input.claims });

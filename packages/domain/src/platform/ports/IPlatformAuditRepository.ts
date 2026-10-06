@@ -8,9 +8,10 @@ export interface PlatformAuditLogRow {
   resourceId: string | null;
   tenantId: string | null;
   tenantName: string | null;
-  actorId: string;
-  actorName: string;
-  actorEmail: string;
+  /** Null for system/capability actors (see metadata.actorType). */
+  actorId: string | null;
+  actorName: string | null;
+  actorEmail: string | null;
   ipAddress: string | null;
   /** Sanitized metadata safe for Super Admin UI rendering. */
   metadata: Record<string, unknown>;

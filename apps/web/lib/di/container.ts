@@ -492,6 +492,8 @@ import { isBookingComFixtureTransportEnabled } from "@/lib/channels/booking-com-
 
 import {
 
+  withTenantTransaction,
+
   PrismaOutboxRepository,
 
   PrismaBackgroundJobRepository,
@@ -1943,6 +1945,11 @@ export const getStaffHousekeepingStatusUseCase =
     propertyStaffPinRepository,
   );
 
+const tenantTransactionRunner = {
+  runInTenantTransaction: <T>(tenantId: string, fn: () => Promise<T>) =>
+    withTenantTransaction(tenantId, () => fn()),
+};
+
 export const markStaffHousekeepingStatusUseCase =
   new MarkStaffHousekeepingStatusUseCase(
     cleaningLocationRepository,
@@ -1950,6 +1957,7 @@ export const markStaffHousekeepingStatusUseCase =
     getStaffHousekeepingStatusUseCase,
     publicCleaningQrLookup,
     auditLogRepository,
+    tenantTransactionRunner,
   );
 
 export const getCleaningChecklistTemplateUseCase =

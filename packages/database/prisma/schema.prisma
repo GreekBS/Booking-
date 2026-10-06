@@ -619,7 +619,8 @@ model PropertyAmenity {
 model AuditLog {
   id           String   @id @default(uuid()) @db.Uuid
   tenantId     String?  @map("tenant_id") @db.Uuid
-  actorId      String   @map("actor_id") @db.Uuid
+  /** Null = system/capability actor; see metadata.actorType (e.g. HK_STAFF). */
+  actorId      String?  @map("actor_id") @db.Uuid
   action       String   @db.VarChar(100)
   resourceType String   @map("resource_type") @db.VarChar(50)
   resourceId   String?  @map("resource_id") @db.VarChar(255)
@@ -627,7 +628,7 @@ model AuditLog {
   ipAddress    String?  @map("ip_address") @db.VarChar(45)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  actor User @relation(fields: [actorId], references: [id])
+  actor User? @relation(fields: [actorId], references: [id])
 
   @@index([tenantId, createdAt])
   @@index([actorId])

@@ -190,9 +190,9 @@ export default async function PlatformAuditPage({
                     ) : null}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium">{row.actorName}</div>
+                    <div className="font-medium">{row.actorName ?? "System"}</div>
                     <div className="text-xs text-[var(--platform-muted)]">
-                      {row.actorEmail}
+                      {row.actorEmail ?? "—"}
                     </div>
                   </td>
                   <td className="hidden px-4 py-3 md:table-cell">
