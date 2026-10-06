@@ -1909,12 +1909,10 @@ export const resolveCleaningQrUseCase = new ResolveCleaningQrUseCase(
   permissionChecker,
 );
 
-import { resolveHkStaffCapabilitySecret } from "@/lib/housekeeping/hk-staff-secret";
-import { HmacHkStaffCapabilitySigner } from "@/lib/housekeeping/hmac-hk-staff-capability-signer";
+import { createLazyHkStaffCapabilitySigner } from "@/lib/housekeeping/hmac-hk-staff-capability-signer";
 
-export const hkStaffCapabilitySigner = new HmacHkStaffCapabilitySigner(
-  resolveHkStaffCapabilitySecret(),
-);
+/** Lazy: secret resolved only on first issue/verify, not at container import. */
+export const hkStaffCapabilitySigner = createLazyHkStaffCapabilitySigner();
 
 export const resolvePublicQrRouteUseCase = new ResolvePublicQrRouteUseCase(
   opaqueTokenFactory,
