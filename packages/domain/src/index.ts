@@ -117,7 +117,7 @@ export * from "./messaging";
 export * from "./operations/index";
 
 export * from "./catalog/domain/Property";
-
+export * from "./catalog/domain/propertyWebsiteUrl";
 export * from "./catalog/domain/Unit";
 
 export * from "./catalog/domain/events/CatalogEvents";

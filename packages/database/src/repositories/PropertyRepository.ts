@@ -72,6 +72,7 @@ function toDomain(
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     })),
+    websiteUrl: record.websiteUrl ?? null,
     deletedAt: record.deletedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -112,6 +113,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
           checkOutTime: props.policies.checkOutTime,
           cancellationPolicyType: props.policies
             .cancellationPolicyType as CancellationPolicyType,
+          websiteUrl: props.websiteUrl,
           deletedAt: props.deletedAt,
         },
         update: {
@@ -132,6 +134,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
           checkOutTime: props.policies.checkOutTime,
           cancellationPolicyType: props.policies
             .cancellationPolicyType as CancellationPolicyType,
+          websiteUrl: props.websiteUrl,
           deletedAt: props.deletedAt,
         },
       });

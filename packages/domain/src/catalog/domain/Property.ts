@@ -13,6 +13,7 @@ import {
   UnitRemovedEvent,
   UnitUpdatedEvent,
 } from "./events/CatalogEvents";
+import { normalizePropertyWebsiteUrl } from "./propertyWebsiteUrl";
 
 export interface PropertyProps {
   id: string;
@@ -27,6 +28,8 @@ export interface PropertyProps {
   policies: PropertyPolicies;
   amenityIds: string[];
   units: UnitProps[];
+  /** Guest-facing website. Null = QR goes to Staff PIN flow. */
+  websiteUrl: string | null;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -103,6 +106,10 @@ export class Property extends AggregateRoot<PropertyProps> {
     return this.props.policies;
   }
 
+  get websiteUrl(): string | null {
+    return this.props.websiteUrl;
+  }
+
   get amenityIds(): string[] {
     return [...this.props.amenityIds];
   }
@@ -148,6 +155,7 @@ export class Property extends AggregateRoot<PropertyProps> {
       policies: props.policies ?? PropertyPolicies.create(),
       amenityIds: [],
       units: [unit.toProps()],
+      websiteUrl: null,
       deletedAt: null,
       createdAt: now,
       updatedAt: now,
@@ -179,6 +187,7 @@ export class Property extends AggregateRoot<PropertyProps> {
     location?: Location;
     policies?: PropertyPolicies;
     amenityIds?: string[];
+    websiteUrl?: string | null;
   }): void {
     const changedFields: string[] = [];
 
@@ -213,6 +222,10 @@ export class Property extends AggregateRoot<PropertyProps> {
     if (details.amenityIds !== undefined) {
       this.props.amenityIds = [...details.amenityIds];
       changedFields.push("amenityIds");
+    }
+    if (details.websiteUrl !== undefined) {
+      this.props.websiteUrl = normalizePropertyWebsiteUrl(details.websiteUrl);
+      changedFields.push("websiteUrl");
     }
 
     if (changedFields.length > 0) {

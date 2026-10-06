@@ -37,6 +37,7 @@ export const UNIT_HOUSEKEEPING_SOURCES = [
   "TASK_REOPEN",
   "MANUAL",
   "SYSTEM",
+  "QR_STAFF",
 ] as const;
 
 export type UnitHousekeepingSource =

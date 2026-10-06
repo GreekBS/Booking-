@@ -78,6 +78,8 @@ export const updatePropertySchema = z.object({
     })
     .optional(),
   amenityIds: z.array(z.string().uuid()).optional(),
+  /** Guest-facing website. Null clears. Validated again in domain. */
+  websiteUrl: z.string().max(2048).nullable().optional(),
 });
 
 export const createUnitSchema = z.object({

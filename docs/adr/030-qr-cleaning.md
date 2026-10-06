@@ -232,6 +232,41 @@ which is correct but requires the client to re-fetch rather than cache URLs.
 **Explicitly out of scope.** iCal, worker activation and calendar housekeeping
 markers are untouched. Cleaning never creates inventory blocks.
 
+## Amendment — QR → Website / Staff PIN housekeeping (2026-10-06)
+
+**Status:** Accepted (product lock)
+
+Physical QR stickers remain Talos-controlled opaque URLs (`/q/{token}`). The
+token alone is still **not** a credential for CLEAN/DIRTY mutation.
+
+### Public routing (no Auth.js required)
+
+| Path | Behavior |
+|------|----------|
+| `GET /q/{token}` | Resolve ACTIVE QR → if `Property.websiteUrl` set, safe `http(s)` redirect; else redirect to `/q/{token}/staff` |
+| `GET /q/{token}/staff` | Always Staff PIN entry (or resume valid `hk_staff` capability) → scoped cleaner UI |
+| `GET /q/{token}/clean` | **Authenticated operator checklist** (ADR-030 original). Middleware still requires Auth.js. Not exposed publicly. |
+
+### Staff PIN (required for every cleaner mutation)
+
+- Property-scoped PIN, bcrypt-hashed at rest (never plaintext, never in URLs/logs/API responses)
+- Failed-attempt counter + temporary lockout
+- Correct PIN issues a short-lived **`hk_staff`** capability cookie (HttpOnly, Secure, SameSite=Lax) scoped to tenant + property + exact CleaningLocation/unit + QR access identity + token hash
+- Capability authorizes **only** read status + mark CLEAN/DIRTY for that scope
+- Does **not** create or elevate an Auth.js operator session
+- Source for readiness mutations: `QR_STAFF`
+
+### Website URL
+
+- Single nullable `Property.websiteUrl`
+- Validated on write and before redirect (`http:` / `https:` only)
+- Changing the URL changes future QR behavior without reprinting stickers
+- External site Staff link is a plain URL back to `/q/{token}/staff` — no PIN or business logic on the website
+
+### Isolation
+
+One QR per CleaningLocation (room). A capability issued for room 204 cannot mutate 205. Rotate/revoke of the QR invalidates the old token (and any capability bound to its hash).
+
 ## Alternatives considered
 
 - **Storing the token in plaintext so codes can be reprinted.** Rejected: it
@@ -240,9 +275,13 @@ markers are untouched. Cleaning never creates inventory blocks.
 - **Replacing hash verification with reversible-only storage.** Rejected: scan
   resolution must remain one-way hash based.
 - **Resolving tokens across tenants.** Rejected: it leaks unit existence across
-  tenant boundaries for the cost of one guessed hash.
+  tenant boundaries for the cost of one guessed hash. Public resolve uses a
+  SECURITY DEFINER hash lookup that returns only the owning tenant/ids for an
+  exact ACTIVE hash — no cross-tenant enumeration of sequential IDs.
 - **A separate `cleaning_status` column on Unit.** Rejected: two sources of truth
   for readiness is exactly the bug ADR-029 was written to avoid.
 - **Completing the execution and the task in separate transactions.** Rejected:
   a crash between them leaves a unit that was cleaned but reads DIRTY, or a
   closed task with no evidence.
+- **QR-only CLEAN/DIRTY without PIN.** Rejected (2026-10-06 product lock): every
+  cleaner mutation requires Staff PIN + scoped `hk_staff` capability.

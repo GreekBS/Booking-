@@ -185,6 +185,12 @@ import {
   GenerateCleaningLocationQrUseCase,
   RotateCleaningLocationQrUseCase,
   ResolveCleaningQrUseCase,
+  ResolvePublicQrRouteUseCase,
+  SetPropertyStaffPinUseCase,
+  UnlockHousekeepingStaffUseCase,
+  GetStaffHousekeepingStatusUseCase,
+  MarkStaffHousekeepingStatusUseCase,
+  HmacHkStaffCapabilitySigner,
   GetCleaningChecklistTemplateUseCase,
   UpsertCleaningChecklistTemplateUseCase,
   ResolveCleaningContextUseCase,
@@ -571,6 +577,8 @@ import {
   PrismaUnitQrAccessRepository,
   PrismaCleaningLocationRepository,
   PrismaCleaningLocationQrAccessRepository,
+  PrismaPublicCleaningQrLookup,
+  PrismaPropertyStaffPinRepository,
   PrismaCleaningChecklistRepository,
   PrismaCleaningExecutionRepository,
   PrismaCleaningPhotoRepository,
@@ -714,6 +722,8 @@ const unitQrAccessRepository = new PrismaUnitQrAccessRepository();
 const cleaningLocationRepository = new PrismaCleaningLocationRepository();
 const cleaningLocationQrAccessRepository =
   new PrismaCleaningLocationQrAccessRepository();
+const publicCleaningQrLookup = new PrismaPublicCleaningQrLookup();
+const propertyStaffPinRepository = new PrismaPropertyStaffPinRepository();
 const cleaningChecklistRepository = new PrismaCleaningChecklistRepository();
 const cleaningExecutionRepository = new PrismaCleaningExecutionRepository(
   housekeepingTurnoverStore,
@@ -1899,6 +1909,51 @@ export const resolveCleaningQrUseCase = new ResolveCleaningQrUseCase(
   opaqueTokenFactory,
   permissionChecker,
 );
+
+import { resolveHkStaffCapabilitySecret } from "@/lib/housekeeping/hk-staff-secret";
+
+export const hkStaffCapabilitySigner = new HmacHkStaffCapabilitySigner(
+  resolveHkStaffCapabilitySecret(),
+);
+
+export const resolvePublicQrRouteUseCase = new ResolvePublicQrRouteUseCase(
+  opaqueTokenFactory,
+  publicCleaningQrLookup,
+  propertyStaffPinRepository,
+  cleaningLocationRepository,
+);
+
+export const setPropertyStaffPinUseCase = new SetPropertyStaffPinUseCase(
+  propertyStaffPinRepository,
+  passwordHasher,
+  permissionChecker,
+  auditLogRepository,
+);
+
+export const unlockHousekeepingStaffUseCase = new UnlockHousekeepingStaffUseCase(
+  resolvePublicQrRouteUseCase,
+  propertyStaffPinRepository,
+  passwordHasher,
+  hkStaffCapabilitySigner,
+);
+
+export const getStaffHousekeepingStatusUseCase =
+  new GetStaffHousekeepingStatusUseCase(
+    cleaningLocationRepository,
+    propertyRepository,
+    publicCleaningQrLookup,
+    propertyStaffPinRepository,
+  );
+
+export const markStaffHousekeepingStatusUseCase =
+  new MarkStaffHousekeepingStatusUseCase(
+    cleaningLocationRepository,
+    unitHousekeepingStatusRepository,
+    getStaffHousekeepingStatusUseCase,
+    publicCleaningQrLookup,
+    auditLogRepository,
+  );
+
 export const getCleaningChecklistTemplateUseCase =
   new GetCleaningChecklistTemplateUseCase(
     cleaningChecklistRepository,

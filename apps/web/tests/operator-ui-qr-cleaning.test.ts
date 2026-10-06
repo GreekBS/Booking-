@@ -61,18 +61,56 @@ describe("operator-ui QR cleaning V1", () => {
     }
   });
 
-  it("scanned QR landing page is auth-gated and resolves server-side", () => {
+  it("scanned QR landing routes publicly; checklist stays auth-gated", () => {
     const page = read("app/q/[token]/page.tsx");
-    expect(page).toContain("QrLandingPage");
+    expect(page).toContain("resolvePublicQrRouteUseCase");
+    expect(page).toContain("redirect_website");
+    expect(page).toContain("/staff");
+    expect(page).not.toContain("QrLandingPage");
+
+    const staff = read("app/q/[token]/staff/page.tsx");
+    expect(staff).toContain("StaffHousekeepingPage");
+
+    const clean = read("app/q/[token]/clean/page.tsx");
+    expect(clean).toContain("QrLandingPage");
 
     const landing = read("features/cleaning/QrLandingPage.tsx");
     expect(landing).toContain("resolveQrToken");
     expect(landing).toContain("CleaningForm");
-    // The token itself must never be treated as a credential client-side.
     expect(landing).not.toContain("localStorage");
+
+    const staffUi = read("features/cleaning/StaffHousekeepingPage.tsx");
+    expect(staffUi).toContain("ΚΑΘΑΡΟ");
+    expect(staffUi).toContain("ΔΕΝ ΕΙΝΑΙ ΚΑΘΑΡΟ");
+    expect(staffUi).toContain("/api/public/v1/housekeeping/staff/unlock");
+    expect(staffUi).not.toContain("localStorage");
+
+    const middleware = read("middleware.ts");
+    expect(middleware).toContain("isPublicQrStaffPath");
+    expect(middleware).toContain("/api/public/v1/housekeeping/");
+    // Authenticated checklist path must NOT be in the public QR allowlist.
+    expect(middleware).toContain("NOT /q/{token}/clean");
 
     const layout = read("app/q/layout.tsx");
     expect(layout).toContain("TenantProvider");
+  });
+
+  it("exposes public housekeeping API surface without Auth.js", () => {
+    for (const route of [
+      "app/api/public/v1/housekeeping/qr/resolve/route.ts",
+      "app/api/public/v1/housekeeping/staff/unlock/route.ts",
+      "app/api/public/v1/housekeeping/status/route.ts",
+      "app/api/public/v1/housekeeping/mark/route.ts",
+      "app/api/admin/v1/properties/[propertyId]/staff-pin/route.ts",
+    ]) {
+      expect(existsSync(join(root, route)), route).toBe(true);
+    }
+    const unlock = read("app/api/public/v1/housekeeping/staff/unlock/route.ts");
+    expect(unlock).toContain("HK_STAFF_COOKIE_NAME");
+    expect(unlock).not.toContain("requireTenantContext");
+    const mark = read("app/api/public/v1/housekeeping/mark/route.ts");
+    expect(mark).toContain("readHkStaffClaims");
+    expect(mark).not.toContain("requireTenantContext");
   });
 
   it("middleware preserves a safe callbackUrl through login", () => {

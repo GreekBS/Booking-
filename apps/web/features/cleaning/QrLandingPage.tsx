@@ -9,12 +9,9 @@ import { ErrorState } from "@/components/admin/error-state";
 import { CleaningForm } from "./CleaningForm";
 
 /**
- * Landing surface for a scanned unit QR code.
- *
- * Reaching this component already implies an authenticated session — the
- * middleware bounces anonymous visitors to `/login?callbackUrl=/q/<token>`.
- * The token is then exchanged server-side for unit identity under the
- * operator's tenant and property ACL.
+ * Landing surface for authenticated operator QR checklist (/q/{token}/clean).
+ * Physical stickers resolve via public /q/{token} (website or staff PIN).
+ * Middleware requires Auth.js for this checklist path.
  */
 export function QrLandingPage({ token }: { token: string }) {
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();

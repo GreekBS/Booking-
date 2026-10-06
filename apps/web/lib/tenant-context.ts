@@ -153,6 +153,7 @@ export function serializeProperty(property: {
   type: string;
   status: string;
   timezone: string;
+  websiteUrl?: string | null;
   location: {
     addressLine: string | null;
     city: string | null;
@@ -190,6 +191,7 @@ export function serializeProperty(property: {
     location: property.location,
     policies: property.policies,
     amenityIds: property.amenityIds,
+    websiteUrl: property.websiteUrl ?? null,
     units: property.units.map((u) => ({
       id: u.id,
       name: u.name,

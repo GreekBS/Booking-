@@ -59,6 +59,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
     type: "villa",
     status: "draft",
     timezone: "Europe/Athens",
+    websiteUrl: "",
     addressLine: "",
     city: "",
     region: "",
@@ -69,6 +70,9 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
     cancellationPolicyType: "moderate",
     amenityIds: [] as string[],
   });
+  const [staffPin, setStaffPin] = useState("");
+  const [staffPinConfirm, setStaffPinConfirm] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
 
   async function loadProperty() {
     if (!tenantId) return;
@@ -87,6 +91,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         type: prop.type,
         status: prop.status,
         timezone: prop.timezone,
+        websiteUrl: prop.websiteUrl ?? "",
         addressLine: prop.location.addressLine ?? "",
         city: prop.location.city ?? "",
         region: prop.location.region ?? "",
@@ -148,6 +153,33 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
   async function activateProperty() {
     setForm((prev) => ({ ...prev, status: "active" }));
     await save({ status: "active" });
+  }
+
+  async function saveStaffPin() {
+    if (!tenantId) return;
+    if (staffPin !== staffPinConfirm) {
+      toastError("Τα PIN δεν ταιριάζουν");
+      return;
+    }
+    if (!/^\d{4,8}$/.test(staffPin)) {
+      toastError("Το PIN πρέπει να είναι 4–8 ψηφία");
+      return;
+    }
+    setPinSaving(true);
+    try {
+      await adminFetch(`/properties/${propertyId}/staff-pin`, {
+        method: "PUT",
+        tenantId,
+        body: JSON.stringify({ pin: staffPin }),
+      });
+      setStaffPin("");
+      setStaffPinConfirm("");
+      toastSuccess("Το PIN προσωπικού αποθηκεύτηκε");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης PIN");
+    } finally {
+      setPinSaving(false);
+    }
   }
 
   const tenantGate = renderTenantGate({
@@ -554,6 +586,77 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
                 </Button>
                 <Button variant="outline" asChild>
                   <Link href="/dashboard/pricing">Τιμοκατάλογος</Link>
+                </Button>
+              </div>
+
+              <div className="space-y-3 border-t border-border pt-4">
+                <SurfaceHeader
+                  className="mb-0"
+                  title="Ιστότοπος καταλύματος"
+                  description="Αν οριστεί, το φυσικό QR ανακατευθύνει επισκέπτες εδώ. Το QR παραμένει /q/{token}."
+                />
+                <div className="space-y-2">
+                  <Label>URL ιστότοπου (https)</Label>
+                  <Input
+                    type="url"
+                    placeholder="https://example.com"
+                    value={form.websiteUrl}
+                    onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
+                  />
+                </div>
+                <Button
+                  disabled={saving}
+                  onClick={() =>
+                    void save({
+                      websiteUrl: form.websiteUrl.trim()
+                        ? form.websiteUrl.trim()
+                        : null,
+                    })
+                  }
+                >
+                  {saving ? elCommon.saving : "Αποθήκευση ιστότοπου"}
+                </Button>
+              </div>
+
+              <div className="space-y-3 border-t border-border pt-4">
+                <SurfaceHeader
+                  className="mb-0"
+                  title="PIN προσωπικού καθαριότητας"
+                  description="Απαιτείται για κάθε ενημέρωση Καθαρό / Δεν είναι καθαρό μέσω QR. Δεν αποθηκεύεται σε απλό κείμενο."
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Νέο PIN (4–8 ψηφία)</Label>
+                    <Input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      value={staffPin}
+                      onChange={(e) =>
+                        setStaffPin(e.target.value.replace(/\D/g, "").slice(0, 8))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Επιβεβαίωση PIN</Label>
+                    <Input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      value={staffPinConfirm}
+                      onChange={(e) =>
+                        setStaffPinConfirm(
+                          e.target.value.replace(/\D/g, "").slice(0, 8),
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <Button
+                  disabled={pinSaving || staffPin.length < 4}
+                  onClick={() => void saveStaffPin()}
+                >
+                  {pinSaving ? elCommon.saving : "Αποθήκευση PIN"}
                 </Button>
               </div>
             </div>

@@ -94,3 +94,22 @@ export const renameCleaningLocationBodySchema = z.object({
 export const cleaningLocationsBoardQuerySchema = z.object({
   propertyId: z.string().uuid(),
 });
+
+/** 4–8 digit property staff PIN (never logged / never returned). */
+export const staffPinSchema = z
+  .string()
+  .regex(/^\d{4,8}$/, { message: "Staff PIN must be 4–8 digits" });
+
+export const setStaffPinBodySchema = z.object({
+  pin: staffPinSchema,
+});
+
+export const unlockStaffPinBodySchema = z.object({
+  token: qrTokenSchema,
+  pin: staffPinSchema,
+});
+
+export const markStaffHousekeepingBodySchema = z.object({
+  target: z.enum(["CLEAN", "DIRTY"]),
+  expectedVersion: z.number().int().positive(),
+});

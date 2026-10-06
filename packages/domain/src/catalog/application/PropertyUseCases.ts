@@ -114,6 +114,8 @@ export interface UpdatePropertyCommand {
     cancellationPolicyType?: "flexible" | "moderate" | "strict";
   };
   amenityIds?: string[];
+  /** Guest-facing website URL (http/https). Null clears. */
+  websiteUrl?: string | null;
 }
 
 export class UpdatePropertyUseCase {
@@ -166,6 +168,7 @@ export class UpdatePropertyUseCase {
             })
           : undefined,
         amenityIds: command.amenityIds,
+        websiteUrl: command.websiteUrl,
       });
 
       await this.propertyRepository.save(property);

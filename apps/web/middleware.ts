@@ -10,6 +10,15 @@ import { NextResponse } from "next/server";
 import { isPublicMarketingPath } from "@/lib/marketing/site";
 import { buildLoginUrl, isSafeCallbackUrl } from "@/lib/auth/callback-url";
 
+/** Public QR routing + staff PIN pages (not the authenticated checklist). */
+function isPublicQrStaffPath(pathname: string): boolean {
+  // /q/{token} or /q/{token}/staff — NOT /q/{token}/clean
+  return (
+    /^\/q\/[0-9a-f]{64}$/i.test(pathname) ||
+    /^\/q\/[0-9a-f]{64}\/staff$/i.test(pathname)
+  );
+}
+
 export async function middleware(request: Request) {
   const requestId = crypto.randomUUID();
   const url = new URL(request.url);
@@ -46,13 +55,25 @@ export async function middleware(request: Request) {
    */
   const isPublicWhatsAppWebhook =
     url.pathname === "/api/messaging/v1/webhooks/whatsapp";
+  /** QR website/staff resolve + PIN unlock + scoped CLEAN/DIRTY — capability-gated in handlers. */
+  const isPublicHousekeepingApi = url.pathname.startsWith(
+    "/api/public/v1/housekeeping/",
+  );
+  const isPublicQrPage = isPublicQrStaffPath(url.pathname);
 
   const attachRequestId = (response: NextResponse) => {
     response.headers.set("x-request-id", requestId);
     return response;
   };
 
-  if (isApiAuth || isPublicInvite || isSeoFile || isPublicWhatsAppWebhook) {
+  if (
+    isApiAuth ||
+    isPublicInvite ||
+    isSeoFile ||
+    isPublicWhatsAppWebhook ||
+    isPublicHousekeepingApi ||
+    isPublicQrPage
+  ) {
     return attachRequestId(NextResponse.next());
   }
 
@@ -78,7 +99,7 @@ export async function middleware(request: Request) {
         ),
       );
     }
-    // Preserve where the operator was heading (e.g. a scanned /q/<token>).
+    // Preserve where the operator was heading (e.g. authenticated /q/<token>/clean).
     const requestedPath = `${url.pathname}${url.search}`;
     return attachRequestId(
       NextResponse.redirect(new URL(buildLoginUrl(requestedPath), request.url)),

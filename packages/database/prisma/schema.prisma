@@ -501,6 +501,13 @@ model Property {
   checkInTime            String                 @default("15:00") @map("check_in_time") @db.VarChar(5)
   checkOutTime           String                 @default("11:00") @map("check_out_time") @db.VarChar(5)
   cancellationPolicyType CancellationPolicyType @default(moderate) @map("cancellation_policy_type")
+  /// Guest-facing property website. QR resolve redirects here when set (http/https only).
+  websiteUrl             String?                @map("website_url") @db.VarChar(2048)
+  /// bcrypt hash of property staff PIN. Never plaintext. Null = PIN not configured.
+  staffPinHash           String?                @map("staff_pin_hash") @db.VarChar(255)
+  staffPinFailedAttempts Int                    @default(0) @map("staff_pin_failed_attempts")
+  staffPinLockedUntil    DateTime?              @map("staff_pin_locked_until") @db.Timestamptz
+  staffPinUpdatedAt      DateTime?              @map("staff_pin_updated_at") @db.Timestamptz
   deletedAt              DateTime?              @map("deleted_at") @db.Timestamptz
   createdAt              DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt              DateTime               @updatedAt @map("updated_at") @db.Timestamptz

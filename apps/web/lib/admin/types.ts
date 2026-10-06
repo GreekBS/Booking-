@@ -53,6 +53,7 @@ export interface PropertyRecord {
   type: string;
   status: string;
   timezone: string;
+  websiteUrl: string | null;
   location: PropertyLocation;
   policies: PropertyPolicies;
   amenityIds: string[];
