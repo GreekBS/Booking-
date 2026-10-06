@@ -355,7 +355,7 @@ describe("Phase C2 — UI commit workflow wiring", () => {
     expect(page).not.toContain("RESERVATION_IMPORT_PHASE_C_PLACEHOLDER");
     expect(page).not.toContain("messagingActivation");
     const copy = read("features/reservation-import/reservation-import-copy.ts");
-    expect(copy).toContain('RESERVATION_IMPORT_COMMIT_LABEL = "Ολοκλήρωση εισαγωγής"');
+    expect(copy).toContain('RESERVATION_IMPORT_COMMIT_LABEL = "Εισαγωγή κρατήσεων"');
   });
 
   it("hook commits then refetches; handles stale with recheck", () => {

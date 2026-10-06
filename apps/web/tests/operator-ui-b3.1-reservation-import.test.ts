@@ -53,7 +53,7 @@ describe("B3.1 — CSV reservation import entry + draft shells", () => {
     expect(landing).toContain("Εισαγωγή κρατήσεων από CSV");
     // B3.2 replaced the B3.1 “coming soon” shell with the upload workflow.
     expect(landing).toContain("ReservationImportUpload");
-    expect(landing).toContain("Δημιουργία πρόχειρης εισαγωγής");
+    expect(landing).toContain("RESERVATION_IMPORT_CONTINUE_TO_REVIEW_LABEL");
 
     const draft = read("features/reservation-import/ReservationImportDraftPage.tsx");
     expect(draft).toContain("RESERVATION_IMPORT_DRAFT_TTL_MESSAGE");

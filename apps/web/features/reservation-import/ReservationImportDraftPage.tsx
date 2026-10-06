@@ -17,6 +17,8 @@ import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { elCommon } from "@/lib/i18n";
 import {
   RESERVATION_IMPORT_BACK_TO_BOOKINGS,
+  RESERVATION_IMPORT_CHANGE_FILE_LABEL,
+  RESERVATION_IMPORT_COMMIT_BUSY_LABEL,
   RESERVATION_IMPORT_COMMIT_CONFIRM_BODY,
   RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE,
   RESERVATION_IMPORT_COMMIT_ERROR,
@@ -52,6 +54,7 @@ import {
   RESERVATION_IMPORT_VIEW_BOOKING_LABEL,
 } from "./reservation-import-copy";
 import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
+import { ReservationImportDraftPreviewTable } from "./ReservationImportDraftPreviewTable";
 import { ReservationImportRejectedRowCard } from "./ReservationImportRejectedRowCard";
 import { ReservationImportReviewRowCard } from "./ReservationImportReviewRowCard";
 import { evaluateClientCommitEligibility } from "./reservation-import-commit-eligibility";
@@ -98,6 +101,7 @@ export function ReservationImportDraftPage() {
   } = useReservationImportReview(tenantId, batchId);
 
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [changeFileOpen, setChangeFileOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
   const [tab, setTab] = useState<ReviewTabId>("all");
   const [liveMessage, setLiveMessage] = useState("");
@@ -185,12 +189,17 @@ export function ReservationImportDraftPage() {
   const canCommit = !isCompleted && commitGate.kind === "eligible";
   const previewCounts = commitGate.counts;
 
-  async function handleDiscard() {
+  async function handleDiscard(destination: "bookings" | "import" = "bookings") {
     const ok = await discard();
     if (ok) {
       toastSuccess(RESERVATION_IMPORT_DISCARD_SUCCESS);
       setDiscardOpen(false);
-      router.push("/dashboard/bookings");
+      setChangeFileOpen(false);
+      router.push(
+        destination === "import"
+          ? "/dashboard/bookings/import"
+          : "/dashboard/bookings",
+      );
     } else {
       toastError(RESERVATION_IMPORT_DISCARD_ERROR);
     }
@@ -357,6 +366,15 @@ export function ReservationImportDraftPage() {
                   {rechecking ? "Επανέλεγχος…" : RESERVATION_IMPORT_RECHECK_LABEL}
                 </Button>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={committing || discarding}
+                  onClick={() => setChangeFileOpen(true)}
+                  data-testid="import-draft-change-file"
+                >
+                  {RESERVATION_IMPORT_CHANGE_FILE_LABEL}
+                </Button>
+                <Button
                   variant="ghost"
                   size="sm"
                   className="text-destructive hover:text-destructive"
@@ -471,7 +489,7 @@ export function ReservationImportDraftPage() {
       ) : (
         <Surface variant="panel" padding="md" className="space-y-4">
           <SurfaceHeader
-            title="Σύνοψη προχείρου"
+            title="Προεπισκόπηση κρατήσεων"
             description={RESERVATION_IMPORT_RECHECK_DESCRIPTION}
           />
           <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -497,28 +515,12 @@ export function ReservationImportDraftPage() {
             </div>
           </dl>
 
-          <div className="flex flex-wrap gap-2 text-sm">
-            <span className="rounded-md bg-muted px-2 py-1">
-              Αποδεκτές: <strong>{counts.accepted}</strong>
-            </span>
-            <span className="rounded-md bg-muted px-2 py-1">
-              Έτοιμες: <strong>{counts.ready}</strong>
-            </span>
-            <span className="rounded-md bg-muted px-2 py-1">
-              Παραλείφθηκαν: <strong>{counts.skipped}</strong>
-            </span>
-            <span className="rounded-md bg-muted px-2 py-1">
-              Χρειάζονται ενέργεια: <strong>{counts.needAction}</strong>
-            </span>
-            <span className="rounded-md bg-muted px-2 py-1">
-              Απορριφθείσες: <strong>{counts.rejected}</strong>
-            </span>
-            {unresolvedEligible > 0 ? (
-              <span className="rounded-md bg-muted px-2 py-1">
-                Χωρίς τιμή: <strong>{unresolvedEligible}</strong>
-              </span>
-            ) : null}
-          </div>
+          <ReservationImportDraftPreviewTable
+            rows={rows}
+            rejectedRows={rejectedRows}
+            counts={counts}
+            unitLabel={unitLabel}
+          />
 
           {unresolvedEligible > 0 ? (
             <div className="space-y-2 rounded-md border bg-muted/20 p-3">
@@ -539,7 +541,10 @@ export function ReservationImportDraftPage() {
             </div>
           ) : null}
 
-          <div className="space-y-3 rounded-md border p-3">
+          <div
+            className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-4"
+            data-testid="import-confirm-panel"
+          >
             <h3 className="text-sm font-medium">{RESERVATION_IMPORT_FINAL_SUMMARY_TITLE}</h3>
             <ul className="grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
               <li>
@@ -568,14 +573,26 @@ export function ReservationImportDraftPage() {
               </p>
             ) : null}
 
-            <Button
-              type="button"
-              size="sm"
-              disabled={!canCommit}
-              onClick={() => setCommitOpen(true)}
-            >
-              {committing ? "Ολοκλήρωση…" : RESERVATION_IMPORT_COMMIT_LABEL}
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                disabled={!canCommit}
+                onClick={() => setCommitOpen(true)}
+                data-testid="import-commit-reservations"
+              >
+                {committing
+                  ? RESERVATION_IMPORT_COMMIT_BUSY_LABEL
+                  : RESERVATION_IMPORT_COMMIT_LABEL}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={committing || discarding}
+                onClick={() => setChangeFileOpen(true)}
+              >
+                {RESERVATION_IMPORT_CHANGE_FILE_LABEL}
+              </Button>
+            </div>
           </div>
         </Surface>
       )}
@@ -665,7 +682,19 @@ export function ReservationImportDraftPage() {
             confirmLabel="Απόρριψη"
             destructive
             loading={discarding}
-            onConfirm={handleDiscard}
+            onConfirm={() => void handleDiscard("bookings")}
+          />
+          <ConfirmDialog
+            open={changeFileOpen}
+            onOpenChange={(open) => {
+              if (!open && !discarding) setChangeFileOpen(false);
+            }}
+            title={RESERVATION_IMPORT_CHANGE_FILE_LABEL}
+            description="Θα απορριφθεί η τρέχουσα πρόχειρη εισαγωγή χωρίς δημιουργία κρατήσεων, ώστε να ανεβάσετε άλλο αρχείο CSV."
+            confirmLabel={RESERVATION_IMPORT_CHANGE_FILE_LABEL}
+            destructive
+            loading={discarding}
+            onConfirm={() => void handleDiscard("import")}
           />
           <ConfirmDialog
             open={commitOpen}

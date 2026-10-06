@@ -55,12 +55,17 @@ export const RESERVATION_IMPORT_RECHECK_SUCCESS =
 export const RESERVATION_IMPORT_RECHECK_ERROR =
   "Αποτυχία επανελέγχου συγκρούσεων.";
 
-export const RESERVATION_IMPORT_REVIEW_TITLE = "Ανασκόπηση πρόχειρης εισαγωγής";
+export const RESERVATION_IMPORT_REVIEW_TITLE = "Προεπισκόπηση εισαγωγής";
+
+export const RESERVATION_IMPORT_CHANGE_FILE_LABEL = "Αλλαγή αρχείου";
+
+export const RESERVATION_IMPORT_CONTINUE_TO_REVIEW_LABEL =
+  "Συνέχεια στην προεπισκόπηση";
 
 /** Phase C2 — commit workflow copy */
-export const RESERVATION_IMPORT_COMMIT_LABEL = "Ολοκλήρωση εισαγωγής";
+export const RESERVATION_IMPORT_COMMIT_LABEL = "Εισαγωγή κρατήσεων";
 
-export const RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE = "Ολοκλήρωση εισαγωγής;";
+export const RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE = "Εισαγωγή κρατήσεων;";
 
 export const RESERVATION_IMPORT_COMMIT_CONFIRM_BODY = (
   importCount: number,
@@ -84,16 +89,18 @@ export const RESERVATION_IMPORT_COMMIT_SUCCESS =
   "Η εισαγωγή ολοκληρώθηκε επιτυχώς.";
 
 export const RESERVATION_IMPORT_COMMIT_ERROR =
-  "Αποτυχία ολοκλήρωσης εισαγωγής.";
+  "Αποτυχία εισαγωγής κρατήσεων.";
 
 export const RESERVATION_IMPORT_COMMIT_STALE_ERROR =
   "Η διαθεσιμότητα ή οι συγκρούσεις άλλαξαν. Δεν δημιουργήθηκε καμία κράτηση. Ελέγξτε ξανά και δοκιμάστε πάλι.";
 
 export const RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR =
-  "Η εισαγωγή δεν είναι ακόμη έτοιμη για ολοκλήρωση. Ανανεώστε και ολοκληρώστε τις εκκρεμότητες.";
+  "Η εισαγωγή δεν είναι ακόμη έτοιμη. Ανανεώστε και ολοκληρώστε τις εκκρεμότητες πριν πατήσετε «Εισαγωγή κρατήσεων».";
 
 export const RESERVATION_IMPORT_COMMIT_REFETCH_ERROR =
-  "Η ολοκλήρωση μπορεί να πέτυχε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
+  "Η εισαγωγή μπορεί να πέτυχε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
+
+export const RESERVATION_IMPORT_COMMIT_BUSY_LABEL = "Εισαγωγή…";
 
 export const RESERVATION_IMPORT_COMPLETED_TITLE = "Η εισαγωγή ολοκληρώθηκε";
 

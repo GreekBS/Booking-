@@ -74,7 +74,8 @@ describe("B3.2 — source contracts & UI wiring", () => {
     expect(landing).toContain("ReservationImportUpload");
     expect(landing).toContain("ReservationImportMapping");
     expect(landing).toContain("ReservationImportPreview");
-    expect(landing).toContain("Δημιουργία πρόχειρης εισαγωγής");
+    expect(landing).toContain("RESERVATION_IMPORT_CONTINUE_TO_REVIEW_LABEL");
+    expect(landing).toContain("RESERVATION_IMPORT_CHANGE_FILE_LABEL");
     expect(landing).toContain("useReservationImportWizard");
     expect(landing).toContain("/dashboard/bookings/import/");
     expect(landing).not.toContain("Μεταφόρτωση CSV — σύντομα");

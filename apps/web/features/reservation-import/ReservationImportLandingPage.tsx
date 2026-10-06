@@ -17,8 +17,9 @@ import { elCommon } from "@/lib/i18n";
 import { ReservationImportMapping } from "./ReservationImportMapping";
 import { ReservationImportPreview } from "./ReservationImportPreview";
 import { ReservationImportUpload } from "./ReservationImportUpload";
-import { csvIssueMessageEl } from "./csv-issue-messages";
 import {
+  RESERVATION_IMPORT_CHANGE_FILE_LABEL,
+  RESERVATION_IMPORT_CONTINUE_TO_REVIEW_LABEL,
   RESERVATION_IMPORT_CREATE_ERROR,
   RESERVATION_IMPORT_CREATE_SUCCESS,
 } from "./reservation-import-copy";
@@ -88,7 +89,7 @@ export function ReservationImportLandingPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader
         title="Εισαγωγή κρατήσεων από CSV"
-        description="Επιλέξτε αρχείο, αντιστοιχίστε στήλες και δημιουργήστε πρόχειρη εισαγωγή για έλεγχο πριν την τελική καταχώριση."
+        description="Ανεβάστε CSV, δείτε προεπισκόπηση των κρατήσεων και επιβεβαιώστε πριν δημιουργηθεί οποιαδήποτε κράτηση."
         actions={
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard/bookings">{elCommon.back}</Link>
@@ -111,7 +112,7 @@ export function ReservationImportLandingPage() {
       <Surface variant="panel" padding="md" className="space-y-4">
         <SurfaceHeader
           title="1. Αρχείο CSV"
-          description="Η πρόχειρη εισαγωγή δημιουργείται μόνο αφού ολοκληρώσετε αντιστοίχιση και πατήσετε δημιουργία."
+          description="Μετά την αντιστοίχιση στηλών εμφανίζεται προεπισκόπηση. Οι κρατήσεις δημιουργούνται μόνο με «Εισαγωγή κρατήσεων»."
         />
         <ReservationImportUpload
           file={wizard.file}
@@ -126,7 +127,7 @@ export function ReservationImportLandingPage() {
         <Surface variant="panel" padding="md" className="space-y-4">
           <SurfaceHeader
             title="2. Αντιστοίχιση στηλών"
-            description="Επιβεβαιώστε ή διορθώστε την αντιστοίχιση πριν τη δημιουργία πρόχειρης εισαγωγής."
+            description="Επιβεβαιώστε ή διορθώστε την αντιστοίχιση πριν την προεπισκόπηση."
           />
           <h2
             ref={mappingHeadingRef}
@@ -154,41 +155,42 @@ export function ReservationImportLandingPage() {
 
       {wizard.parseResult ? (
         <Surface variant="panel" padding="md" className="space-y-4">
-          <SurfaceHeader title="3. Προεπισκόπηση" />
+          <SurfaceHeader
+            title="3. Προεπισκόπηση"
+            description="Ελέγξτε ακριβώς τι θα εισαχθεί. Δεν δημιουργούνται κρατήσεις σε αυτό το βήμα."
+          />
           <ReservationImportPreview
             parseResult={wizard.parseResult}
             structuralRowErrors={wizard.structuralRowErrors}
             fileOrMappingErrors={wizard.fileOrMappingErrors}
           />
-          {wizard.fileOrMappingErrors.length > 0 ||
-          wizard.structuralRowErrors.length > 0 ? (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
-              {[...wizard.fileOrMappingErrors, ...wizard.structuralRowErrors]
-                .slice(0, 8)
-                .map((issue, idx) => (
-                  <li key={`${issue.code}-${idx}`}>
-                    {csvIssueMessageEl(issue)}
-                  </li>
-                ))}
-            </ul>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <Button
               ref={createFocusRef}
               disabled={!wizard.canCreate || wizard.creating}
               onClick={() => void handleCreate()}
+              data-testid="import-continue-to-review"
             >
               {wizard.creating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Δημιουργία…
+                  Προετοιμασία…
                 </>
               ) : (
-                "Δημιουργία πρόχειρης εισαγωγής"
+                RESERVATION_IMPORT_CONTINUE_TO_REVIEW_LABEL
               )}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={wizard.creating}
+              onClick={() => void wizard.selectFile(null)}
+              data-testid="import-change-file"
+            >
+              {RESERVATION_IMPORT_CHANGE_FILE_LABEL}
+            </Button>
             {wizard.createError ? (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="w-full text-sm text-destructive" role="alert">
                 {wizard.createError}
               </p>
             ) : null}
