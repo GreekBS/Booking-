@@ -486,6 +486,14 @@ import {
 
   defaultFixtureSnapshot,
 
+  OperatorCopilotToolRegistry,
+  OperatorCopilotOrchestrator,
+  CreateCopilotConversationUseCase,
+  ListCopilotConversationsUseCase,
+  GetCopilotConversationUseCase,
+  ArchiveCopilotConversationUseCase,
+  SendCopilotMessageUseCase,
+
 } from "@hcp/domain";
 
 import { isBookingComFixtureTransportEnabled } from "@/lib/channels/booking-com-operator-access";
@@ -561,6 +569,8 @@ import {
   PrismaAiSuggestionRepository,
   PrismaOwnerEscalationRepository,
   PrismaAiUsageRepository,
+  PrismaCopilotConversationRepository,
+  PrismaCopilotMessageRepository,
   PrismaPropertyAmenityReader,
   PrismaPlatformMessagingConnectionRepository,
   PrismaMessagingSecretVault,
@@ -696,6 +706,7 @@ import { createProductionChannelProviderRegistry } from "@/lib/channels/enabled-
 import { PollingFeatureGatedPollJobHandler } from "@/lib/channels/PollingFeatureGatedPollJobHandler";
 import { isChannelsPollingEnabled } from "@/lib/channels/polling-enabled";
 import { createAssistantProvider } from "@/lib/ai/createAssistantProvider";
+import { createOperatorCopilotProvider } from "@/lib/ai/createOperatorCopilotProvider";
 
 
 
@@ -2423,6 +2434,59 @@ export const getTenantDashboardOverviewUseCase = new GetTenantDashboardOverviewU
   permissionChecker,
   catalogQueryAdapter,
   timezoneService,
+);
+
+// ---------------------------------------------------------------------------
+// Operator Copilot V1 (read-only; reuses existing read use cases + ACLs)
+// ---------------------------------------------------------------------------
+const copilotConversationRepository = new PrismaCopilotConversationRepository();
+const copilotMessageRepository = new PrismaCopilotMessageRepository();
+
+const operatorCopilotToolRegistry = new OperatorCopilotToolRegistry({
+  getTenantDashboardOverviewUseCase,
+  getHousekeepingTodayUseCase,
+  getBookingUseCase,
+  searchBookingsUseCase,
+  getUnitsCalendarBatchUseCase,
+  checkAvailabilityUseCase,
+  getConversationThreadUseCase,
+  listOpenEscalationsUseCase,
+  listTasksUseCase,
+  listPropertyUnitCatalogUseCase,
+  permissionChecker,
+});
+
+const operatorCopilotOrchestrator = new OperatorCopilotOrchestrator(
+  createOperatorCopilotProvider(),
+  operatorCopilotToolRegistry,
+  copilotConversationRepository,
+  copilotMessageRepository,
+  aiUsageRepository,
+  idGenerator,
+  permissionChecker,
+);
+
+export const createCopilotConversationUseCase = new CreateCopilotConversationUseCase(
+  copilotConversationRepository,
+  idGenerator,
+  permissionChecker,
+);
+export const listCopilotConversationsUseCase = new ListCopilotConversationsUseCase(
+  copilotConversationRepository,
+  permissionChecker,
+);
+export const getCopilotConversationUseCase = new GetCopilotConversationUseCase(
+  copilotConversationRepository,
+  copilotMessageRepository,
+  permissionChecker,
+);
+export const archiveCopilotConversationUseCase = new ArchiveCopilotConversationUseCase(
+  copilotConversationRepository,
+  permissionChecker,
+);
+export const sendCopilotMessageUseCase = new SendCopilotMessageUseCase(
+  operatorCopilotOrchestrator,
+  permissionChecker,
 );
 
 export const listHoldsUseCase = new ListHoldsUseCase(

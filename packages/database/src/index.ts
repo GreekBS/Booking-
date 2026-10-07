@@ -84,6 +84,10 @@ export {
   PrismaOwnerEscalationRepository,
   PrismaAiUsageRepository,
 } from "./repositories/messaging/MessagingRepositories";
+export {
+  PrismaCopilotConversationRepository,
+  PrismaCopilotMessageRepository,
+} from "./repositories/operator-copilot/OperatorCopilotRepositories";
 export { PrismaPropertyAmenityReader } from "./repositories/messaging/PropertyAmenityReader";
 export {
   PrismaPlatformMessagingConnectionRepository,

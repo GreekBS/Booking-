@@ -1094,6 +1094,16 @@ export class GetBookingUseCase {
         return Result.fail(new ValidationError("Booking not found"));
       }
 
+      // Assigned-manager ACL: fail closed when booking.propertyId is outside actor scope.
+      assertCommercePropertyAccess(
+        this.permissionChecker,
+        actor,
+        tenantId,
+        booking.propertyId,
+        PERMISSIONS.BOOKING_READ_TENANT,
+        PERMISSIONS.BOOKING_READ_ASSIGNED,
+      );
+
       return Result.ok(booking);
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));

@@ -14,6 +14,8 @@ import { AdminHeader } from "./admin-header";
 import { BreadcrumbEntityLabelsProvider } from "./breadcrumb-entity-labels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { SHELL_CONTENT_PAD } from "./shell-spacing";
+import { CopilotPageContextProvider } from "@/features/operator-copilot/hooks/use-copilot-page-context";
+import { OperatorCopilotHost } from "@/features/operator-copilot/components/OperatorCopilotHost";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -40,6 +42,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <TenantProvider>
       <ActivePropertyProvider>
+        <CopilotPageContextProvider>
         <BreadcrumbEntityLabelsProvider>
         <div className="flex min-h-screen bg-background font-sans">
           <div className="hidden h-screen sticky top-0 lg:block lg:bg-[hsl(var(--sidebar-rail))] lg:pl-3">
@@ -69,7 +72,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </main>
           </div>
         </div>
+        <OperatorCopilotHost />
         </BreadcrumbEntityLabelsProvider>
+        </CopilotPageContextProvider>
       </ActivePropertyProvider>
     </TenantProvider>
   );

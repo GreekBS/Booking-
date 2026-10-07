@@ -58,11 +58,23 @@ describe("ListPropertyUnitCatalogUseCase", () => {
     expect(listUnitCatalog).toHaveBeenCalledWith("tenant-a", null);
   });
 
-  it("forbids actors without property:read:tenant", async () => {
+  it("scopes assigned managers via property:read:assigned", async () => {
     const result = await useCase.execute("tenant-a", {
       userId: "manager-1",
       role: "manager",
       propertyIds: ["prop-1"],
+      isSuperAdmin: false,
+    });
+
+    expect(result.isSuccess).toBe(true);
+    expect(listUnitCatalog).toHaveBeenCalledWith("tenant-a", ["prop-1"]);
+  });
+
+  it("forbids actors without property read permissions", async () => {
+    const result = await useCase.execute("tenant-a", {
+      userId: "none-1",
+      role: "unknown_role" as "manager",
+      propertyIds: null,
       isSuperAdmin: false,
     });
 

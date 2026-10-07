@@ -363,6 +363,8 @@ model Tenant {
   aiSuggestions                  AiSuggestion[]
   ownerEscalations               OwnerEscalation[]
   aiUsageRecords                 AiUsageRecord[]
+  copilotConversations           CopilotConversation[]
+  copilotMessages                CopilotMessage[]
   propertyMessagingSettings      PropertyMessagingSettings[]
   bookingMessagingProfiles       BookingMessagingProfile[]
   messagingAutomationRuns        MessagingAutomationRun[]
@@ -400,6 +402,7 @@ model User {
   messagesCreated             Message[]                @relation("MessageCreator")
   escalationsAnswered         OwnerEscalation[]        @relation("EscalationAnswerer")
   reservationImportBatches    ReservationImportBatch[]
+  copilotConversations        CopilotConversation[]
 
   @@map("users")
 }
@@ -542,6 +545,7 @@ model Property {
   aiSuggestions              AiSuggestion[]
   ownerEscalations           OwnerEscalation[]
   aiUsageRecords             AiUsageRecord[]
+  copilotConversations       CopilotConversation[]
   messagingSettings          PropertyMessagingSettings?
   bookingMessagingProfiles   BookingMessagingProfile[]
   messagingAutomationRuns    MessagingAutomationRun[]
@@ -2863,4 +2867,47 @@ model AiUsageRecord {
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, propertyId, createdAt(sort: Desc)])
   @@map("ai_usage_records")
+}
+
+// ---------------------------------------------------------------------------
+// Operator Copilot V1 (read-only AI assistant for authenticated operators)
+// ---------------------------------------------------------------------------
+
+model CopilotConversation {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  operatorUserId   String    @map("operator_user_id") @db.Uuid
+  activePropertyId String?   @map("active_property_id") @db.Uuid
+  status           String    @default("active") @db.VarChar(16)
+  title            String?   @db.VarChar(255)
+  lastMessageAt    DateTime? @map("last_message_at") @db.Timestamptz
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operator       User             @relation(fields: [operatorUserId], references: [id], onDelete: Cascade)
+  activeProperty Property?        @relation(fields: [activePropertyId], references: [id], onDelete: SetNull)
+  messages       CopilotMessage[]
+
+  @@index([tenantId, operatorUserId, updatedAt(sort: Desc)])
+  @@index([tenantId, status])
+  @@map("copilot_conversations")
+}
+
+model CopilotMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  role           String   @db.VarChar(16)
+  content        String   @db.Text
+  toolName       String?  @map("tool_name") @db.VarChar(64)
+  toolCallId     String?  @map("tool_call_id") @db.VarChar(64)
+  toolSuccess    Boolean? @map("tool_success")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation CopilotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, conversationId, createdAt])
+  @@map("copilot_messages")
 }

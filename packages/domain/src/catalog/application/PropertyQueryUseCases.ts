@@ -7,6 +7,39 @@ import type {
   PaginationParams,
 } from "../../shared/types/index";
 import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
+import { PERMISSIONS } from "@hcp/permissions";
+
+/**
+ * Resolve catalog list scope without weakening isolation:
+ * - tenant readers → null (all properties)
+ * - assigned readers → actor.propertyIds
+ * - neither → deny
+ */
+function resolveCatalogPropertyScope(
+  permissionChecker: PermissionChecker,
+  actor: ActorContext,
+  tenantId: string,
+): string[] | null | undefined {
+  if (
+    permissionChecker.hasPermission(
+      actor,
+      PERMISSIONS.PROPERTY_READ_TENANT,
+      tenantId,
+    )
+  ) {
+    return null;
+  }
+  if (
+    !permissionChecker.hasPermission(
+      actor,
+      PERMISSIONS.PROPERTY_READ_ASSIGNED,
+      tenantId,
+    )
+  ) {
+    return undefined;
+  }
+  return actor.propertyIds;
+}
 
 export class GetPropertyUseCase {
   constructor(
@@ -55,16 +88,14 @@ export class ListPropertiesUseCase {
     actor: ActorContext,
   ): Promise<Result<PaginatedResult<Property>, Error>> {
     try {
-      if (
-        !this.permissionChecker.hasPermission(actor, "property:read:tenant", tenantId)
-      ) {
+      const propertyIds = resolveCatalogPropertyScope(
+        this.permissionChecker,
+        actor,
+        tenantId,
+      );
+      if (propertyIds === undefined) {
         return Result.fail(new ForbiddenError());
       }
-
-      const propertyIds =
-        actor.role === "manager" && !actor.isSuperAdmin
-          ? actor.propertyIds
-          : null;
 
       const result = await this.propertyRepository.findAll(
         tenantId,
@@ -92,16 +123,14 @@ export class ListPropertyUnitCatalogUseCase {
     actor: ActorContext,
   ): Promise<Result<import("../types/PropertyUnitCatalog").PropertyUnitCatalogResult, Error>> {
     try {
-      if (
-        !this.permissionChecker.hasPermission(actor, "property:read:tenant", tenantId)
-      ) {
+      const propertyIds = resolveCatalogPropertyScope(
+        this.permissionChecker,
+        actor,
+        tenantId,
+      );
+      if (propertyIds === undefined) {
         return Result.fail(new ForbiddenError());
       }
-
-      const propertyIds =
-        actor.role === "manager" && !actor.isSuperAdmin
-          ? actor.propertyIds
-          : null;
 
       const result = await this.propertyRepository.listUnitCatalog(
         tenantId,
