@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { copilotStrings } from "../lib/strings";
+import { ProgressiveAssistantMessage } from "./ProgressiveAssistantMessage";
 import { TaliaPortrait } from "./TaliaPortrait";
+import { TypingDots } from "./TypingDots";
 
 export interface CopilotPanelMessage {
   id: string;
@@ -21,6 +23,12 @@ export interface CopilotPanelProps {
   error?: string | null;
   /** Active Property display name (context hint shown in the header). */
   propertyName?: string | null;
+  /**
+   * Assistant message ids that should progressive-reveal (newly arrived only).
+   * History and previously revealed messages must not be listed here.
+   */
+  animateMessageIds?: ReadonlySet<string>;
+  onRevealComplete?: (id: string) => void;
   /** Resolve `true` when the message was accepted (input is then cleared). */
   onSend: (text: string) => Promise<boolean>;
   onNewChat: () => void;
@@ -31,6 +39,7 @@ export interface CopilotPanelProps {
 }
 
 const MAX_INPUT_CHARS = 4000;
+const EMPTY_ANIMATE_IDS: ReadonlySet<string> = new Set();
 
 export function CopilotPanel({
   messages,
@@ -38,6 +47,8 @@ export function CopilotPanel({
   loadingHistory = false,
   error = null,
   propertyName = null,
+  animateMessageIds = EMPTY_ANIMATE_IDS,
+  onRevealComplete,
   onSend,
   onNewChat,
   onClose,
@@ -51,7 +62,7 @@ export function CopilotPanel({
   useEffect(() => {
     const el = logRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, sending]);
+  }, [messages, sending, animateMessageIds]);
 
   const trimmed = draft.trim();
   const canSend = trimmed.length > 0 && !sending && !loadingHistory;
@@ -143,37 +154,38 @@ export function CopilotPanel({
             <div
               key={m.id}
               data-role={m.role}
-              className={cn("flex flex-col gap-1", m.role === "operator" ? "items-end" : "items-start")}
+              className={cn(
+                "flex flex-col gap-1",
+                m.role === "operator" ? "items-end" : "items-start",
+              )}
             >
               <span className="text-[11px] font-medium text-muted-foreground">
                 {m.role === "operator"
                   ? copilotStrings.operatorLabel
                   : copilotStrings.assistantLabel}
               </span>
-              <div
-                className={cn(
-                  "max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm leading-relaxed",
-                  m.role === "operator"
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-muted text-foreground",
-                )}
-              >
-                {m.content}
-              </div>
+              {m.role === "assistant" ? (
+                <ProgressiveAssistantMessage
+                  id={m.id}
+                  content={m.content}
+                  animate={animateMessageIds.has(m.id)}
+                  onRevealComplete={onRevealComplete}
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm leading-relaxed",
+                    "bg-primary text-primary-foreground",
+                  )}
+                >
+                  {m.content}
+                </div>
+              )}
             </div>
           ))
         )}
 
-        {sending ? (
-          <p
-            role="status"
-            data-testid="copilot-thinking"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
-            {copilotStrings.thinking}
-          </p>
-        ) : null}
+        {sending ? <TypingDots /> : null}
       </div>
 
       {error ? (

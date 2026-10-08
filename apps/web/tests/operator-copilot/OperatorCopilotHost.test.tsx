@@ -271,6 +271,23 @@ describe("OperatorCopilotHost", () => {
     const dialog = await openPanel(user);
     expect(await within(dialog).findByText("earlier answer")).toBeInTheDocument();
     expect(within(dialog).getByText("earlier question")).toBeInTheDocument();
+    // History must not progressive-reveal.
+    const historyBubble = within(dialog).getByTestId("copilot-assistant-message");
+    expect(historyBubble).toHaveAttribute("data-progressive-done", "true");
+    expect(historyBubble).toHaveAttribute("data-progressive-message", "b");
+  });
+
+  it("progressive-reveals only newly received assistant replies", async () => {
+    const user = userEvent.setup();
+    render(<OperatorCopilotHost />);
+    const dialog = await openPanel(user);
+    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talia"), "status?");
+    await user.click(within(dialog).getByRole("button", { name: "Αποστολή" }));
+
+    const bubble = await within(dialog).findByTestId("copilot-assistant-message");
+    expect(bubble).toHaveAttribute("data-progressive-message", "m-ai");
+    // Full text is available to AT immediately; visual reveal may still be running.
+    expect(within(bubble).getByText("Three arrivals today.")).toBeInTheDocument();
   });
 
   it("announces assistant replies through a polite live region", async () => {

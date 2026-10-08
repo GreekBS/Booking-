@@ -1,0 +1,36 @@
+.dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  animation: copilot-typing-dot 1.05s ease-in-out infinite;
+}
+
+/* Delays relative to sibling dots (an sr-only label may precede them). */
+.dot + .dot {
+  animation-delay: 160ms;
+}
+
+.dot + .dot + .dot {
+  animation-delay: 320ms;
+}
+
+@keyframes copilot-typing-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}

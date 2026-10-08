@@ -81,6 +81,10 @@ export function OperatorCopilotHost() {
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Newly arrived assistant message ids pending progressive reveal (never history). */
+  const [animateMessageIds, setAnimateMessageIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
   const avatarRef = useRef<HTMLButtonElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -139,9 +143,24 @@ export function OperatorCopilotHost() {
   const resetConversation = useCallback(() => {
     setConversationId(null);
     setMessages([]);
+    setAnimateMessageIds(new Set());
     loadedConversationRef.current = null;
     if (tenantId && userId) writeStoredConversationId(tenantId, userId, null);
   }, [tenantId, userId]);
+
+  const handleRevealComplete = useCallback((id: string) => {
+    setAnimateMessageIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  // Closing the panel cancels in-flight reveal; reopen shows full text.
+  useEffect(() => {
+    if (!open) setAnimateMessageIds(new Set());
+  }, [open]);
 
   // Load the persisted conversation the first time the panel opens.
   useEffect(() => {
@@ -211,6 +230,10 @@ export function OperatorCopilotHost() {
             ...(result.assistantMessage ? [result.assistantMessage] : []),
           ];
         });
+        if (result.assistantMessage) {
+          const assistantId = result.assistantMessage.id;
+          setAnimateMessageIds((prev) => new Set(prev).add(assistantId));
+        }
         if (!openRef.current && result.assistantMessage) {
           setUnread((n) => n + 1);
         }
@@ -264,6 +287,8 @@ export function OperatorCopilotHost() {
           loadingHistory={loadingHistory}
           error={error}
           propertyName={property?.name ?? null}
+          animateMessageIds={animateMessageIds}
+          onRevealComplete={handleRevealComplete}
           onSend={handleSend}
           onNewChat={handleNewChat}
           onClose={() => setOpen(false)}
