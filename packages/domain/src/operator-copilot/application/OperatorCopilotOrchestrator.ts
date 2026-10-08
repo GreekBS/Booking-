@@ -313,7 +313,9 @@ export class OperatorCopilotOrchestrator {
       }
 
       for (const call of outcome.toolCalls) {
-        const toolCallId = call.id?.trim() || this.ids.generate();
+        const providerCallId = call.providerCallId?.trim() || undefined;
+        const toolCallId =
+          providerCallId || call.id?.trim() || this.ids.generate();
         let content: string;
         let ok = false;
         let errorCode: string | null = null;
@@ -357,6 +359,11 @@ export class OperatorCopilotOrchestrator {
           name: call.name,
           content,
           arguments: call.arguments ?? {},
+          ...(typeof call.thoughtSignature === "string" &&
+          call.thoughtSignature.length > 0
+            ? { thoughtSignature: call.thoughtSignature }
+            : {}),
+          ...(providerCallId ? { providerCallId } : {}),
         });
 
         await this.recordUsage(ctx, {

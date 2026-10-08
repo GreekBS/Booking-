@@ -3,6 +3,7 @@ import type { OperatorCopilotTurnRequest } from "@hcp/domain";
 import {
   GeminiOperatorCopilotProvider,
   buildGeminiOperatorCopilotRequest,
+  parseGeminiOperatorCopilotResponse,
   sanitizeGeminiSchema,
 } from "@/lib/ai/GeminiOperatorCopilotProvider";
 import {
@@ -45,6 +46,8 @@ const request: OperatorCopilotTurnRequest = {
       name: "get_housekeeping_today",
       content: '{"ok":true,"data":{}}',
       arguments: { propertyId: "p1" },
+      providerCallId: "call-hk-1",
+      thoughtSignature: "sig-hk-1",
     },
   ],
 };
@@ -63,15 +66,16 @@ describe("Gemini request building", () => {
     expect(body.systemInstruction.parts[0]!.text).toContain("POLICY");
     expect(body.systemInstruction.parts[0]!.text).toContain('{"activePropertyId":"p1"}');
 
-    // Consecutive same-role turns are merged (answer + functionCall share a model turn).
+    // Historical tools are text (no fabricated thought signatures).
+    // Current-turn toolResults: one model functionCall turn + one user functionResponse turn.
     expect(body.contents.map((c) => c.role)).toEqual([
       "user", // earlier question
-      "model", // earlier answer + historical functionCall
-      "function", // historical functionResponse
+      "model", // earlier answer
+      "user", // historical tool as text
       "model", // answer after tool
       "user", // current operator request
-      "model", // this-turn functionCall
-      "function", // this-turn functionResponse
+      "model", // this-turn functionCall(s)
+      "user", // this-turn functionResponse(s)
     ]);
 
     const declarations = body.tools![0]!.functionDeclarations;
@@ -79,7 +83,6 @@ describe("Gemini request building", () => {
       "get_housekeeping_today",
       "get_property_catalog",
     ]);
-    // Unsupported schema keywords are stripped; empty-object params omitted.
     expect(JSON.stringify(declarations[0]!.parameters)).not.toMatch(
       /additionalProperties|pattern|uuid/,
     );
@@ -87,30 +90,71 @@ describe("Gemini request building", () => {
     expect(body.toolConfig).toEqual({ functionCallingConfig: { mode: "AUTO" } });
   });
 
-  it("preserves original tool-call arguments on the echoed functionCall", () => {
+  it("preserves thoughtSignature, provider call id and args on the tool round-trip", () => {
     const body = buildGeminiOperatorCopilotRequest(request);
     const thisTurnModel = body.contents[body.contents.length - 2]!;
-    const thisTurnFn = body.contents[body.contents.length - 1]!;
+    const thisTurnUser = body.contents[body.contents.length - 1]!;
     expect(thisTurnModel.role).toBe("model");
-    expect(thisTurnFn.role).toBe("function");
+    expect(thisTurnUser.role).toBe("user");
 
-    const callPart = thisTurnModel.parts.find(
-      (p): p is { functionCall: { name: string; args: Record<string, unknown> } } =>
-        "functionCall" in p,
-    );
-    const responsePart = thisTurnFn.parts.find(
-      (p): p is { functionResponse: { name: string; response: Record<string, unknown> } } =>
-        "functionResponse" in p,
-    );
-    expect(callPart?.functionCall).toEqual({
+    const callPart = thisTurnModel.parts[0] as {
+      functionCall: { name: string; args: Record<string, unknown>; id?: string };
+      thoughtSignature?: string;
+    };
+    const responsePart = thisTurnUser.parts[0] as {
+      functionResponse: {
+        name: string;
+        response: Record<string, unknown>;
+        id?: string;
+      };
+    };
+
+    expect(callPart.functionCall).toEqual({
       name: "get_housekeeping_today",
       args: { propertyId: "p1" },
+      id: "call-hk-1",
     });
-    expect(responsePart?.functionResponse.name).toBe("get_housekeeping_today");
-    expect(responsePart?.functionResponse.response).toEqual({ ok: true, data: {} });
+    expect(callPart.thoughtSignature).toBe("sig-hk-1");
+    expect(responsePart.functionResponse).toEqual({
+      name: "get_housekeeping_today",
+      response: { ok: true, data: {} },
+      id: "call-hk-1",
+    });
   });
 
-  it("preserves distinct args across sequential toolResults in one turn", () => {
+  it("does not invent ids or thoughtSignatures when the provider omitted them", () => {
+    const body = buildGeminiOperatorCopilotRequest({
+      ...request,
+      toolResults: [
+        {
+          toolCallId: "local-only",
+          name: "get_today_overview",
+          content: '{"ok":true}',
+          arguments: {},
+        },
+      ],
+    });
+    const modelParts = body.contents[body.contents.length - 2]!.parts;
+    const userParts = body.contents[body.contents.length - 1]!.parts;
+    const callPart = modelParts[0] as {
+      functionCall: Record<string, unknown>;
+      thoughtSignature?: string;
+    };
+    const responsePart = userParts[0] as {
+      functionResponse: Record<string, unknown>;
+    };
+    expect(callPart.functionCall).toEqual({
+      name: "get_today_overview",
+      args: {},
+    });
+    expect(callPart.thoughtSignature).toBeUndefined();
+    expect(responsePart.functionResponse).toEqual({
+      name: "get_today_overview",
+      response: { ok: true },
+    });
+  });
+
+  it("batches multiple parallel toolResults into one model turn and one user turn", () => {
     const body = buildGeminiOperatorCopilotRequest({
       ...request,
       toolResults: [
@@ -119,45 +163,59 @@ describe("Gemini request building", () => {
           name: "get_today_overview",
           content: '{"ok":true,"data":{"arrivalsToday":2}}',
           arguments: { propertyId: "p1" },
+          providerCallId: "call-1",
+          thoughtSignature: "sig-A",
         },
         {
           toolCallId: "t2",
           name: "get_housekeeping_today",
           content: '{"ok":true,"data":{"dirty":1}}',
           arguments: { propertyId: "p1" },
+          providerCallId: "call-2",
+          // Parallel calls: signature only on the first part (Gemini contract).
         },
       ],
     });
 
-    const functionCalls = body.contents
-      .filter((c) => c.role === "model")
-      .flatMap((c) => c.parts)
-      .filter(
-        (p): p is { functionCall: { name: string; args: Record<string, unknown> } } =>
-          "functionCall" in p,
-      )
-      .map((p) => p.functionCall);
+    const modelTurn = body.contents[body.contents.length - 2]!;
+    const userTurn = body.contents[body.contents.length - 1]!;
+    expect(modelTurn.role).toBe("model");
+    expect(userTurn.role).toBe("user");
+    expect(modelTurn.parts).toHaveLength(2);
+    expect(userTurn.parts).toHaveLength(2);
 
-    // History tool (empty args) + two this-turn toolResults with real args.
-    expect(functionCalls.at(-2)).toEqual({
+    const calls = modelTurn.parts.map((p) => p as {
+      functionCall: { name: string; args: Record<string, unknown>; id?: string };
+      thoughtSignature?: string;
+    });
+    expect(calls[0]!.functionCall).toEqual({
       name: "get_today_overview",
       args: { propertyId: "p1" },
+      id: "call-1",
     });
-    expect(functionCalls.at(-1)).toEqual({
+    expect(calls[0]!.thoughtSignature).toBe("sig-A");
+    expect(calls[1]!.functionCall).toEqual({
       name: "get_housekeeping_today",
       args: { propertyId: "p1" },
+      id: "call-2",
     });
+    expect(calls[1]!.thoughtSignature).toBeUndefined();
 
-    const responses = body.contents
-      .filter((c) => c.role === "function")
-      .flatMap((c) => c.parts)
-      .filter(
-        (p): p is { functionResponse: { name: string; response: Record<string, unknown> } } =>
-          "functionResponse" in p,
-      )
-      .map((p) => p.functionResponse);
-    expect(responses.at(-2)?.name).toBe("get_today_overview");
-    expect(responses.at(-1)?.name).toBe("get_housekeeping_today");
+    const responses = userTurn.parts.map(
+      (p) =>
+        (p as { functionResponse: { name: string; id?: string; response: unknown } })
+          .functionResponse,
+    );
+    expect(responses[0]).toEqual({
+      name: "get_today_overview",
+      id: "call-1",
+      response: { ok: true, data: { arrivalsToday: 2 } },
+    });
+    expect(responses[1]).toEqual({
+      name: "get_housekeeping_today",
+      id: "call-2",
+      response: { ok: true, data: { dirty: 1 } },
+    });
   });
 
   it("renders tool traffic as text and omits tools on the final round", () => {
@@ -166,6 +224,25 @@ describe("Gemini request building", () => {
     expect(body.toolConfig).toBeUndefined();
     const parts = body.contents.flatMap((c) => c.parts);
     expect(parts.some((p) => "functionCall" in p || "functionResponse" in p)).toBe(false);
+  });
+
+  it("keeps earlier conversation history as user/model text turns", () => {
+    const body = buildGeminiOperatorCopilotRequest({
+      ...request,
+      toolResults: undefined,
+    });
+    expect(body.contents.map((c) => c.role)).toEqual([
+      "user",
+      "model",
+      "user",
+      "model",
+      "user",
+    ]);
+    expect(body.contents[0]!.parts[0]).toEqual({ text: "earlier question" });
+    expect(body.contents[1]!.parts[0]).toEqual({ text: "earlier answer" });
+    expect(
+      (body.contents[2]!.parts[0] as { text: string }).text,
+    ).toContain("[tool_result get_today_overview]");
   });
 
   it("sanitizes nested schemas", () => {
@@ -181,6 +258,71 @@ describe("Gemini request building", () => {
       type: "object",
       properties: { ids: { type: "array", items: { type: "string" }, maxItems: 3 } },
     });
+  });
+});
+
+describe("parseGeminiOperatorCopilotResponse", () => {
+  it("preserves provider call ids and thought signatures from functionCall parts", () => {
+    const parsed = parseGeminiOperatorCopilotResponse({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                functionCall: {
+                  id: "fc-1",
+                  name: "get_today_overview",
+                  args: { propertyId: "p1" },
+                },
+                thoughtSignature: "sig-1",
+              },
+              {
+                functionCall: {
+                  id: "fc-2",
+                  name: "get_housekeeping_today",
+                  args: {},
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    expect(parsed).toEqual({
+      kind: "tool_calls",
+      toolCalls: [
+        {
+          id: "fc-1",
+          name: "get_today_overview",
+          arguments: { propertyId: "p1" },
+          thoughtSignature: "sig-1",
+          providerCallId: "fc-1",
+        },
+        {
+          id: "fc-2",
+          name: "get_housekeeping_today",
+          arguments: {},
+          providerCallId: "fc-2",
+        },
+      ],
+    });
+  });
+
+  it("does not invent a providerCallId when Gemini omits functionCall.id", () => {
+    const parsed = parseGeminiOperatorCopilotResponse({
+      candidates: [
+        {
+          content: {
+            parts: [{ functionCall: { name: "get_property_catalog", args: {} } }],
+          },
+        },
+      ],
+    });
+    expect(parsed.kind).toBe("tool_calls");
+    if (parsed.kind !== "tool_calls") return;
+    expect(parsed.toolCalls[0]!.providerCallId).toBeUndefined();
+    expect(parsed.toolCalls[0]!.thoughtSignature).toBeUndefined();
+    expect(parsed.toolCalls[0]!.id).toBe("gemini-call-1");
   });
 });
 
@@ -234,15 +376,24 @@ describe("GeminiOperatorCopilotProvider", () => {
     });
   });
 
-  it("parses functionCall parts into tool_calls", async () => {
+  it("parses functionCall parts into tool_calls with ids and signatures", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({
         candidates: [
           {
             content: {
               parts: [
-                { functionCall: { name: "get_housekeeping_today", args: { propertyId: "p" } } },
-                { functionCall: { name: "get_property_catalog" } },
+                {
+                  functionCall: {
+                    id: "hk-1",
+                    name: "get_housekeeping_today",
+                    args: { propertyId: "p" },
+                  },
+                  thoughtSignature: "sig-hk",
+                },
+                {
+                  functionCall: { id: "cat-1", name: "get_property_catalog" },
+                },
               ],
             },
           },
@@ -253,9 +404,70 @@ describe("GeminiOperatorCopilotProvider", () => {
     expect(out.type).toBe("tool_calls");
     if (out.type !== "tool_calls") return;
     expect(out.toolCalls).toEqual([
-      { id: "gemini-call-1", name: "get_housekeeping_today", arguments: { propertyId: "p" } },
-      { id: "gemini-call-2", name: "get_property_catalog", arguments: {} },
+      {
+        id: "hk-1",
+        name: "get_housekeeping_today",
+        arguments: { propertyId: "p" },
+        thoughtSignature: "sig-hk",
+        providerCallId: "hk-1",
+      },
+      {
+        id: "cat-1",
+        name: "get_property_catalog",
+        arguments: {},
+        providerCallId: "cat-1",
+      },
     ]);
+  });
+
+  it("sends a Gemini-3-compatible functionResponse round-trip body", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        candidates: [{ content: { parts: [{ text: "Σήμερα υπάρχουν 0 κρατήσεις." }] } }],
+      }),
+    );
+
+    const roundTrip: OperatorCopilotTurnRequest = {
+      systemPolicy: "POLICY",
+      operatorRequest: "Πόσες κρατήσεις έχουμε;",
+      trustedContextJson: '{"activePropertyId":"p1"}',
+      history: [],
+      tools: request.tools,
+      toolResults: [
+        {
+          toolCallId: "fc-today",
+          name: "get_today_overview",
+          content: '{"ok":true,"data":{"counts":{"arrivalsToday":0}}}',
+          arguments: {},
+          providerCallId: "fc-today",
+          thoughtSignature: "sig-today",
+        },
+      ],
+    };
+
+    const out = await provider().completeTurn(roundTrip);
+    expect(out).toMatchObject({
+      type: "text",
+      text: "Σήμερα υπάρχουν 0 κρατήσεις.",
+      success: true,
+    });
+
+    const body = JSON.parse(String((fetchMock.mock.calls[0]![1] as RequestInit).body));
+    const modelTurn = body.contents[body.contents.length - 2];
+    const userTurn = body.contents[body.contents.length - 1];
+    expect(modelTurn.role).toBe("model");
+    expect(userTurn.role).toBe("user");
+    expect(modelTurn.parts[0]).toEqual({
+      functionCall: { name: "get_today_overview", args: {}, id: "fc-today" },
+      thoughtSignature: "sig-today",
+    });
+    expect(userTurn.parts[0]).toEqual({
+      functionResponse: {
+        name: "get_today_overview",
+        id: "fc-today",
+        response: { ok: true, data: { counts: { arrivalsToday: 0 } } },
+      },
+    });
   });
 
   it.each([

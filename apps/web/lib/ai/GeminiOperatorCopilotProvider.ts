@@ -4,6 +4,7 @@ import type {
   OperatorCopilotProviderOutcome,
   OperatorCopilotToolCallRequest,
   OperatorCopilotToolDeclaration,
+  OperatorCopilotToolResult,
   OperatorCopilotTurnRequest,
 } from "@hcp/domain";
 
@@ -13,13 +14,28 @@ const DEFAULT_MODEL = "gemini-2.0-flash";
 const REQUEST_TIMEOUT_MS = 18_000;
 const MAX_FUNCTION_CALLS_PER_RESPONSE = 4;
 
+type GeminiFunctionCall = {
+  name: string;
+  args: Record<string, unknown>;
+  id?: string;
+};
+
 type GeminiPart =
   | { text: string }
-  | { functionCall: { name: string; args: Record<string, unknown> } }
-  | { functionResponse: { name: string; response: Record<string, unknown> } };
+  | {
+      functionCall: GeminiFunctionCall;
+      thoughtSignature?: string;
+    }
+  | {
+      functionResponse: {
+        name: string;
+        response: Record<string, unknown>;
+        id?: string;
+      };
+    };
 
 interface GeminiContent {
-  role: "user" | "model" | "function";
+  role: "user" | "model";
   parts: GeminiPart[];
 }
 
@@ -117,15 +133,47 @@ function pushContent(contents: GeminiContent[], next: GeminiContent): void {
   contents.push({ role: next.role, parts: [...next.parts] });
 }
 
+function buildFunctionCallPart(result: OperatorCopilotToolResult): GeminiPart {
+  const functionCall: GeminiFunctionCall = {
+    name: result.name,
+    args: result.arguments ?? {},
+  };
+  // Only echo a call id when Gemini originally supplied one — never invent.
+  if (result.providerCallId?.trim()) {
+    functionCall.id = result.providerCallId.trim();
+  }
+  const part: GeminiPart = { functionCall };
+  if (result.thoughtSignature && result.thoughtSignature.length > 0) {
+    (part as { thoughtSignature?: string }).thoughtSignature =
+      result.thoughtSignature;
+  }
+  return part;
+}
+
+function buildFunctionResponsePart(result: OperatorCopilotToolResult): GeminiPart {
+  const functionResponse: {
+    name: string;
+    response: Record<string, unknown>;
+    id?: string;
+  } = {
+    name: result.name,
+    response: parseToolContent(result.content),
+  };
+  if (result.providerCallId?.trim()) {
+    functionResponse.id = result.providerCallId.trim();
+  }
+  return { functionResponse };
+}
+
 /**
  * Builds the generateContent body.
  *
- * - History roles map operator→user, assistant→model, tool→model functionCall +
- *   function functionResponse.
- * - The server-derived TRUSTED_CONTEXT is part of the system instruction, never of
- *   operator-authored or tool-authored turns.
- * - When no tools are offered (final round), tool traffic is rendered as plain
- *   text so Gemini does not see function parts without declarations.
+ * Gemini 3+ contract (generateContent):
+ * - Replay model functionCall parts with original args, provider call id, and
+ *   thoughtSignature when present (never invent signatures/ids).
+ * - Return FunctionResponse parts as role "user", one per call, with matching id.
+ * - Parallel tool results from the current turn share one model turn + one user turn.
+ * - Historical tool rows lack thought signatures → render as plain text.
  */
 export function buildGeminiOperatorCopilotRequest(
   req: OperatorCopilotTurnRequest,
@@ -133,43 +181,45 @@ export function buildGeminiOperatorCopilotRequest(
   const useFunctionParts = req.tools.length > 0;
   const contents: GeminiContent[] = [];
 
-  const pushToolExchange = (
-    name: string,
-    content: string,
-    args: Record<string, unknown> = {},
-  ) => {
-    if (useFunctionParts) {
-      pushContent(contents, {
-        role: "model",
-        parts: [{ functionCall: { name, args } }],
-      });
-      pushContent(contents, {
-        role: "function",
-        parts: [{ functionResponse: { name, response: parseToolContent(content) } }],
-      });
-    } else {
-      pushContent(contents, {
-        role: "user",
-        parts: [{ text: `[tool_result ${name}] ${content}` }],
-      });
-    }
-  };
-
   const pushHistory = (m: OperatorCopilotHistoryMessage) => {
     if (m.role === "operator") {
       pushContent(contents, { role: "user", parts: [{ text: m.content }] });
     } else if (m.role === "assistant") {
       pushContent(contents, { role: "model", parts: [{ text: m.content }] });
     } else {
-      pushToolExchange(m.toolName?.trim() || "tool", m.content);
+      // Historical tool exchanges are not stored with Gemini thought signatures.
+      // Never fabricate signatures — render as text even when tools are offered.
+      const name = m.toolName?.trim() || "tool";
+      pushContent(contents, {
+        role: "user",
+        parts: [{ text: `[tool_result ${name}] ${m.content}` }],
+      });
     }
   };
 
   for (const m of req.history) pushHistory(m);
   pushContent(contents, { role: "user", parts: [{ text: req.operatorRequest }] });
-  for (const r of req.toolResults ?? []) {
-    // Preserve the original validated args on the echoed functionCall — never guess.
-    pushToolExchange(r.name, r.content, r.arguments);
+
+  const toolResults = req.toolResults ?? [];
+  if (toolResults.length > 0) {
+    if (useFunctionParts) {
+      // One model turn with all functionCalls, then one user turn with all responses.
+      pushContent(contents, {
+        role: "model",
+        parts: toolResults.map(buildFunctionCallPart),
+      });
+      pushContent(contents, {
+        role: "user",
+        parts: toolResults.map(buildFunctionResponsePart),
+      });
+    } else {
+      for (const r of toolResults) {
+        pushContent(contents, {
+          role: "user",
+          parts: [{ text: `[tool_result ${r.name}] ${r.content}` }],
+        });
+      }
+    }
   }
 
   const systemText = [
@@ -196,13 +246,16 @@ export function buildGeminiOperatorCopilotRequest(
 // Response parsing
 // ---------------------------------------------------------------------------
 
+interface GeminiResponsePart {
+  text?: string;
+  thoughtSignature?: unknown;
+  functionCall?: { name?: unknown; args?: unknown; id?: unknown };
+}
+
 interface GeminiResponseJson {
   candidates?: Array<{
     content?: {
-      parts?: Array<{
-        text?: string;
-        functionCall?: { name?: unknown; args?: unknown; id?: unknown };
-      }>;
+      parts?: GeminiResponsePart[];
     };
     finishReason?: string;
   }>;
@@ -241,10 +294,24 @@ export function parseGeminiOperatorCopilotResponse(
     ) {
       return { kind: "invalid", errorCode: "gemini_invalid_function_call" };
     }
+
+    const providerCallId =
+      typeof id === "string" && id.trim() ? id.trim().slice(0, 128) : undefined;
+    const thoughtSignature =
+      typeof part.thoughtSignature === "string" && part.thoughtSignature.length > 0
+        ? part.thoughtSignature
+        : undefined;
+
+    // Internal correlation id: prefer provider id; otherwise a local placeholder
+    // used only for our DB/orchestrator (never sent back as a fabricated Gemini id).
+    const internalId = providerCallId ?? `gemini-call-${toolCalls.length + 1}`;
+
     toolCalls.push({
-      id: typeof id === "string" && id.trim() ? id.trim().slice(0, 64) : `gemini-call-${toolCalls.length + 1}`,
+      id: internalId,
       name: name.trim(),
       arguments: (args as Record<string, unknown> | undefined | null) ?? {},
+      ...(thoughtSignature ? { thoughtSignature } : {}),
+      ...(providerCallId ? { providerCallId } : {}),
     });
   }
 

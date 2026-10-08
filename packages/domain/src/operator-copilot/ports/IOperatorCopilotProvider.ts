@@ -16,6 +16,17 @@ export interface OperatorCopilotToolCallRequest {
   id: string;
   name: string;
   arguments: Record<string, unknown>;
+  /**
+   * Exact Gemini `Part.thoughtSignature` when the model provided one.
+   * Must be echoed on the replayed functionCall part — never invented.
+   */
+  thoughtSignature?: string;
+  /**
+   * Exact Gemini `functionCall.id` when the model provided one.
+   * Must be echoed on both the replayed functionCall and the FunctionResponse.
+   * Absent when the provider did not supply an id (do not fabricate on the wire).
+   */
+  providerCallId?: string;
 }
 
 /**
@@ -29,6 +40,10 @@ export interface OperatorCopilotToolResult {
   content: string;
   /** Original tool-call arguments (may be `{}`). Required for Gemini round-trips. */
   arguments: Record<string, unknown>;
+  /** Echo of the model Part.thoughtSignature when present (never invented). */
+  thoughtSignature?: string;
+  /** Echo of the model functionCall.id when present (never invented). */
+  providerCallId?: string;
 }
 
 export interface OperatorCopilotTurnRequest {
