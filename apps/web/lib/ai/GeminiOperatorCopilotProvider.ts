@@ -10,9 +10,89 @@ import type {
 
 const PROVIDER_NAME = "gemini";
 const DEFAULT_MODEL = "gemini-2.0-flash";
-/** Slightly below the orchestrator's own PROVIDER_TIMEOUT_MS so we fail with a clean code. */
+/**
+ * Total deadline for one generateContent call including retries/backoff.
+ * Kept below the orchestrator's PROVIDER_TIMEOUT_MS (20s).
+ */
 const REQUEST_TIMEOUT_MS = 18_000;
 const MAX_FUNCTION_CALLS_PER_RESPONSE = 4;
+/** Total HTTP attempts per generateContent (initial + retries). */
+export const GEMINI_HTTP_MAX_ATTEMPTS = 3;
+const GEMINI_RETRY_BASE_DELAY_MS = 500;
+const GEMINI_RETRY_MAX_DELAY_MS = 4_000;
+/** Do not start another attempt if less than this remains on the deadline. */
+const GEMINI_MIN_ATTEMPT_BUDGET_MS = 750;
+
+const RETRYABLE_HTTP_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+export function isRetryableGeminiHttpStatus(status: number): boolean {
+  return RETRYABLE_HTTP_STATUSES.has(status);
+}
+
+/**
+ * Parse Retry-After as seconds or HTTP-date. Returns delay ms, or null if absent/invalid.
+ */
+export function parseRetryAfterMs(
+  header: string | null,
+  nowMs: number = Date.now(),
+): number | null {
+  if (!header) return null;
+  const trimmed = header.trim();
+  if (!trimmed) return null;
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    if (!Number.isFinite(seconds) || seconds < 0) return null;
+    return Math.min(seconds * 1000, GEMINI_RETRY_MAX_DELAY_MS);
+  }
+  const when = Date.parse(trimmed);
+  if (Number.isNaN(when)) return null;
+  const delay = when - nowMs;
+  if (delay <= 0) return 0;
+  return Math.min(delay, GEMINI_RETRY_MAX_DELAY_MS);
+}
+
+/** Exponential backoff with full jitter, capped. attemptIndex is 0-based after a failure. */
+export function computeGeminiRetryDelayMs(
+  attemptIndex: number,
+  random: () => number = Math.random,
+): number {
+  const exp = Math.min(
+    GEMINI_RETRY_MAX_DELAY_MS,
+    GEMINI_RETRY_BASE_DELAY_MS * 2 ** attemptIndex,
+  );
+  const jittered = exp * (0.5 + random() * 0.5);
+  return Math.max(0, Math.floor(jittered));
+}
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      const err = new Error("The operation was aborted");
+      err.name = "AbortError";
+      reject(err);
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      const err = new Error("The operation was aborted");
+      err.name = "AbortError";
+      reject(err);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || /aborted/i.test(error.message))
+  );
+}
 
 type GeminiFunctionCall = {
   name: string;
@@ -341,6 +421,10 @@ export function parseGeminiOperatorCopilotResponse(
  * return a `failure` outcome — never a heuristic substitute. Prompts, tool
  * payloads and model output are never logged.
  *
+ * Transient HTTP failures (408/429/5xx) and network blips are retried with
+ * exponential backoff + jitter inside this adapter only — the orchestrator
+ * never re-runs tools or re-persists messages because of these retries.
+ *
  * Env: GEMINI_API_KEY, GEMINI_MODEL (default gemini-2.0-flash).
  */
 export class GeminiOperatorCopilotProvider implements IOperatorCopilotProvider {
@@ -360,6 +444,9 @@ export class GeminiOperatorCopilotProvider implements IOperatorCopilotProvider {
     req: OperatorCopilotTurnRequest,
   ): Promise<OperatorCopilotProviderOutcome> {
     const started = Date.now();
+    const deadlineMs = started + REQUEST_TIMEOUT_MS;
+    let httpAttempts = 0;
+
     const failure = (errorCode: string): OperatorCopilotProviderOutcome => ({
       type: "failure",
       errorCode,
@@ -367,62 +454,115 @@ export class GeminiOperatorCopilotProvider implements IOperatorCopilotProvider {
       model: this.model,
       latencyMs: Date.now() - started,
       success: false,
+      httpAttempts,
     });
 
     if (!this.apiKey) return failure("gemini_api_key_missing");
 
+    // Serialize once so every retry posts the identical body (tool results,
+    // call ids, thought signatures included).
+    const bodyJson = JSON.stringify(buildGeminiOperatorCopilotRequest(req));
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
-      const body = buildGeminiOperatorCopilotRequest(req);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": this.apiKey,
-          },
-          signal: controller.signal,
-          body: JSON.stringify(body),
-        });
-      } finally {
-        clearTimeout(timer);
+      let lastErrorCode = "gemini_unavailable";
+
+      for (let attempt = 0; attempt < GEMINI_HTTP_MAX_ATTEMPTS; attempt += 1) {
+        const remainingBeforeAttempt = deadlineMs - Date.now();
+        if (controller.signal.aborted || remainingBeforeAttempt < GEMINI_MIN_ATTEMPT_BUDGET_MS) {
+          return failure(
+            httpAttempts > 0 && lastErrorCode !== "gemini_timeout"
+              ? lastErrorCode
+              : "gemini_timeout",
+          );
+        }
+
+        httpAttempts = attempt + 1;
+
+        let res: Response;
+        try {
+          res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": this.apiKey,
+            },
+            signal: controller.signal,
+            body: bodyJson,
+          });
+        } catch (error) {
+          if (isAbortError(error)) {
+            return failure("gemini_timeout");
+          }
+          lastErrorCode = "gemini_unavailable";
+          const canRetry = attempt < GEMINI_HTTP_MAX_ATTEMPTS - 1;
+          if (!canRetry) return failure(lastErrorCode);
+          const delay = computeGeminiRetryDelayMs(attempt);
+          const remaining = deadlineMs - Date.now();
+          if (remaining - delay < GEMINI_MIN_ATTEMPT_BUDGET_MS) {
+            return failure(lastErrorCode);
+          }
+          await sleep(Math.min(delay, Math.max(0, remaining - GEMINI_MIN_ATTEMPT_BUDGET_MS)), controller.signal);
+          continue;
+        }
+
+        if (!res.ok) {
+          lastErrorCode =
+            res.status === 429 ? "gemini_rate_limited" : `gemini_http_${res.status}`;
+          const canRetry =
+            isRetryableGeminiHttpStatus(res.status) &&
+            attempt < GEMINI_HTTP_MAX_ATTEMPTS - 1;
+          if (!canRetry) return failure(lastErrorCode);
+
+          const retryAfter = parseRetryAfterMs(res.headers.get("retry-after"));
+          const delay =
+            retryAfter !== null
+              ? retryAfter
+              : computeGeminiRetryDelayMs(attempt);
+          const remaining = deadlineMs - Date.now();
+          if (remaining - delay < GEMINI_MIN_ATTEMPT_BUDGET_MS) {
+            return failure(lastErrorCode);
+          }
+          await sleep(
+            Math.min(delay, Math.max(0, remaining - GEMINI_MIN_ATTEMPT_BUDGET_MS)),
+            controller.signal,
+          );
+          continue;
+        }
+
+        let json: GeminiResponseJson;
+        try {
+          json = (await res.json()) as GeminiResponseJson;
+        } catch {
+          // Invalid JSON is not a transient HTTP failure — do not retry.
+          return failure("gemini_invalid_json");
+        }
+
+        const parsed = parseGeminiOperatorCopilotResponse(json);
+        if (parsed.kind === "invalid") return failure(parsed.errorCode);
+
+        const common = {
+          provider: PROVIDER_NAME,
+          model: this.model,
+          inputTokens: json.usageMetadata?.promptTokenCount ?? null,
+          outputTokens: json.usageMetadata?.candidatesTokenCount ?? null,
+          latencyMs: Date.now() - started,
+          success: true as const,
+          httpAttempts,
+        };
+        return parsed.kind === "tool_calls"
+          ? { type: "tool_calls", toolCalls: parsed.toolCalls, ...common }
+          : { type: "text", text: parsed.text, ...common };
       }
 
-      if (!res.ok) {
-        return failure(
-          res.status === 429 ? "gemini_rate_limited" : `gemini_http_${res.status}`,
-        );
-      }
-
-      let json: GeminiResponseJson;
-      try {
-        json = (await res.json()) as GeminiResponseJson;
-      } catch {
-        return failure("gemini_invalid_json");
-      }
-
-      const parsed = parseGeminiOperatorCopilotResponse(json);
-      if (parsed.kind === "invalid") return failure(parsed.errorCode);
-
-      const common = {
-        provider: PROVIDER_NAME,
-        model: this.model,
-        inputTokens: json.usageMetadata?.promptTokenCount ?? null,
-        outputTokens: json.usageMetadata?.candidatesTokenCount ?? null,
-        latencyMs: Date.now() - started,
-        success: true as const,
-      };
-      return parsed.kind === "tool_calls"
-        ? { type: "tool_calls", toolCalls: parsed.toolCalls, ...common }
-        : { type: "text", text: parsed.text, ...common };
+      return failure(lastErrorCode);
     } catch (error) {
-      const aborted =
-        error instanceof Error &&
-        (error.name === "AbortError" || /aborted/i.test(error.message));
-      return failure(aborted ? "gemini_timeout" : "gemini_unavailable");
+      return failure(isAbortError(error) ? "gemini_timeout" : "gemini_unavailable");
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

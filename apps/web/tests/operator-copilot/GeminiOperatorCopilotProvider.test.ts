@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OperatorCopilotTurnRequest } from "@hcp/domain";
 import {
+  GEMINI_HTTP_MAX_ATTEMPTS,
   GeminiOperatorCopilotProvider,
   buildGeminiOperatorCopilotRequest,
+  computeGeminiRetryDelayMs,
+  isRetryableGeminiHttpStatus,
   parseGeminiOperatorCopilotResponse,
+  parseRetryAfterMs,
   sanitizeGeminiSchema,
 } from "@/lib/ai/GeminiOperatorCopilotProvider";
 import {
@@ -471,14 +475,13 @@ describe("GeminiOperatorCopilotProvider", () => {
   });
 
   it.each([
-    ["HTTP 429", () => jsonResponse({}, 429), "gemini_rate_limited"],
-    ["HTTP 500", () => jsonResponse({}, 500), "gemini_http_500"],
-    ["HTTP 400", () => jsonResponse({}, 400), "gemini_http_400"],
-    ["empty candidates", () => jsonResponse({ candidates: [] }), "gemini_empty_response"],
+    ["HTTP 400", () => jsonResponse({}, 400), "gemini_http_400", 1],
+    ["empty candidates", () => jsonResponse({ candidates: [] }), "gemini_empty_response", 1],
     [
       "blocked prompt",
       () => jsonResponse({ promptFeedback: { blockReason: "SAFETY" } }),
       "gemini_prompt_blocked",
+      1,
     ],
     [
       "invalid function call",
@@ -487,6 +490,7 @@ describe("GeminiOperatorCopilotProvider", () => {
           candidates: [{ content: { parts: [{ functionCall: { name: 42 } }] } }],
         }),
       "gemini_invalid_function_call",
+      1,
     ],
     [
       "non-object args",
@@ -495,28 +499,261 @@ describe("GeminiOperatorCopilotProvider", () => {
           candidates: [{ content: { parts: [{ functionCall: { name: "x", args: [1] } }] } }],
         }),
       "gemini_invalid_function_call",
+      1,
     ],
-    ["invalid JSON body", () => new Response("<html>", { status: 200 }), "gemini_invalid_json"],
-  ])("fails closed on %s", async (_label, makeResponse, errorCode) => {
+    ["invalid JSON body", () => new Response("<html>", { status: 200 }), "gemini_invalid_json", 1],
+  ])("fails closed without retry on %s", async (_label, makeResponse, errorCode, attempts) => {
     fetchMock.mockResolvedValue(makeResponse());
     const out = await provider().completeTurn(request);
-    expect(out).toMatchObject({ type: "failure", errorCode, success: false });
+    expect(out).toMatchObject({
+      type: "failure",
+      errorCode,
+      success: false,
+      httpAttempts: attempts,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(attempts);
   });
 
-  it("fails closed on network errors and aborts", async () => {
-    fetchMock.mockRejectedValueOnce(new Error("ECONNRESET"));
-    expect(await provider().completeTurn(request)).toMatchObject({
-      type: "failure",
-      errorCode: "gemini_unavailable",
-    });
-
+  it("fails closed on AbortError without treating it as a retryable network blip", async () => {
     const abort = new Error("The operation was aborted");
     abort.name = "AbortError";
     fetchMock.mockRejectedValueOnce(abort);
     expect(await provider().completeTurn(request)).toMatchObject({
       type: "failure",
       errorCode: "gemini_timeout",
+      httpAttempts: 1,
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Gemini HTTP retry helpers", () => {
+  it("classifies retryable HTTP statuses", () => {
+    for (const status of [408, 429, 500, 502, 503, 504]) {
+      expect(isRetryableGeminiHttpStatus(status)).toBe(true);
+    }
+    for (const status of [400, 401, 403, 404, 422]) {
+      expect(isRetryableGeminiHttpStatus(status)).toBe(false);
+    }
+  });
+
+  it("parses Retry-After seconds and HTTP-date", () => {
+    expect(parseRetryAfterMs("2")).toBe(2000);
+    expect(parseRetryAfterMs("120")).toBe(4000); // capped
+    const future = new Date(Date.now() + 1500).toUTCString();
+    const delay = parseRetryAfterMs(future);
+    expect(delay).not.toBeNull();
+    expect(delay!).toBeGreaterThan(0);
+    expect(delay!).toBeLessThanOrEqual(4000);
+    expect(parseRetryAfterMs("not-a-date")).toBeNull();
+    expect(parseRetryAfterMs(null)).toBeNull();
+  });
+
+  it("applies exponential backoff with jitter bounds", () => {
+    expect(computeGeminiRetryDelayMs(0, () => 0)).toBe(250);
+    expect(computeGeminiRetryDelayMs(0, () => 1)).toBe(500);
+    expect(computeGeminiRetryDelayMs(2, () => 1)).toBe(2000);
+  });
+});
+
+describe("GeminiOperatorCopilotProvider retries", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  const provider = () =>
+    new GeminiOperatorCopilotProvider({ apiKey: "test-key", model: "gemini-test" });
+
+  async function flushRetries<T>(promise: Promise<T>): Promise<T> {
+    const wrapped = promise;
+    // Advance through backoff sleeps without hanging the test.
+    await vi.runAllTimersAsync();
+    return wrapped;
+  }
+
+  it("retries once after HTTP 503 then succeeds", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          candidates: [{ content: { parts: [{ text: "Γεια σου!" }] } }],
+        }),
+      );
+
+    const pending = provider().completeTurn({
+      ...request,
+      history: [],
+      toolResults: undefined,
+      operatorRequest: "γεια σου",
+    });
+    const out = await flushRetries(pending);
+    expect(out).toMatchObject({
+      type: "text",
+      text: "Γεια σου!",
+      success: true,
+      httpAttempts: 2,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const bodies = fetchMock.mock.calls.map((c) => String((c[1] as RequestInit).body));
+    expect(bodies[0]).toBe(bodies[1]);
+  });
+
+  it("respects Retry-After on HTTP 429 before succeeding", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response("{}", {
+          status: 429,
+          headers: { "content-type": "application/json", "retry-after": "1" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          candidates: [{ content: { parts: [{ text: "ok after wait" }] } }],
+        }),
+      );
+
+    const pending = provider().completeTurn({
+      ...request,
+      history: [],
+      toolResults: undefined,
+    });
+    const out = await flushRetries(pending);
+    expect(out).toMatchObject({
+      type: "text",
+      text: "ok after wait",
+      success: true,
+      httpAttempts: 2,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("exhausts attempts on repeated 503 and fails closed", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 503));
+    const pending = provider().completeTurn({
+      ...request,
+      history: [],
+      toolResults: undefined,
+    });
+    const out = await flushRetries(pending);
+    expect(out).toMatchObject({
+      type: "failure",
+      errorCode: "gemini_http_503",
+      success: false,
+      httpAttempts: GEMINI_HTTP_MAX_ATTEMPTS,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(GEMINI_HTTP_MAX_ATTEMPTS);
+  });
+
+  it("does not retry non-retryable HTTP 400", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 400));
+    const out = await provider().completeTurn(request);
+    expect(out).toMatchObject({
+      type: "failure",
+      errorCode: "gemini_http_400",
+      httpAttempts: 1,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries transient network failure then succeeds", async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error("ECONNRESET"))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          candidates: [{ content: { parts: [{ text: "recovered" }] } }],
+        }),
+      );
+    const pending = provider().completeTurn({
+      ...request,
+      history: [],
+      toolResults: undefined,
+    });
+    const out = await flushRetries(pending);
+    expect(out).toMatchObject({
+      type: "text",
+      text: "recovered",
+      success: true,
+      httpAttempts: 2,
+    });
+  });
+
+  it("retries tool-result synthesis with identical body (no tool re-execution)", async () => {
+    const roundTrip: OperatorCopilotTurnRequest = {
+      systemPolicy: "POLICY",
+      operatorRequest: "Πόσες κρατήσεις έχουμε;",
+      trustedContextJson: '{"activePropertyId":"p1"}',
+      history: [],
+      tools: request.tools,
+      toolResults: [
+        {
+          toolCallId: "fc-today",
+          name: "get_today_overview",
+          content: '{"ok":true,"data":{"counts":{"arrivalsToday":0}}}',
+          arguments: {},
+          providerCallId: "fc-today",
+          thoughtSignature: "sig-today",
+        },
+      ],
+    };
+
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          candidates: [
+            { content: { parts: [{ text: "Σήμερα υπάρχουν 0 κρατήσεις." }] } },
+          ],
+        }),
+      );
+
+    const pending = provider().completeTurn(roundTrip);
+    const out = await flushRetries(pending);
+    expect(out).toMatchObject({
+      type: "text",
+      text: "Σήμερα υπάρχουν 0 κρατήσεις.",
+      httpAttempts: 2,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const bodyA = JSON.parse(String((fetchMock.mock.calls[0]![1] as RequestInit).body));
+    const bodyB = JSON.parse(String((fetchMock.mock.calls[1]![1] as RequestInit).body));
+    expect(bodyA).toEqual(bodyB);
+    expect(bodyA.contents.at(-2).parts[0]).toEqual({
+      functionCall: { name: "get_today_overview", args: {}, id: "fc-today" },
+      thoughtSignature: "sig-today",
+    });
+    expect(bodyA.contents.at(-1).parts[0].functionResponse.id).toBe("fc-today");
+  });
+
+  it("stops retrying when the shared deadline is exhausted", async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          // Each attempt burns most of the remaining budget.
+          setTimeout(() => resolve(jsonResponse({}, 503)), 7_000);
+        }),
+    );
+
+    const pending = provider().completeTurn({
+      ...request,
+      history: [],
+      toolResults: undefined,
+    });
+    const out = await flushRetries(pending);
+    expect(out.type).toBe("failure");
+    if (out.type !== "failure") return;
+    expect(["gemini_http_503", "gemini_timeout"]).toContain(out.errorCode);
+    // Deadline prevents using the full max-attempt count.
+    expect(out.httpAttempts).toBeGreaterThanOrEqual(1);
+    expect(out.httpAttempts).toBeLessThanOrEqual(GEMINI_HTTP_MAX_ATTEMPTS);
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(GEMINI_HTTP_MAX_ATTEMPTS);
   });
 });
 

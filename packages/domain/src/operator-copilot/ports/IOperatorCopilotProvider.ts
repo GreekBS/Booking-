@@ -67,6 +67,8 @@ export type OperatorCopilotProviderOutcome =
       outputTokens: number | null;
       latencyMs: number;
       success: true;
+      /** HTTP attempts used for this provider call (1 = no retry). Sanitized telemetry only. */
+      httpAttempts?: number;
     }
   | {
       type: "tool_calls";
@@ -77,6 +79,7 @@ export type OperatorCopilotProviderOutcome =
       outputTokens: number | null;
       latencyMs: number;
       success: true;
+      httpAttempts?: number;
     }
   | {
       type: "failure";
@@ -85,6 +88,7 @@ export type OperatorCopilotProviderOutcome =
       model: string;
       latencyMs: number;
       success: false;
+      httpAttempts?: number;
     };
 
 export interface IOperatorCopilotProvider {

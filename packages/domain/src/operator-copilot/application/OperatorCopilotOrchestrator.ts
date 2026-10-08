@@ -73,6 +73,13 @@ interface TurnAccumulator {
   latencyMs: number;
   provider: string;
   model: string;
+  /** Max HTTP attempts observed across provider rounds (sanitized telemetry). */
+  httpAttempts: number;
+}
+
+function httpAttemptsClassification(attempts: number): string | null {
+  if (!Number.isFinite(attempts) || attempts < 1) return null;
+  return `http_attempts_${Math.min(Math.floor(attempts), 9)}`;
 }
 
 function addTokens(a: number | null, b: number | null): number | null {
@@ -224,6 +231,7 @@ export class OperatorCopilotOrchestrator {
       latencyMs: 0,
       provider: "unknown",
       model: "unknown",
+      httpAttempts: 0,
     };
     let toolCallCount = 0;
 
@@ -243,6 +251,9 @@ export class OperatorCopilotOrchestrator {
       acc.provider = outcome.provider;
       acc.model = outcome.model;
       acc.latencyMs += outcome.latencyMs;
+      if (typeof outcome.httpAttempts === "number" && outcome.httpAttempts > acc.httpAttempts) {
+        acc.httpAttempts = outcome.httpAttempts;
+      }
 
       if (outcome.type === "failure") {
         return this.finishWithFailure(
@@ -285,6 +296,7 @@ export class OperatorCopilotOrchestrator {
         await this.recordUsage(ctx, {
           operation: OPERATOR_COPILOT_OPS.TURN,
           acc,
+          classification: httpAttemptsClassification(acc.httpAttempts),
           success: true,
           errorCode: null,
         });
@@ -374,6 +386,7 @@ export class OperatorCopilotOrchestrator {
             latencyMs: Date.now() - started,
             provider: TOOL_USAGE_PROVIDER,
             model: call.name.slice(0, 64),
+            httpAttempts: 0,
           },
           classification: call.name.slice(0, 64),
           success: ok,
@@ -435,6 +448,7 @@ export class OperatorCopilotOrchestrator {
     await this.recordUsage(ctx, {
       operation: OPERATOR_COPILOT_OPS.TURN,
       acc,
+      classification: httpAttemptsClassification(acc.httpAttempts),
       success: false,
       errorCode,
     });
