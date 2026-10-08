@@ -2,6 +2,7 @@ export * from "./domain/OperatorCopilotTypes";
 export * from "./ports/IOperatorCopilotProvider";
 export * from "./ports/IOperatorCopilotRepositories";
 export * from "./application/OperatorCopilotPolicy";
+export * from "./application/OperatorCopilotConversationalIntent";
 export * from "./application/OperatorCopilotToolDefs";
 export * from "./application/tools/minimizeDtos";
 export * from "./application/OperatorCopilotToolRegistry";

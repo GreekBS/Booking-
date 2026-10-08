@@ -32,6 +32,7 @@ import type {
   ICopilotConversationRepository,
   ICopilotMessageRepository,
 } from "../ports/IOperatorCopilotRepositories";
+import { classifyOperatorCopilotTurnIntent } from "./OperatorCopilotConversationalIntent";
 import {
   OPERATOR_COPILOT_SYSTEM_POLICY,
   buildTrustedContextJson,
@@ -235,6 +236,12 @@ export class OperatorCopilotOrchestrator {
     const { ctx, actor, conversationId, message, history, operatorMessage } = args;
     const trustedContextJson = buildTrustedContextJson(ctx);
     const declarations = this.registry.listDeclarations();
+    /**
+     * PR1: clearly conversational turns omit tool declarations (Gemini no-tool path).
+     * Ambiguous / operational messages keep the authorized tool-enabled path.
+     */
+    const toolsAllowed =
+      classifyOperatorCopilotTurnIntent(message) === "tools";
     const toolResults: OperatorCopilotToolResult[] = [];
     const toolMessages: CopilotMessageRecord[] = [];
     const acc: TurnAccumulator = {
@@ -250,16 +257,17 @@ export class OperatorCopilotOrchestrator {
       toolCallCount: 0,
     };
 
-    // MAX_TOOL_CALLS_PER_TURN tool rounds + 1 final answer round.
-    for (let round = 0; round <= MAX_TOOL_CALLS_PER_TURN; round += 1) {
-      const finalRound = round === MAX_TOOL_CALLS_PER_TURN;
+    // Conversational: single text round. Operational: tool rounds + final answer.
+    const maxRound = toolsAllowed ? MAX_TOOL_CALLS_PER_TURN : 0;
+    for (let round = 0; round <= maxRound; round += 1) {
+      const finalRound = round === maxRound;
       const outcome = await this.callProvider({
         systemPolicy: OPERATOR_COPILOT_SYSTEM_POLICY,
         operatorRequest: message,
         trustedContextJson,
         history,
-        // Last round: no tools, forcing a text answer.
-        tools: finalRound ? [] : declarations,
+        // No-tool fast path / last round: omit declarations (provider MODE omitted).
+        tools: !toolsAllowed || finalRound ? [] : declarations,
         ...(toolResults.length > 0 ? { toolResults: [...toolResults] } : {}),
       });
 
@@ -334,6 +342,17 @@ export class OperatorCopilotOrchestrator {
       }
 
       // tool_calls
+      if (!toolsAllowed) {
+        // Conversational path never offers tools; refuse unexpected function calls.
+        return this.finishWithFailure(
+          ctx,
+          conversationId,
+          operatorMessage,
+          toolMessages,
+          acc,
+          "unexpected_tool_calls",
+        );
+      }
       if (finalRound || outcome.toolCalls.length === 0) {
         return this.finishWithFailure(
           ctx,
