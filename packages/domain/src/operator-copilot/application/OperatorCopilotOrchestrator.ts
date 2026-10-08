@@ -37,6 +37,10 @@ import {
   buildTrustedContextJson,
 } from "./OperatorCopilotPolicy";
 import type { OperatorCopilotToolRegistry } from "./OperatorCopilotToolRegistry";
+import {
+  buildCopilotRoundClassification,
+  buildCopilotTurnClassification,
+} from "./OperatorCopilotTelemetry";
 import { truncateJson } from "./tools/minimizeDtos";
 
 export const COPILOT_FRIENDLY_FAILURE_MESSAGE =
@@ -70,21 +74,29 @@ export interface RunOperatorCopilotTurnResult {
 interface TurnAccumulator {
   inputTokens: number | null;
   outputTokens: number | null;
-  latencyMs: number;
   provider: string;
   model: string;
-  /** Max HTTP attempts observed across provider rounds (sanitized telemetry). */
-  httpAttempts: number;
-}
-
-function httpAttemptsClassification(attempts: number): string | null {
-  if (!Number.isFinite(attempts) || attempts < 1) return null;
-  return `http_attempts_${Math.min(Math.floor(attempts), 9)}`;
+  /** Wall-clock start (ms since epoch) for the provider/tool loop. */
+  wallStartedAt: number;
+  /** Gemini rounds observed (including failed rounds). */
+  geminiRounds: number;
+  /** Sum of HTTP attempts across rounds (including retries). */
+  httpAttemptsTotal: number;
+  /** Sum of provider-reported Gemini latencies (ms). */
+  geminiLatencyMs: number;
+  /** Aggregate tool execution duration (ms). */
+  toolLatencyMs: number;
+  /** Domain tools executed this turn. */
+  toolCallCount: number;
 }
 
 function addTokens(a: number | null, b: number | null): number | null {
   if (a === null && b === null) return null;
   return (a ?? 0) + (b ?? 0);
+}
+
+function wallClockMs(acc: TurnAccumulator, nowMs: number = Date.now()): number {
+  return Math.max(0, nowMs - acc.wallStartedAt);
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -228,12 +240,15 @@ export class OperatorCopilotOrchestrator {
     const acc: TurnAccumulator = {
       inputTokens: null,
       outputTokens: null,
-      latencyMs: 0,
       provider: "unknown",
       model: "unknown",
-      httpAttempts: 0,
+      wallStartedAt: Date.now(),
+      geminiRounds: 0,
+      httpAttemptsTotal: 0,
+      geminiLatencyMs: 0,
+      toolLatencyMs: 0,
+      toolCallCount: 0,
     };
-    let toolCallCount = 0;
 
     // MAX_TOOL_CALLS_PER_TURN tool rounds + 1 final answer round.
     for (let round = 0; round <= MAX_TOOL_CALLS_PER_TURN; round += 1) {
@@ -250,10 +265,25 @@ export class OperatorCopilotOrchestrator {
 
       acc.provider = outcome.provider;
       acc.model = outcome.model;
-      acc.latencyMs += outcome.latencyMs;
-      if (typeof outcome.httpAttempts === "number" && outcome.httpAttempts > acc.httpAttempts) {
-        acc.httpAttempts = outcome.httpAttempts;
-      }
+      acc.geminiRounds += 1;
+      acc.geminiLatencyMs += Math.max(0, outcome.latencyMs);
+      const roundHttp =
+        typeof outcome.httpAttempts === "number" && Number.isFinite(outcome.httpAttempts)
+          ? Math.max(0, Math.floor(outcome.httpAttempts))
+          : 0;
+      acc.httpAttemptsTotal += roundHttp;
+
+      await this.recordRoundUsage(ctx, {
+        roundIndex1Based: acc.geminiRounds,
+        httpAttempts: roundHttp,
+        latencyMs: Math.max(0, outcome.latencyMs),
+        provider: outcome.provider,
+        model: outcome.model,
+        inputTokens: outcome.type === "failure" ? null : outcome.inputTokens,
+        outputTokens: outcome.type === "failure" ? null : outcome.outputTokens,
+        success: outcome.type !== "failure",
+        errorCode: outcome.type === "failure" ? outcome.errorCode : null,
+      });
 
       if (outcome.type === "failure") {
         return this.finishWithFailure(
@@ -261,7 +291,6 @@ export class OperatorCopilotOrchestrator {
           conversationId,
           operatorMessage,
           toolMessages,
-          toolCallCount,
           acc,
           outcome.errorCode,
         );
@@ -278,7 +307,6 @@ export class OperatorCopilotOrchestrator {
             conversationId,
             operatorMessage,
             toolMessages,
-            toolCallCount,
             acc,
             "empty_response",
           );
@@ -293,19 +321,13 @@ export class OperatorCopilotOrchestrator {
           toolCallId: null,
           createdAt: this.now(),
         });
-        await this.recordUsage(ctx, {
-          operation: OPERATOR_COPILOT_OPS.TURN,
-          acc,
-          classification: httpAttemptsClassification(acc.httpAttempts),
-          success: true,
-          errorCode: null,
-        });
+        await this.recordTurnUsage(ctx, acc, { success: true, errorCode: null });
         return {
           conversationId,
           operatorMessage,
           assistantMessage,
           toolMessages,
-          toolCallCount,
+          toolCallCount: acc.toolCallCount,
           failed: false,
           errorCode: null,
         };
@@ -318,7 +340,6 @@ export class OperatorCopilotOrchestrator {
           conversationId,
           operatorMessage,
           toolMessages,
-          toolCallCount,
           acc,
           "tool_loop_exceeded",
         );
@@ -333,12 +354,12 @@ export class OperatorCopilotOrchestrator {
         let errorCode: string | null = null;
         const started = Date.now();
 
-        if (toolCallCount >= MAX_TOOL_CALLS_PER_TURN) {
+        if (acc.toolCallCount >= MAX_TOOL_CALLS_PER_TURN) {
           // Over the cap: tell the model, do not execute.
           errorCode = "tool_call_limit";
           content = truncateJson({ ok: false, errorCode }, MAX_TOOL_RESULT_CHARS);
         } else {
-          toolCallCount += 1;
+          acc.toolCallCount += 1;
           const result = await this.registry.execute(
             call.name,
             call.arguments ?? {},
@@ -353,6 +374,11 @@ export class OperatorCopilotOrchestrator {
               : { ok: false, errorCode },
             MAX_TOOL_RESULT_CHARS,
           );
+        }
+
+        const toolLatencyMs = Math.max(0, Date.now() - started);
+        if (errorCode !== "tool_call_limit") {
+          acc.toolLatencyMs += toolLatencyMs;
         }
 
         const toolMessage = await this.messages.append({
@@ -378,17 +404,9 @@ export class OperatorCopilotOrchestrator {
           ...(providerCallId ? { providerCallId } : {}),
         });
 
-        await this.recordUsage(ctx, {
-          operation: OPERATOR_COPILOT_OPS.TOOL,
-          acc: {
-            inputTokens: null,
-            outputTokens: null,
-            latencyMs: Date.now() - started,
-            provider: TOOL_USAGE_PROVIDER,
-            model: call.name.slice(0, 64),
-            httpAttempts: 0,
-          },
-          classification: call.name.slice(0, 64),
+        await this.recordToolUsage(ctx, {
+          toolName: call.name.slice(0, 64),
+          latencyMs: toolLatencyMs,
           success: ok,
           errorCode,
         });
@@ -401,7 +419,6 @@ export class OperatorCopilotOrchestrator {
       conversationId,
       operatorMessage,
       toolMessages,
-      toolCallCount,
       acc,
       "tool_loop_exceeded",
     );
@@ -422,6 +439,7 @@ export class OperatorCopilotOrchestrator {
         model: "unknown",
         latencyMs: Date.now() - started,
         success: false,
+        httpAttempts: 0,
       };
     }
   }
@@ -431,7 +449,6 @@ export class OperatorCopilotOrchestrator {
     conversationId: string,
     operatorMessage: CopilotMessageRecord,
     toolMessages: CopilotMessageRecord[],
-    toolCallCount: number,
     acc: TurnAccumulator,
     errorCode: string,
   ): Promise<RunOperatorCopilotTurnResult> {
@@ -445,50 +462,134 @@ export class OperatorCopilotOrchestrator {
       toolCallId: null,
       createdAt: this.now(),
     });
-    await this.recordUsage(ctx, {
-      operation: OPERATOR_COPILOT_OPS.TURN,
-      acc,
-      classification: httpAttemptsClassification(acc.httpAttempts),
-      success: false,
-      errorCode,
-    });
+    await this.recordTurnUsage(ctx, acc, { success: false, errorCode });
     return {
       conversationId,
       operatorMessage,
       assistantMessage,
       toolMessages,
-      toolCallCount,
+      toolCallCount: acc.toolCallCount,
       failed: true,
       errorCode,
     };
   }
 
-  /** Usage is best-effort telemetry: a failure here must never fail the turn. */
-  private async recordUsage(
+  /** Turn row: wall-clock latency + compact sanitized counters. */
+  private async recordTurnUsage(
+    ctx: CopilotOperatorContext,
+    acc: TurnAccumulator,
+    outcome: { success: boolean; errorCode: string | null },
+  ): Promise<void> {
+    const classification = buildCopilotTurnClassification({
+      geminiRounds: acc.geminiRounds,
+      httpAttemptsTotal: acc.httpAttemptsTotal,
+      toolCallCount: acc.toolCallCount,
+      toolLatencyMs: acc.toolLatencyMs,
+      geminiLatencyMs: acc.geminiLatencyMs,
+    });
+    await this.persistUsage({
+      tenantId: ctx.tenantId,
+      propertyId: ctx.activePropertyId,
+      provider: acc.provider,
+      model: acc.model,
+      operation: OPERATOR_COPILOT_OPS.TURN,
+      classification,
+      inputTokens: acc.inputTokens,
+      outputTokens: acc.outputTokens,
+      latencyMs: wallClockMs(acc),
+      success: outcome.success,
+      errorCode: outcome.errorCode,
+    });
+  }
+
+  /** One row per Gemini generateContent round. */
+  private async recordRoundUsage(
     ctx: CopilotOperatorContext,
     input: {
-      operation: string;
-      acc: TurnAccumulator;
-      classification?: string | null;
+      roundIndex1Based: number;
+      httpAttempts: number;
+      latencyMs: number;
+      provider: string;
+      model: string;
+      inputTokens: number | null;
+      outputTokens: number | null;
       success: boolean;
       errorCode: string | null;
     },
   ): Promise<void> {
-    const record: AiUsageRecord = {
-      id: this.ids.generate(),
+    await this.persistUsage({
       tenantId: ctx.tenantId,
       propertyId: ctx.activePropertyId,
+      provider: input.provider,
+      model: input.model.slice(0, 64),
+      operation: OPERATOR_COPILOT_OPS.ROUND,
+      classification: buildCopilotRoundClassification(
+        input.roundIndex1Based,
+        input.httpAttempts,
+      ),
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      latencyMs: input.latencyMs,
+      success: input.success,
+      errorCode: input.errorCode,
+    });
+  }
+
+  private async recordToolUsage(
+    ctx: CopilotOperatorContext,
+    input: {
+      toolName: string;
+      latencyMs: number;
+      success: boolean;
+      errorCode: string | null;
+    },
+  ): Promise<void> {
+    await this.persistUsage({
+      tenantId: ctx.tenantId,
+      propertyId: ctx.activePropertyId,
+      provider: TOOL_USAGE_PROVIDER,
+      model: input.toolName,
+      operation: OPERATOR_COPILOT_OPS.TOOL,
+      classification: input.toolName,
+      inputTokens: null,
+      outputTokens: null,
+      latencyMs: input.latencyMs,
+      success: input.success,
+      errorCode: input.errorCode,
+    });
+  }
+
+  /** Usage is best-effort telemetry: a failure here must never fail the turn. */
+  private async persistUsage(input: {
+    tenantId: string;
+    propertyId: string | null;
+    provider: string;
+    model: string;
+    operation: string;
+    classification: string | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    latencyMs: number;
+    success: boolean;
+    errorCode: string | null;
+  }): Promise<void> {
+    const record: AiUsageRecord = {
+      id: this.ids.generate(),
+      tenantId: input.tenantId,
+      propertyId: input.propertyId,
       // Copilot conversations are not guest conversations; avoid cross-table linkage.
       conversationId: null,
-      provider: input.acc.provider,
-      model: input.acc.model,
-      operation: input.operation,
-      classification: input.classification ?? null,
+      provider: input.provider.slice(0, 32),
+      model: input.model.slice(0, 64),
+      operation: input.operation.slice(0, 32),
+      classification: input.classification
+        ? input.classification.slice(0, 32)
+        : null,
       autoAnswered: false,
       escalated: false,
-      inputTokens: input.acc.inputTokens,
-      outputTokens: input.acc.outputTokens,
-      latencyMs: input.acc.latencyMs,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      latencyMs: input.latencyMs,
       success: input.success,
       errorCode: input.errorCode,
       estimatedCostMinor: null,

@@ -75,6 +75,8 @@ export interface CopilotOperatorContext {
 export const OPERATOR_COPILOT_OPS = {
   TURN: "operator_copilot_turn",
   TOOL: "operator_copilot_tool",
+  /** One row per Gemini generateContent round (latency + http attempts). */
+  ROUND: "operator_copilot_round",
 } as const;
 
 export type OperatorCopilotOp =

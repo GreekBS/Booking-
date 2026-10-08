@@ -6,5 +6,6 @@ export * from "./application/OperatorCopilotToolDefs";
 export * from "./application/tools/minimizeDtos";
 export * from "./application/OperatorCopilotToolRegistry";
 export * from "./application/OperatorCopilotOrchestrator";
+export * from "./application/OperatorCopilotTelemetry";
 export * from "./application/OperatorCopilotUseCases";
 export * from "./application/HeuristicOperatorCopilotProvider";

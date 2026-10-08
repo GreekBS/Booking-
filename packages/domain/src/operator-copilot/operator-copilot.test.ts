@@ -227,7 +227,12 @@ describe("OperatorCopilotOrchestrator", () => {
     expect(out.failed).toBe(false);
     expect(out.toolCallCount).toBe(1);
     expect(msgs.map((m) => m.role)).toEqual(["operator", "tool", "assistant"]);
-    expect(usage.map((u) => u.operation)).toEqual(["operator_copilot_tool", "operator_copilot_turn"]);
+    expect(usage.map((u) => u.operation)).toEqual([
+      "operator_copilot_round",
+      "operator_copilot_tool",
+      "operator_copilot_round",
+      "operator_copilot_turn",
+    ]);
     expect(convs.get("c1")!.title).toContain("status?");
   });
 
@@ -235,6 +240,10 @@ describe("OperatorCopilotOrchestrator", () => {
     const { orchestrator, usage } = setup();
     const out = (await orchestrator.runTurn({ ...base, message: "__fail__" })).getValue();
     expect(out.failed).toBe(true);
+    expect(usage.map((u) => u.operation)).toEqual([
+      "operator_copilot_round",
+      "operator_copilot_turn",
+    ]);
     expect(usage.at(-1)).toEqual({ operation: "operator_copilot_turn", success: false });
   });
 
