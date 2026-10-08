@@ -86,8 +86,8 @@ function installDefaultApi(reply = "Three arrivals today.") {
 }
 
 async function openPanel(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("button", { name: "Talos AI Operator Copilot" }));
-  return screen.findByRole("dialog", { name: "Talos AI Operator Copilot" });
+  await user.click(await screen.findByRole("button", { name: "Talia Operator Copilot" }));
+  return screen.findByRole("dialog", { name: "Talia Operator Copilot" });
 }
 
 describe("OperatorCopilotHost", () => {
@@ -111,7 +111,7 @@ describe("OperatorCopilotHost", () => {
   it("shows a labelled avatar and keeps the panel closed by default", async () => {
     render(<OperatorCopilotHost />);
     expect(
-      await screen.findByRole("button", { name: "Talos AI Operator Copilot" }),
+      await screen.findByRole("button", { name: "Talia Operator Copilot" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -132,7 +132,7 @@ describe("OperatorCopilotHost", () => {
   it("opens with Enter and Space from the keyboard", async () => {
     const user = userEvent.setup();
     render(<OperatorCopilotHost />);
-    const avatar = await screen.findByRole("button", { name: "Talos AI Operator Copilot" });
+    const avatar = await screen.findByRole("button", { name: "Talia Operator Copilot" });
 
     avatar.focus();
     await user.keyboard("{Enter}");
@@ -140,7 +140,7 @@ describe("OperatorCopilotHost", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    screen.getByRole("button", { name: "Talos AI Operator Copilot" }).focus();
+    screen.getByRole("button", { name: "Talia Operator Copilot" }).focus();
     await user.keyboard(" ");
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
@@ -151,7 +151,7 @@ describe("OperatorCopilotHost", () => {
     const dialog = await openPanel(user);
     expect(within(dialog).getByText(/Villa Aurora/)).toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talos AI"), "status?");
+    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talia"), "status?");
     await user.click(within(dialog).getByRole("button", { name: "Αποστολή" }));
 
     expect(await within(dialog).findByText("Three arrivals today.")).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe("OperatorCopilotHost", () => {
 
     render(<OperatorCopilotHost />);
     const dialog = await openPanel(user);
-    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talos AI"), "status?");
+    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talia"), "status?");
     await user.click(within(dialog).getByRole("button", { name: "Αποστολή" }));
     await waitFor(() => expect(screen.getByTestId("copilot-thinking")).toBeInTheDocument());
 
@@ -220,7 +220,7 @@ describe("OperatorCopilotHost", () => {
 
     render(<OperatorCopilotHost />);
     const dialog = await openPanel(user);
-    const input = within(dialog).getByLabelText("Μήνυμα προς Talos AI");
+    const input = within(dialog).getByLabelText("Μήνυμα προς Talia");
     await user.type(input, "hello");
     await user.click(within(dialog).getByRole("button", { name: "Αποστολή" }));
 
@@ -232,7 +232,7 @@ describe("OperatorCopilotHost", () => {
     const user = userEvent.setup();
     render(<OperatorCopilotHost />);
     const dialog = await openPanel(user);
-    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talos AI"), "status?");
+    await user.type(within(dialog).getByLabelText("Μήνυμα προς Talia"), "status?");
     await user.click(within(dialog).getByRole("button", { name: "Αποστολή" }));
     await within(dialog).findByText("Three arrivals today.");
 

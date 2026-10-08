@@ -10,6 +10,7 @@ import {
   type ViewportSize,
 } from "../lib/avatar-position";
 import { copilotStrings } from "../lib/strings";
+import { TaliaPortrait } from "./TaliaPortrait";
 
 export interface CopilotAvatarProps {
   position: AvatarPosition;
@@ -32,7 +33,7 @@ interface DragState {
 }
 
 /**
- * Draggable, circular, branded placeholder for the Copilot launcher.
+ * Draggable circular Talia portrait launcher for the Copilot.
  * Pointer events only (no drag library). A press that moves less than
  * AVATAR_DRAG_THRESHOLD px is treated as a click. Keyboard activation uses
  * the native button click (Enter / Space).
@@ -150,15 +151,13 @@ export const CopilotAvatar = forwardRef<HTMLButtonElement, CopilotAvatarProps>(
           touchAction: "none",
         }}
         className={cn(
-          "z-40 flex select-none items-center justify-center rounded-full border border-border",
-          "bg-primary text-primary-foreground shadow-md",
-          "text-[15px] font-semibold tracking-wide",
-          "transition-shadow motion-reduce:transition-none hover:shadow-lg",
+          "z-40 flex select-none items-center justify-center rounded-full bg-transparent p-0",
+          "transition-shadow motion-reduce:transition-none",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          dragging ? "cursor-grabbing shadow-lg" : "cursor-grab",
+          dragging ? "cursor-grabbing" : "cursor-grab",
         )}
       >
-        <span aria-hidden="true">{copilotStrings.avatarInitials}</span>
+        <TaliaPortrait size={AVATAR_SIZE} showOnline />
         {unreadCount > 0 && !open ? (
           <span
             data-testid="copilot-unread-badge"

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { copilotStrings } from "../lib/strings";
+import { TaliaPortrait } from "./TaliaPortrait";
 
 export interface CopilotPanelMessage {
   id: string;
@@ -75,20 +76,19 @@ export function CopilotPanel({
       )}
     >
       <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
-        >
-          {copilotStrings.avatarInitials}
-        </span>
+        <TaliaPortrait size={32} showOnline className="shrink-0" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-semibold leading-tight">
             {copilotStrings.productName}
           </h2>
-          <p className="truncate text-xs text-muted-foreground">
-            {propertyName
-              ? `${copilotStrings.activePropertyPrefix} ${propertyName}`
-              : copilotStrings.subtitleReadOnly}
+          <p className="truncate text-xs italic text-muted-foreground">
+            {copilotStrings.subtitle}
+            {propertyName ? (
+              <span className="not-italic">
+                {" · "}
+                {copilotStrings.activePropertyPrefix} {propertyName}
+              </span>
+            ) : null}
           </p>
         </div>
         <Button
