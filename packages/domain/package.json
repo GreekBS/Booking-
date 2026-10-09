@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@hcp/permissions": "workspace:*",
+    "@hcp/validators": "workspace:*",
     "csv-parse": "^7.0.3"
   },
   "devDependencies": {

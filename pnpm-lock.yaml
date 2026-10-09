@@ -292,6 +292,9 @@ importers:
       '@hcp/permissions':
         specifier: workspace:*
         version: link:../permissions
+      '@hcp/validators':
+        specifier: workspace:*
+        version: link:../validators
       csv-parse:
         specifier: ^7.0.3
         version: 7.0.3
