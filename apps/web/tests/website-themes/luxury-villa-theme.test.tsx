@@ -22,12 +22,8 @@ describe("Luxury Villa theme (B2)", () => {
     expect(theme?.Layout).toBeTruthy();
   });
 
-  it("does not change foundation themes to Luxury Villa visuals", () => {
-    for (const id of [
-      "boutique_hotel",
-      "apartments_studios",
-      "nature_retreat",
-    ] as const) {
+  it("keeps unfinished themes on foundation layout (not Luxury Villa)", () => {
+    for (const id of ["apartments_studios", "nature_retreat"] as const) {
       const theme = getWebsiteThemeDefinition(id);
       expect(theme?.renderSection).toBeUndefined();
       render(
@@ -38,6 +34,7 @@ describe("Luxury Villa theme (B2)", () => {
       );
       expect(screen.getByTestId("wb-theme-foundation")).toBeInTheDocument();
       expect(screen.queryByTestId("lv-theme-root")).toBeNull();
+      expect(screen.queryByTestId("bh-theme-root")).toBeNull();
       cleanup();
     }
   });

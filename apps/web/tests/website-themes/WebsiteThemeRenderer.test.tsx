@@ -99,8 +99,7 @@ describe("WebsiteThemeRenderer + preview shell", () => {
       "data-viewport",
       "mobile",
     );
-    // boutique_hotel still uses foundation layout in B2
-    expect(screen.getByTestId("wb-theme-foundation")).toHaveAttribute(
+    expect(screen.getByTestId("bh-theme-root")).toHaveAttribute(
       "data-viewport",
       "mobile",
     );

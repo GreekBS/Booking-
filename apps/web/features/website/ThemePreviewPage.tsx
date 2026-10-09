@@ -15,9 +15,9 @@ import { ErrorState } from "@/components/admin/error-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  SAMPLE_PROPERTY_DISPLAY_NAME,
-  SAMPLE_WEBSITE_DRAFT_CONTENT,
   WebsitePreviewShell,
+  getSamplePropertyDisplayName,
+  getSampleWebsiteDraftForTheme,
 } from "@/features/website-themes";
 import { getThemeGalleryEntry, isThemePreviewable } from "./theme-catalog";
 import {
@@ -133,7 +133,7 @@ export function ThemePreviewPage({ themeId }: ThemePreviewPageProps) {
         />
         <EmptyState
           title="Coming soon"
-          description="Μόνο ολοκληρωμένα θέματα μπορούν να προβληθούν. Το Luxury Villa είναι διαθέσιμο."
+          description="Μόνο ολοκληρωμένα θέματα μπορούν να προβληθούν. Luxury Villa και Boutique Hotel είναι διαθέσιμα."
           action={{
             label: "Θέματα",
             href: "/dashboard/website/themes",
@@ -143,7 +143,9 @@ export function ThemePreviewPage({ themeId }: ThemePreviewPageProps) {
     );
   }
 
-  const propertyLabel = property?.name ?? SAMPLE_PROPERTY_DISPLAY_NAME;
+  const sampleName = getSamplePropertyDisplayName(themeId);
+  const propertyLabel = property?.name ?? sampleName;
+  const sampleContent = getSampleWebsiteDraftForTheme(themeId);
 
   return (
     <div data-testid="theme-preview-page" data-preview-mode={mode}>
@@ -203,8 +205,8 @@ export function ThemePreviewPage({ themeId }: ThemePreviewPageProps) {
       {mode === "sample" ? (
         <WebsitePreviewShell
           themeId={themeId}
-          content={SAMPLE_WEBSITE_DRAFT_CONTENT}
-          propertyDisplayName={SAMPLE_PROPERTY_DISPLAY_NAME}
+          content={sampleContent}
+          propertyDisplayName={sampleName}
           fullPage
         />
       ) : loadingDraft ? (

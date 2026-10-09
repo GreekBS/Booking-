@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1600" viewBox="0 0 1400 1600" role="img" aria-label="Demo boutique hotel lobby">
+  <defs>
+    <linearGradient id="bhLobby" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2a28"/>
+      <stop offset="55%" stop-color="#3d3a36"/>
+      <stop offset="100%" stop-color="#1c1b19"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="1600" fill="url(#bhLobby)"/>
+  <rect x="120" y="180" width="1160" height="40" fill="#c4a574" opacity="0.55"/>
+  <rect x="200" y="320" width="420" height="720" fill="#4a4640"/>
+  <rect x="780" y="320" width="420" height="720" fill="#524e47"/>
+  <rect x="280" y="420" width="260" height="380" fill="#8a857a" opacity="0.35"/>
+  <rect x="860" y="420" width="260" height="380" fill="#8a857a" opacity="0.28"/>
+  <rect x="480" y="1120" width="440" height="28" fill="#c4a574" opacity="0.7"/>
+  <rect x="0" y="1280" width="1400" height="320" fill="#151513"/>
+  <text x="48" y="72" font-family="Georgia, serif" font-size="32" fill="rgba(255,255,255,0.4)" letter-spacing="6">DEMO</text>
+</svg>

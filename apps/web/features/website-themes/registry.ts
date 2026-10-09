@@ -8,6 +8,8 @@ import type {
 } from "./contracts";
 import { isRenderableWebsiteThemeId } from "./contracts";
 import { FoundationThemeLayout } from "./themes/FoundationThemeLayout";
+import { BoutiqueHotelLayout } from "./themes/boutique-hotel/BoutiqueHotelLayout";
+import { renderBoutiqueHotelSection } from "./themes/boutique-hotel/BoutiqueHotelSections";
 import { LuxuryVillaLayout } from "./themes/luxury-villa/LuxuryVillaLayout";
 import { renderLuxuryVillaSection } from "./themes/luxury-villa/LuxuryVillaSections";
 
@@ -32,7 +34,8 @@ const THEME_DEFINITIONS: Record<
     id: "boutique_hotel",
     label: "Boutique hotel",
     supportedSectionTypes: ALL_SECTIONS,
-    Layout: FoundationThemeLayout,
+    Layout: BoutiqueHotelLayout,
+    renderSection: renderBoutiqueHotelSection,
   },
   apartments_studios: {
     id: "apartments_studios",

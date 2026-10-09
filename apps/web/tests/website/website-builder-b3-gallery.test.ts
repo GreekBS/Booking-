@@ -22,11 +22,9 @@ describe("website builder B3 gallery foundation", () => {
     expect(THEME_GALLERY_ENTRIES).toHaveLength(4);
     expect(isThemeSelectable("luxury_villa")).toBe(true);
     expect(isThemePreviewable("luxury_villa")).toBe(true);
-    for (const id of [
-      "boutique_hotel",
-      "apartments_studios",
-      "nature_retreat",
-    ]) {
+    expect(isThemeSelectable("boutique_hotel")).toBe(true);
+    expect(isThemePreviewable("boutique_hotel")).toBe(true);
+    for (const id of ["apartments_studios", "nature_retreat"]) {
       expect(isThemeSelectable(id)).toBe(false);
       expect(isThemePreviewable(id)).toBe(false);
     }
@@ -69,7 +67,7 @@ describe("website builder B3 gallery foundation", () => {
       join(ROOT, "features", "website", "ThemePreviewPage.tsx"),
       "utf8",
     );
-    expect(preview).toContain("SAMPLE_WEBSITE_DRAFT_CONTENT");
+    expect(preview).toContain("getSampleWebsiteDraftForTheme");
     expect(preview).toContain("draftBundleToRenderContent");
     expect(preview).toContain("mode === \"sample\"");
     expect(preview).toMatch(/Δεν γίνεται ανάμειξη|ανάμειξη/);

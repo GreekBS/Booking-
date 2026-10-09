@@ -100,11 +100,17 @@ describe("ThemePreviewPage", () => {
   });
 
   it("blocks coming-soon theme preview", async () => {
-    render(<ThemePreviewPage themeId="boutique_hotel" />);
+    render(<ThemePreviewPage themeId="nature_retreat" />);
     expect(
       await screen.findByTestId("theme-preview-unavailable"),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("wb-preview-shell")).toBeNull();
+  });
+
+  it("renders Boutique Hotel sample preview", async () => {
+    render(<ThemePreviewPage themeId="boutique_hotel" />);
+    expect(await screen.findByTestId("bh-theme-root")).toBeInTheDocument();
+    expect(screen.getByTestId("bh-section-hero")).toBeInTheDocument();
   });
 
   it("shows empty draft state without mixing sample content", async () => {

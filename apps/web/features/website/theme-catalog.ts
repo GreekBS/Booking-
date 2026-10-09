@@ -28,9 +28,10 @@ export const THEME_GALLERY_ENTRIES: readonly ThemeGalleryEntry[] = [
   {
     id: "boutique_hotel",
     label: "Boutique hotel",
-    blurb: "Intimate hotel storytelling with lobby-first navigation. Coming soon.",
-    status: "coming_soon",
-    thumbnailSrc: "/website-themes/luxury-villa/terrace.svg",
+    blurb:
+      "Architectural editorial for independent hotels — split hero, numbered rooms, filmstrip gallery.",
+    status: "ready",
+    thumbnailSrc: "/website-themes/boutique-hotel/lobby.svg",
   },
   {
     id: "apartments_studios",

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Demo boutique hotel street facade">
+  <defs>
+    <linearGradient id="bhStreet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a9aa3"/>
+      <stop offset="100%" stop-color="#d8d0c4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bhStreet)"/>
+  <rect x="280" y="160" width="1040" height="720" fill="#3f3c38"/>
+  <rect x="360" y="260" width="200" height="280" fill="#9aa6ab" opacity="0.55"/>
+  <rect x="700" y="260" width="200" height="280" fill="#9aa6ab" opacity="0.45"/>
+  <rect x="1040" y="260" width="200" height="280" fill="#9aa6ab" opacity="0.55"/>
+  <rect x="700" y="620" width="200" height="260" fill="#1f1e1c"/>
+  <text x="40" y="56" font-family="Georgia, serif" font-size="28" fill="rgba(30,30,30,0.4)" letter-spacing="6">DEMO</text>
+</svg>

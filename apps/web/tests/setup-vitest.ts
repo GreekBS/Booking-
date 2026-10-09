@@ -13,6 +13,8 @@ vi.mock("next/font/google", () => {
     Manrope: fontFactory,
     Cormorant_Garamond: fontFactory,
     Outfit: fontFactory,
+    Libre_Baskerville: fontFactory,
+    DM_Sans: fontFactory,
   };
 });
 

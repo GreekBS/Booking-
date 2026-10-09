@@ -134,10 +134,11 @@ describe("ThemeGalleryPage", () => {
     );
     expect(screen.getByTestId("theme-card-boutique_hotel")).toHaveAttribute(
       "data-theme-status",
-      "coming_soon",
+      "ready",
     );
-    expect(screen.getByTestId("theme-select-disabled-boutique_hotel")).toBeDisabled();
-    expect(screen.getByTestId("theme-preview-disabled-nature_retreat")).toBeDisabled();
+    expect(screen.getByTestId("theme-select-boutique_hotel")).toBeEnabled();
+    expect(screen.getByTestId("theme-select-disabled-nature_retreat")).toBeDisabled();
+    expect(screen.getByTestId("theme-preview-disabled-apartments_studios")).toBeDisabled();
     expect(screen.getByTestId("theme-select-luxury_villa")).toBeEnabled();
   });
 

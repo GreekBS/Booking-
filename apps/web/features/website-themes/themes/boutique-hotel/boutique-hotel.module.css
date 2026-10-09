@@ -1,0 +1,592 @@
+/* Boutique Hotel — architectural editorial (structurally distinct from Luxury Villa). */
+
+.root {
+  --bh-ink: #1a1917;
+  --bh-paper: #f3efe8;
+  --bh-mist: #e5dfd4;
+  --bh-brass: #b8955a;
+  --bh-mute: #6b6560;
+  --bh-line: rgba(26, 25, 23, 0.14);
+  --bh-max: 74rem;
+  --bh-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  background: var(--bh-paper);
+  color: var(--bh-ink);
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+.root :global(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+  background: var(--bh-ink);
+  color: var(--bh-paper);
+  padding: 0.5rem 0.85rem;
+  z-index: 70;
+}
+
+.skip:focus {
+  left: 0.75rem;
+  top: 0.75rem;
+}
+
+/* Stacked architectural header (not LV sticky glass bar). */
+.masthead {
+  border-bottom: 1px solid var(--bh-line);
+  background: var(--bh-paper);
+}
+
+.brandBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.35rem 1.25rem 0.85rem;
+  text-align: center;
+}
+
+.brand {
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.brandTag {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bh-mute);
+}
+
+.navRow {
+  display: none;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: 0.85rem 1rem 1.1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bh-mute);
+}
+
+.navRow a {
+  position: relative;
+  padding-bottom: 0.25rem;
+}
+
+.navRow a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--bh-brass);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms var(--bh-ease);
+}
+
+.navRow a:hover::after,
+.navRow a:focus-visible::after {
+  transform: scaleX(1);
+  outline: none;
+}
+
+.menuBtn {
+  display: inline-flex;
+  margin: 0 auto 1rem;
+  border: 1px solid var(--bh-ink);
+  background: transparent;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.mobilePanel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 1.25rem 1.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bh-mute);
+}
+
+/* Split architectural hero (not LV full-bleed overlay). */
+.hero {
+  display: grid;
+  min-height: min(82vh, 44rem);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1.25rem;
+  padding: 2.5rem 1.35rem 2.75rem;
+  background: var(--bh-ink);
+  color: var(--bh-paper);
+}
+
+.heroKicker {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--bh-brass);
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: clamp(2.35rem, 7vw, 3.8rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 11ch;
+}
+
+.heroLead {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: rgba(243, 239, 232, 0.78);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btnSolid,
+.btnLine {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.65rem 1.15rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: background 180ms var(--bh-ease), color 180ms var(--bh-ease),
+    border-color 180ms var(--bh-ease);
+}
+
+.btnSolid {
+  background: var(--bh-brass);
+  color: var(--bh-ink);
+  border: 1px solid var(--bh-brass);
+}
+
+.btnSolid:hover,
+.btnSolid:focus-visible {
+  background: var(--bh-paper);
+  border-color: var(--bh-paper);
+  outline: none;
+}
+
+.btnLine {
+  border: 1px solid rgba(243, 239, 232, 0.45);
+  color: var(--bh-paper);
+  background: transparent;
+}
+
+.btnLine:hover,
+.btnLine:focus-visible {
+  border-color: var(--bh-paper);
+  outline: none;
+}
+
+.heroMedia {
+  position: relative;
+  min-height: 18rem;
+  background: var(--bh-mist);
+  overflow: hidden;
+}
+
+.heroMedia img,
+.bandMedia img,
+.roomMedia img,
+.frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaFallback {
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #3a3732, #1f1e1c);
+  color: rgba(243, 239, 232, 0.55);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.section {
+  padding: clamp(3rem, 7vw, 5rem) 1.25rem;
+}
+
+.sectionInner {
+  max-width: var(--bh-max);
+  margin: 0 auto;
+}
+
+.sectionIndex {
+  margin: 0 0 0.65rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bh-brass);
+}
+
+.sectionTitle {
+  margin: 0 0 1.35rem;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: clamp(1.9rem, 4vw, 2.85rem);
+  font-weight: 400;
+  line-height: 1.12;
+  max-width: 16ch;
+}
+
+.prose {
+  max-width: 38rem;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--bh-mute);
+}
+
+.prose :global(p + p) {
+  margin-top: 1rem;
+}
+
+.introGrid {
+  display: grid;
+  gap: 2rem;
+}
+
+.frame {
+  min-height: 18rem;
+  overflow: hidden;
+  background: var(--bh-mist);
+}
+
+/* Numbered room rows — not LV suite cards. */
+.roomList {
+  display: grid;
+  gap: 0;
+}
+
+.roomRow {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--bh-line);
+}
+
+.roomRow:last-child {
+  border-bottom: 1px solid var(--bh-line);
+}
+
+.roomMeta {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.roomNum {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--bh-brass);
+}
+
+.roomTitle {
+  margin: 0;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: 1.7rem;
+  font-weight: 400;
+}
+
+.roomText {
+  margin: 0;
+  color: var(--bh-mute);
+  line-height: 1.6;
+}
+
+.roomMedia {
+  min-height: 12rem;
+  overflow: hidden;
+  background: var(--bh-mist);
+}
+
+/* Horizontal filmstrip bands — not LV masonry. */
+.film {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.band {
+  position: relative;
+  min-height: 11rem;
+  overflow: hidden;
+  background: var(--bh-ink);
+}
+
+.bandCaption {
+  position: absolute;
+  left: 1rem;
+  bottom: 0.85rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 232, 0.85);
+}
+
+/* Typographic amenity columns — not LV dotted list. */
+.amenityCols {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--bh-line);
+}
+
+.amenityCols li {
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--bh-line);
+  font-size: 1.02rem;
+}
+
+.locationBand {
+  background: var(--bh-ink);
+  color: var(--bh-paper);
+}
+
+.locationBand .sectionIndex {
+  color: var(--bh-brass);
+}
+
+.locationBand .prose,
+.locationBand .roomText {
+  color: rgba(243, 239, 232, 0.75);
+}
+
+.locationGrid {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.nearbyList {
+  display: grid;
+  gap: 1.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nearbyTitle {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: 1.35rem;
+}
+
+/* Bordered FAQ panels (different chrome from LV +/− summary). */
+.faqStack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.faqItem {
+  border: 1px solid var(--bh-line);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.faqItem summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 1.1rem;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: 1.2rem;
+}
+
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqAnswer {
+  padding: 0 1.1rem 1.1rem;
+  color: var(--bh-mute);
+  line-height: 1.65;
+  max-width: 40rem;
+}
+
+/* Outlined CTA on paper — not LV solid dark band. */
+.ctaBand {
+  margin: 0 1.25rem clamp(2.5rem, 6vw, 4rem);
+  padding: clamp(2.25rem, 5vw, 3.5rem) 1.35rem;
+  border: 1px solid var(--bh-ink);
+  text-align: center;
+  background: var(--bh-mist);
+}
+
+.ctaTitle {
+  margin: 0 0 1.25rem;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: clamp(1.7rem, 3.8vw, 2.4rem);
+  font-weight: 400;
+}
+
+.ctaBand .btnSolid {
+  background: var(--bh-ink);
+  border-color: var(--bh-ink);
+  color: var(--bh-paper);
+}
+
+.ctaBand .btnSolid:hover,
+.ctaBand .btnSolid:focus-visible {
+  background: var(--bh-brass);
+  border-color: var(--bh-brass);
+  color: var(--bh-ink);
+}
+
+.footer {
+  background: var(--bh-ink);
+  color: rgba(243, 239, 232, 0.78);
+  padding: 2.75rem 1.25rem 3rem;
+}
+
+.footerInner {
+  max-width: var(--bh-max);
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.footerBrand {
+  margin: 0;
+  font-family: var(--font-bh-display), "Times New Roman", serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bh-paper);
+}
+
+.footerMeta {
+  margin: 0.65rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 28rem;
+}
+
+.footerNav {
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 232, 0.55);
+  border-top: 1px solid rgba(243, 239, 232, 0.14);
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 760px) {
+  .navRow {
+    display: flex;
+  }
+
+  .menuBtn,
+  .mobilePanel {
+    display: none;
+  }
+
+  .hero {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  }
+
+  .heroMedia {
+    min-height: 100%;
+  }
+
+  .introGrid {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: end;
+    gap: 3rem;
+  }
+
+  .roomRow {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .roomRow:nth-child(even) .roomMeta {
+    order: 2;
+  }
+
+  .roomRow:nth-child(even) .roomMedia {
+    order: 1;
+  }
+
+  .film {
+    grid-template-columns: 1.4fr 1fr;
+    grid-auto-rows: 14rem;
+  }
+
+  .band:first-child {
+    grid-row: span 2;
+    min-height: 100%;
+  }
+
+  .amenityCols {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.5rem;
+  }
+
+  .locationGrid {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+  }
+
+  .footerInner {
+    grid-template-columns: 1.4fr 0.8fr;
+    align-items: end;
+  }
+
+  .footerNav {
+    border-top: none;
+    padding-top: 0;
+    justify-items: end;
+    text-align: right;
+  }
+}
+
+@media (min-width: 1100px) {
+  .brandBlock,
+  .section,
+  .ctaBand,
+  .footer {
+    padding-inline: 2rem;
+  }
+
+  .ctaBand {
+    margin-inline: 2rem;
+  }
+}

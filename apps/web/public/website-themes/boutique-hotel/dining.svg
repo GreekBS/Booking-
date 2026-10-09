@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Demo boutique hotel dining room">
+  <rect width="1600" height="1000" fill="#242220"/>
+  <rect x="100" y="140" width="1400" height="40" fill="#c4a574" opacity="0.35"/>
+  <ellipse cx="500" cy="620" rx="220" ry="90" fill="#3a3732"/>
+  <ellipse cx="1100" cy="620" rx="220" ry="90" fill="#3a3732"/>
+  <rect x="380" y="420" width="240" height="140" fill="#5a554c"/>
+  <rect x="980" y="420" width="240" height="140" fill="#5a554c"/>
+  <rect x="0" y="780" width="1600" height="220" fill="#151413"/>
+  <text x="40" y="56" font-family="Georgia, serif" font-size="28" fill="rgba(255,255,255,0.35)" letter-spacing="6">DEMO</text>
+</svg>

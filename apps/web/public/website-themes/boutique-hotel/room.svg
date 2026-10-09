@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Demo boutique hotel room">
+  <rect width="1600" height="1000" fill="#e8e2d8"/>
+  <rect x="0" y="0" width="1600" height="420" fill="#d5cfc4"/>
+  <rect x="140" y="160" width="520" height="360" fill="#6d736f"/>
+  <rect x="820" y="280" width="620" height="40" fill="#c4a574" opacity="0.55"/>
+  <rect x="840" y="360" width="580" height="280" rx="4" fill="#f4efe7"/>
+  <rect x="200" y="620" width="1200" height="220" rx="6" fill="#f7f3ec"/>
+  <text x="40" y="56" font-family="Georgia, serif" font-size="28" fill="rgba(40,40,40,0.35)" letter-spacing="6">DEMO</text>
+</svg>
