@@ -49,6 +49,7 @@ export async function truncateIntegrationTables(): Promise<void> {
         where: { property: { tenantId } },
       });
       await tx.unit.deleteMany({ where: { tenantId } });
+      await tx.roomType.deleteMany({ where: { tenantId } });
       await tx.property.deleteMany({ where: { tenantId } });
       await tx.invitation.deleteMany({ where: { tenantId } });
       await tx.membership.deleteMany({ where: { tenantId } });
@@ -91,6 +92,7 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.auditLog.deleteMany();
   await prisma.propertyAmenity.deleteMany();
   await prisma.unit.deleteMany();
+  await prisma.roomType.deleteMany();
   await prisma.property.deleteMany();
   await prisma.amenity.deleteMany({ where: { tenantId: { not: null } } });
   await prisma.invitation.deleteMany();
@@ -173,6 +175,17 @@ export async function verifyWebsiteBuilderRlsPoliciesActive(): Promise<boolean> 
       )
   `;
   return rows.length === 3 && rows.every((row) => row.rowsecurity === true);
+}
+
+/** RoomType C1 — FORCE RLS expected after migration 20261010120000. */
+export async function verifyRoomTypeRlsPoliciesActive(): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ tablename: string; rowsecurity: boolean }>>`
+    SELECT tablename, rowsecurity
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN ('room_types')
+  `;
+  return rows.length === 1 && rows.every((row) => row.rowsecurity === true);
 }
 
 export { prisma, setTenantContext, clearTenantContext, withTenantTransaction };

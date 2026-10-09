@@ -93,6 +93,10 @@ export const createUnitSchema = z.object({
   maxGuests: z.number().int().min(1).max(50),
   bedrooms: z.number().int().min(0).max(20).optional(),
   bathrooms: z.number().int().min(0).max(20).optional(),
+  /** Phase C1+ hotel metadata — optional; APIs wire in C2/C3. */
+  roomTypeId: z.string().uuid().nullable().optional(),
+  roomNumber: z.string().trim().min(1).max(64).nullable().optional(),
+  floor: z.string().trim().min(1).max(32).nullable().optional(),
 });
 
 export const updateUnitSchema = z.object({
@@ -101,7 +105,69 @@ export const updateUnitSchema = z.object({
   bedrooms: z.number().int().min(0).max(20).optional(),
   bathrooms: z.number().int().min(0).max(20).optional(),
   status: z.enum(["active", "inactive", "archived"]).optional(),
+  roomTypeId: z.string().uuid().nullable().optional(),
+  roomNumber: z.string().trim().min(1).max(64).nullable().optional(),
+  floor: z.string().trim().min(1).max(32).nullable().optional(),
 });
+
+/** Phase C1 contracts — RoomType CRUD routes arrive in C2. */
+export const roomTypeStatusSchema = z.enum(["active", "inactive"]);
+
+export const roomTypeCodeSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+
+export const createRoomTypeSchema = z
+  .object({
+    name: z.string().trim().min(1).max(255),
+    code: roomTypeCodeSchema.nullable().optional(),
+    description: z.string().trim().max(4000).nullable().optional(),
+    maxGuests: z.number().int().min(1).max(100),
+    maxAdults: z.number().int().min(0).max(100).nullable().optional(),
+    maxChildren: z.number().int().min(0).max(100).nullable().optional(),
+    status: roomTypeStatusSchema.optional(),
+    sortOrder: z.number().int().min(0).max(1_000_000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const adults = value.maxAdults ?? null;
+    const children = value.maxChildren ?? null;
+    if (adults !== null && children !== null && adults + children > value.maxGuests) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "maxAdults + maxChildren cannot exceed maxGuests",
+        path: ["maxGuests"],
+      });
+    }
+  });
+
+export const updateRoomTypeSchema = z
+  .object({
+    name: z.string().trim().min(1).max(255).optional(),
+    code: roomTypeCodeSchema.nullable().optional(),
+    description: z.string().trim().max(4000).nullable().optional(),
+    maxGuests: z.number().int().min(1).max(100).optional(),
+    maxAdults: z.number().int().min(0).max(100).nullable().optional(),
+    maxChildren: z.number().int().min(0).max(100).nullable().optional(),
+    status: roomTypeStatusSchema.optional(),
+    sortOrder: z.number().int().min(0).max(1_000_000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.maxGuests !== undefined &&
+      value.maxAdults != null &&
+      value.maxChildren != null &&
+      value.maxAdults + value.maxChildren > value.maxGuests
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "maxAdults + maxChildren cannot exceed maxGuests",
+        path: ["maxGuests"],
+      });
+    }
+  });
 
 export const createAmenitySchema = z.object({
   name: z.string().min(2).max(100),

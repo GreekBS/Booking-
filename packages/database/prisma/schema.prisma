@@ -51,6 +51,12 @@ enum UnitStatus {
   archived
 }
 
+/// Commercial accommodation category (hotel room type). Not independently bookable.
+enum RoomTypeStatus {
+  active
+  inactive
+}
+
 enum CancellationPolicyType {
   flexible
   moderate
@@ -373,6 +379,7 @@ model Tenant {
   websites                       Website[]
   websiteVersions                WebsiteVersion[]
   websiteMediaAssets             WebsiteMediaAsset[]
+  roomTypes                      RoomType[]
 
   @@map("tenants")
 }
@@ -558,6 +565,7 @@ model Property {
   reservationImportBatches   ReservationImportBatch[]
   websites                   Website[]
   websiteMediaAssets         WebsiteMediaAsset[]
+  roomTypes                  RoomType[]
 
   @@unique([tenantId, slug])
   /// Supports composite FKs (tenant_id, property_id) from website-builder tables.
@@ -565,6 +573,36 @@ model Property {
   @@index([tenantId, status])
   @@index([tenantId, deletedAt])
   @@map("properties")
+}
+
+/// Property-scoped commercial room category (e.g. Deluxe Double). Physical inventory remains Unit.
+model RoomType {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  propertyId  String         @map("property_id") @db.Uuid
+  name        String         @db.VarChar(255)
+  /// Optional short code unique per property when set (case/trim normalized in DB).
+  code        String?        @db.VarChar(64)
+  description String?        @db.Text
+  maxGuests   Int            @map("max_guests")
+  maxAdults   Int?           @map("max_adults")
+  maxChildren Int?           @map("max_children")
+  status      RoomTypeStatus @default(active)
+  sortOrder   Int            @default(0) @map("sort_order")
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [tenantId, propertyId], references: [tenantId, id], onDelete: Restrict)
+  units    Unit[]
+
+  /// Supports composite Unit → RoomType FK: (tenant_id, property_id, room_type_id).
+  @@unique([tenantId, propertyId, id], map: "room_types_tenant_property_id_uidx")
+  @@unique([tenantId, id], map: "room_types_tenant_id_id_uidx")
+  @@index([tenantId, propertyId, status], map: "room_types_tenant_property_status_idx")
+  @@index([tenantId, propertyId, sortOrder], map: "room_types_tenant_property_sort_idx")
+  @@map("room_types")
 }
 
 model Unit {
@@ -577,11 +615,20 @@ model Unit {
   bedrooms   Int        @default(1)
   bathrooms  Int        @default(1)
   status     UnitStatus @default(active)
+  /// Optional commercial category. Null = villa/apartment or uncategorized hotel unit.
+  roomTypeId String?    @map("room_type_id") @db.Uuid
+  /// Optional property-scoped room identifier (e.g. "204"). Unique when set and unit not soft-deleted.
+  roomNumber String?    @map("room_number") @db.VarChar(64)
+  /// Optional floor label (e.g. "2", "Ground").
+  floor      String?    @db.VarChar(32)
   deletedAt  DateTime?  @map("deleted_at") @db.Timestamptz
   createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
   property           Property                @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  /// Composite FK prevents attaching a Unit to a RoomType from another tenant/property.
+  /// ON DELETE RESTRICT (not SET NULL) so tenantId/propertyId are never nulled by cascade.
+  roomType           RoomType?               @relation(fields: [tenantId, propertyId, roomTypeId], references: [tenantId, propertyId, id], onDelete: Restrict)
   availabilityRule   UnitAvailabilityRule?
   ratePlan           RatePlan?
   calendarBlocks     UnitCalendarBlock[]
@@ -600,6 +647,7 @@ model Unit {
   @@unique([propertyId, slug])
   @@index([tenantId, propertyId])
   @@index([tenantId, status])
+  @@index([tenantId, propertyId, roomTypeId], map: "units_tenant_property_room_type_idx")
   @@map("units")
 }
 

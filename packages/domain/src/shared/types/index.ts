@@ -12,6 +12,9 @@ export type PropertyStatus = "draft" | "active" | "inactive" | "archived";
 
 export type UnitStatus = "active" | "inactive" | "archived";
 
+/** Commercial room category status (hotel RoomType). Soft-delete uses deletedAt. */
+export type RoomTypeStatus = "active" | "inactive";
+
 export interface PaginationParams {
   page: number;
   limit: number;

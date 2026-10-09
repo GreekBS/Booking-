@@ -3,6 +3,7 @@ import {
   verifyRlsPoliciesActive,
   verifyCleaningLocationRlsPoliciesActive,
   verifyWebsiteBuilderRlsPoliciesActive,
+  verifyRoomTypeRlsPoliciesActive,
   prisma,
 } from "./helpers";
 import { runIntegration } from "./integrationGate";
@@ -23,5 +24,9 @@ runIntegration("PostgreSQL RLS verification", () => {
 
   it("has RLS enabled on Website Builder A1 tables", async () => {
     expect(await verifyWebsiteBuilderRlsPoliciesActive()).toBe(true);
+  });
+
+  it("has RLS enabled on RoomType C1 tables", async () => {
+    expect(await verifyRoomTypeRlsPoliciesActive()).toBe(true);
   });
 });

@@ -11,6 +11,12 @@ export interface UnitProps {
   bedrooms: number;
   bathrooms: number;
   status: UnitStatus;
+  /** Optional commercial RoomType. Null for villas / uncategorized units. */
+  roomTypeId: string | null;
+  /** Optional property-scoped room identifier (e.g. "204"). */
+  roomNumber: string | null;
+  /** Optional floor label. */
+  floor: string | null;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -25,6 +31,17 @@ export interface CreateUnitProps {
   maxGuests: number;
   bedrooms?: number;
   bathrooms?: number;
+  roomTypeId?: string | null;
+  roomNumber?: string | null;
+  floor?: string | null;
+}
+
+function normalizeOptionalLabel(
+  value: string | null | undefined,
+): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
 }
 
 export class Unit extends Entity<UnitProps> {
@@ -64,6 +81,18 @@ export class Unit extends Entity<UnitProps> {
     return this.props.status;
   }
 
+  get roomTypeId(): string | null {
+    return this.props.roomTypeId;
+  }
+
+  get roomNumber(): string | null {
+    return this.props.roomNumber;
+  }
+
+  get floor(): string | null {
+    return this.props.floor;
+  }
+
   get deletedAt(): Date | null {
     return this.props.deletedAt;
   }
@@ -80,14 +109,29 @@ export class Unit extends Entity<UnitProps> {
       bedrooms: props.bedrooms ?? 1,
       bathrooms: props.bathrooms ?? 1,
       status: "active",
+      roomTypeId: props.roomTypeId ?? null,
+      roomNumber: normalizeOptionalLabel(props.roomNumber),
+      floor: normalizeOptionalLabel(props.floor),
       deletedAt: null,
       createdAt: now,
       updatedAt: now,
     });
   }
 
-  static reconstitute(props: UnitProps): Unit {
-    return new Unit(props);
+  /**
+   * Reconstitute from persistence. Hotel metadata fields default to null when
+   * omitted so pre-C1 fixtures and partial props remain valid.
+   */
+  static reconstitute(
+    props: Omit<UnitProps, "roomTypeId" | "roomNumber" | "floor"> &
+      Partial<Pick<UnitProps, "roomTypeId" | "roomNumber" | "floor">>,
+  ): Unit {
+    return new Unit({
+      ...props,
+      roomTypeId: props.roomTypeId ?? null,
+      roomNumber: props.roomNumber ?? null,
+      floor: props.floor ?? null,
+    });
   }
 
   update(details: Partial<Pick<UnitProps, "name" | "maxGuests" | "bedrooms" | "bathrooms" | "status">>): void {
