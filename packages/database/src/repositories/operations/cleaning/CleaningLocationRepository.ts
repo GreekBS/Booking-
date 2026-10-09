@@ -167,6 +167,145 @@ export class PrismaCleaningLocationRepository
     });
   }
 
+  async ensureActiveLinkedToCommercialUnit(command: {
+    tenantId: string;
+    propertyId: string;
+    unitId: string;
+    preferredName: string;
+    now?: Date;
+  }): Promise<{ location: CleaningLocationRecord; created: boolean }> {
+    const now = command.now ?? new Date();
+    const baseName = normalizeCleaningLocationName(command.preferredName);
+
+    return withTenantTransaction(command.tenantId, async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM properties
+        WHERE id = ${command.propertyId}::uuid
+          AND tenant_id = ${command.tenantId}::uuid
+        FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new NotFoundError("Property", command.propertyId);
+      }
+
+      const unit = await tx.unit.findFirst({
+        where: {
+          id: command.unitId,
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!unit) {
+        throw new NotFoundError("Unit", command.unitId);
+      }
+
+      const existing = await tx.cleaningLocation.findFirst({
+        where: {
+          tenantId: command.tenantId,
+          commercialUnitId: command.unitId,
+          status: "active",
+        },
+      });
+      if (existing) {
+        return {
+          location: mapLocation(existing as LocationRow),
+          created: false,
+        };
+      }
+
+      const maxSort = await tx.cleaningLocation.aggregate({
+        where: {
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          status: "active",
+        },
+        _max: { sortOrder: true },
+      });
+      const sortOrder = (maxSort._max.sortOrder ?? -1) + 1;
+
+      const nameCandidates = [
+        baseName,
+        `${baseName} · μονάδα`,
+        `${baseName} · ${command.unitId.slice(0, 8)}`,
+      ];
+
+      for (const name of nameCandidates) {
+        const record = createCleaningLocation({
+          id: randomUUID(),
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          name,
+          sortOrder,
+          commercialUnitId: command.unitId,
+          now,
+        });
+        try {
+          await tx.cleaningLocation.create({
+            data: {
+              id: record.id,
+              tenantId: record.tenantId,
+              propertyId: record.propertyId,
+              name: record.name,
+              status: record.status,
+              sortOrder: record.sortOrder,
+              commercialUnitId: record.commercialUnitId,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+              archivedAt: null,
+            },
+          });
+          const status = createCleaningLocationStatus({
+            cleaningLocationId: record.id,
+            tenantId: command.tenantId,
+            propertyId: command.propertyId,
+            status: "CLEAN",
+            source: "INIT",
+            updatedByUserId: null,
+            now,
+          });
+          await tx.cleaningLocationStatus.create({
+            data: {
+              cleaningLocationId: status.cleaningLocationId,
+              tenantId: status.tenantId,
+              propertyId: status.propertyId,
+              status: status.status,
+              source: status.source,
+              updatedByUserId: null,
+              updatedAt: status.updatedAt,
+              version: status.version,
+            },
+          });
+          return { location: record, created: true };
+        } catch (error) {
+          if (isUniqueViolation(error)) {
+            const raced = await tx.cleaningLocation.findFirst({
+              where: {
+                tenantId: command.tenantId,
+                commercialUnitId: command.unitId,
+                status: "active",
+              },
+            });
+            if (raced) {
+              return {
+                location: mapLocation(raced as LocationRow),
+                created: false,
+              };
+            }
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw new ConflictError(
+        "Could not create a linked cleaning location for this unit",
+        "cleaning_location_unit_link_failed",
+      );
+    });
+  }
+
   async countActiveByProperty(
     tenantId: string,
     propertyId: string,

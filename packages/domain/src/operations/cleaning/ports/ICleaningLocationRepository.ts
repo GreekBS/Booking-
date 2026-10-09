@@ -74,6 +74,19 @@ export interface ICleaningLocationRepository {
     unitId: string,
   ): Promise<CleaningLocationRecord | null>;
 
+  /**
+   * Idempotent: return the active CleaningLocation linked to this commercial Unit,
+   * creating one when missing. Never creates a second active link (partial unique index).
+   * Does not create commercial Units or alter booking inventory.
+   */
+  ensureActiveLinkedToCommercialUnit(command: {
+    tenantId: string;
+    propertyId: string;
+    unitId: string;
+    preferredName: string;
+    now?: Date;
+  }): Promise<{ location: CleaningLocationRecord; created: boolean }>;
+
   countActiveByProperty(tenantId: string, propertyId: string): Promise<number>;
 
   /**

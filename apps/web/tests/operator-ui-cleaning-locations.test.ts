@@ -56,13 +56,14 @@ describe("operator-ui CleaningLocation Property.type awareness", () => {
     );
   });
 
-  it("hotel UI shows room setup and add room; villa copy omits them for single mode", () => {
+  it("hotel UI shows cleaning-location setup; clarifies units vs housekeeping", () => {
     const panel = read("features/housekeeping/CleaningLocationsPanel.tsx");
-    expect(panel).toContain("Δωμάτια");
-    expect(panel).toContain("Ρύθμιση δωματίων");
-    expect(panel).toContain("Πόσα δωμάτια διαθέτει το κατάλυμα;");
-    expect(panel).toContain("Δημιουργία δωματίων");
-    expect(panel).toContain("Προσθήκη δωματίου");
+    expect(panel).toContain("Χώροι καθαρισμού");
+    expect(panel).toContain("Ρύθμιση χώρων καθαρισμού");
+    expect(panel).toContain("Πόσοι χώροι καθαρισμού;");
+    expect(panel).toContain("Δημιουργία χώρων");
+    expect(panel).toContain("Προσθήκη χώρου");
+    expect(panel).toContain("Δεν δημιουργούν εμπορικές μονάδες");
     expect(panel).toContain("Καθαρισμός καταλύματος");
     expect(panel).toContain("isHotelType");
     expect(panel).toContain('type === "hotel"');

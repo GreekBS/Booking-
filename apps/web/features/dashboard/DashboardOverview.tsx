@@ -26,6 +26,7 @@ import {
   useActiveProperty,
 } from "@/hooks/use-active-property";
 import { fetchDashboardOverview, fetchHousekeepingToday } from "@/lib/admin/api";
+import { canCreateProperty } from "@/lib/admin/can-create-property";
 import type {
   DashboardOverviewRecentBooking,
   DashboardOverviewRecord,
@@ -71,7 +72,13 @@ function formatOpsDate(iso: string): string {
 export function DashboardOverview() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { tenantId, tenantName, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    tenantId,
+    tenantName,
+    profile,
+    loading: tenantLoading,
+    error: tenantError,
+  } = useTenant();
   const {
     propertyId,
     property,
@@ -79,6 +86,7 @@ export function DashboardOverview() {
     ready: propertyReady,
     error: propertyError,
   } = useActiveProperty();
+  const allowCreateProperty = canCreateProperty(profile, tenantId);
   const [overview, setOverview] = useState<DashboardOverviewRecord | null>(null);
   const [housekeeping, setHousekeeping] = useState<HousekeepingTodayBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,11 +163,19 @@ export function DashboardOverview() {
         />
         <EmptyState
           title="Καλώς ήρθατε στο Talos"
-          description="Ο οργανισμός σας είναι έτοιμος. Το επόμενο βήμα είναι να δημιουργήσετε το πρώτο σας κατάλυμα — για τιμές, διαθεσιμότητα και κρατήσεις."
-          action={{
-            label: "Δημιουργήστε το πρώτο σας κατάλυμα",
-            href: "/dashboard/properties/new",
-          }}
+          description={
+            allowCreateProperty
+              ? "Ο οργανισμός σας είναι έτοιμος. Το επόμενο βήμα είναι να δημιουργήσετε το πρώτο σας κατάλυμα — για τιμές, διαθεσιμότητα και κρατήσεις."
+              : "Δεν υπάρχουν προσβάσιμα καταλύματα. Ζητήστε από διαχειριστή οργανισμού να δημιουργήσει κατάλυμα ή να σας το αναθέσει."
+          }
+          action={
+            allowCreateProperty
+              ? {
+                  label: "Δημιουργήστε το πρώτο σας κατάλυμα",
+                  href: "/dashboard/properties/new",
+                }
+              : undefined
+          }
         />
       </div>
     );

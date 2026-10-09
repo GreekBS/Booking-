@@ -69,6 +69,7 @@ export class ResolvePublicQrRouteUseCase {
     private readonly lookup: IPublicCleaningQrLookup,
     private readonly staffPin: IPropertyStaffPinRepository,
     private readonly locations: ICleaningLocationRepository,
+    private readonly properties: IPropertyRepository,
   ) {}
 
   async execute(input: {
@@ -121,21 +122,50 @@ export class ResolvePublicQrRouteUseCase {
       return Result.fail(new NotFoundError("Cleaning QR", "token"));
     }
 
-    if (!row.cleaningLocationId) {
-      return Result.fail(new NotFoundError("Cleaning location", row.unitId ?? "unknown"));
-    }
-
     const meta = await this.staffPin.getPublicMeta(row.tenantId, row.propertyId);
     if (!meta) {
       return Result.fail(new NotFoundError("Property", row.propertyId));
     }
 
-    const location = await this.locations.findById(
-      row.tenantId,
-      row.cleaningLocationId,
-    );
+    let location =
+      row.cleaningLocationId != null
+        ? await this.locations.findById(row.tenantId, row.cleaningLocationId)
+        : null;
+
+    // Legacy unit QR: lookup LEFT JOINs by commercialUnitId — may be null when
+    // no linked CleaningLocation exists. Resolve by link, or ensure one linked
+    // location for this commercial unit (idempotent; no inventory side effects).
+    if ((!location || location.status !== "active") && row.unitId) {
+      location = await this.locations.findActiveByCommercialUnit(
+        row.tenantId,
+        row.unitId,
+      );
+      if (!location) {
+        const property = await this.properties.findById(
+          row.tenantId,
+          row.propertyId,
+        );
+        const unit = property?.units.find((u) => u.id === row.unitId);
+        if (!property || !unit) {
+          return Result.fail(new NotFoundError("Unit", row.unitId));
+        }
+        const ensured = await this.locations.ensureActiveLinkedToCommercialUnit({
+          tenantId: row.tenantId,
+          propertyId: row.propertyId,
+          unitId: row.unitId,
+          preferredName: unit.name,
+        });
+        location = ensured.location;
+      }
+    }
+
     if (!location || location.status !== "active") {
-      return Result.fail(new NotFoundError("Cleaning location", row.cleaningLocationId));
+      return Result.fail(
+        new NotFoundError(
+          "Cleaning location",
+          row.cleaningLocationId ?? row.unitId ?? "unknown",
+        ),
+      );
     }
 
     return Result.ok({
@@ -366,9 +396,23 @@ export class GetStaffHousekeepingStatusUseCase {
       !row ||
       row.qrAccessId !== claims.qrAccessId ||
       row.tenantId !== claims.tenantId ||
-      row.propertyId !== claims.propertyId ||
-      (row.cleaningLocationId ?? "") !== claims.locationId
+      row.propertyId !== claims.propertyId
     ) {
+      throw new ForbiddenError("Housekeeping capability is no longer valid");
+    }
+    // Unit QR lookup may return null location until JOIN sees the link; accept
+    // an explicit linked location for the same commercial unit.
+    const locationMatches =
+      (row.cleaningLocationId ?? "") === claims.locationId ||
+      (row.unitId != null &&
+        row.cleaningLocationId == null &&
+        (
+          await this.locations.findActiveByCommercialUnit(
+            claims.tenantId,
+            row.unitId,
+          )
+        )?.id === claims.locationId);
+    if (!locationMatches) {
       throw new ForbiddenError("Housekeeping capability is no longer valid");
     }
 
@@ -409,11 +453,20 @@ export class MarkStaffHousekeepingStatusUseCase {
       }
 
       const row = await this.lookup.findActiveByTokenHash(input.claims.tokenHash);
-      if (
-        !row ||
-        row.qrAccessId !== input.claims.qrAccessId ||
-        row.cleaningLocationId !== input.claims.locationId
-      ) {
+      if (!row || row.qrAccessId !== input.claims.qrAccessId) {
+        return Result.fail(new ForbiddenError("Housekeeping capability is no longer valid"));
+      }
+      const locationMatches =
+        row.cleaningLocationId === input.claims.locationId ||
+        (row.unitId != null &&
+          row.cleaningLocationId == null &&
+          (
+            await this.locations.findActiveByCommercialUnit(
+              input.claims.tenantId,
+              row.unitId,
+            )
+          )?.id === input.claims.locationId);
+      if (!locationMatches) {
         return Result.fail(new ForbiddenError("Housekeeping capability is no longer valid"));
       }
 

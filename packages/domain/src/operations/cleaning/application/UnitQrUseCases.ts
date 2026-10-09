@@ -15,6 +15,7 @@ import type { UnitQrAccessRecord } from "../domain/CleaningTypes";
 import type { IUnitQrAccessRepository } from "../ports/IUnitQrAccessRepository";
 import type { IOpaqueTokenFactory } from "../ports/IOpaqueTokenFactory";
 import type { IHousekeepingQrTokenSealer } from "../ports/IHousekeepingQrTokenSealer";
+import type { ICleaningLocationRepository } from "../ports/ICleaningLocationRepository";
 import {
   canManageCleaningConfigOnProperty,
   canReadCleaningOnProperty,
@@ -164,6 +165,7 @@ export class GenerateUnitQrUseCase {
     private readonly sealer: IHousekeepingQrTokenSealer,
     private readonly permissionChecker: PermissionChecker,
     private readonly audit?: IAuditLogRepository,
+    private readonly cleaningLocations?: ICleaningLocationRepository,
   ) {}
 
   async execute(
@@ -190,6 +192,14 @@ export class GenerateUnitQrUseCase {
       ) {
         return Result.fail(new ForbiddenError());
       }
+
+      // Public staff QR flow requires a CleaningLocation linked to the unit.
+      await this.cleaningLocations?.ensureActiveLinkedToCommercialUnit({
+        tenantId: input.tenantId,
+        propertyId: location.propertyId,
+        unitId: input.unitId,
+        preferredName: location.unitName,
+      });
 
       const minted = this.tokens.create();
       const sealed = this.sealer.seal(minted.token);

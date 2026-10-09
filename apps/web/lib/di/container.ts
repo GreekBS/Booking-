@@ -1848,6 +1848,7 @@ export const generateUnitQrUseCase = new GenerateUnitQrUseCase(
   housekeepingQrTokenSealer,
   permissionChecker,
   auditLogRepository,
+  cleaningLocationRepository,
 );
 export const rotateUnitQrUseCase = new RotateUnitQrUseCase(
   unitQrAccessRepository,
@@ -1941,6 +1942,7 @@ export const resolvePublicQrRouteUseCase = new ResolvePublicQrRouteUseCase(
   publicCleaningQrLookup,
   propertyStaffPinRepository,
   cleaningLocationRepository,
+  propertyRepository,
 );
 
 export const setPropertyStaffPinUseCase = new SetPropertyStaffPinUseCase(

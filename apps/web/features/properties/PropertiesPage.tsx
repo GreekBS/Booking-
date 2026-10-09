@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { fetchAllProperties } from "@/lib/admin/api";
+import { canCreateProperty } from "@/lib/admin/can-create-property";
 import type { PaginatedProperties, PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
@@ -41,7 +42,13 @@ import { elCommon, statusLabelEl } from "@/lib/i18n";
 const PAGE_SIZE = 10;
 
 export function PropertiesPage() {
-  const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    tenantId,
+    profile,
+    loading: tenantLoading,
+    error: tenantError,
+  } = useTenant();
+  const allowCreate = canCreateProperty(profile, tenantId);
   const [data, setData] = useState<PaginatedProperties | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,12 +116,14 @@ export function PropertiesPage() {
         title="Καταλύματα"
         description="Καταλύματα οργανισμού — αναζήτηση, λεπτομέρειες ή μετάβαση στις μονάδες. Χωρίς φίλτρο ενεργού καταλύματος."
         actions={
-          <Button asChild>
-            <Link href="/dashboard/properties/new">
-              <Plus className="h-4 w-4" />
-              {elCommon.addProperty}
-            </Link>
-          </Button>
+          allowCreate ? (
+            <Button asChild>
+              <Link href="/dashboard/properties/new">
+                <Plus className="h-4 w-4" />
+                {elCommon.addProperty}
+              </Link>
+            </Button>
+          ) : null
         }
       />
 
@@ -150,8 +159,20 @@ export function PropertiesPage() {
       {filtered.length === 0 ? (
         <EmptyState
           title="Δεν βρέθηκαν καταλύματα"
-          description="Δημιουργήστε το πρώτο κατάλυμα για κρατήσεις."
-          action={{ label: elCommon.addProperty, href: "/dashboard/properties/new", onClick: () => {} }}
+          description={
+            allowCreate
+              ? "Δημιουργήστε το πρώτο κατάλυμα για κρατήσεις."
+              : "Δεν υπάρχουν προσβάσιμα καταλύματα. Ζητήστε ανάθεση από διαχειριστή οργανισμού."
+          }
+          action={
+            allowCreate
+              ? {
+                  label: elCommon.addProperty,
+                  href: "/dashboard/properties/new",
+                  onClick: () => {},
+                }
+              : undefined
+          }
         />
       ) : (
         <Surface

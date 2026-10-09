@@ -229,8 +229,8 @@ export function UnitsPage() {
         title="Μονάδες"
         description={
           property
-            ? `Rooms for ${property.name} (Active Property)`
-            : "Διαχείριση δωματίων και μονάδων διαμονής"
+            ? `Εμπορικές μονάδες για «${property.name}» — κρατήσεις, τιμές και διαθεσιμότητα. Δεν είναι χώροι καθαρισμού.`
+            : "Εμπορικές μονάδες διαμονής (δωμάτια / διαμερίσματα) για κρατήσεις και τιμές."
         }
         actions={
           <Button onClick={openCreate} disabled={!propertyId}>
@@ -243,7 +243,7 @@ export function UnitsPage() {
       {units.length === 0 ? (
         <EmptyState
           title="Δεν υπάρχουν μονάδες ακόμα"
-          description="Προσθέστε μονάδες για διαχείσιμότητα και τιμές."
+          description="Προσθέστε εμπορικές μονάδες για κρατήσεις και τιμές. Οι χώροι καθαρισμού ρυθμίζονται χωριστά στην Καθαριότητα."
           action={{ label: "Προσθήκη μονάδας", onClick: openCreate }}
         />
       ) : (
@@ -254,7 +254,7 @@ export function UnitsPage() {
               title="Κατάλογος μονάδων"
               description={
                 property
-                  ? `${units.length} unit${units.length === 1 ? "" : "s"} · ${property.name}`
+                  ? `${units.length} εμπορικ${units.length === 1 ? "ή μονάδα" : "ές μονάδες"} · ${property.name}`
                   : undefined
               }
             />

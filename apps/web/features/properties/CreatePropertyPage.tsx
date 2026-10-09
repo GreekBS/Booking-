@@ -3,7 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import { adminFetch, invalidatePropertiesCache } from "@/lib/admin/api";
+import { canCreateProperty } from "@/lib/admin/can-create-property";
 import type { PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
@@ -24,16 +26,24 @@ export function CreatePropertyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const onboarding = searchParams.get("onboarding") === "1";
-  const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const {
+    tenantId,
+    profile,
+    loading: tenantLoading,
+    error: tenantError,
+  } = useTenant();
+  const { refresh: refreshActiveProperty } = useActiveProperty();
   const [name, setName] = useState("");
   const [type, setType] = useState("villa");
   const [maxGuests, setMaxGuests] = useState(4);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const allowed = canCreateProperty(profile, tenantId);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!tenantId) return;
+    if (!tenantId || !allowed) return;
     setLoading(true);
     setError(null);
     try {
@@ -43,6 +53,7 @@ export function CreatePropertyPage() {
         body: JSON.stringify({ name, type, maxGuests }),
       });
       invalidatePropertiesCache(tenantId);
+      await refreshActiveProperty({ preferredPropertyId: created.id });
       const next = onboarding
         ? `/dashboard/properties/${created.id}?onboarding=1`
         : `/dashboard/properties/${created.id}`;
@@ -61,6 +72,15 @@ export function CreatePropertyPage() {
     tenantId,
   });
   if (tenantGate) return tenantGate;
+
+  if (!allowed) {
+    return (
+      <ErrorState
+        title="Δεν επιτρέπεται"
+        message="Μόνο διαχειριστές οργανισμού μπορούν να δημιουργήσουν κατάλυμα. Ζητήστε πρόσβαση από διαχειριστή."
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -106,7 +126,7 @@ export function CreatePropertyPage() {
         <Surface variant="panel" padding="md">
           <SurfaceHeader
             title="Προεπιλεγμένη μονάδα"
-            description="Αρχική χωρητικότητα. Μπορείτε να προσθέσετε μονάδες μετά τη δημιουργία."
+            description="Αρχική χωρητικότητα της εμπορικής μονάδας (κρατήσεις / τιμές). Μπορείτε να προσθέσετε μονάδες μετά τη δημιουργία."
           />
           <div className="space-y-2">
             <Label htmlFor="maxGuests">Μέγ. επισκέπτες</Label>

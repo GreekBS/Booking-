@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useTenant } from "@/hooks/use-tenant";
@@ -45,6 +46,11 @@ function writeStoredPropertyId(tenantId: string, propertyId: string): void {
   }
 }
 
+export type ActivePropertyRefreshOptions = {
+  /** Prefer this id when present in the refreshed accessible catalog. */
+  preferredPropertyId?: string | null;
+};
+
 export interface ActivePropertyContextValue {
   propertyId: string | null;
   property: CatalogPropertyRecord | null;
@@ -52,7 +58,7 @@ export interface ActivePropertyContextValue {
   setActiveProperty: (propertyId: string) => void;
   ready: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: (options?: ActivePropertyRefreshOptions) => Promise<void>;
 }
 
 const ActivePropertyContext = createContext<ActivePropertyContextValue | null>(
@@ -69,39 +75,56 @@ export function ActivePropertyProvider({
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const propertyIdRef = useRef<string | null>(null);
+  propertyIdRef.current = propertyId;
 
-  const refresh = useCallback(async () => {
-    if (!tenantId) {
-      setProperties([]);
-      setPropertyId(null);
-      setReady(true);
-      setError(null);
-      return;
-    }
-
-    setReady(false);
-    setError(null);
-    try {
-      const catalog = await fetchPropertyUnitCatalog(tenantId);
-      const accessible = catalog.properties.filter((p) => p.status !== "archived");
-      const accessibleIds = accessible.map((p) => p.id);
-      const stored = readStoredPropertyId(tenantId);
-      const nextId = resolveActivePropertyId(accessibleIds, stored, null);
-      setProperties(accessible);
-      setPropertyId(nextId);
-      if (nextId) {
-        writeStoredPropertyId(tenantId, nextId);
+  const refresh = useCallback(
+    async (options?: ActivePropertyRefreshOptions) => {
+      if (!tenantId) {
+        setProperties([]);
+        setPropertyId(null);
+        setReady(true);
+        setError(null);
+        return;
       }
-    } catch (err) {
-      setProperties([]);
-      setPropertyId(null);
-      setError(
-        err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλυμάτων",
-      );
-    } finally {
-      setReady(true);
-    }
-  }, [tenantId]);
+
+      setReady(false);
+      setError(null);
+      try {
+        const catalog = await fetchPropertyUnitCatalog(tenantId);
+        const accessible = catalog.properties.filter(
+          (p) => p.status !== "archived",
+        );
+        const accessibleIds = accessible.map((p) => p.id);
+        const stored = readStoredPropertyId(tenantId);
+        const preferred = options?.preferredPropertyId?.trim() || null;
+        const previousId = propertyIdRef.current;
+        const nextId = resolveActivePropertyId(
+          accessibleIds,
+          stored,
+          preferred && accessibleIds.includes(preferred) ? preferred : null,
+        );
+        setProperties(accessible);
+        setPropertyId(nextId);
+        if (nextId) {
+          writeStoredPropertyId(tenantId, nextId);
+        }
+        // Switching (or first select after empty) must clear property-scoped caches.
+        if (nextId && nextId !== previousId) {
+          invalidateActivePropertyScopedCaches(tenantId);
+        }
+      } catch (err) {
+        setProperties([]);
+        setPropertyId(null);
+        setError(
+          err instanceof Error ? err.message : "Αποτυχία φόρτωσης καταλυμάτων",
+        );
+      } finally {
+        setReady(true);
+      }
+    },
+    [tenantId],
+  );
 
   useEffect(() => {
     if (tenantLoading) return;

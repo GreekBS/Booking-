@@ -251,10 +251,12 @@ export function CleaningLocationsPanel({
   const list = rows ?? [];
   const showHotelSetup = hotelMode && list.length === 0;
   const showAddRoom = hotelMode && list.length > 0;
-  const sectionTitle = hotelMode ? "Δωμάτια" : "Καθαρισμός καταλύματος";
+  const sectionTitle = hotelMode
+    ? "Χώροι καθαρισμού"
+    : "Καθαρισμός καταλύματος";
   const sectionDescription = hotelMode
-    ? "Χώροι καθαρισμού με QR — ανεξάρτητα από εμπορικές μονάδες"
-    : "Ένας χώρος καθαρισμού για ολόκληρο το κατάλυμα — QR και ιστορικό";
+    ? "Λειτουργικοί χώροι housekeeping με QR. Δεν δημιουργούν εμπορικές μονάδες ούτε διαθέσιμες κρατήσεις — οι μονάδες ρυθμίζονται στο μενού Μονάδες."
+    : "Ένας λειτουργικός χώρος καθαρισμού για το κατάλυμα — QR και ιστορικό (ξεχωριστά από εμπορικές μονάδες).";
 
   return (
     <>
@@ -266,7 +268,7 @@ export function CleaningLocationsPanel({
             showAddRoom ? (
               <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
                 <Plus className="h-4 w-4" />
-                Προσθήκη δωματίου
+                Προσθήκη χώρου
               </Button>
             ) : null
           }
@@ -286,13 +288,13 @@ export function CleaningLocationsPanel({
         {showHotelSetup ? (
           <div className="space-y-4 p-4">
             <EmptyState
-              title="Ρύθμιση δωματίων"
-              description="Ορίστε πόσα δωμάτια έχει το κατάλυμα για να δημιουργηθούν με αύξοντες αριθμούς (1, 2, 3…)."
+              title="Ρύθμιση χώρων καθαρισμού"
+              description="Ορίστε πόσοι λειτουργικοί χώροι housekeeping χρειάζονται (αρίθμηση 1, 2, 3…). Δεν δημιουργούνται εμπορικές μονάδες ούτε ημερολόγια κρατήσεων."
             />
             <div className="flex max-w-md flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
                 <Label htmlFor="bulk-rooms">
-                  Πόσα δωμάτια διαθέτει το κατάλυμα;
+                  Πόσοι χώροι καθαρισμού;
                 </Label>
                 <Input
                   id="bulk-rooms"
@@ -305,7 +307,7 @@ export function CleaningLocationsPanel({
               </div>
               <Button disabled={busy} onClick={() => void handleBulkCreate()}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Δημιουργία δωματίων
+                Δημιουργία χώρων
               </Button>
             </div>
           </div>

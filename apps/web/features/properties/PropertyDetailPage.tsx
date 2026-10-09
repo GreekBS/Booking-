@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
+import { useActiveProperty } from "@/hooks/use-active-property";
 import { adminFetch, invalidatePropertiesCache } from "@/lib/admin/api";
 import type { AmenityRecord, PropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -45,6 +46,8 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
   const searchParams = useSearchParams();
   const onboarding = searchParams.get("onboarding") === "1";
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  const { refresh: refreshActiveProperty, propertyId: activePropertyId } =
+    useActiveProperty();
   const [property, setProperty] = useState<PropertyRecord | null>(null);
   const [amenities, setAmenities] = useState<AmenityRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,6 +134,11 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
         body: JSON.stringify(updates),
       });
       invalidatePropertiesCache(tenantId);
+      await refreshActiveProperty(
+        activePropertyId === propertyId
+          ? { preferredPropertyId: propertyId }
+          : undefined,
+      );
       setProperty(updated);
       setMessage("Αποθηκεύτηκε επιτυχώς");
       toastSuccess("Αποθηκεύτηκε επιτυχώς");
@@ -146,6 +154,7 @@ export function PropertyDetailPage({ propertyId }: PropertyDetailPageProps) {
     if (!tenantId) return;
     await adminFetch(`/properties/${propertyId}`, { method: "DELETE", tenantId });
     invalidatePropertiesCache(tenantId);
+    await refreshActiveProperty();
     toastSuccess("Το κατάλυμα αρχειοθετήθηκε");
     router.push("/dashboard/properties");
   }

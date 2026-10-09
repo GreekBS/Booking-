@@ -31,4 +31,12 @@ describe("resolveActivePropertyId", () => {
   it("selects among multiple properties using stored valid id", () => {
     expect(resolveActivePropertyId(["a", "b", "c"], "b", null)).toBe("b");
   });
+
+  it("prefers newly created property id over stale stored selection", () => {
+    expect(resolveActivePropertyId(["old", "new"], "old", "new")).toBe("new");
+  });
+
+  it("first-property creation selects the only accessible id", () => {
+    expect(resolveActivePropertyId(["only"], null, "only")).toBe("only");
+  });
 });
