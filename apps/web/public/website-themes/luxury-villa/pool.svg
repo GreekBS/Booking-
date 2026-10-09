@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Fictional infinity pool">
+  <defs>
+    <linearGradient id="pSky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d7c3a8"/>
+      <stop offset="100%" stop-color="#8aa4b0"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6eb0b8"/>
+      <stop offset="100%" stop-color="#2d5c68"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#pSky)"/>
+  <path d="M0 420 H1200 V900 H0 Z" fill="#3d4f45"/>
+  <rect x="140" y="380" width="920" height="320" rx="8" fill="url(#water)"/>
+  <rect x="140" y="380" width="920" height="36" fill="#e8ddd0" opacity="0.85"/>
+  <ellipse cx="980" cy="260" rx="70" ry="70" fill="#f0e2c8" opacity="0.5"/>
+  <text x="24" y="48" font-family="Georgia, serif" font-size="28" fill="rgba(255,255,255,0.55)" letter-spacing="4">DEMO</text>`n</svg>

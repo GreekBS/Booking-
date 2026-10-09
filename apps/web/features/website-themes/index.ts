@@ -34,6 +34,9 @@ export {
 } from "./sample/sample-content";
 export { WebsiteThemeRenderer } from "./WebsiteThemeRenderer";
 export { WebsitePreviewShell } from "./preview/WebsitePreviewShell";
+export { LuxuryVillaLayout } from "./themes/luxury-villa/LuxuryVillaLayout";
+export { renderLuxuryVillaSection } from "./themes/luxury-villa/LuxuryVillaSections";
+export { deriveHeroLocationLabel } from "./themes/luxury-villa/derive-location-label";
 export {
   WEBSITE_PREVIEW_VIEWPORTS,
   isWebsitePreviewViewportId,

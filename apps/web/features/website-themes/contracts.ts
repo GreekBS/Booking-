@@ -45,6 +45,12 @@ export type WebsiteThemeDefinition = {
   label: string;
   supportedSectionTypes: readonly WebsiteSectionType[];
   Layout: ComponentType<ThemeLayoutProps>;
+  /**
+   * Optional theme-owned section renderer. When omitted, the foundation
+   * adapters are used — keeps Luxury Villa (and future themes) out of the
+   * shared WebsiteThemeRenderer switch.
+   */
+  renderSection?: (section: WebsiteSection) => ReactNode;
 };
 
 export type WebsiteThemeRenderInput = {

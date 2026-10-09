@@ -116,7 +116,7 @@ export function buildSampleWebsiteDraftContent(
         visible: true,
         showMap: true,
         directionsText:
-          "Fifteen quiet minutes above a fictional Cycladic harbor. A stone path leads to a pebble beach; the village square is a short walk for morning bread and evening ouzo.",
+          "Demo destination — fictional coastal harbor. A stone path leads to a pebble beach; the village square is a short walk for morning bread and evening ouzo.",
       },
       {
         id: "b1000000-0000-4000-8000-000000000108",

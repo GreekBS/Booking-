@@ -1,6 +1,20 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
+
+vi.mock("next/font/google", () => {
+  const fontFactory = () => ({
+    className: "mock-font",
+    variable: "--font-mock",
+    style: { fontFamily: "mock-font" },
+  });
+  return {
+    Fraunces: fontFactory,
+    Manrope: fontFactory,
+    Cormorant_Garamond: fontFactory,
+    Outfit: fontFactory,
+  };
+});
 
 afterEach(() => {
   cleanup();

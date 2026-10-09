@@ -69,6 +69,7 @@ export function WebsiteThemeRenderer({
   }
 
   const { Layout } = theme;
+  const renderSection = theme.renderSection ?? renderFoundationSection;
   return (
     <div data-testid="wb-theme-renderer" data-theme-id={prepared.themeId}>
       <Layout
@@ -77,7 +78,7 @@ export function WebsiteThemeRenderer({
         sections={prepared.sections}
         skippedSectionTypes={prepared.skippedSectionTypes}
         context={context}
-        renderSection={renderFoundationSection}
+        renderSection={renderSection}
       />
     </div>
   );

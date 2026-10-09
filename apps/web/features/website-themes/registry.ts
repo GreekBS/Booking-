@@ -8,13 +8,14 @@ import type {
 } from "./contracts";
 import { isRenderableWebsiteThemeId } from "./contracts";
 import { FoundationThemeLayout } from "./themes/FoundationThemeLayout";
+import { LuxuryVillaLayout } from "./themes/luxury-villa/LuxuryVillaLayout";
+import { renderLuxuryVillaSection } from "./themes/luxury-villa/LuxuryVillaSections";
 
 const ALL_SECTIONS = WEBSITE_SECTION_TYPES;
 
 /**
  * Code theme rendering registry (no DB table).
- * B1 registers four selectable themes with foundation Layout stubs.
- * B2+ swap Layout implementations per theme without migrations.
+ * Each theme may supply its own Layout + section renderer without migrations.
  */
 const THEME_DEFINITIONS: Record<
   RenderableWebsiteThemeId,
@@ -24,7 +25,8 @@ const THEME_DEFINITIONS: Record<
     id: "luxury_villa",
     label: "Luxury villa",
     supportedSectionTypes: ALL_SECTIONS,
-    Layout: FoundationThemeLayout,
+    Layout: LuxuryVillaLayout,
+    renderSection: renderLuxuryVillaSection,
   },
   boutique_hotel: {
     id: "boutique_hotel",

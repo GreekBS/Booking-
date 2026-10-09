@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Fictional pebble cove">
+  <defs>
+    <linearGradient id="cSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7f9eb0"/>
+      <stop offset="55%" stop-color="#d7c2a4"/>
+      <stop offset="100%" stop-color="#c5b39a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#cSky)"/>
+  <path d="M0 480 C260 420 480 560 720 500 C920 452 1040 420 1200 460 V900 H0 Z" fill="#3f6d78"/>
+  <path d="M0 700 C300 640 600 760 1200 700 V900 H0 Z" fill="#c2b09a"/>
+  <circle cx="260" cy="760" r="18" fill="#a89880"/>
+  <circle cx="420" cy="790" r="12" fill="#8f806c"/>
+  <circle cx="640" cy="770" r="16" fill="#b3a08a"/>
+  <text x="24" y="48" font-family="Georgia, serif" font-size="28" fill="rgba(255,255,255,0.55)" letter-spacing="4">DEMO</text>`n</svg>

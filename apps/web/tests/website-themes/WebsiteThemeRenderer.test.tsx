@@ -26,12 +26,12 @@ describe("WebsiteThemeRenderer + preview shell", () => {
       "data-theme-id",
       "luxury_villa",
     );
-    expect(screen.getByTestId("wb-theme-foundation")).toBeInTheDocument();
-    expect(screen.getByTestId("wb-section-hero")).toHaveTextContent(
+    expect(screen.getByTestId("lv-theme-root")).toBeInTheDocument();
+    expect(screen.getByTestId("lv-section-hero")).toHaveTextContent(
       /Aegean meets stillness/i,
     );
-    expect(screen.getByTestId("wb-section-faq")).toBeInTheDocument();
-    expect(screen.getByTestId("wb-section-cta")).toBeInTheDocument();
+    expect(screen.getByTestId("lv-section-faq")).toBeInTheDocument();
+    expect(screen.getByTestId("lv-section-cta")).toBeInTheDocument();
   });
 
   it("shows error for unknown theme", () => {
@@ -99,6 +99,7 @@ describe("WebsiteThemeRenderer + preview shell", () => {
       "data-viewport",
       "mobile",
     );
+    // boutique_hotel still uses foundation layout in B2
     expect(screen.getByTestId("wb-theme-foundation")).toHaveAttribute(
       "data-viewport",
       "mobile",
