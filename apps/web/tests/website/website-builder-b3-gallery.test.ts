@@ -17,17 +17,17 @@ import {
 const ROOT = process.cwd();
 
 describe("website builder B3 gallery foundation", () => {
-  it("catalog covers registry ids and only luxury_villa is selectable", () => {
+  it("catalog covers registry ids; ready themes selectable; Nature Retreat coming soon", () => {
     expect(themeCatalogCoversRegistry()).toBe(true);
     expect(THEME_GALLERY_ENTRIES).toHaveLength(4);
     expect(isThemeSelectable("luxury_villa")).toBe(true);
     expect(isThemePreviewable("luxury_villa")).toBe(true);
     expect(isThemeSelectable("boutique_hotel")).toBe(true);
     expect(isThemePreviewable("boutique_hotel")).toBe(true);
-    for (const id of ["apartments_studios", "nature_retreat"]) {
-      expect(isThemeSelectable(id)).toBe(false);
-      expect(isThemePreviewable(id)).toBe(false);
-    }
+    expect(isThemeSelectable("apartments_studios")).toBe(true);
+    expect(isThemePreviewable("apartments_studios")).toBe(true);
+    expect(isThemeSelectable("nature_retreat")).toBe(false);
+    expect(isThemePreviewable("nature_retreat")).toBe(false);
   });
 
   it("exposes gallery and preview dashboard routes (auth-gated app routes)", () => {

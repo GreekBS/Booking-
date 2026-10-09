@@ -22,21 +22,19 @@ describe("Luxury Villa theme (B2)", () => {
     expect(theme?.Layout).toBeTruthy();
   });
 
-  it("keeps unfinished themes on foundation layout (not Luxury Villa)", () => {
-    for (const id of ["apartments_studios", "nature_retreat"] as const) {
-      const theme = getWebsiteThemeDefinition(id);
-      expect(theme?.renderSection).toBeUndefined();
-      render(
-        <WebsiteThemeRenderer
-          themeId={id}
-          content={buildSampleWebsiteDraftContent(id)}
-        />,
-      );
-      expect(screen.getByTestId("wb-theme-foundation")).toBeInTheDocument();
-      expect(screen.queryByTestId("lv-theme-root")).toBeNull();
-      expect(screen.queryByTestId("bh-theme-root")).toBeNull();
-      cleanup();
-    }
+  it("keeps Nature Retreat on foundation layout (not Luxury Villa)", () => {
+    const theme = getWebsiteThemeDefinition("nature_retreat");
+    expect(theme?.renderSection).toBeUndefined();
+    render(
+      <WebsiteThemeRenderer
+        themeId="nature_retreat"
+        content={buildSampleWebsiteDraftContent("nature_retreat")}
+      />,
+    );
+    expect(screen.getByTestId("wb-theme-foundation")).toBeInTheDocument();
+    expect(screen.queryByTestId("lv-theme-root")).toBeNull();
+    expect(screen.queryByTestId("bh-theme-root")).toBeNull();
+    expect(screen.queryByTestId("as-theme-root")).toBeNull();
   });
 
   it("renders the full sample section set", () => {

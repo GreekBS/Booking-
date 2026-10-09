@@ -136,9 +136,15 @@ describe("ThemeGalleryPage", () => {
       "data-theme-status",
       "ready",
     );
+    expect(screen.getByTestId("theme-card-apartments_studios")).toHaveAttribute(
+      "data-theme-status",
+      "ready",
+    );
     expect(screen.getByTestId("theme-select-boutique_hotel")).toBeEnabled();
+    expect(screen.getByTestId("theme-select-apartments_studios")).toBeEnabled();
+    expect(screen.getByTestId("theme-preview-apartments_studios")).toBeEnabled();
     expect(screen.getByTestId("theme-select-disabled-nature_retreat")).toBeDisabled();
-    expect(screen.getByTestId("theme-preview-disabled-apartments_studios")).toBeDisabled();
+    expect(screen.getByTestId("theme-preview-disabled-nature_retreat")).toBeDisabled();
     expect(screen.getByTestId("theme-select-luxury_villa")).toBeEnabled();
   });
 

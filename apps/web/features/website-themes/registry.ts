@@ -8,6 +8,8 @@ import type {
 } from "./contracts";
 import { isRenderableWebsiteThemeId } from "./contracts";
 import { FoundationThemeLayout } from "./themes/FoundationThemeLayout";
+import { ApartmentsStudiosLayout } from "./themes/apartments-studios/ApartmentsStudiosLayout";
+import { renderApartmentsStudiosSection } from "./themes/apartments-studios/ApartmentsStudiosSections";
 import { BoutiqueHotelLayout } from "./themes/boutique-hotel/BoutiqueHotelLayout";
 import { renderBoutiqueHotelSection } from "./themes/boutique-hotel/BoutiqueHotelSections";
 import { LuxuryVillaLayout } from "./themes/luxury-villa/LuxuryVillaLayout";
@@ -41,7 +43,8 @@ const THEME_DEFINITIONS: Record<
     id: "apartments_studios",
     label: "Apartments & studios",
     supportedSectionTypes: ALL_SECTIONS,
-    Layout: FoundationThemeLayout,
+    Layout: ApartmentsStudiosLayout,
+    renderSection: renderApartmentsStudiosSection,
   },
   nature_retreat: {
     id: "nature_retreat",

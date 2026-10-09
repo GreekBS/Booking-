@@ -38,6 +38,11 @@ export {
   buildBoutiqueHotelSampleContent,
 } from "./sample/sample-boutique-hotel";
 export {
+  APARTMENTS_STUDIOS_ASSET_IDS,
+  APARTMENTS_STUDIOS_DISPLAY_NAME,
+  buildApartmentsStudiosSampleContent,
+} from "./sample/sample-apartments-studios";
+export {
   getSamplePropertyDisplayName,
   getSampleWebsiteDraftForTheme,
 } from "./sample/resolve-sample-content";
@@ -48,6 +53,8 @@ export { renderLuxuryVillaSection } from "./themes/luxury-villa/LuxuryVillaSecti
 export { deriveHeroLocationLabel } from "./themes/luxury-villa/derive-location-label";
 export { BoutiqueHotelLayout } from "./themes/boutique-hotel/BoutiqueHotelLayout";
 export { renderBoutiqueHotelSection } from "./themes/boutique-hotel/BoutiqueHotelSections";
+export { ApartmentsStudiosLayout } from "./themes/apartments-studios/ApartmentsStudiosLayout";
+export { renderApartmentsStudiosSection } from "./themes/apartments-studios/ApartmentsStudiosSections";
 export {
   WEBSITE_PREVIEW_VIEWPORTS,
   isWebsitePreviewViewportId,

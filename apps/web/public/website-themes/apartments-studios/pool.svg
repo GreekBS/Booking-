@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Demo apartments pool terrace">
+  <defs>
+    <linearGradient id="asPoolSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7eb9df"/>
+      <stop offset="100%" stop-color="#f3efe6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#asPoolSky)"/>
+  <rect x="160" y="360" width="1280" height="360" rx="12" fill="#4aa0c8"/>
+  <rect x="160" y="360" width="1280" height="48" fill="#f7fafc" opacity="0.85"/>
+  <circle cx="1280" cy="220" r="70" fill="#fff3c4" opacity="0.7"/>
+  <text x="40" y="56" font-family="Arial, sans-serif" font-size="28" fill="rgba(30,60,90,0.4)" letter-spacing="6">DEMO</text>
+</svg>

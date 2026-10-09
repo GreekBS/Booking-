@@ -78,7 +78,7 @@ describe("WebsiteThemeRenderer + preview shell", () => {
     );
     expect(container.querySelector("script")).toBeNull();
     expect(container.innerHTML.toLowerCase()).not.toContain("onerror=");
-    expect(screen.getByTestId("wb-section-richtext")).toHaveTextContent("Intro");
+    expect(screen.getByTestId("as-section-intro")).toHaveTextContent("Intro");
   });
 
   it("preview shell switches viewports without writing state APIs", async () => {

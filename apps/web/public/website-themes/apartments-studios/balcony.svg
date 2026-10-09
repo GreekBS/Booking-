@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Demo apartments balcony view">
+  <defs>
+    <linearGradient id="asSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8ec5e8"/>
+      <stop offset="55%" stop-color="#d7eaf7"/>
+      <stop offset="100%" stop-color="#f7f3ea"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#asSky)"/>
+  <ellipse cx="1240" cy="180" rx="90" ry="90" fill="#fff6d6" opacity="0.85"/>
+  <rect x="0" y="620" width="1600" height="380" fill="#3d8fb5"/>
+  <rect x="180" y="420" width="920" height="280" fill="#f8fafc" opacity="0.95"/>
+  <rect x="220" y="460" width="200" height="160" fill="#7eb8d8" opacity="0.55"/>
+  <rect x="460" y="460" width="200" height="160" fill="#7eb8d8" opacity="0.45"/>
+  <rect x="700" y="460" width="200" height="160" fill="#7eb8d8" opacity="0.55"/>
+  <rect x="180" y="700" width="920" height="36" fill="#e8a07a"/>
+  <text x="40" y="56" font-family="Arial, sans-serif" font-size="28" fill="rgba(30,60,90,0.4)" letter-spacing="6">DEMO</text>
+</svg>

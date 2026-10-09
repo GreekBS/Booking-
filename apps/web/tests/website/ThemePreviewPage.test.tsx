@@ -113,6 +113,13 @@ describe("ThemePreviewPage", () => {
     expect(screen.getByTestId("bh-section-hero")).toBeInTheDocument();
   });
 
+  it("renders Apartments & Studios sample preview", async () => {
+    render(<ThemePreviewPage themeId="apartments_studios" />);
+    expect(await screen.findByTestId("as-theme-root")).toBeInTheDocument();
+    expect(screen.getByTestId("as-section-hero")).toBeInTheDocument();
+    expect(screen.getByTestId("as-section-units")).toBeInTheDocument();
+  });
+
   it("shows empty draft state without mixing sample content", async () => {
     modeParam = "draft";
     getWebsiteBundle.mockResolvedValue({

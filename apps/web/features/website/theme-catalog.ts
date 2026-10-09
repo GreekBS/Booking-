@@ -36,9 +36,10 @@ export const THEME_GALLERY_ENTRIES: readonly ThemeGalleryEntry[] = [
   {
     id: "apartments_studios",
     label: "Apartments & studios",
-    blurb: "Multi-unit clarity for city and coastal apartments. Coming soon.",
-    status: "coming_soon",
-    thumbnailSrc: "/website-themes/luxury-villa/suite.svg",
+    blurb:
+      "Bright Mediterranean multi-unit stays — unit strips, airy sky palette, clear booking actions.",
+    status: "ready",
+    thumbnailSrc: "/website-themes/apartments-studios/balcony.svg",
   },
   {
     id: "nature_retreat",

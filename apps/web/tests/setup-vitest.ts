@@ -15,6 +15,8 @@ vi.mock("next/font/google", () => {
     Outfit: fontFactory,
     Libre_Baskerville: fontFactory,
     DM_Sans: fontFactory,
+    Source_Serif_4: fontFactory,
+    Karla: fontFactory,
   };
 });
 

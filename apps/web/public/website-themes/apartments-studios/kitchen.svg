@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000" role="img" aria-label="Demo apartment kitchenette">
+  <rect width="1400" height="1000" fill="#eef5f9"/>
+  <rect x="80" y="200" width="1240" height="520" fill="#ffffff"/>
+  <rect x="140" y="280" width="520" height="360" fill="#d0e4f0"/>
+  <rect x="760" y="320" width="480" height="40" fill="#e8a07a" opacity="0.55"/>
+  <rect x="780" y="400" width="160" height="200" fill="#b7cfdc"/>
+  <rect x="980" y="400" width="160" height="200" fill="#b7cfdc"/>
+  <text x="40" y="56" font-family="Arial, sans-serif" font-size="28" fill="rgba(40,70,100,0.35)" letter-spacing="6">DEMO</text>
+</svg>

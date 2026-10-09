@@ -5,6 +5,10 @@ import {
   buildSampleWebsiteDraftContent,
 } from "./sample-content";
 import {
+  APARTMENTS_STUDIOS_DISPLAY_NAME,
+  buildApartmentsStudiosSampleContent,
+} from "./sample-apartments-studios";
+import {
   BOUTIQUE_HOTEL_DISPLAY_NAME,
   buildBoutiqueHotelSampleContent,
 } from "./sample-boutique-hotel";
@@ -15,9 +19,11 @@ export function getSampleWebsiteDraftForTheme(
   if (themeId === "boutique_hotel") {
     return buildBoutiqueHotelSampleContent();
   }
+  if (themeId === "apartments_studios") {
+    return buildApartmentsStudiosSampleContent();
+  }
   if (
     themeId === "luxury_villa" ||
-    themeId === "apartments_studios" ||
     themeId === "nature_retreat" ||
     themeId === "unset"
   ) {
@@ -30,5 +36,6 @@ export function getSampleWebsiteDraftForTheme(
 
 export function getSamplePropertyDisplayName(themeId: string): string {
   if (themeId === "boutique_hotel") return BOUTIQUE_HOTEL_DISPLAY_NAME;
+  if (themeId === "apartments_studios") return APARTMENTS_STUDIOS_DISPLAY_NAME;
   return SAMPLE_PROPERTY_DISPLAY_NAME;
 }

@@ -152,9 +152,9 @@ describe("Boutique Hotel theme (B4a)", () => {
     );
   });
 
-  it("does not regress Luxury Villa readiness", () => {
+  it("does not regress Luxury Villa readiness; Nature Retreat stays unavailable", () => {
     expect(gallerySelectable("luxury_villa")).toBe(true);
-    expect(gallerySelectable("apartments_studios")).toBe(false);
+    expect(gallerySelectable("boutique_hotel")).toBe(true);
     expect(gallerySelectable("nature_retreat")).toBe(false);
   });
 });

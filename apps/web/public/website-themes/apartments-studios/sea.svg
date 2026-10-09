@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Demo coastal apartments vista">
+  <defs>
+    <linearGradient id="asSea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6eb0d8"/>
+      <stop offset="45%" stop-color="#b9d9ec"/>
+      <stop offset="100%" stop-color="#f6f1e6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#asSea)"/>
+  <path d="M0 560 C360 500 640 620 960 560 C1200 516 1400 540 1600 520 V1000 H0 Z" fill="#3d8fb5"/>
+  <path d="M0 780 C400 720 900 840 1600 760 V1000 H0 Z" fill="#e8d7b8"/>
+  <text x="40" y="56" font-family="Arial, sans-serif" font-size="28" fill="rgba(255,255,255,0.45)" letter-spacing="6">DEMO</text>
+</svg>

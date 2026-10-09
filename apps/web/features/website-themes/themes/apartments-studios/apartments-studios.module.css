@@ -1,0 +1,557 @@
+/* Apartments & Studios — bright, airy, unit-first (distinct from LV & BH). */
+
+.root {
+  --as-sky: #e8f3fa;
+  --as-sky-deep: #4f9fc4;
+  --as-ink: #1e2a33;
+  --as-mute: #5a6b76;
+  --as-paper: #ffffff;
+  --as-warm: #e8a07a;
+  --as-line: rgba(30, 42, 51, 0.1);
+  --as-max: 70rem;
+  --as-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: var(--as-paper);
+  color: var(--as-ink);
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+.root :global(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+  z-index: 80;
+  background: var(--as-ink);
+  color: #fff;
+  padding: 0.5rem 0.85rem;
+}
+
+.skip:focus {
+  left: 0.75rem;
+  top: 0.75rem;
+}
+
+/* Soft sky top bar — not LV glass sticky, not BH stacked masthead. */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.15rem;
+  background: var(--as-sky);
+  border-bottom: 1px solid rgba(79, 159, 196, 0.22);
+}
+
+.brand {
+  font-family: var(--font-as-display), Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pillNav {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.pillNav a {
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--as-mute);
+  transition: background 160ms var(--as-ease), color 160ms var(--as-ease);
+}
+
+.pillNav a:hover,
+.pillNav a:focus-visible {
+  background: var(--as-paper);
+  color: var(--as-ink);
+  outline: none;
+}
+
+.topCta {
+  display: none;
+  border-radius: 999px;
+  background: var(--as-sky-deep);
+  color: #fff;
+  padding: 0.55rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.topCta:hover,
+.topCta:focus-visible {
+  filter: brightness(1.05);
+  outline: none;
+}
+
+.menuBtn {
+  border: 1px solid rgba(79, 159, 196, 0.45);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--as-ink);
+}
+
+.mobilePanel {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 1.15rem 1.15rem;
+  background: var(--as-sky);
+  border-bottom: 1px solid rgba(79, 159, 196, 0.22);
+}
+
+.mobilePanel a {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--as-mute);
+}
+
+/* Stacked welcome hero — photo band + content band (not overlay / not split). */
+.hero {
+  display: grid;
+}
+
+.heroMedia {
+  position: relative;
+  min-height: min(52vh, 28rem);
+  background: var(--as-sky);
+  overflow: hidden;
+}
+
+.heroMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroBand {
+  padding: 1.75rem 1.25rem 2.25rem;
+  background: var(--as-paper);
+  border-top: 4px solid var(--as-sky-deep);
+}
+
+.heroInner {
+  max-width: var(--as-max);
+  margin: 0 auto;
+}
+
+.heroKicker {
+  margin: 0 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--as-sky-deep);
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--font-as-display), Georgia, serif;
+  font-size: clamp(2rem, 5.5vw, 3.1rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+
+.heroLead {
+  margin: 0.85rem 0 0;
+  max-width: 36rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--as-mute);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.35rem;
+}
+
+.btnPrimary,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: transform 160ms var(--as-ease), background 160ms var(--as-ease),
+    color 160ms var(--as-ease), border-color 160ms var(--as-ease);
+}
+
+.btnPrimary {
+  background: var(--as-sky-deep);
+  color: #fff;
+  border: 1px solid var(--as-sky-deep);
+}
+
+.btnPrimary:hover,
+.btnPrimary:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid rgba(79, 159, 196, 0.45);
+  color: var(--as-ink);
+}
+
+.btnGhost:hover,
+.btnGhost:focus-visible {
+  border-color: var(--as-sky-deep);
+  outline: none;
+}
+
+.section {
+  padding: clamp(2.75rem, 6vw, 4.5rem) 1.25rem;
+}
+
+.sectionInner {
+  max-width: var(--as-max);
+  margin: 0 auto;
+}
+
+.sectionLabel {
+  margin: 0 0 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--as-sky-deep);
+}
+
+.sectionTitle {
+  margin: 0 0 1.1rem;
+  font-family: var(--font-as-display), Georgia, serif;
+  font-size: clamp(1.7rem, 3.6vw, 2.35rem);
+  font-weight: 600;
+  line-height: 1.15;
+  max-width: 18ch;
+}
+
+.prose {
+  max-width: 40rem;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--as-mute);
+}
+
+.prose :global(p + p) {
+  margin-top: 0.95rem;
+}
+
+.introGrid {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.frame {
+  min-height: 16rem;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: var(--as-sky);
+}
+
+.frame img,
+.unitMedia img,
+.galleryItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaFallback {
+  width: 100%;
+  height: 100%;
+  min-height: 11rem;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #d7eaf5, #f7f3ea);
+  color: var(--as-mute);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Unit strips — photo | details (not LV cards, not BH numbered rows). */
+.unitList {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.unitStrip {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--as-line);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: #fbfdff;
+}
+
+.unitMedia {
+  min-height: 12rem;
+  background: var(--as-sky);
+}
+
+.unitBody {
+  padding: 1.25rem 1.2rem 1.4rem;
+  border-left: 4px solid var(--as-warm);
+}
+
+.unitTitle {
+  margin: 0;
+  font-family: var(--font-as-display), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.unitText {
+  margin: 0.45rem 0 0;
+  color: var(--as-mute);
+  line-height: 1.55;
+}
+
+/* Equal airy gallery grid — not masonry, not filmstrip. */
+.galleryGrid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.galleryItem {
+  aspect-ratio: 4 / 3;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--as-sky);
+}
+
+/* Soft amenity chips in sky panel. */
+.amenityPanel {
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--as-sky);
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chipRow li {
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(79, 159, 196, 0.28);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.locationGrid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.mapSoft {
+  min-height: 12rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(160deg, #d3e8f4, #f4f0e6);
+  display: grid;
+  place-items: center;
+  color: var(--as-mute);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nearbyGrid {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nearbyItem {
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  background: #f7fbfd;
+  border: 1px solid var(--as-line);
+}
+
+.nearbyTitle {
+  margin: 0 0 0.3rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+/* FAQ with sky accent rail. */
+.faqList {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.faqItem {
+  border-radius: 0.9rem;
+  border: 1px solid var(--as-line);
+  border-left: 4px solid var(--as-sky-deep);
+  background: #fff;
+}
+
+.faqItem summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.95rem 1rem;
+  font-weight: 650;
+  font-size: 1.02rem;
+}
+
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqAnswer {
+  padding: 0 1rem 1rem;
+  color: var(--as-mute);
+  line-height: 1.6;
+}
+
+/* Soft sky CTA band. */
+.ctaBand {
+  margin: 0 1.25rem clamp(2.5rem, 6vw, 3.75rem);
+  padding: clamp(2rem, 5vw, 3rem) 1.25rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, #4f9fc4, #7eb9df);
+  color: #fff;
+  text-align: center;
+}
+
+.ctaTitle {
+  margin: 0 0 1.15rem;
+  font-family: var(--font-as-display), Georgia, serif;
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 600;
+}
+
+.ctaBand .btnPrimary {
+  background: #fff;
+  color: var(--as-sky-deep);
+  border-color: #fff;
+}
+
+.footer {
+  padding: 2.5rem 1.25rem 3rem;
+  background: #f3f8fb;
+  border-top: 1px solid var(--as-line);
+}
+
+.footerInner {
+  max-width: var(--as-max);
+  margin: 0 auto;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.footerBrand {
+  margin: 0;
+  font-family: var(--font-as-display), Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.footerMeta {
+  margin: 0.45rem 0 0;
+  color: var(--as-mute);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 30rem;
+}
+
+.footerNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.15rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--as-sky-deep);
+}
+
+@media (min-width: 760px) {
+  .pillNav,
+  .topCta {
+    display: flex;
+  }
+
+  .menuBtn,
+  .mobilePanel {
+    display: none;
+  }
+
+  .heroBand {
+    padding-inline: 2rem;
+  }
+
+  .introGrid {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+    gap: 2.5rem;
+  }
+
+  .unitStrip {
+    grid-template-columns: 0.95fr 1.05fr;
+  }
+
+  .galleryGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .locationGrid {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: stretch;
+  }
+
+  .nearbyGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .footerInner {
+    grid-template-columns: 1.4fr 1fr;
+    align-items: end;
+  }
+}
+
+@media (min-width: 1100px) {
+  .topbar,
+  .section,
+  .ctaBand,
+  .footer {
+    padding-inline: 2rem;
+  }
+
+  .ctaBand {
+    margin-inline: 2rem;
+  }
+}
