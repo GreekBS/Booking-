@@ -46,6 +46,9 @@ export function formatWebsiteApiError(err: unknown): string {
     if (err.status === 409) {
       return "Το αίτημα συγκρούστηκε με άλλη ενημέρωση. Ανανεώστε και δοκιμάστε ξανά.";
     }
+    if (err.status === 404) {
+      return "Ο ιστότοπος δεν βρέθηκε για αυτό το κατάλυμα.";
+    }
     return err.message || "Αποτυχία αιτήματος ιστότοπου.";
   }
   if (err instanceof Error) {
@@ -81,4 +84,49 @@ export async function ensureWebsite(
     tenantId,
     body: JSON.stringify(themeId ? { themeId } : {}),
   });
+}
+
+/** PATCH theme on the website entity only — never mutates published versions. */
+export async function updateWebsiteTheme(
+  tenantId: string,
+  propertyId: string,
+  themeId: string,
+): Promise<{ website: WebsiteRecord }> {
+  return adminFetch(
+    `/properties/${encodeURIComponent(propertyId)}/website/theme`,
+    {
+      method: "PATCH",
+      tenantId,
+      body: JSON.stringify({ themeId }),
+    },
+  );
+}
+
+/**
+ * Map an authorized website + draft snapshot into Zod v1 render input.
+ * Uses only website-safe fields from the admin bundle — never PMS entities.
+ */
+export function draftBundleToRenderContent(
+  website: WebsiteRecord,
+  draft: WebsiteVersionRecord,
+): {
+  contentSchemaVersion: number;
+  locale: string;
+  themeId: string;
+  sections: unknown;
+  seo: unknown;
+} {
+  return {
+    contentSchemaVersion: website.contentSchemaVersion || 1,
+    locale: draft.locale || "en",
+    themeId: website.themeId,
+    sections: draft.sections ?? [],
+    seo: draft.seo ?? {},
+  };
+}
+
+export function draftHasRenderableSections(
+  draft: WebsiteVersionRecord | null | undefined,
+): boolean {
+  return Array.isArray(draft?.sections) && draft!.sections.length > 0;
 }

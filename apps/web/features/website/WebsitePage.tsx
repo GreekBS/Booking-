@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Globe, Plus, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Globe, Palette, Plus, RefreshCw } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import {
   renderActivePropertyGate,
@@ -154,16 +155,24 @@ export function WebsitePage() {
           </span>
         }
         actions={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void load()}
-            disabled={loading}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Ανανέωση
-          </Button>
+          <>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link href="/dashboard/website/themes" data-testid="website-browse-themes">
+                <Palette className="h-4 w-4" />
+                Θέματα
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Ανανέωση
+            </Button>
+          </>
         }
       />
 
@@ -235,10 +244,19 @@ export function WebsitePage() {
             </dl>
             <p className="mt-4 flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              Η επιλογή θέματος, ο επεξεργαστής περιεχομένου και η δημοσίευση θα
-              προστεθούν σε επόμενες εκδόσεις. Δεν γίνεται προεπισκόπηση ή
-              δημόσια απόδοση εδώ.
+              Περιηγηθείτε στη συλλογή θεμάτων για προεπισκόπηση και επιλογή.
+              Ο επεξεργαστής περιεχομένου και η δημόσια δημοσίευση έρχονται σε
+              επόμενα βήματα.
             </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              asChild
+            >
+              <Link href="/dashboard/website/themes">Άνοιγμα συλλογής θεμάτων</Link>
+            </Button>
           </Surface>
 
           <Surface data-testid="website-draft-card">

@@ -22,6 +22,8 @@ export type WebsitePreviewShellProps = {
   initialViewport?: WebsitePreviewViewportId;
   /** Optional chrome above the device frame (gallery will use this). */
   toolbarExtra?: ReactNode;
+  /** Full-page preview: taller scroll region (B3). */
+  fullPage?: boolean;
 };
 
 /**
@@ -37,6 +39,7 @@ export function WebsitePreviewShell({
   propertyDisplayName = SAMPLE_PROPERTY_DISPLAY_NAME,
   initialViewport = "desktop",
   toolbarExtra,
+  fullPage = false,
 }: WebsitePreviewShellProps) {
   const [viewport, setViewport] =
     useState<WebsitePreviewViewportId>(initialViewport);
@@ -93,7 +96,14 @@ export function WebsitePreviewShell({
           data-testid="wb-preview-frame"
           data-viewport={viewport}
         >
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div
+            className={
+              fullPage
+                ? "max-h-[min(85vh,56rem)] overflow-y-auto"
+                : "max-h-[70vh] overflow-y-auto"
+            }
+            data-testid="wb-preview-scroll"
+          >
             <WebsiteThemeRenderer
               themeId={themeId}
               content={content}

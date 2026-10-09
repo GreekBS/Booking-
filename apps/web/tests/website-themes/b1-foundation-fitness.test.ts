@@ -25,12 +25,7 @@ describe("website builder B1 foundation fitness", () => {
     }
   });
 
-  it("does not add public website routes or gallery UI in B1", () => {
-    expect(
-      existsSync(
-        join(ROOT, "app", "(dashboard)", "dashboard", "website", "themes"),
-      ),
-    ).toBe(false);
+  it("does not add unauthenticated public site routes", () => {
     expect(
       existsSync(join(ROOT, "app", "(public)", "sites")),
     ).toBe(false);
