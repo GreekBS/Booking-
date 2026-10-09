@@ -370,6 +370,9 @@ model Tenant {
   messagingAutomationRuns        MessagingAutomationRun[]
   messagingContactTokens         MessagingContactToken[]
   directBookingIntegrations      DirectBookingIntegration[]
+  websites                       Website[]
+  websiteVersions                WebsiteVersion[]
+  websiteMediaAssets             WebsiteMediaAsset[]
 
   @@map("tenants")
 }
@@ -403,6 +406,7 @@ model User {
   escalationsAnswered         OwnerEscalation[]        @relation("EscalationAnswerer")
   reservationImportBatches    ReservationImportBatch[]
   copilotConversations        CopilotConversation[]
+  uploadedWebsiteMedia        WebsiteMediaAsset[]      @relation("WebsiteMediaUploader")
 
   @@map("users")
 }
@@ -552,8 +556,12 @@ model Property {
   messagingContactTokens     MessagingContactToken[]
   directBookingIntegrations  DirectBookingIntegration[]
   reservationImportBatches   ReservationImportBatch[]
+  websites                   Website[]
+  websiteMediaAssets         WebsiteMediaAsset[]
 
   @@unique([tenantId, slug])
+  /// Supports composite FKs (tenant_id, property_id) from website-builder tables.
+  @@unique([tenantId, id], map: "properties_tenant_id_id_uidx")
   @@index([tenantId, status])
   @@index([tenantId, deletedAt])
   @@map("properties")
@@ -2910,4 +2918,100 @@ model CopilotMessage {
 
   @@index([tenantId, conversationId, createdAt])
   @@map("copilot_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Website Builder A1 — persistence foundation (CMS tables only; no publish/DNS)
+// Phase-4 PropertyContent → Website; ContentVersion → WebsiteVersion;
+// MediaAsset → WebsiteMediaAsset (metadata only; uploads in later phase).
+// ---------------------------------------------------------------------------
+
+/// One marketing website per Property (tenant-scoped ownership).
+model Website {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  propertyId           String    @map("property_id") @db.Uuid
+  /// draft | published | unpublished — publish workflow wired in later phases.
+  status               String    @default("draft") @db.VarChar(16)
+  /// Code theme registry id (e.g. unset | luxury_villa). Rendering comes later.
+  themeId              String    @default("unset") @map("theme_id") @db.VarChar(64)
+  contentSchemaVersion Int       @default(1) @map("content_schema_version")
+  draftVersionId       String?   @unique(map: "websites_draft_version_id_uidx") @map("draft_version_id") @db.Uuid
+  publishedVersionId   String?   @unique(map: "websites_published_version_id_uidx") @map("published_version_id") @db.Uuid
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property         Property            @relation(fields: [tenantId, propertyId], references: [tenantId, id], onDelete: Restrict)
+  /// Pointers must reference a version that belongs to THIS website and tenant.
+  draftVersion     WebsiteVersion?     @relation("WebsiteDraftVersion", fields: [tenantId, id, draftVersionId], references: [tenantId, websiteId, id], onDelete: Restrict)
+  publishedVersion WebsiteVersion?     @relation("WebsitePublishedVersion", fields: [tenantId, id, publishedVersionId], references: [tenantId, websiteId, id], onDelete: Restrict)
+  versions         WebsiteVersion[]    @relation("WebsiteVersions")
+  mediaAssets      WebsiteMediaAsset[]
+
+  @@unique([propertyId], map: "websites_property_id_uidx")
+  @@unique([tenantId, propertyId], map: "websites_tenant_property_uidx")
+  /// Supports composite FKs (tenant_id, website_id) from child tables.
+  @@unique([tenantId, id], map: "websites_tenant_id_id_uidx")
+  @@unique([tenantId, id, draftVersionId], map: "websites_tenant_id_draft_version_uidx")
+  @@unique([tenantId, id, publishedVersionId], map: "websites_tenant_id_published_version_uidx")
+  @@index([tenantId, status], map: "websites_tenant_status_idx")
+  @@map("websites")
+}
+
+/// Draft or frozen content snapshot for a Website (sections/seo JSON validated in later PRs).
+model WebsiteVersion {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  websiteId     String    @map("website_id") @db.Uuid
+  versionNumber Int       @map("version_number")
+  locale        String    @default("el") @db.VarChar(16)
+  sections      Json      @default("[]")
+  seo           Json      @default("{}")
+  /// draft | published | superseded
+  state         String    @default("draft") @db.VarChar(16)
+  publishedAt   DateTime? @map("published_at") @db.Timestamptz
+  publishedBy   String?   @map("published_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  website              Website   @relation("WebsiteVersions", fields: [tenantId, websiteId], references: [tenantId, id], onDelete: Cascade)
+  draftForWebsite      Website?  @relation("WebsiteDraftVersion")
+  publishedForWebsite  Website?  @relation("WebsitePublishedVersion")
+
+  @@unique([websiteId, versionNumber], map: "website_versions_website_version_uidx")
+  @@unique([tenantId, id], map: "website_versions_tenant_id_id_uidx")
+  /// Supports website draft/published pointers: (tenant, website, version).
+  @@unique([tenantId, websiteId, id], map: "website_versions_tenant_website_id_uidx")
+  @@index([tenantId, websiteId, state], map: "website_versions_tenant_website_state_idx")
+  @@map("website_versions")
+}
+
+/// Marketing media metadata only (bytes/storage adapters arrive in a later phase).
+model WebsiteMediaAsset {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  websiteId        String   @map("website_id") @db.Uuid
+  propertyId       String   @map("property_id") @db.Uuid
+  storageKey       String   @map("storage_key") @db.VarChar(512)
+  contentType      String   @map("content_type") @db.VarChar(128)
+  sizeBytes        Int      @map("size_bytes")
+  alt              String?  @db.VarChar(512)
+  width            Int?
+  height           Int?
+  sortOrder        Int      @default(0) @map("sort_order")
+  /// pending | ready | archived — upload pipeline later; column reserved now.
+  status           String   @default("pending") @db.VarChar(16)
+  createdByUserId  String?  @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  website  Website  @relation(fields: [tenantId, websiteId], references: [tenantId, id], onDelete: Cascade)
+  property Property @relation(fields: [tenantId, propertyId], references: [tenantId, id], onDelete: Restrict)
+  createdBy User?   @relation("WebsiteMediaUploader", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([storageKey], map: "website_media_assets_storage_key_uidx")
+  @@index([tenantId, websiteId], map: "website_media_assets_tenant_website_idx")
+  @@index([tenantId, propertyId], map: "website_media_assets_tenant_property_idx")
+  @@map("website_media_assets")
 }

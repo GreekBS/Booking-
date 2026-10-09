@@ -21,6 +21,14 @@ export async function truncateIntegrationTables(): Promise<void> {
   });
   for (const { id: tenantId } of intTenants) {
     await withTenantTransaction(tenantId, async (tx) => {
+      await tx.websiteMediaAsset.deleteMany({ where: { tenantId } });
+      // Clear circular draft/published pointers before deleting versions.
+      await tx.website.updateMany({
+        where: { tenantId },
+        data: { draftVersionId: null, publishedVersionId: null },
+      });
+      await tx.websiteVersion.deleteMany({ where: { tenantId } });
+      await tx.website.deleteMany({ where: { tenantId } });
       await tx.copilotMessage.deleteMany({ where: { tenantId } });
       await tx.copilotConversation.deleteMany({ where: { tenantId } });
       await tx.reservationImportRejectedRow.deleteMany({ where: { tenantId } });
@@ -147,6 +155,21 @@ export async function verifyCleaningLocationRlsPoliciesActive(): Promise<boolean
         'cleaning_locations',
         'cleaning_location_statuses',
         'cleaning_location_qr_access'
+      )
+  `;
+  return rows.length === 3 && rows.every((row) => row.rowsecurity === true);
+}
+
+/** Website Builder A1 tables — FORCE RLS expected after migration 20261009120000. */
+export async function verifyWebsiteBuilderRlsPoliciesActive(): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ tablename: string; rowsecurity: boolean }>>`
+    SELECT tablename, rowsecurity
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'websites',
+        'website_versions',
+        'website_media_assets'
       )
   `;
   return rows.length === 3 && rows.every((row) => row.rowsecurity === true);
