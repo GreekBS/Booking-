@@ -12,6 +12,7 @@ import {
   Shield,
   Settings,
   Network,
+  Globe,
   Wallet,
   FileText,
   PanelLeftClose,
@@ -67,7 +68,10 @@ export const adminNavSections: AdminNavSection[] = [
   {
     id: "distribution",
     label: elNav.distribution,
-    items: [{ href: "/dashboard/channels", label: elNav.channels, icon: Network }],
+    items: [
+      { href: "/dashboard/channels", label: elNav.channels, icon: Network },
+      { href: "/dashboard/website", label: elNav.website, icon: Globe },
+    ],
   },
   {
     id: "property",

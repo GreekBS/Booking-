@@ -140,6 +140,7 @@ export const elNav = {
   fiscalDocuments: "Παραστατικά",
   distribution: "Διανομή",
   channels: "Κανάλια",
+  website: "Ιστότοπος",
   property: "Κατάλυμα",
   properties: "Καταλύματα",
   units: "Μονάδες",
