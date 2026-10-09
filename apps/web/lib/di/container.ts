@@ -58,6 +58,16 @@ import {
 
   GetUnitUseCase,
 
+  CreateRoomTypeUseCase,
+
+  ListRoomTypesUseCase,
+
+  GetRoomTypeUseCase,
+
+  UpdateRoomTypeUseCase,
+
+  DeactivateRoomTypeUseCase,
+
   ListAmenitiesUseCase,
 
   CreateAmenityUseCase,
@@ -539,6 +549,8 @@ import {
 
   PrismaAmenityRepository,
 
+  PrismaRoomTypeRepository,
+
   PrismaSessionRepository,
 
   UuidIdGenerator,
@@ -786,6 +798,8 @@ const commerceSettingsRepository = new PrismaCommerceSettingsRepository();
 
 const amenityRepository = new PrismaAmenityRepository();
 
+const roomTypeRepository = new PrismaRoomTypeRepository();
+
 const sessionRepository = new PrismaSessionRepository();
 
 const permissionChecker = new PermissionChecker();
@@ -941,6 +955,58 @@ export const removeUnitUseCase = new RemoveUnitUseCase(
 );
 
 export const getUnitUseCase = new GetUnitUseCase(
+
+  propertyRepository,
+
+  permissionChecker,
+
+);
+
+export const createRoomTypeUseCase = new CreateRoomTypeUseCase(
+
+  roomTypeRepository,
+
+  propertyRepository,
+
+  permissionChecker,
+
+  idGenerator,
+
+);
+
+export const listRoomTypesUseCase = new ListRoomTypesUseCase(
+
+  roomTypeRepository,
+
+  propertyRepository,
+
+  permissionChecker,
+
+);
+
+export const getRoomTypeUseCase = new GetRoomTypeUseCase(
+
+  roomTypeRepository,
+
+  propertyRepository,
+
+  permissionChecker,
+
+);
+
+export const updateRoomTypeUseCase = new UpdateRoomTypeUseCase(
+
+  roomTypeRepository,
+
+  propertyRepository,
+
+  permissionChecker,
+
+);
+
+export const deactivateRoomTypeUseCase = new DeactivateRoomTypeUseCase(
+
+  roomTypeRepository,
 
   propertyRepository,
 

@@ -1,4 +1,5 @@
 import type { Property } from "../domain/Property";
+import type { RoomType } from "../domain/RoomType";
 import type {
   PaginatedResult,
   PaginationParams,
@@ -33,4 +34,29 @@ export interface AmenityRecord {
 export interface IAmenityRepository {
   findAll(tenantId: string): Promise<AmenityRecord[]>;
   saveCustom(tenantId: string, name: string, icon?: string, category?: string): Promise<AmenityRecord>;
+}
+
+export interface ListRoomTypesOptions {
+  /** When true, include soft-deleted RoomTypes. Default: false. */
+  includeDeleted?: boolean;
+}
+
+export interface IRoomTypeRepository {
+  save(roomType: RoomType): Promise<void>;
+  findById(
+    tenantId: string,
+    propertyId: string,
+    roomTypeId: string,
+  ): Promise<RoomType | null>;
+  listByProperty(
+    tenantId: string,
+    propertyId: string,
+    options?: ListRoomTypesOptions,
+  ): Promise<RoomType[]>;
+  /** Non-deleted Units currently linked to this RoomType. */
+  countLinkedUnits(
+    tenantId: string,
+    propertyId: string,
+    roomTypeId: string,
+  ): Promise<number>;
 }

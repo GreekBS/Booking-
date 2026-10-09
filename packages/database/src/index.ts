@@ -39,6 +39,7 @@ export {
 export { PrismaTenantRepository } from "./repositories/TenantRepository";
 export { PrismaPropertyRepository } from "./repositories/PropertyRepository";
 export { PrismaAmenityRepository } from "./repositories/AmenityRepository";
+export { PrismaRoomTypeRepository } from "./repositories/RoomTypeRepository";
 export { PrismaTenantDashboardOverviewQuery } from "./repositories/commerce/TenantDashboardOverviewQuery";
 export { PrismaAuditLogRepository } from "./repositories/AuditLogRepository";
 export { PrismaLeadRepository } from "./repositories/LeadRepository";

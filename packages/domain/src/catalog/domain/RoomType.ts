@@ -128,6 +128,14 @@ export class RoomType extends Entity<RoomTypeProps> {
     return this.props.deletedAt;
   }
 
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   get isActive(): boolean {
     return this.props.status === "active" && this.props.deletedAt === null;
   }
@@ -180,6 +188,85 @@ export class RoomType extends Entity<RoomTypeProps> {
 
   static reconstitute(props: RoomTypeProps): RoomType {
     return new RoomType(props);
+  }
+
+  update(
+    details: Partial<
+      Pick<
+        RoomTypeProps,
+        | "name"
+        | "code"
+        | "description"
+        | "maxGuests"
+        | "maxAdults"
+        | "maxChildren"
+        | "status"
+        | "sortOrder"
+      >
+    >,
+  ): void {
+    if (this.props.deletedAt) {
+      throw new ValidationError("Cannot update a deactivated RoomType");
+    }
+
+    if (details.name !== undefined) {
+      const name = details.name.trim();
+      if (name.length === 0) {
+        throw new ValidationError("RoomType.name is required");
+      }
+      if (name.length > 255) {
+        throw new ValidationError("RoomType.name must be at most 255 characters");
+      }
+      this.props.name = name;
+    }
+
+    if (details.code !== undefined) {
+      const code = normalizeOptionalCode(details.code);
+      if (code && code.length > 64) {
+        throw new ValidationError("RoomType.code must be at most 64 characters");
+      }
+      this.props.code = code;
+    }
+
+    if (details.description !== undefined) {
+      const description = details.description?.trim()
+        ? details.description.trim()
+        : null;
+      this.props.description = description;
+    }
+
+    const maxGuests = details.maxGuests ?? this.props.maxGuests;
+    const maxAdults =
+      details.maxAdults !== undefined ? details.maxAdults : this.props.maxAdults;
+    const maxChildren =
+      details.maxChildren !== undefined
+        ? details.maxChildren
+        : this.props.maxChildren;
+    assertOccupancyInvariants({ maxGuests, maxAdults, maxChildren });
+    this.props.maxGuests = maxGuests;
+    this.props.maxAdults = maxAdults;
+    this.props.maxChildren = maxChildren;
+
+    if (details.status !== undefined) {
+      this.props.status = details.status;
+    }
+
+    if (details.sortOrder !== undefined) {
+      if (!Number.isInteger(details.sortOrder) || details.sortOrder < 0) {
+        throw new ValidationError("RoomType.sortOrder must be a non-negative integer");
+      }
+      this.props.sortOrder = details.sortOrder;
+    }
+
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Safe deactivate: soft-delete + inactive. Units may still reference this id
+   * (FK ON DELETE RESTRICT blocks hard deletes — never hard-delete here).
+   */
+  deactivate(): void {
+    this.softDelete();
   }
 
   softDelete(): void {

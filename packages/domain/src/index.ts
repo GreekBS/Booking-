@@ -135,6 +135,8 @@ export * from "./catalog/application/PropertyQueryUseCases";
 
 export * from "./catalog/application/UnitUseCases";
 
+export * from "./catalog/application/RoomTypeUseCases";
+
 export * from "./catalog/application/AmenityUseCases";
 
 export * from "./commerce/index";
