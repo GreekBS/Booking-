@@ -4,6 +4,7 @@ import {
 } from "@hcp/validators";
 import { Result } from "../../shared/kernel/Result";
 import {
+  DomainError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
@@ -40,6 +41,14 @@ function parseDraftOrThrow(input: unknown): WebsiteDraftContent {
       error instanceof Error ? error.message : "Invalid website draft content";
     throw new ValidationError(message);
   }
+}
+
+/** Map persistence failures without leaking Prisma / DB driver details. */
+function failClosed(error: unknown): Result<never, Error> {
+  if (error instanceof DomainError) {
+    return Result.fail(error);
+  }
+  return Result.fail(new ValidationError("Website operation failed"));
 }
 
 export interface EnsureWebsiteCommand {
@@ -122,9 +131,7 @@ export class EnsureWebsiteUseCase {
       await this.unitOfWork.saveDraft({ website, draft });
       return Result.ok({ website, draft });
     } catch (error) {
-      return Result.fail(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      return failClosed(error);
     }
   }
 }
@@ -188,9 +195,7 @@ export class GetWebsiteUseCase {
 
       return Result.ok({ website, draft, published });
     } catch (error) {
-      return Result.fail(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      return failClosed(error);
     }
   }
 }
@@ -256,17 +261,12 @@ export class SaveWebsiteDraftUseCase {
           seo: parsed.seo,
         });
       } else {
-        // Published draft pointer missing or frozen → allocate a new draft row
-        // so live published content stays untouched (draft/published coexistence).
-        const versionNumber = await this.versions.nextVersionNumber(
-          command.tenantId,
-          website.id,
-        );
+        // New draft row — provisional versionNumber; UoW assigns under FOR UPDATE.
         draft = WebsiteVersion.create({
           id: this.idGenerator.generate(),
           tenantId: command.tenantId,
           websiteId: website.id,
-          versionNumber,
+          versionNumber: 1,
           locale: parsed.locale,
           sections: parsed.sections,
           seo: parsed.seo,
@@ -278,9 +278,7 @@ export class SaveWebsiteDraftUseCase {
       await this.unitOfWork.saveDraft({ website, draft });
       return Result.ok({ website, draft });
     } catch (error) {
-      return Result.fail(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      return failClosed(error);
     }
   }
 }
@@ -330,9 +328,7 @@ export class UpdateWebsiteThemeUseCase {
       await this.websites.save(website);
       return Result.ok(website);
     } catch (error) {
-      return Result.fail(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      return failClosed(error);
     }
   }
 }
@@ -413,16 +409,12 @@ export class PublishWebsiteUseCase {
         themeId: website.themeId,
       });
 
-      // Prepare next draft row before mutating publish pointers.
-      const nextNumber = await this.versions.nextVersionNumber(
-        command.tenantId,
-        website.id,
-      );
+      // Provisional versionNumber — UoW assigns authoritative value after FOR UPDATE.
       const nextDraft = WebsiteVersion.create({
         id: this.idGenerator.generate(),
         tenantId: command.tenantId,
         websiteId: website.id,
-        versionNumber: nextNumber,
+        versionNumber: 1,
         locale: draft.locale,
         sections: draft.sections,
         seo: draft.seo,
@@ -459,9 +451,7 @@ export class PublishWebsiteUseCase {
 
       return Result.ok({ website, published: draft, draft: nextDraft });
     } catch (error) {
-      return Result.fail(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      return failClosed(error);
     }
   }
 }

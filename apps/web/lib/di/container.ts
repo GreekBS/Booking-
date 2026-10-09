@@ -294,6 +294,11 @@ import {
   CreateDirectBookingHoldUseCase,
   CreateDirectBookingBookUseCase,
 
+  EnsureWebsiteUseCase,
+  GetWebsiteUseCase,
+  SaveWebsiteDraftUseCase,
+  UpdateWebsiteThemeUseCase,
+
   GetTenantSettingsUseCase,
 
   UpdateTenantSettingsUseCase,
@@ -629,6 +634,10 @@ import {
   PrismaPublishableKeyRepository,
 
   PrismaDirectBookingIntegrationRepository,
+
+  PrismaWebsiteRepository,
+  PrismaWebsiteVersionRepository,
+  PrismaWebsiteUnitOfWork,
 
   PrismaCommerceSettingsRepository,
 
@@ -2421,6 +2430,41 @@ export const updateDirectBookingIntegrationStatusUseCase =
     directBookingIntegrationRepository,
     permissionChecker,
   );
+
+// ---------------------------------------------------------------------------
+// Website Builder A3 (repos + UoW; no public publish/DNS)
+// ---------------------------------------------------------------------------
+const websiteRepository = new PrismaWebsiteRepository();
+const websiteVersionRepository = new PrismaWebsiteVersionRepository();
+const websiteUnitOfWork = new PrismaWebsiteUnitOfWork();
+
+export const ensureWebsiteUseCase = new EnsureWebsiteUseCase(
+  websiteRepository,
+  websiteVersionRepository,
+  websiteUnitOfWork,
+  propertyRepository,
+  permissionChecker,
+  idGenerator,
+);
+
+export const getWebsiteUseCase = new GetWebsiteUseCase(
+  websiteRepository,
+  websiteVersionRepository,
+  permissionChecker,
+);
+
+export const saveWebsiteDraftUseCase = new SaveWebsiteDraftUseCase(
+  websiteRepository,
+  websiteVersionRepository,
+  websiteUnitOfWork,
+  permissionChecker,
+  idGenerator,
+);
+
+export const updateWebsiteThemeUseCase = new UpdateWebsiteThemeUseCase(
+  websiteRepository,
+  permissionChecker,
+);
 
 export const searchBookingsUseCase = new SearchBookingsUseCase(
   bookingRepository,

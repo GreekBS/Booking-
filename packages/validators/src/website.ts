@@ -272,3 +272,20 @@ export function parseWebsiteSections(input: unknown): WebsiteSection[] {
 export function parseWebsiteSeo(input: unknown): WebsiteSeo {
   return websiteSeoSchema.parse(input ?? {});
 }
+
+/** Admin API: ensure website (optional theme preselect). */
+export const ensureWebsiteBodySchema = z
+  .object({
+    themeId: websiteThemeIdSchema.optional(),
+  })
+  .strict();
+
+/** Admin API: update theme only. */
+export const updateWebsiteThemeBodySchema = z
+  .object({
+    themeId: websiteThemeIdSchema,
+  })
+  .strict();
+
+/** Admin API: save draft — same contract as domain content validation. */
+export const saveWebsiteDraftBodySchema = websiteDraftContentSchema;

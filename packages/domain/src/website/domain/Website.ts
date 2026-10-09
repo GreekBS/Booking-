@@ -30,8 +30,15 @@ export interface CreateWebsiteInput {
 }
 
 export class Website extends AggregateRoot<WebsiteProps> {
+  /**
+   * Optimistic concurrency token: `updatedAt` at last load/create.
+   * Mutations bump `props.updatedAt` for the write; CAS uses this token.
+   */
+  private _expectedUpdatedAt: Date;
+
   private constructor(props: WebsiteProps) {
     super(props);
+    this._expectedUpdatedAt = props.updatedAt;
   }
 
   get tenantId(): string {
@@ -68,6 +75,16 @@ export class Website extends AggregateRoot<WebsiteProps> {
 
   get updatedAt(): Date {
     return this.props.updatedAt;
+  }
+
+  /** Value that must still be stored for a concurrent write to succeed. */
+  get expectedUpdatedAt(): Date {
+    return this._expectedUpdatedAt;
+  }
+
+  /** Call after a successful persistence write when reusing the aggregate. */
+  acknowledgePersisted(): void {
+    this._expectedUpdatedAt = this.props.updatedAt;
   }
 
   static create(input: CreateWebsiteInput): Website {

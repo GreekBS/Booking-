@@ -163,6 +163,13 @@ export {
   PrismaDirectBookingIntegrationRepository,
   generateDirectBookingPublicKey,
 } from "./repositories/direct-booking/DirectBookingIntegrationRepository";
+export {
+  PrismaWebsiteRepository,
+  PrismaWebsiteVersionRepository,
+  PrismaWebsiteUnitOfWork,
+  createWebsiteReposInTransaction,
+  type WebsiteUnitOfWorkTransactionOptions,
+} from "./repositories/website/WebsiteRepositories";
 export { PrismaCatalogQueryAdapter } from "./adapters/CatalogQueryAdapter";
 export { PrismaStorefrontCatalogAdapter } from "./adapters/StorefrontCatalogAdapter";
 export { PrismaDirectBookingCatalogAdapter } from "./adapters/DirectBookingCatalogAdapter";

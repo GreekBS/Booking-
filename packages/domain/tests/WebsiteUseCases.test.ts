@@ -103,10 +103,28 @@ function makeRepos() {
 
   const unitOfWork: IWebsiteUnitOfWork = {
     async saveDraft(snapshot: SaveWebsiteDraftSnapshot) {
+      const existing = await versionRepo.findById(
+        snapshot.draft.tenantId,
+        snapshot.draft.id,
+      );
+      if (!existing) {
+        snapshot.draft.assignVersionNumber(
+          await versionRepo.nextVersionNumber(
+            snapshot.website.tenantId,
+            snapshot.website.id,
+          ),
+        );
+      }
       await websiteRepo.save(snapshot.website);
       await versionRepo.save(snapshot.draft);
     },
     async publish(snapshot: PublishWebsiteSnapshot) {
+      snapshot.nextDraft.assignVersionNumber(
+        await versionRepo.nextVersionNumber(
+          snapshot.website.tenantId,
+          snapshot.website.id,
+        ),
+      );
       await websiteRepo.save(snapshot.website);
       await versionRepo.save(snapshot.published);
       if (snapshot.superseded) {

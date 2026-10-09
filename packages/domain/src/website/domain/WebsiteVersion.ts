@@ -116,6 +116,21 @@ export class WebsiteVersion extends Entity<WebsiteVersionProps> {
   }
 
   /**
+   * Assign authoritative version number under a persistence lock.
+   * Use cases may create drafts with a provisional number; UoW overwrites
+   * before insert so concurrent publishes cannot collide.
+   */
+  assignVersionNumber(versionNumber: number): void {
+    if (this.props.state !== "draft") {
+      throw new ValidationError("Only draft versions can change versionNumber");
+    }
+    if (!Number.isInteger(versionNumber) || versionNumber < 1) {
+      throw new ValidationError("versionNumber must be a positive integer");
+    }
+    this.props.versionNumber = versionNumber;
+  }
+
+  /**
    * Replace draft snapshot content. Rejects mutation of published/superseded rows
    * so publish history stays immutable.
    */

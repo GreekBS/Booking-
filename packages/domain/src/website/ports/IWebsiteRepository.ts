@@ -46,7 +46,9 @@ export interface PublishWebsiteSnapshot {
  * Persistence boundary for Website Builder transitions.
  *
  * A3 Prisma adapters MUST:
- * - Apply `publish` in one DB transaction (website pointers + version rows).
+ * - Apply `publish` / `saveDraft` in one DB transaction (website pointers + versions).
+ * - Lock the website row and assign `nextDraft.versionNumber` inside that TX
+ *   (never trust a pre-transaction `nextVersionNumber` read).
  * - Clear draft/published pointers before deleting referenced versions (RESTRICT).
  * - Rely on A1 composite FKs for tenant/website/version integrity.
  *
