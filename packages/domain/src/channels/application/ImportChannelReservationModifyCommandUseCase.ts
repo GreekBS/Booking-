@@ -82,10 +82,17 @@ export class ImportChannelReservationModifyCommandUseCase {
         externalReservationId: command.existingLink.externalReservationId,
       });
 
+      // BFS-1: isolated channel compatibility path — keeps pre-BFS RatePlan
+      // reprice until BFS-7 OTA financial policy. Operator stay-change does not
+      // use this path (defaults to preserve_agreed_total).
       const commitResult = await this.orchestrator.commitStayChange(
         booking,
         draft,
-        origin,
+        currentQuote,
+        {
+          mutationOrigin: origin,
+          commercial: { source: "channel_compat_reprice" },
+        },
       );
       if (commitResult.isFailure) {
         const err = commitResult.getError();

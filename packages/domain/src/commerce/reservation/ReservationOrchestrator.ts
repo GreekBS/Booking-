@@ -13,6 +13,7 @@ import type { IIdGenerator } from "../../shared/ports/IIdGenerator";
 import type {
   PrepareReservationCreateParams,
   PreparedReservationCreate,
+  StayChangeCommercialMode,
   StayChangeDraft,
   StayChangePreview,
   StayChangeCommitResult,
@@ -222,15 +223,30 @@ export class ReservationOrchestrator {
     booking: Booking,
     draft: StayChangeDraft,
     currentQuote: Quote,
+    commercial?: StayChangeCommercialMode,
   ): Promise<Result<StayChangePreview, Error>> {
-    return this.mutationEngine.previewStayChange(booking, draft, currentQuote);
+    return this.mutationEngine.previewStayChange(
+      booking,
+      draft,
+      currentQuote,
+      commercial,
+    );
   }
 
   commitStayChange(
     booking: Booking,
     draft: StayChangeDraft,
-    mutationOrigin?: MutationOrigin | null,
+    currentQuote: Quote,
+    options?: {
+      mutationOrigin?: MutationOrigin | null;
+      commercial?: StayChangeCommercialMode;
+    },
   ): Promise<Result<StayChangeCommitResult, Error>> {
-    return this.mutationEngine.commitStayChange(booking, draft, mutationOrigin);
+    return this.mutationEngine.commitStayChange(
+      booking,
+      draft,
+      currentQuote,
+      options,
+    );
   }
 }

@@ -101,11 +101,19 @@ export const createBookingSchema = z.object({
   guestId: z.string().uuid().nullable().optional(),
 });
 
+export const bookingPricingIntentSchema = z.enum([
+  "preserve_agreed_total",
+  "recalculate_from_rate_plan",
+  "manual_total",
+]);
+
 export const changeBookingStaySchema = z.object({
   unitId: z.string().uuid(),
   checkIn: localDateSchema,
   checkOut: localDateSchema,
   guestCount: z.number().int().min(1).max(50),
+  /** Optional; server defaults to preserve_agreed_total and rejects unsafe intents. */
+  pricingIntent: bookingPricingIntentSchema.optional(),
 });
 
 export const previewStayPricingSchema = z

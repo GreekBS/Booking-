@@ -54,6 +54,15 @@ export type QuotePricingMode =
   | "imported_csv"
   | "operator_entered";
 
+/**
+ * Explicit commercial intent for booking modifications (BFS).
+ * Stay-change defaults to preserve_agreed_total; recalculate/manual are gated.
+ */
+export type BookingPricingIntent =
+  | "preserve_agreed_total"
+  | "recalculate_from_rate_plan"
+  | "manual_total";
+
 export interface ActiveCalendarBlock {
   blockType: CalendarBlockType;
   status: CalendarBlockStatus;

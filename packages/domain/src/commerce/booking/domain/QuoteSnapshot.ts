@@ -2,6 +2,27 @@ import { ValueObject } from "../../../shared/kernel/ValueObject";
 import type { NightlyLineItem } from "../../pricing/PricingCalculator";
 import type { QuotePricingMode } from "../../shared/types/CommerceTypes";
 
+/**
+ * Immutable commercial evidence from the prior agreed quote when stay geometry
+ * changes and nightly lines cannot be carried forward without inventing prices.
+ * Stored in Quote.snapshot JSON — no schema migration.
+ */
+export interface PreservedCommercialEvidence {
+  previousQuoteId: string;
+  previousSnapshotId: string;
+  unitId: string;
+  checkIn: string;
+  checkOut: string;
+  lineItems: NightlyLineItem[];
+  subtotalAmount: string;
+  feesAmount: string;
+  taxesAmount: string;
+  totalAmount: string;
+  pricingMode: QuotePricingMode;
+  /** Why the active snapshot uses a geometry placeholder instead of prior nights. */
+  reason: "stay_geometry_changed";
+}
+
 export interface QuoteSnapshotProps {
   version: number;
   checkIn: string;
@@ -18,6 +39,11 @@ export interface QuoteSnapshotProps {
    * Commercial provenance. Optional for v1 snapshots — readers default to `talos_calculated`.
    */
   pricingMode?: QuotePricingMode;
+  /**
+   * Prior agreed breakdown retained when dates change (BFS-1).
+   * Active lineItems may then be a non-redistributed geometry placeholder.
+   */
+  preservedCommercialEvidence?: PreservedCommercialEvidence;
 }
 
 export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
@@ -74,6 +100,12 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
     return this.props.pricingMode ?? "talos_calculated";
   }
 
+  get preservedCommercialEvidence(): PreservedCommercialEvidence | null {
+    return this.props.preservedCommercialEvidence
+      ? clonePreservedEvidence(this.props.preservedCommercialEvidence)
+      : null;
+  }
+
   static create(props: QuoteSnapshotProps): QuoteSnapshot {
     const lineItems = Object.freeze(
       props.lineItems.map((item) => Object.freeze({ ...item })),
@@ -83,6 +115,9 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
       lineItems,
       quotedAt: new Date(props.quotedAt),
       pricingMode: props.pricingMode,
+      preservedCommercialEvidence: props.preservedCommercialEvidence
+        ? clonePreservedEvidence(props.preservedCommercialEvidence)
+        : undefined,
     });
   }
 
@@ -100,6 +135,22 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
       totalAmount: this.totalAmount,
       quotedAt: new Date(this.quotedAt),
       pricingMode: this.pricingMode,
+      ...(this.props.preservedCommercialEvidence
+        ? {
+            preservedCommercialEvidence: clonePreservedEvidence(
+              this.props.preservedCommercialEvidence,
+            ),
+          }
+        : {}),
     };
   }
+}
+
+function clonePreservedEvidence(
+  evidence: PreservedCommercialEvidence,
+): PreservedCommercialEvidence {
+  return {
+    ...evidence,
+    lineItems: evidence.lineItems.map((item) => ({ ...item })),
+  };
 }

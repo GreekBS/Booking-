@@ -1,6 +1,10 @@
 import type { ChannelSource } from "../../channels/types/ChannelTypes";
 import type { ActorContext } from "../../shared/services/PermissionChecker";
-import type { ConfirmationMode, GuestDetailsProps } from "../shared/types/CommerceTypes";
+import type {
+  BookingPricingIntent,
+  ConfirmationMode,
+  GuestDetailsProps,
+} from "../shared/types/CommerceTypes";
 import type { AvailabilityReason } from "../shared/types/CommerceTypes";
 import type { Hold } from "../booking/domain/Hold";
 import type { Quote } from "../booking/domain/Quote";
@@ -12,7 +16,21 @@ export interface StayChangeDraft {
   checkIn: string;
   checkOut: string;
   guestCount: number;
+  /**
+   * Operator stay-change commercial intent. Defaults to preserve_agreed_total.
+   * Ignored for channel_compat_reprice commits.
+   */
+  pricingIntent?: BookingPricingIntent;
 }
+
+/**
+ * Commercial policy for StayMutationEngine (BFS-1).
+ * - operator: enforce pricingIntent (default preserve; reject recalculate/manual until later BFS).
+ * - channel_compat_reprice: isolated OTA path keeping pre-BFS RatePlan reprice until BFS-7.
+ */
+export type StayChangeCommercialMode =
+  | { source: "operator"; pricingIntent?: BookingPricingIntent }
+  | { source: "channel_compat_reprice" };
 
 export interface ApplyStayChangeCommand extends StayChangeDraft {
   propertyId: string;
@@ -34,6 +52,8 @@ export interface StayChangePreview {
   current: StayChangePreviewTotals;
   proposed: StayChangePreviewTotals | null;
   priceDelta: { amount: string; currency: string } | null;
+  /** Effective commercial intent applied to this preview (operator path). */
+  pricingIntent?: BookingPricingIntent;
 }
 
 export interface StayChangeCommitResult {

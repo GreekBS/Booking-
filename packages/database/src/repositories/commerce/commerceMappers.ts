@@ -76,7 +76,57 @@ export function quoteToDomain(record: PrismaQuote): Quote {
     totalAmount: string;
     quotedAt: string;
     pricingMode?: "talos_calculated" | "imported_csv" | "operator_entered";
+    preservedCommercialEvidence?: {
+      previousQuoteId: string;
+      previousSnapshotId: string;
+      unitId: string;
+      checkIn: string;
+      checkOut: string;
+      lineItems: Array<{
+        date: string;
+        baseAmount: string;
+        adjustedAmount: string;
+        currency: string;
+      }>;
+      subtotalAmount: string;
+      feesAmount: string;
+      taxesAmount: string;
+      totalAmount: string;
+      pricingMode: "talos_calculated" | "imported_csv" | "operator_entered";
+      reason: "stay_geometry_changed";
+    };
   };
+
+  const pricingMode =
+    "pricingMode" in raw &&
+    (raw.pricingMode === "talos_calculated" ||
+      raw.pricingMode === "imported_csv" ||
+      raw.pricingMode === "operator_entered")
+      ? raw.pricingMode
+      : undefined;
+
+  const evidence = raw.preservedCommercialEvidence;
+  const preservedCommercialEvidence =
+    evidence &&
+    evidence.reason === "stay_geometry_changed" &&
+    (evidence.pricingMode === "talos_calculated" ||
+      evidence.pricingMode === "imported_csv" ||
+      evidence.pricingMode === "operator_entered")
+      ? {
+          previousQuoteId: evidence.previousQuoteId,
+          previousSnapshotId: evidence.previousSnapshotId,
+          unitId: evidence.unitId,
+          checkIn: evidence.checkIn,
+          checkOut: evidence.checkOut,
+          lineItems: evidence.lineItems,
+          subtotalAmount: evidence.subtotalAmount,
+          feesAmount: evidence.feesAmount,
+          taxesAmount: evidence.taxesAmount,
+          totalAmount: evidence.totalAmount,
+          pricingMode: evidence.pricingMode,
+          reason: "stay_geometry_changed" as const,
+        }
+      : undefined;
 
   return Quote.reconstitute({
     id: record.id,
@@ -98,13 +148,8 @@ export function quoteToDomain(record: PrismaQuote): Quote {
       totalAmount: raw.totalAmount,
       quotedAt: new Date(raw.quotedAt),
       // Optional v2 field — missing on legacy snapshots → talos_calculated via getter.
-      pricingMode:
-        "pricingMode" in raw &&
-        (raw.pricingMode === "talos_calculated" ||
-          raw.pricingMode === "imported_csv" ||
-          raw.pricingMode === "operator_entered")
-          ? raw.pricingMode
-          : undefined,
+      pricingMode,
+      preservedCommercialEvidence,
     }),
     expiresAt: record.expiresAt,
     createdAt: record.createdAt,

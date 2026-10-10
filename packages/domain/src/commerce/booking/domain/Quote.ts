@@ -1,7 +1,10 @@
 import { AggregateRoot } from "../../../shared/kernel/Entity";
 import { ConflictError, ValidationError } from "../../../shared/errors/DomainError";
 import { Money } from "../../shared/value-objects/Money";
-import { QuoteSnapshot } from "./QuoteSnapshot";
+import {
+  QuoteSnapshot,
+  type PreservedCommercialEvidence,
+} from "./QuoteSnapshot";
 import type { Hold } from "./Hold";
 import type { Booking } from "./Booking";
 import type { PricingResult } from "../../pricing/PricingCalculator";
@@ -41,6 +44,17 @@ export interface CreateQuoteForStayChangeProps {
   propertyTimezone: string;
   feesAmount?: string;
   taxesAmount?: string;
+}
+
+export interface CreateQuoteForStayChangePreservingTotalProps {
+  id: string;
+  snapshotId: string;
+  booking: Booking;
+  command: ApplyStayChangeCommand;
+  /** Authoritative current quote — total + pricingMode are preserved. */
+  currentQuote: Quote;
+  propertyTimezone: string;
+  quotedAt?: Date;
 }
 
 /**
@@ -248,6 +262,143 @@ export class Quote extends AggregateRoot<QuoteProps> {
       totalAmount: totalWithFees.amount,
       quotedAt,
       pricingMode: "talos_calculated",
+    });
+
+    const quote = new Quote({
+      id: props.id,
+      tenantId: booking.tenantId,
+      holdId: booking.holdId,
+      unitId: command.unitId,
+      propertyId: command.propertyId,
+      snapshotId: props.snapshotId,
+      snapshot,
+      expiresAt: new Date(quotedAt.getTime() + STAY_CHANGE_QUOTE_TTL_MS),
+      createdAt: quotedAt,
+    });
+
+    quote.addDomainEvent(
+      new QuoteCreatedEvent(quote.id, quote.tenantId, {
+        holdId: quote.holdId,
+        unitId: quote.unitId,
+        propertyId: quote.propertyId,
+        totalAmount: snapshot.totalAmount,
+        currency: snapshot.currency,
+      }),
+    );
+
+    return quote;
+  }
+
+  /**
+   * Stay-change quote that preserves the booking's agreed commercial agreement (BFS-1).
+   * Does not invoke RatePlan or invent nightly/tax/fee amounts.
+   *
+   * - Always preserves total, currency, pricingMode, subtotal, fees, taxes.
+   * - Same stay dates: carries forward nightly line items (and thus discount display).
+   * - Changed stay dates: does not redistribute the total across nights; keeps a
+   *   non-redistributed geometry placeholder for subtotal and stores the prior
+   *   breakdown in preservedCommercialEvidence.
+   */
+  static createForStayChangePreservingTotal(
+    props: CreateQuoteForStayChangePreservingTotalProps,
+  ): Quote {
+    const { booking, command, currentQuote } = props;
+    const quotedAt = props.quotedAt ?? new Date();
+    const current = currentQuote.snapshot;
+    const currency = current.currency.trim().toUpperCase();
+    const total = Money.create(current.totalAmount, currency);
+    const subtotal = Money.create(current.subtotalAmount, currency);
+    const fees = Money.create(current.feesAmount, currency);
+    const taxes = Money.create(current.taxesAmount, currency);
+
+    if (total.isZero() || total.isNegative()) {
+      throw new ValidationError(
+        "Cannot preserve a non-positive agreed booking total",
+      );
+    }
+
+    const pricingMode = current.pricingMode;
+    if (
+      pricingMode !== "imported_csv" &&
+      pricingMode !== "operator_entered" &&
+      pricingMode !== "talos_calculated"
+    ) {
+      throw new ValidationError(
+        "Cannot preserve booking total with unsupported pricing mode",
+      );
+    }
+
+    // Fail closed: fees/taxes must not exceed the agreed total.
+    // Note: subtotal + fees + taxes may exceed total when LOS/other discounts
+    // reduced the commercial total (discounts are not a separate snapshot field).
+    if (subtotal.isNegative() || fees.isNegative() || taxes.isNegative()) {
+      throw new ValidationError(
+        "Agreed booking commercial components must not be negative",
+      );
+    }
+    const afterFeesTaxes = total.subtract(fees).subtract(taxes);
+    if (afterFeesTaxes.isNegative()) {
+      throw new ValidationError(
+        "Agreed booking total is inconsistent with recorded fees and taxes",
+      );
+    }
+
+    const datesUnchanged =
+      current.checkIn === command.checkIn &&
+      current.checkOut === command.checkOut;
+
+    let lineItems: Array<{
+      date: string;
+      baseAmount: string;
+      adjustedAmount: string;
+      currency: string;
+    }>;
+    let preservedCommercialEvidence: PreservedCommercialEvidence | undefined;
+
+    if (datesUnchanged && current.lineItems.length > 0) {
+      // Guest-only / unit-only: keep the original commercial nightly breakdown.
+      lineItems = current.lineItems.map((item) => ({ ...item }));
+    } else {
+      // Geometry changed: do not invent per-night prices. Placeholder carries
+      // the preserved subtotal only; fees/taxes remain explicit snapshot fields.
+      lineItems = [
+        {
+          date: command.checkIn,
+          baseAmount: subtotal.amount,
+          adjustedAmount: subtotal.amount,
+          currency,
+        },
+      ];
+      preservedCommercialEvidence = {
+        previousQuoteId: currentQuote.id,
+        previousSnapshotId: currentQuote.snapshotId,
+        unitId: currentQuote.unitId,
+        checkIn: current.checkIn,
+        checkOut: current.checkOut,
+        lineItems: current.lineItems.map((item) => ({ ...item })),
+        subtotalAmount: current.subtotalAmount,
+        feesAmount: current.feesAmount,
+        taxesAmount: current.taxesAmount,
+        totalAmount: current.totalAmount,
+        pricingMode,
+        reason: "stay_geometry_changed",
+      };
+    }
+
+    const snapshot = QuoteSnapshot.create({
+      version: SNAPSHOT_VERSION,
+      checkIn: command.checkIn,
+      checkOut: command.checkOut,
+      propertyTimezone: props.propertyTimezone,
+      currency,
+      lineItems,
+      subtotalAmount: subtotal.amount,
+      feesAmount: fees.amount,
+      taxesAmount: taxes.amount,
+      totalAmount: total.amount,
+      quotedAt,
+      pricingMode,
+      preservedCommercialEvidence,
     });
 
     const quote = new Quote({

@@ -13,6 +13,8 @@ import { ForbiddenError, ValidationError } from "../../shared/errors/DomainError
 import { PERMISSIONS } from "@hcp/permissions";
 import { assertCommercePropertyAccess } from "./commerceAccess";
 import { mutationOriginOperator } from "../../shared/types/MutationOrigin";
+import type { BookingPricingIntent } from "../shared/types/CommerceTypes";
+import { Money } from "../shared/value-objects/Money";
 
 export interface ChangeBookingStayCommand extends StayChangeDraft {
   tenantId: string;
@@ -47,7 +49,14 @@ export class ChangeBookingStayUseCase {
         return Result.fail(new ValidationError("Quote not found"));
       }
 
-      return this.orchestrator.previewStayChange(booking.getValue(), command, currentQuote);
+      const pricingIntent = resolveCommandIntent(command.pricingIntent);
+
+      return this.orchestrator.previewStayChange(
+        booking.getValue(),
+        command,
+        currentQuote,
+        { source: "operator", pricingIntent },
+      );
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
@@ -65,33 +74,76 @@ export class ChangeBookingStayUseCase {
       }
 
       const booking = bookingResult.getValue();
+      const currentQuote = await this.quoteRepository.findById(
+        booking.quoteId,
+        command.tenantId,
+      );
+      if (!currentQuote) {
+        return Result.fail(new ValidationError("Quote not found"));
+      }
+
+      const previousQuoteId = currentQuote.id;
+      const previousTotal = currentQuote.snapshot.totalAmount;
+      const currency = currentQuote.snapshot.currency;
+      const previousStay = {
+        unitId: booking.unitId,
+        checkIn: booking.stayPeriod.checkIn.value,
+        checkOut: booking.stayPeriod.checkOut.value,
+        guestCount: booking.guestCount.value,
+      };
+
+      const pricingIntent = resolveCommandIntent(command.pricingIntent);
+
       const commitResult = await this.orchestrator.commitStayChange(
         booking,
         command,
-        mutationOriginOperator(),
+        currentQuote,
+        {
+          mutationOrigin: mutationOriginOperator(),
+          commercial: { source: "operator", pricingIntent },
+        },
       );
       if (commitResult.isFailure) {
         return Result.fail(commitResult.getError());
       }
 
       const { booking: updatedBooking, quote } = commitResult.getValue();
-      await this.commerceFlowRepository.saveStayChange(quote, updatedBooking);
+      const newTotal = quote.snapshot.totalAmount;
+      const delta = Money.create(newTotal, currency).subtract(
+        Money.create(previousTotal, currency),
+      );
 
-      await this.auditLogRepository.append({
-        tenantId: command.tenantId,
-        actorId: actor.userId,
-        action: "booking.stay_changed",
-        resourceType: "Booking",
-        resourceId: updatedBooking.id,
-        metadata: {
-          unitId: command.unitId,
-          checkIn: command.checkIn,
-          checkOut: command.checkOut,
-          guestCount: command.guestCount,
-          quoteId: quote.id,
+      await this.commerceFlowRepository.runInTenantTransaction(
+        command.tenantId,
+        async () => {
+          await this.commerceFlowRepository.saveStayChange(quote, updatedBooking);
+          await this.auditLogRepository.append({
+            tenantId: command.tenantId,
+            actorId: actor.userId,
+            action: "booking.stay_changed",
+            resourceType: "Booking",
+            resourceId: updatedBooking.id,
+            metadata: {
+              bookingId: updatedBooking.id,
+              previousQuoteId,
+              newQuoteId: quote.id,
+              previousTotalAmount: previousTotal,
+              newTotalAmount: newTotal,
+              currency,
+              financialDelta: delta.amount,
+              pricingIntent,
+              previousStay,
+              newStay: {
+                unitId: command.unitId,
+                checkIn: command.checkIn,
+                checkOut: command.checkOut,
+                guestCount: command.guestCount,
+              },
+            },
+            ipAddress: audit?.ipAddress ?? null,
+          });
         },
-        ipAddress: audit?.ipAddress ?? null,
-      });
+      );
 
       return Result.ok(updatedBooking);
     } catch (error) {
@@ -129,4 +181,10 @@ export class ChangeBookingStayUseCase {
 
     return Result.ok(booking);
   }
+}
+
+function resolveCommandIntent(
+  intent: BookingPricingIntent | undefined,
+): BookingPricingIntent {
+  return intent ?? "preserve_agreed_total";
 }

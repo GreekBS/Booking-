@@ -32,6 +32,16 @@ export interface CreateQuoteFromFixedTotalParams {
   quotedAt?: Date;
 }
 
+export interface CreateQuoteForStayChangePreservingTotalParams {
+  id: string;
+  snapshotId: string;
+  booking: Booking;
+  command: ApplyStayChangeCommand;
+  currentQuote: Quote;
+  propertyTimezone: string;
+  quotedAt?: Date;
+}
+
 export class QuoteFactory {
   createFromHold(params: CreateQuoteFromHoldParams): Quote {
     return Quote.create({
@@ -51,6 +61,20 @@ export class QuoteFactory {
       command: params.command,
       pricing: params.pricing,
       propertyTimezone: params.propertyTimezone,
+    });
+  }
+
+  createForStayChangePreservingTotal(
+    params: CreateQuoteForStayChangePreservingTotalParams,
+  ): Quote {
+    return Quote.createForStayChangePreservingTotal({
+      id: params.id,
+      snapshotId: params.snapshotId,
+      booking: params.booking,
+      command: params.command,
+      currentQuote: params.currentQuote,
+      propertyTimezone: params.propertyTimezone,
+      quotedAt: params.quotedAt,
     });
   }
 
