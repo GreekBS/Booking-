@@ -74,9 +74,13 @@ function actionSuccessLabel(action: ManualAvailabilityAction): string {
 }
 
 function defaultUnitId(units: RackUnit[], selectedUnitId: string | null): string {
-  if (units.length === 1) return units[0]!.unitId;
-  if (selectedUnitId && units.some((u) => u.unitId === selectedUnitId)) return selectedUnitId;
-  return units[0]?.unitId ?? "";
+  const bookable = units.filter((u) => u.status === "active");
+  const pool = bookable.length > 0 ? bookable : units;
+  if (pool.length === 1) return pool[0]!.unitId;
+  if (selectedUnitId && pool.some((u) => u.unitId === selectedUnitId)) {
+    return selectedUnitId;
+  }
+  return pool[0]?.unitId ?? "";
 }
 
 interface ManualDateEditFormProps {

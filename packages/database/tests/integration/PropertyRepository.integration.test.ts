@@ -89,6 +89,29 @@ runIntegration("PropertyRepository integration", () => {
     expect(event?.eventType).toBe("PropertyCreated");
   });
 
+  it("persists hotel Entire Property as inactive (C3-H1)", async () => {
+    const propertyId = "550e8400-e29b-41d4-a716-446655440030";
+    const unitId = "550e8400-e29b-41d4-a716-446655440031";
+
+    const property = Property.create({
+      id: propertyId,
+      tenantId,
+      name: "Hotel Safety",
+      slug: "hotel-safety-c3h1",
+      type: "hotel",
+      defaultUnit: { id: unitId, maxGuests: 2 },
+    });
+
+    expect(property.units[0]?.status).toBe("inactive");
+    await repository.save(property);
+
+    const found = await repository.findById(tenantId, propertyId);
+    expect(found?.type).toBe("hotel");
+    expect(found?.units).toHaveLength(1);
+    expect(found?.units[0]?.slug).toBe("entire-property");
+    expect(found?.units[0]?.status).toBe("inactive");
+  });
+
   it("persists exactly one outbox event on property archive", async () => {
     const propertyId = "550e8400-e29b-41d4-a716-446655440015";
     const property = Property.create({

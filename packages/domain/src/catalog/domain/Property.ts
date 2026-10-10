@@ -133,6 +133,11 @@ export class Property extends AggregateRoot<PropertyProps> {
     const now = new Date();
     const propertyId = props.id;
     const defaultUnitId = props.defaultUnit.id;
+    const propertyType = props.type ?? "villa";
+    // Hotels sell via RoomType-linked physical rooms. Keep the placeholder
+    // Unit for the ≥1-unit invariant, but do not auto-sell Entire Property.
+    const defaultUnitStatus =
+      propertyType === "hotel" ? ("inactive" as const) : ("active" as const);
 
     const unit = Unit.create({
       id: defaultUnitId,
@@ -143,6 +148,7 @@ export class Property extends AggregateRoot<PropertyProps> {
       maxGuests: props.defaultUnit?.maxGuests ?? 4,
       bedrooms: props.defaultUnit?.bedrooms ?? 1,
       bathrooms: props.defaultUnit?.bathrooms ?? 1,
+      status: defaultUnitStatus,
     });
 
     const property = new Property({
@@ -151,7 +157,7 @@ export class Property extends AggregateRoot<PropertyProps> {
       name: props.name.trim(),
       slug: props.slug,
       description: props.description ?? null,
-      type: props.type ?? "villa",
+      type: propertyType,
       status: "draft",
       timezone: props.timezone ?? "Europe/Athens",
       location: props.location ?? Location.empty(),

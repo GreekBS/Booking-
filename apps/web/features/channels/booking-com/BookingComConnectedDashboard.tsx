@@ -115,6 +115,8 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
       const activeUnitIds: string[] = [];
       for (const p of props.data ?? []) {
         for (const u of p.units) {
+          // Admin selector only — inactive Units are not sellable inventory.
+          if (u.status !== "active") continue;
           activeUnitIds.push(u.id);
           unitPropertyIds[u.id] = p.id;
         }

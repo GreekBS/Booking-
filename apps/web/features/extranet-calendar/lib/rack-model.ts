@@ -33,6 +33,7 @@ export function buildRackGroup(
       unitName: displayUnitName(u.name),
       propertyId: property.id,
       propertyName: property.name,
+      status: u.status,
     }));
 
   const catalogUnitIds = property.units.map((u) => u.id);

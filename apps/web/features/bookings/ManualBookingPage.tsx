@@ -86,7 +86,12 @@ export function ManualBookingPage() {
   const [guestSearchLoading, setGuestSearchLoading] = useState(false);
 
   const filteredUnits = useMemo(
-    () => units.filter((u) => !propertyId || u.propertyId === propertyId),
+    () =>
+      units.filter(
+        (u) =>
+          u.status === "active" &&
+          (!propertyId || u.propertyId === propertyId),
+      ),
     [units, propertyId],
   );
 

@@ -31,6 +31,8 @@ export interface CreateUnitProps {
   maxGuests: number;
   bedrooms?: number;
   bathrooms?: number;
+  /** Defaults to active. Hotels seed Entire Property as inactive (C3-H1). */
+  status?: UnitStatus;
   roomTypeId?: string | null;
   roomNumber?: string | null;
   floor?: string | null;
@@ -108,7 +110,7 @@ export class Unit extends Entity<UnitProps> {
       maxGuests: props.maxGuests,
       bedrooms: props.bedrooms ?? 1,
       bathrooms: props.bathrooms ?? 1,
-      status: "active",
+      status: props.status ?? "active",
       roomTypeId: props.roomTypeId ?? null,
       roomNumber: normalizeOptionalLabel(props.roomNumber),
       floor: normalizeOptionalLabel(props.floor),

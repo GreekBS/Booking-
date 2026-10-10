@@ -64,6 +64,8 @@ export interface RackUnit {
   unitName: string;
   propertyId: string;
   propertyName: string;
+  /** Catalog unit status — inactive units remain visible on the rack. */
+  status: string;
 }
 
 export interface RackPropertyGroup {

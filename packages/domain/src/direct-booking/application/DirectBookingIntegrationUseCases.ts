@@ -66,21 +66,24 @@ export class CreateDirectBookingIntegrationUseCase {
         return Result.fail(new NotFoundError("Property", command.propertyId));
       }
 
-      const activeUnits = property.units.filter((u) => u.deletedAt === null);
-      if (activeUnits.length === 0) {
+      // Commercial units only — inactive placeholders (e.g. hotel Entire Property) excluded.
+      const bookableUnits = property.units.filter(
+        (u) => u.deletedAt === null && u.status === "active",
+      );
+      if (bookableUnits.length === 0) {
         return Result.fail(new ValidationError("Property has no commercial units"));
       }
 
       let unitId = command.unitId;
       if (!unitId) {
-        if (activeUnits.length !== 1) {
+        if (bookableUnits.length !== 1) {
           return Result.fail(
             new ValidationError("unitId is required when property has multiple units"),
           );
         }
-        unitId = activeUnits[0]!.id;
+        unitId = bookableUnits[0]!.id;
       } else {
-        const match = activeUnits.find((u) => u.id === unitId);
+        const match = bookableUnits.find((u) => u.id === unitId);
         if (!match) {
           return Result.fail(new NotFoundError("Unit", unitId));
         }

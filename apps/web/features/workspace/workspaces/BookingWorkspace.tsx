@@ -16,11 +16,15 @@ export function BookingWorkspace({ target, active, units }: BookingWorkspaceProp
   const { closeWorkspace } = useWorkspace();
   const { refreshCalendars } = useCalendarActions();
 
-  const unitOptions = units.map((u) => ({
-    unitId: u.unitId,
-    unitName: displayUnitName(u.unitName),
-    propertyId: u.propertyId,
-  }));
+  // New stay assignment: active inventory only. Current booking unit stays
+  // readable via labels even when inactive.
+  const unitOptions = units
+    .filter((u) => u.status === "active" || u.unitId === target.unitId)
+    .map((u) => ({
+      unitId: u.unitId,
+      unitName: displayUnitName(u.unitName),
+      propertyId: u.propertyId,
+    }));
 
   return (
     <BookingWorkspaceView

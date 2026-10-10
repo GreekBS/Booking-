@@ -154,8 +154,13 @@ describe("BulkCreateUnitsUseCase C3", () => {
     expect(result.getValue().units[0]!.roomNumber).toBe("101");
     expect(result.getValue().units[19]!.roomNumber).toBe("120");
     expect(result.getValue().units[0]!.roomTypeId).toBe(RT);
-    // Default Entire Property remains
-    expect(deps.property.units.some((u) => u.slug === "entire-property")).toBe(
+    // Default Entire Property remains (inactive placeholder for hotels — C3-H1)
+    const placeholder = deps.property.units.find(
+      (u) => u.slug === "entire-property",
+    );
+    expect(placeholder).toBeDefined();
+    expect(placeholder!.status).toBe("inactive");
+    expect(result.getValue().units.every((u) => u.status === "active")).toBe(
       true,
     );
     expect(deps.propertyRepository.mutateUnderLock).toHaveBeenCalled();

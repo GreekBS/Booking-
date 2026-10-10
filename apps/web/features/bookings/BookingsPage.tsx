@@ -258,13 +258,17 @@ function BookingsPageContent() {
   const workspaceUnitOptions = useMemo(
     () =>
       units
-        .filter((u) => u.propertyId === propertyId)
+        .filter(
+          (u) =>
+            u.propertyId === propertyId &&
+            (u.status === "active" || u.id === selected?.unitId),
+        )
         .map((u) => ({
           unitId: u.id,
           unitName: displayUnitName(u.name),
           propertyId: u.propertyId,
         })),
-    [units, propertyId],
+    [units, propertyId, selected?.unitId],
   );
   const propertyMap = useMemo(() => new Map(properties.map((p) => [p.id, p])), [properties]);
 

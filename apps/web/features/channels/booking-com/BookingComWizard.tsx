@@ -98,7 +98,8 @@ export function BookingComWizard({ connectionId }: Props) {
   const step = BOOKING_COM_WIZARD_STEPS[stepIndex]!;
 
   const selectedProperty = properties.find((p) => p.id === propertyId);
-  const units = selectedProperty?.units ?? [];
+  // Channel mapping UI: active commercial Units only (inactive placeholders excluded).
+  const units = (selectedProperty?.units ?? []).filter((u) => u.status === "active");
 
   // Default wizard property picker to global active property when empty (connection remains tenant-wide).
   useEffect(() => {
@@ -109,12 +110,14 @@ export function BookingComWizard({ connectionId }: Props) {
   }, [propertyId, activePropertyId, properties]);
 
   const catalogContext = useMemo(() => {
-    const activeUnitIds = units.map((u) => u.id);
+    // Admin selector only — must not treat inactive placeholders as mappable inventory.
+    const activeUnits = units.filter((u) => u.status === "active");
+    const activeUnitIds = activeUnits.map((u) => u.id);
     const activeRatePlanIds = Object.values(unitRatePlans)
       .map((rp) => rp?.id)
       .filter((id): id is string => Boolean(id));
     const unitPropertyIds: Record<string, string> = {};
-    for (const u of units) unitPropertyIds[u.id] = propertyId;
+    for (const u of activeUnits) unitPropertyIds[u.id] = propertyId;
     return { activeUnitIds, activeRatePlanIds, unitPropertyIds };
   }, [units, unitRatePlans, propertyId]);
 
