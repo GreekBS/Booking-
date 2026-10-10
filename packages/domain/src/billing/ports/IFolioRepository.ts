@@ -27,6 +27,16 @@ export interface IFolioRepository {
   ): Promise<FolioWithLines | null>;
 
   /**
+   * Lock the primary folio row FOR UPDATE by (tenantId, bookingId, folioKey)
+   * inside the ambient tenant TX. Returns null when no primary folio exists.
+   * Used by BFS-3b apply before booking locks (folio → booking order).
+   */
+  lockPrimaryForUpdate(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<FolioWithLines | null>;
+
+  /**
    * Append newly posted lines only. Never updates/deletes existing posted lines.
    */
   appendLines(

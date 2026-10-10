@@ -35,6 +35,17 @@ export async function truncateIntegrationTables(): Promise<void> {
       await tx.reservationImportRow.deleteMany({ where: { tenantId } });
       await tx.reservationImportBatch.deleteMany({ where: { tenantId } });
       await tx.bookingCommercialAmendment.deleteMany({ where: { tenantId } });
+      // Billing/fiscal before bookings (RESTRICT FKs from payments → bookings).
+      await tx.fiscalLineAllocation.deleteMany({ where: { tenantId } });
+      await tx.fiscalDocumentLine.deleteMany({ where: { tenantId } });
+      await tx.fiscalDocument.deleteMany({ where: { tenantId } });
+      await tx.paymentRefund.deleteMany({ where: { tenantId } });
+      await tx.paymentAllocationReversal.deleteMany({ where: { tenantId } });
+      await tx.paymentAllocation.deleteMany({ where: { tenantId } });
+      await tx.payment.deleteMany({ where: { tenantId } });
+      await tx.paymentRecord.deleteMany({ where: { tenantId } });
+      await tx.folioLine.deleteMany({ where: { tenantId } });
+      await tx.folio.deleteMany({ where: { tenantId } });
       await tx.booking.deleteMany({ where: { tenantId } });
       await tx.guest.deleteMany({ where: { tenantId } });
       await tx.quote.deleteMany({ where: { tenantId } });
@@ -67,6 +78,13 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.channelConnection.deleteMany();
   await prisma.storefrontIdempotencyRecord.deleteMany();
   await prisma.tenantPublishableKey.deleteMany();
+  await prisma.fiscalLineAllocation.deleteMany();
+  await prisma.fiscalDocumentLine.deleteMany();
+  await prisma.fiscalDocument.deleteMany();
+  await prisma.paymentRefund.deleteMany();
+  await prisma.paymentAllocationReversal.deleteMany();
+  await prisma.paymentAllocation.deleteMany();
+  await prisma.payment.deleteMany();
   await prisma.paymentRecord.deleteMany();
   await prisma.folioLine.deleteMany();
   await prisma.folio.deleteMany();

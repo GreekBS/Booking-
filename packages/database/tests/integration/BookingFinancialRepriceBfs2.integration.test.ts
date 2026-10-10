@@ -5,7 +5,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { afterAll, beforeEach, expect, it } from "vitest";
 import {
   ApplyBookingFinancialRepriceUseCase,
-  BFS3_FINANCIAL_APPLY_GATE_MESSAGE,
   BOOKING_FINANCIAL_CONFIRM_TTL_SECONDS,
   BOOKING_FINANCIAL_CONFIRM_TYP,
   ChangeBookingStayUseCase,
@@ -41,6 +40,7 @@ import {
   PrismaPaymentSettlementRepository,
 } from "../../src/repositories/billing/PaymentRepositories";
 import { PrismaFiscalAllocationRepository } from "../../src/repositories/fiscal/FiscalDocumentRepositories";
+import { PrismaBookingCommercialAmendmentRepository } from "../../src/repositories/commerce/BookingCommercialAmendmentRepository";
 import { UuidIdGenerator } from "../../src/UuidIdGenerator";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { withTenantTransaction } from "../../src/client";
@@ -218,6 +218,9 @@ runIntegration("Booking financial reprice BFS-2", () => {
       folioRepository,
       paymentRepository: new PrismaPaymentRepository(),
       fiscalAllocationRepository: new PrismaFiscalAllocationRepository(),
+      amendmentRepository: new PrismaBookingCommercialAmendmentRepository(),
+      auditLogRepository,
+      idGenerator,
     },
   );
   const openFolioUseCase = new OpenPrimaryFolioFromBookingUseCase(
@@ -324,13 +327,14 @@ runIntegration("Booking financial reprice BFS-2", () => {
       tx.quote.count({ where: { tenantId } }),
     );
 
+    // Financial reprice preserves stay geometry; RatePlan bump drives the delta.
     const preview = await previewFinancial.execute(
       {
         tenantId,
         bookingId: created.bookingId,
         unitId,
         checkIn: "2027-08-01",
-        checkOut: "2027-08-05",
+        checkOut: "2027-08-04",
         guestCount: 2,
         reason: "IT rate correction",
       },
@@ -340,7 +344,7 @@ runIntegration("Booking financial reprice BFS-2", () => {
     const previewed = preview.getValue();
     expect(previewed.current.totalAmount).toBe(created.originalTotal);
     expect(previewed.proposed?.currency).toBe(created.originalCurrency);
-    expect(previewed.proposed?.totalAmount).toBe("1000.0000");
+    expect(previewed.proposed?.totalAmount).toBe("750.0000");
     expect(previewed.priceDelta?.currency).toBe("EUR");
     expect(Number(previewed.priceDelta?.amount)).toBeGreaterThan(0);
     expect(previewed.confirmationToken.length).toBeGreaterThan(16);
@@ -370,30 +374,33 @@ runIntegration("Booking financial reprice BFS-2", () => {
       },
       adminActor,
     );
-    expect(apply.isFailure).toBe(true);
-    expect(apply.getError()).toBeInstanceOf(ValidationError);
-    expect(apply.getError().message).toBe(BFS3_FINANCIAL_APPLY_GATE_MESSAGE);
+    expect(apply.isSuccess).toBe(true);
+    expect(apply.getValue().replayed).toBe(false);
+    expect(apply.getValue().newTotalAmount).toBe("750.0000");
 
     const bookingAfterApply = await bookingRepository.findById(
       created.bookingId,
       tenantId,
     );
-    expect(bookingAfterApply!.quoteId).toBe(created.originalQuoteId);
+    expect(bookingAfterApply!.quoteId).not.toBe(created.originalQuoteId);
+    expect(bookingAfterApply!.stayPeriod.checkOut.value).toBe("2027-08-04");
     const quoteAfterApply = await quoteRepository.findById(
       bookingAfterApply!.quoteId,
       tenantId,
     );
-    expect(quoteAfterApply!.snapshot.totalAmount).toBe(created.originalTotal);
+    expect(quoteAfterApply!.snapshot.totalAmount).toBe("750.0000");
 
-    const folioAfterGate = await folioRepository.findById(tenantId, folioBefore.id);
-    expect(folioAfterGate).not.toBeNull();
-    expect(folioAfterGate!.lines).toHaveLength(linesBefore);
-    expect(folioBefore.balance.folioTotal).toBe(totalBefore);
-
-    const folioLines = await withTenantTransaction(tenantId, async (tx) =>
-      tx.folioLine.findMany({ where: { folioId: folioBefore.id } }),
+    const folioAfterApply = await folioRepository.findById(tenantId, folioBefore.id);
+    expect(folioAfterApply).not.toBeNull();
+    expect(folioAfterApply!.lines.length).toBe(linesBefore + 1);
+    expect(
+      folioAfterApply!.lines.some(
+        (l) => l.source.sourceType === "booking_commercial_amendment",
+      ),
+    ).toBe(true);
+    expect(Number(folioAfterApply!.folio.computeBalance().folioTotal)).toBeGreaterThan(
+      Number(totalBefore),
     );
-    expect(folioLines).toHaveLength(linesBefore);
 
     const preserved = await changeBookingStayUseCase.execute(
       {
@@ -411,7 +418,8 @@ runIntegration("Booking financial reprice BFS-2", () => {
       preserved.getValue().quoteId,
       tenantId,
     );
-    expect(preservedQuote!.snapshot.totalAmount).toBe(created.originalTotal);
+    // Ordinary stay-change must preserve the post-reprice agreed total.
+    expect(preservedQuote!.snapshot.totalAmount).toBe("750.0000");
   });
 
   it("rejects unauthorized financial preview and direct stay-change recalculate", async () => {

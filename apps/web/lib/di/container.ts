@@ -581,6 +581,8 @@ import {
 
   PrismaFolioRepository,
 
+  PrismaBookingCommercialAmendmentRepository,
+
   PrismaTaxRuleRepository,
 
   PrismaBusinessFiscalProfileRepository,
@@ -1267,6 +1269,9 @@ const bookingRepository = new PrismaBookingRepository(outboxRepository);
 
 const folioRepository = new PrismaFolioRepository();
 
+const bookingCommercialAmendmentRepository =
+  new PrismaBookingCommercialAmendmentRepository();
+
 const taxRuleRepository = new PrismaTaxRuleRepository();
 
 const businessFiscalProfileRepository = new PrismaBusinessFiscalProfileRepository();
@@ -1435,6 +1440,9 @@ export const applyBookingFinancialRepriceUseCase =
       folioRepository,
       paymentRepository,
       fiscalAllocationRepository,
+      amendmentRepository: bookingCommercialAmendmentRepository,
+      auditLogRepository,
+      idGenerator,
     },
   );
 

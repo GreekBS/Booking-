@@ -334,9 +334,19 @@ runIntegration("Booking commercial amendment BFS-3a", () => {
         folioRepository: {
           findByBookingAndKey: async () => null,
           findByBooking: async () => [],
+          lockPrimaryForUpdate: async () => null,
+          appendLines: async () => "appended" as const,
         } as never,
         paymentRepository: { listByBooking: async () => [] } as never,
         fiscalAllocationRepository: { listByFolioId: async () => [] } as never,
+        amendmentRepository: {
+          findByIdempotencyKey: async () => null,
+          insert: async () => {
+            throw new Error("unused");
+          },
+        } as never,
+        auditLogRepository: { append: async () => undefined } as never,
+        idGenerator: { generate: () => randomUUID() } as never,
       },
     );
 

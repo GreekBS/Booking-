@@ -8,8 +8,7 @@ type RouteContext = { params: Promise<{ bookingId: string }> };
 
 /**
  * POST /api/admin/v1/bookings/:bookingId/financial-reprice/apply
- * BFS-2: revalidate confirmation then reject until BFS-3 folio reconciliation.
- * Never mutates money even with a valid token.
+ * BFS-3b-2: atomic confirmed financial reprice (quote/booking/amendment/folio/audit).
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   try {

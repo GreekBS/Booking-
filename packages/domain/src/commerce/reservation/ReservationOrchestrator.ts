@@ -249,4 +249,21 @@ export class ReservationOrchestrator {
       options,
     );
   }
+
+  /** BFS-3b-2 financial apply only — see StayMutationEngine.commitAuthorizedFinancialReprice. */
+  commitAuthorizedFinancialReprice(
+    booking: Booking,
+    draft: StayChangeDraft,
+    currentQuote: Quote,
+    options?: {
+      mutationOrigin?: MutationOrigin | null;
+    },
+  ): Promise<Result<StayChangeCommitResult, Error>> {
+    return this.mutationEngine.commitAuthorizedFinancialReprice(
+      booking,
+      draft,
+      currentQuote,
+      options,
+    );
+  }
 }

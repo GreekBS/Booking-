@@ -24,6 +24,12 @@ export const COMMERCIAL_AMENDMENT_MISSING_FOLIO_ACTIVITY_MESSAGE =
 export const COMMERCIAL_AMENDMENT_FOLIO_BASELINE_MESSAGE =
   "Financial reprice rejected: legacy folio commercial baseline cannot be reconciled safely";
 
+export const COMMERCIAL_AMENDMENT_FOLIO_CONCURRENT_MESSAGE =
+  "Financial reprice rejected: primary folio changed concurrently; retry confirmation";
+
+export const COMMERCIAL_AMENDMENT_IDEMPOTENCY_CONFLICT_MESSAGE =
+  "Financial reprice rejected: confirmation was already used with a different commercial payload";
+
 /**
  * Fail-closed quote/commercial checks shared by preview and apply (no writes).
  */

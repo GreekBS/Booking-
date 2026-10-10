@@ -210,6 +210,112 @@ export class StayMutationEngine {
     }
   }
 
+  /**
+   * BFS-3b-2: authorized financial-reprice commit only.
+   * Bypasses ordinary stay-change recalculate gate; allows same-geometry price changes.
+   * Must only be called from ApplyBookingFinancialRepriceUseCase after token + guards.
+   */
+  async commitAuthorizedFinancialReprice(
+    booking: Booking,
+    draft: StayChangeDraft,
+    currentQuote: Quote,
+    options?: {
+      mutationOrigin?: MutationOrigin | null;
+    },
+  ): Promise<Result<StayChangeCommitResult, Error>> {
+    try {
+      const mutationOrigin = options?.mutationOrigin ?? null;
+
+      // Hard invariant: financial reprice never changes stay geometry.
+      if (!this.isUnchanged(booking, draft)) {
+        return Result.fail(
+          new ValidationError(
+            "Authorized financial reprice must preserve unit, dates, and guest count",
+          ),
+        );
+      }
+
+      // Geometry is unchanged; exclude this booking's own occupancy for the
+      // availability re-check (inventory blocks are not released/recreated).
+      const availability = await this.availabilityEngine.evaluate({
+        tenantId: booking.tenantId,
+        unitId: draft.unitId,
+        checkIn: draft.checkIn,
+        checkOut: draft.checkOut,
+        guestCount: draft.guestCount,
+        excludeSourceIds: [booking.id],
+      });
+      if (availability.isFailure) {
+        return Result.fail(availability.getError());
+      }
+      const availabilityValue = availability.getValue();
+      const { propertyId, ...availabilityResult } = availabilityValue;
+      if (!availabilityResult.available) {
+        return Result.fail(
+          new ValidationError(
+            availabilityResult.reasons[0]?.message ?? "Dates not available",
+          ),
+        );
+      }
+
+      if (propertyId !== booking.propertyId) {
+        return Result.fail(
+          new ValidationError(
+            "Authorized financial reprice must preserve property assignment",
+          ),
+        );
+      }
+
+      const property = await this.catalog.getProperty(propertyId, booking.tenantId);
+      if (!property) {
+        return Result.fail(new ValidationError("Property not found"));
+      }
+
+      const priced = await this.pricingEngine.priceStayDetailed(
+        booking.tenantId,
+        draft.unitId,
+        draft.checkIn,
+        draft.checkOut,
+      );
+      if (priced.isFailure) return Result.fail(priced.getError());
+      const { pricing } = priced.getValue();
+      if (
+        pricing.currency.trim().toUpperCase() !==
+        currentQuote.snapshot.currency.trim().toUpperCase()
+      ) {
+        return Result.fail(
+          new ValidationError(
+            "Proposed RatePlan currency does not match the booking currency",
+          ),
+        );
+      }
+
+      const command: ApplyStayChangeCommand = {
+        unitId: booking.unitId,
+        propertyId: booking.propertyId,
+        checkIn: booking.stayPeriod.checkIn.value,
+        checkOut: booking.stayPeriod.checkOut.value,
+        guestCount: booking.guestCount.value,
+      };
+
+      const quote = this.quoteFactory.createForStayChange({
+        id: this.idGenerator.generate(),
+        snapshotId: this.idGenerator.generate(),
+        booking,
+        command,
+        pricing,
+        propertyTimezone: property.timezone,
+      });
+
+      // Reuses quote-swap persistence; stay/unit/guest domain events are not
+      // emitted when geometry is unchanged (see Booking.applyStayChange).
+      booking.applyStayChange(command, quote, new Date(), mutationOrigin);
+      return Result.ok({ booking, quote });
+    } catch (error) {
+      return Result.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
   async commitStayChange(
     booking: Booking,
     draft: StayChangeDraft,

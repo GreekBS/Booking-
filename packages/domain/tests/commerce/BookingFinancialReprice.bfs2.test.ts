@@ -27,18 +27,18 @@ import { PricingCalculator } from "../../src/commerce/pricing/PricingCalculator"
 import { PERMISSIONS } from "@hcp/permissions";
 import {
   baseRatePlan,
-  createHoldForUnit,
   villaProperty,
   HOLD_CREATED_AT,
 } from "./fixtures/commerceFixtures";
 
-const TENANT = villaProperty.tenantId;
+// UUID ids required by BookingCommercialAmendment (BFS-3a) on apply.
+const TENANT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const UNIT = villaProperty.units[0]!.id;
-const PROP = villaProperty.id;
+const PROP = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const NOW = new Date(HOLD_CREATED_AT.getTime() + 5 * 60_000);
 
 const admin: ActorContext = {
-  userId: "admin-bfs2",
+  userId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
   role: "admin",
   propertyIds: null,
 };
@@ -131,14 +131,20 @@ class TestFinancialConfirmTokens implements IBookingFinancialConfirmTokenService
 }
 
 function makeBooking(opts?: { total?: string; pricingMode?: "imported_csv" | "operator_entered" }) {
-  const hold = createHoldForUnit(UNIT, PROP, "2025-08-01", "2025-08-04", {
-    now: HOLD_CREATED_AT,
+  const hold = Hold.create({
+    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    tenantId: TENANT,
+    unitId: UNIT,
+    propertyId: PROP,
+    checkIn: "2025-08-01",
+    checkOut: "2025-08-04",
     guestCount: 2,
+    now: HOLD_CREATED_AT,
   });
 
   const quote = Quote.createFromFixedTotal({
-    id: "quote-bfs2-1",
-    snapshotId: "snap-bfs2-1",
+    id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    snapshotId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
     hold,
     propertyTimezone: villaProperty.timezone,
     total: Money.create(opts?.total ?? "300.0000", "EUR"),
@@ -147,7 +153,7 @@ function makeBooking(opts?: { total?: string; pricingMode?: "imported_csv" | "op
   });
 
   const booking = Booking.create({
-    id: "booking-bfs2-1",
+    id: "99999999-9999-4999-8999-999999999999",
     hold,
     quote,
     guest: { name: "BFS2 Guest", email: "bfs2@test.com", phone: null },
@@ -215,7 +221,13 @@ function buildOrchestrator(opts?: {
     availabilityEngine as never,
     { priceStay, priceStayDetailed } as never,
     new QuoteFactory(),
-    { getProperty: vi.fn(async () => villaProperty) } as never,
+    {
+      getProperty: vi.fn(async () => ({
+        ...villaProperty,
+        id: PROP,
+        tenantId: TENANT,
+      })),
+    } as never,
     {
       generate: () => {
         n += 1;
@@ -237,6 +249,12 @@ function buildOrchestrator(opts?: {
       quote: Quote,
       options?: Parameters<StayMutationEngine["commitStayChange"]>[3],
     ) => engine.commitStayChange(booking, draft, quote, options),
+    commitAuthorizedFinancialReprice: (
+      booking: Booking,
+      draft: Parameters<StayMutationEngine["commitAuthorizedFinancialReprice"]>[1],
+      quote: Quote,
+      options?: Parameters<StayMutationEngine["commitAuthorizedFinancialReprice"]>[3],
+    ) => engine.commitAuthorizedFinancialReprice(booking, draft, quote, options),
   };
 
   return {
@@ -313,6 +331,8 @@ function buildApplyUseCase(opts?: {
     folioRepository: {
       findByBookingAndKey: vi.fn(async () => null),
       findByBooking: vi.fn(async () => []),
+      lockPrimaryForUpdate: vi.fn(async () => null),
+      appendLines: vi.fn(async () => "appended" as const),
     },
     paymentRepository: {
       listByBooking: vi.fn(async () => []),
@@ -320,9 +340,23 @@ function buildApplyUseCase(opts?: {
     fiscalAllocationRepository: {
       listByFolioId: vi.fn(async () => []),
     },
+    amendmentRepository: {
+      findByIdempotencyKey: vi.fn(async () => null),
+      insert: vi.fn(async (a) => ({ status: "created" as const, amendment: a })),
+      listByBookingId: vi.fn(async () => []),
+    },
+    auditLogRepository: {
+      append: vi.fn(async () => undefined),
+    },
+    idGenerator: {
+      generate: vi.fn(() => "11111111-1111-4111-8111-111111111111"),
+    },
   };
   const useCase = new ApplyBookingFinancialRepriceUseCase(
-    { findById: vi.fn(async () => activeBooking) } as never,
+    {
+      findById: vi.fn(async () => activeBooking),
+      lockByIdsForUpdate: vi.fn(async () => [activeBooking]),
+    } as never,
     { findById: vi.fn(async () => activeQuote) } as never,
     {
       findByUnitId: vi.fn(async () => ratePlan),
@@ -341,6 +375,7 @@ function buildApplyUseCase(opts?: {
     commerceFlowRepository,
     ratePlan,
     orchestrator,
+    safety,
   };
 }
 
@@ -867,17 +902,22 @@ describe("BFS-2 booking financial reprice", () => {
     expect(result.getError()).toBeInstanceOf(ForbiddenError);
   });
 
-  it("valid confirmation still cannot bypass BFS-3 financial apply gate", async () => {
+  it("valid confirmation applies financially while ordinary stay-change recalculate stays gated", async () => {
     const tokens = new TestFinancialConfirmTokens();
     const saveSpy = vi.fn();
-    const { useCase, booking, quote, orchestrator, commerceFlowRepository } =
-      buildApplyUseCase({ tokens, saveSpy });
+    // Same stay geometry as booking; RatePlan bump drives the commercial delta.
+    const { useCase, booking, quote, orchestrator, commerceFlowRepository, safety } =
+      buildApplyUseCase({
+        tokens,
+        saveSpy,
+        ratePlan: { ...baseRatePlan, baseNightlyAmount: "150.0000" },
+      });
     const preview = await orchestrator.previewStayChange(
       booking,
       {
         unitId: UNIT,
         checkIn: "2025-08-01",
-        checkOut: "2025-08-05",
+        checkOut: "2025-08-04",
         guestCount: 2,
       },
       quote,
@@ -896,7 +936,7 @@ describe("BFS-2 booking financial reprice", () => {
       currency: quote.snapshot.currency,
       unitId: UNIT,
       checkIn: "2025-08-01",
-      checkOut: "2025-08-05",
+      checkOut: "2025-08-04",
       guestCount: 2,
       proposedTotalAmount: commercial.totalAmount,
       proposedSubtotalAmount: commercial.subtotalAmount,
@@ -904,7 +944,7 @@ describe("BFS-2 booking financial reprice", () => {
       proposedTaxesAmount: commercial.taxesAmount,
       proposedDiscountAmount: commercial.discountAmount,
       pricingFingerprint: commercial.pricingFingerprint,
-      reasonHash: hashFinancialReason("Valid but gated"),
+      reasonHash: hashFinancialReason("Valid apply"),
     });
 
     const result = await useCase.execute(
@@ -912,18 +952,23 @@ describe("BFS-2 booking financial reprice", () => {
         tenantId: TENANT,
         bookingId: booking.id,
         confirmationToken: issued.token,
-        reason: "Valid but gated",
+        reason: "Valid apply",
       },
       admin,
     );
 
-    expect(result.isFailure).toBe(true);
-    expect(result.getError()).toBeInstanceOf(ValidationError);
-    expect(result.getError().message).toBe(BFS3_FINANCIAL_APPLY_GATE_MESSAGE);
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue().replayed).toBe(false);
+    expect(result.getValue().newTotalAmount).toBe(commercial.totalAmount);
     expect(commerceFlowRepository.runInTenantTransaction).toHaveBeenCalled();
-    expect(saveSpy).not.toHaveBeenCalled();
-    expect(booking.quoteId).toBe(quote.id);
-    expect(quote.snapshot.totalAmount).toBe("300.0000");
+    expect(saveSpy).toHaveBeenCalled();
+    expect(safety.amendmentRepository.insert).toHaveBeenCalled();
+    expect(safety.auditLogRepository.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "booking.financial_reprice_applied",
+      }),
+    );
+    expect(booking.quoteId).not.toBe(quote.id);
   });
 
   it("StayMutationEngine commit blocks recalculate; preserve path unchanged", async () => {

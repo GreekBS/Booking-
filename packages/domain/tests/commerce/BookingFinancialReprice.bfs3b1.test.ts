@@ -2,10 +2,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   ApplyBookingFinancialRepriceUseCase,
-  BFS3_FINANCIAL_APPLY_GATE_MESSAGE,
   BOOKING_FINANCIAL_CONFIRM_TTL_SECONDS,
   BOOKING_FINANCIAL_CONFIRM_TYP,
   Booking,
+  Hold,
   COMMERCIAL_AMENDMENT_FISCAL_COVERAGE_MESSAGE,
   COMMERCIAL_AMENDMENT_FOLIO_BASELINE_MESSAGE,
   COMMERCIAL_AMENDMENT_FOLIO_CLOSED_MESSAGE,
@@ -35,18 +35,17 @@ import { QuoteFactory } from "../../src/commerce/reservation/engines/QuoteFactor
 import { PricingCalculator } from "../../src/commerce/pricing/PricingCalculator";
 import {
   baseRatePlan,
-  createHoldForUnit,
   villaProperty,
   HOLD_CREATED_AT,
 } from "./fixtures/commerceFixtures";
 
-const TENANT = villaProperty.tenantId;
+const TENANT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const UNIT = villaProperty.units[0]!.id;
-const PROP = villaProperty.id;
+const PROP = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const NOW = new Date(HOLD_CREATED_AT.getTime() + 5 * 60_000);
 
 const admin: ActorContext = {
-  userId: "admin-bfs3b1",
+  userId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
   role: "admin",
   propertyIds: null,
 };
@@ -242,14 +241,20 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
     ).toThrow(COMMERCIAL_AMENDMENT_FOLIO_BASELINE_MESSAGE);
   });
 
-  it("apply runs folio guards then still hard-gates without writes", async () => {
-    const hold = createHoldForUnit(UNIT, PROP, "2025-08-01", "2025-08-04", {
-      now: HOLD_CREATED_AT,
+  it("apply runs folio guards then mutates via authorized financial commit", async () => {
+    const hold = Hold.create({
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      tenantId: TENANT,
+      unitId: UNIT,
+      propertyId: PROP,
+      checkIn: "2025-08-01",
+      checkOut: "2025-08-04",
       guestCount: 2,
+      now: HOLD_CREATED_AT,
     });
     const quote = Quote.createFromFixedTotal({
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      snapshotId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      snapshotId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
       hold,
       propertyTimezone: villaProperty.timezone,
       total: Money.create("300.0000", "EUR"),
@@ -257,7 +262,7 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
       quotedAt: NOW,
     });
     const booking = Booking.create({
-      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      id: "99999999-9999-4999-8999-999999999999",
       hold,
       quote,
       guest: { name: "BFS3b1", email: "b@test.com", phone: null },
@@ -267,10 +272,11 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
 
     const ratePlan = { ...baseRatePlan, baseNightlyAmount: "250.0000" };
     const priceStayDetailed = vi.fn(async () => {
+      const quotedAt = new Date();
       const pricing = new PricingCalculator().calculate(
         ratePlan,
         hold.stayPeriod,
-        NOW,
+        quotedAt,
       );
       return Result.ok({ pricing, ratePlan });
     });
@@ -286,24 +292,35 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
       } as never,
       { priceStay, priceStayDetailed } as never,
       new QuoteFactory(),
-      { getProperty: vi.fn(async () => villaProperty) } as never,
       {
-        nextId: vi.fn(() => "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"),
+        getProperty: vi.fn(async () => ({
+          ...villaProperty,
+          id: PROP,
+          tenantId: TENANT,
+        })),
+      } as never,
+      {
+        generate: vi.fn(() => "12121212-1212-4121-8121-121212121212"),
       } as never,
     );
 
     const tokens = new TestFinancialConfirmTokens();
     const saveSpy = vi.fn();
+    const baseFolio = openFolioWithAccommodation(quote.snapshot.totalAmount);
     const folio = Folio.rehydrate(
       {
-        ...openFolioWithAccommodation(quote.snapshot.totalAmount).toProps(),
+        ...baseFolio.toProps(),
         bookingId: booking.id,
+        tenantId: TENANT,
       },
-      [...openFolioWithAccommodation(quote.snapshot.totalAmount).lines],
+      [...baseFolio.lines],
     );
 
     const useCase = new ApplyBookingFinancialRepriceUseCase(
-      { findById: vi.fn(async () => booking) } as never,
+      {
+        findById: vi.fn(async () => booking),
+        lockByIdsForUpdate: vi.fn(async () => [booking]),
+      } as never,
       { findById: vi.fn(async () => quote) } as never,
       { findByUnitId: vi.fn(async () => ratePlan) } as never,
       {
@@ -314,6 +331,9 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
         previewStayChange: (
           ...args: Parameters<StayMutationEngine["previewStayChange"]>
         ) => engine.previewStayChange(...args),
+        commitAuthorizedFinancialReprice: (
+          ...args: Parameters<StayMutationEngine["commitAuthorizedFinancialReprice"]>
+        ) => engine.commitAuthorizedFinancialReprice(...args),
       } as never,
       new PermissionChecker(),
       tokens,
@@ -326,10 +346,23 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
           findByBooking: vi.fn(async () => [
             { folio, lines: [...folio.lines] },
           ]),
+          lockPrimaryForUpdate: vi.fn(async () => ({
+            folio,
+            lines: [...folio.lines],
+          })),
+          appendLines: vi.fn(async () => "appended" as const),
         } as never,
         paymentRepository: { listByBooking: vi.fn(async () => []) } as never,
         fiscalAllocationRepository: {
           listByFolioId: vi.fn(async () => []),
+        } as never,
+        amendmentRepository: {
+          findByIdempotencyKey: vi.fn(async () => null),
+          insert: vi.fn(async (a) => ({ status: "created" as const, amendment: a })),
+        } as never,
+        auditLogRepository: { append: vi.fn(async () => undefined) } as never,
+        idGenerator: {
+          generate: vi.fn(() => "ffffffff-ffff-4fff-8fff-ffffffffffff"),
         } as never,
       },
     );
@@ -380,10 +413,9 @@ describe("BFS-3b-1 financial reprice safety guards", () => {
       admin,
     );
 
-    expect(result.isFailure).toBe(true);
-    expect(result.getError()).toBeInstanceOf(ValidationError);
-    expect(result.getError().message).toBe(BFS3_FINANCIAL_APPLY_GATE_MESSAGE);
-    expect(saveSpy).not.toHaveBeenCalled();
-    expect(booking.quoteId).toBe(quote.id);
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue().replayed).toBe(false);
+    expect(saveSpy).toHaveBeenCalled();
+    expect(booking.quoteId).not.toBe(quote.id);
   });
 });

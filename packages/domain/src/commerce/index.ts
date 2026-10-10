@@ -34,6 +34,7 @@ export * from "./application/BookingFinancialRepriceUseCases";
 export * from "./amendment/BookingCommercialAmendment";
 export * from "./amendment/commercialRepriceSafety";
 export * from "./amendment/financialRepriceApplyGuards";
+export * from "./amendment/financialRepriceIdempotency";
 export * from "./amendment/financialRepriceLockOrder";
 export * from "./ports/IBookingCommercialAmendmentRepository";
 

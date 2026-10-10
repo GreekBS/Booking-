@@ -207,4 +207,29 @@ export class PrismaFolioRepository implements IFolioRepository {
       return mapFolio(row, row.lines.map(mapLine));
     });
   }
+
+  async lockPrimaryForUpdate(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<FolioWithLines | null> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id
+        FROM folios
+        WHERE tenant_id = ${tenantId}::uuid
+          AND booking_id = ${bookingId}::uuid
+          AND folio_key = 'primary'
+        ORDER BY id
+        FOR UPDATE
+      `;
+      const id = locked[0]?.id;
+      if (!id) return null;
+      const row = await tx.folio.findFirst({
+        where: { id, tenantId },
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+      });
+      if (!row) return null;
+      return mapFolio(row, row.lines.map(mapLine));
+    });
+  }
 }

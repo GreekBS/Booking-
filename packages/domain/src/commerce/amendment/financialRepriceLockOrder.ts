@@ -19,13 +19,15 @@
  * (tenant_id, idempotency_key) provides idempotency fencing.
  *
  * ---------------------------------------------------------------------------
- * BFS-3b apply TX design (future; not activated in BFS-3b-1):
+ * BFS-3b-2 apply TX (activated):
  *
- * To avoid AB-BA deadlock with payment (folio → booking), apply MUST acquire:
+ * To avoid AB-BA deadlock with payment (folio → booking), apply acquires:
  *   1. folios            FOR UPDATE (ORDER BY id) when a primary folio exists
  *   2. bookings          FOR UPDATE (ORDER BY id)
- *   3. (optional) folio_lines FOR UPDATE (ORDER BY id) only if a later phase
- *      needs line-level fencing beyond the folio lock
+ *
+ * After booking lock, primary-folio *identity* is rechecked with a plain read
+ * (not FOR UPDATE). If a folio appeared/changed since step 1, fail closed —
+ * never lock folio after booking (that inverts payment order).
  *
  * When no primary folio exists: booking FOR UPDATE only.
  * Never lock payments in apply (payments are not mutated by reprice).

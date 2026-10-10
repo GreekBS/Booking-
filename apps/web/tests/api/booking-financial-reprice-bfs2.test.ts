@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import {
-  BFS3_FINANCIAL_APPLY_GATE_MESSAGE,
-  ForbiddenError,
-  Result,
-  ValidationError,
-} from "@hcp/domain";
+import { ForbiddenError, Result } from "@hcp/domain";
 
 const requireTenantContext = vi.fn();
 const toPermissionActor = vi.fn((actor: unknown) => actor);
@@ -160,9 +155,19 @@ describe("BFS-2 booking financial-reprice admin API", () => {
     expect(previewExecute).not.toHaveBeenCalled();
   });
 
-  it("apply forwards confirmationToken and reason; maps BFS-3 gate", async () => {
+  it("apply forwards confirmationToken and reason; returns success payload", async () => {
     applyExecute.mockResolvedValue(
-      Result.fail(new ValidationError(BFS3_FINANCIAL_APPLY_GATE_MESSAGE)),
+      Result.ok({
+        bookingId: BOOKING,
+        amendmentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        previousQuoteId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        newQuoteId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        previousTotalAmount: "300.0000",
+        newTotalAmount: "600.0000",
+        deltaAmount: "300.0000",
+        currency: "EUR",
+        replayed: false,
+      }),
     );
 
     const res = await applyPost(
@@ -173,7 +178,7 @@ describe("BFS-2 booking financial-reprice admin API", () => {
       { params: Promise.resolve({ bookingId: BOOKING }) },
     );
 
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(200);
     expect(applyExecute).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: TENANT,
@@ -183,6 +188,9 @@ describe("BFS-2 booking financial-reprice admin API", () => {
       }),
       actor,
     );
+    const json = await res.json();
+    expect(json.amendmentId).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    expect(json.deltaAmount).toBe("300.0000");
   });
 
   it("maps ForbiddenError from preview", async () => {
