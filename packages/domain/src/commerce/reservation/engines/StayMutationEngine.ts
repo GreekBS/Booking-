@@ -17,6 +17,11 @@ import { ValidationError } from "../../../shared/errors/DomainError";
 import { Result } from "../../../shared/kernel/Result";
 import type { MutationOrigin } from "../../../shared/types/MutationOrigin";
 import type { BookingPricingIntent } from "../../shared/types/CommerceTypes";
+import {
+  bookingProposedCommercialFingerprint,
+} from "../../pricing/bookingFinancialFingerprint";
+import { ratePlanContentFingerprint } from "../../pricing/ratePlanContentFingerprint";
+import { BFS3_FINANCIAL_APPLY_GATE_MESSAGE } from "../../application/BookingFinancialConfirmToken";
 
 export class StayMutationEngine {
   constructor(
@@ -46,7 +51,7 @@ export class StayMutationEngine {
     },
   ): Promise<Result<StayChangePreview, Error>> {
     try {
-      const intentResult = resolveOperatorIntent(commercial);
+      const intentResult = resolveOperatorPreviewIntent(commercial);
       if (intentResult.isFailure) return Result.fail(intentResult.getError());
       const pricingIntent = intentResult.getValue();
 
@@ -60,7 +65,7 @@ export class StayMutationEngine {
         currency: currentQuote.snapshot.currency,
       };
 
-      if (unchanged) {
+      if (unchanged && pricingIntent === "preserve_agreed_total") {
         return Result.ok({
           available: true,
           unchanged: true,
@@ -69,6 +74,7 @@ export class StayMutationEngine {
           proposed: { ...currentTotals },
           priceDelta: null,
           pricingIntent,
+          proposedCommercial: null,
         });
       }
 
@@ -95,10 +101,88 @@ export class StayMutationEngine {
           proposed: null,
           priceDelta: null,
           pricingIntent,
+          proposedCommercial: null,
         });
       }
 
-      // BFS-1: preview always reflects preserve_agreed_total (zero financial delta).
+      if (pricingIntent === "recalculate_from_rate_plan") {
+        const priced = await this.pricingEngine.priceStayDetailed(
+          booking.tenantId,
+          draft.unitId,
+          draft.checkIn,
+          draft.checkOut,
+        );
+        if (priced.isFailure) return Result.fail(priced.getError());
+
+        const { pricing, ratePlan } = priced.getValue();
+        if (pricing.currency.trim().toUpperCase() !==
+          currentQuote.snapshot.currency.trim().toUpperCase()) {
+          return Result.fail(
+            new ValidationError(
+              "Proposed RatePlan currency does not match the booking currency",
+            ),
+          );
+        }
+
+        const feesAmount = "0.0000";
+        const taxesAmount = "0.0000";
+        const discountAmount = pricing.losDiscountAmount.amount;
+        const totalAmount = pricing.total.amount;
+        const proposedTotals = {
+          checkIn: draft.checkIn,
+          checkOut: draft.checkOut,
+          unitId: draft.unitId,
+          guestCount: draft.guestCount,
+          totalAmount,
+          currency: pricing.currency,
+        };
+        const delta = Money.create(totalAmount, pricing.currency).subtract(
+          Money.create(
+            currentQuote.snapshot.totalAmount,
+            currentQuote.snapshot.currency,
+          ),
+        );
+        const pricingFingerprint = bookingProposedCommercialFingerprint({
+          ratePlan,
+          unitId: draft.unitId,
+          checkIn: draft.checkIn,
+          checkOut: draft.checkOut,
+          guestCount: draft.guestCount,
+          subtotalAmount: pricing.subtotal.amount,
+          feesAmount,
+          taxesAmount,
+          discountAmount,
+          totalAmount,
+          currency: pricing.currency,
+          lineItems: pricing.lineItems,
+        });
+
+        return Result.ok({
+          available: true,
+          unchanged: false,
+          reasons: [],
+          current: currentTotals,
+          proposed: proposedTotals,
+          priceDelta: {
+            amount: delta.amount,
+            currency: delta.currency,
+          },
+          pricingIntent,
+          proposedCommercial: {
+            subtotalAmount: pricing.subtotal.amount,
+            feesAmount,
+            taxesAmount,
+            discountAmount,
+            totalAmount,
+            currency: pricing.currency,
+            lineItems: pricing.lineItems.map((l) => ({ ...l })),
+            ratePlanFingerprint: ratePlanContentFingerprint(ratePlan),
+            pricingFingerprint,
+          },
+        });
+      }
+
+      // preserve_agreed_total
       const proposedTotals = {
         checkIn: draft.checkIn,
         checkOut: draft.checkOut,
@@ -119,6 +203,7 @@ export class StayMutationEngine {
           currency: zero.currency,
         },
         pricingIntent,
+        proposedCommercial: null,
       });
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
@@ -146,7 +231,7 @@ export class StayMutationEngine {
       }
 
       if (commercial.source === "operator") {
-        const intentResult = resolveOperatorIntent(commercial);
+        const intentResult = resolveOperatorCommitIntent(commercial);
         if (intentResult.isFailure) return Result.fail(intentResult.getError());
       }
 
@@ -227,7 +312,34 @@ export class StayMutationEngine {
   }
 }
 
-function resolveOperatorIntent(
+function resolveOperatorPreviewIntent(
+  commercial: StayChangeCommercialMode,
+): Result<BookingPricingIntent, Error> {
+  if (commercial.source === "channel_compat_reprice") {
+    return Result.ok("preserve_agreed_total");
+  }
+
+  const intent = commercial.pricingIntent ?? "preserve_agreed_total";
+
+  if (intent === "manual_total") {
+    return Result.fail(
+      new ValidationError(
+        "manual_total is not supported on stay change; use the dedicated price adjustment workflow",
+      ),
+    );
+  }
+
+  if (
+    intent !== "preserve_agreed_total" &&
+    intent !== "recalculate_from_rate_plan"
+  ) {
+    return Result.fail(new ValidationError("Unsupported pricing intent"));
+  }
+
+  return Result.ok(intent);
+}
+
+function resolveOperatorCommitIntent(
   commercial: StayChangeCommercialMode,
 ): Result<BookingPricingIntent, Error> {
   if (commercial.source === "channel_compat_reprice") {
@@ -245,11 +357,7 @@ function resolveOperatorIntent(
   }
 
   if (intent === "recalculate_from_rate_plan") {
-    return Result.fail(
-      new ValidationError(
-        "recalculate_from_rate_plan requires BFS-2 confirmation and is not available yet",
-      ),
-    );
+    return Result.fail(new ValidationError(BFS3_FINANCIAL_APPLY_GATE_MESSAGE));
   }
 
   if (intent !== "preserve_agreed_total") {

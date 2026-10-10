@@ -45,6 +45,11 @@ export const PERMISSIONS = {
   BOOKING_CREATE_TENANT: "booking:create:tenant",
   BOOKING_UPDATE_TENANT: "booking:update:tenant",
   BOOKING_CANCEL_TENANT: "booking:cancel:tenant",
+  /**
+   * Approve commercial financial changes on bookings (repricing / amendments).
+   * Not granted by BOOKING_UPDATE alone (BFS-2).
+   */
+  BOOKING_FINANCIAL_ADJUST_TENANT: "booking:financial_adjust:tenant",
 
   /** Tenant-wide Guest CRM read (Admin / Super Admin Open). */
   GUEST_READ_TENANT: "guest:read:tenant",
@@ -121,6 +126,7 @@ export const ROLE_PERMISSIONS: Record<TenantRole, readonly Permission[]> = {
     PERMISSIONS.BOOKING_CREATE_TENANT,
     PERMISSIONS.BOOKING_UPDATE_TENANT,
     PERMISSIONS.BOOKING_CANCEL_TENANT,
+    PERMISSIONS.BOOKING_FINANCIAL_ADJUST_TENANT,
     PERMISSIONS.GUEST_READ_TENANT,
     PERMISSIONS.GUEST_CREATE_TENANT,
     PERMISSIONS.GUEST_UPDATE_TENANT,
@@ -191,6 +197,7 @@ export const SUPER_ADMIN_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.BOOKING_CREATE_TENANT,
   PERMISSIONS.BOOKING_UPDATE_TENANT,
   PERMISSIONS.BOOKING_CANCEL_TENANT,
+  PERMISSIONS.BOOKING_FINANCIAL_ADJUST_TENANT,
   PERMISSIONS.GUEST_READ_TENANT,
   PERMISSIONS.GUEST_CREATE_TENANT,
   PERMISSIONS.GUEST_UPDATE_TENANT,

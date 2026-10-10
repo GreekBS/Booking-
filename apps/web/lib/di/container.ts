@@ -64,6 +64,10 @@ import {
 
   ApplyBulkRatePlanFromTemplateUseCase,
 
+  PreviewBookingFinancialRepriceUseCase,
+
+  ApplyBookingFinancialRepriceUseCase,
+
   CreateRoomTypeUseCase,
 
   ListRoomTypesUseCase,
@@ -735,6 +739,7 @@ import { isChannelsPollingEnabled } from "@/lib/channels/polling-enabled";
 import { createAssistantProvider } from "@/lib/ai/createAssistantProvider";
 import { createOperatorCopilotProvider } from "@/lib/ai/createOperatorCopilotProvider";
 import { HmacBulkRatePlanConfirmTokenService } from "@/lib/pricing/bulk-rate-confirm-token";
+import { HmacBookingFinancialConfirmTokenService } from "@/lib/pricing/booking-financial-confirm-token";
 
 
 
@@ -1404,6 +1409,29 @@ export const changeBookingStayUseCase = new ChangeBookingStayUseCase(
   permissionChecker,
   auditLogRepository,
 );
+
+const bookingFinancialConfirmTokenService =
+  new HmacBookingFinancialConfirmTokenService();
+
+export const previewBookingFinancialRepriceUseCase =
+  new PreviewBookingFinancialRepriceUseCase(
+    bookingRepository,
+    quoteRepository,
+    reservationOrchestrator,
+    permissionChecker,
+    bookingFinancialConfirmTokenService,
+  );
+
+export const applyBookingFinancialRepriceUseCase =
+  new ApplyBookingFinancialRepriceUseCase(
+    bookingRepository,
+    quoteRepository,
+    ratePlanRepository,
+    commerceFlowRepository,
+    reservationOrchestrator,
+    permissionChecker,
+    bookingFinancialConfirmTokenService,
+  );
 
 export const createManualBlockUseCase = new CreateManualBlockUseCase(
 

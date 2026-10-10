@@ -226,7 +226,7 @@ describe("BFS-1 stay-change preserve_agreed_total", () => {
     expect(preview.getValue().pricingIntent).toBe("preserve_agreed_total");
   });
 
-  it("rejects recalculate_from_rate_plan until BFS-2", async () => {
+  it("rejects recalculate_from_rate_plan apply until BFS-3", async () => {
     const { booking, quote } = makeBooking();
     const { engine, priceStay } = buildEngine();
 
@@ -249,7 +249,7 @@ describe("BFS-1 stay-change preserve_agreed_total", () => {
 
     expect(result.isFailure).toBe(true);
     expect(result.getError()).toBeInstanceOf(ValidationError);
-    expect(result.getError().message).toMatch(/BFS-2/);
+    expect(result.getError().message).toMatch(/BFS-3/);
     expect(priceStay).not.toHaveBeenCalled();
   });
 

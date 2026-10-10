@@ -116,6 +116,29 @@ export const changeBookingStaySchema = z.object({
   pricingIntent: bookingPricingIntentSchema.optional(),
 });
 
+/** BFS-2 — read-only RatePlan reprice preview + confirmation token. */
+export const previewBookingFinancialRepriceSchema = z
+  .object({
+    unitId: z.string().uuid(),
+    checkIn: localDateSchema,
+    checkOut: localDateSchema,
+    guestCount: z.number().int().min(1).max(50),
+    reason: z.string().trim().min(3).max(500),
+  })
+  .refine((value) => value.checkIn < value.checkOut, {
+    message: "checkIn must be before checkOut",
+    path: ["checkOut"],
+  });
+
+/**
+ * BFS-2 — validate confirmation then reject until BFS-3.
+ * Client-supplied totals are intentionally absent.
+ */
+export const applyBookingFinancialRepriceSchema = z.object({
+  confirmationToken: z.string().trim().min(16).max(8192),
+  reason: z.string().trim().min(3).max(500),
+});
+
 export const previewStayPricingSchema = z
   .object({
     unitId: z.string().uuid(),

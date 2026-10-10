@@ -50,6 +50,13 @@ export class ChangeBookingStayUseCase {
       }
 
       const pricingIntent = resolveCommandIntent(command.pricingIntent);
+      if (pricingIntent === "recalculate_from_rate_plan") {
+        return Result.fail(
+          new ValidationError(
+            "recalculate_from_rate_plan requires the booking financial reprice preview endpoint",
+          ),
+        );
+      }
 
       return this.orchestrator.previewStayChange(
         booking.getValue(),

@@ -24,8 +24,8 @@ export interface StayChangeDraft {
 }
 
 /**
- * Commercial policy for StayMutationEngine (BFS-1).
- * - operator: enforce pricingIntent (default preserve; reject recalculate/manual until later BFS).
+ * Commercial policy for StayMutationEngine (BFS-1/BFS-2).
+ * - operator: default preserve_agreed_total; recalculate preview allowed; recalculate commit gated until BFS-3; manual rejected.
  * - channel_compat_reprice: isolated OTA path keeping pre-BFS RatePlan reprice until BFS-7.
  */
 export type StayChangeCommercialMode =
@@ -45,6 +45,25 @@ export interface StayChangePreviewTotals {
   currency: string;
 }
 
+/** Commercial breakdown for recalculate_from_rate_plan previews (BFS-2). */
+export interface StayChangeProposedCommercial {
+  subtotalAmount: string;
+  feesAmount: string;
+  taxesAmount: string;
+  discountAmount: string;
+  totalAmount: string;
+  currency: string;
+  lineItems: Array<{
+    date: string;
+    baseAmount: string;
+    adjustedAmount: string;
+    currency: string;
+  }>;
+  /** RatePlan content fingerprint used for confirmation binding. */
+  ratePlanFingerprint: string;
+  pricingFingerprint: string;
+}
+
 export interface StayChangePreview {
   available: boolean;
   unchanged: boolean;
@@ -54,6 +73,8 @@ export interface StayChangePreview {
   priceDelta: { amount: string; currency: string } | null;
   /** Effective commercial intent applied to this preview (operator path). */
   pricingIntent?: BookingPricingIntent;
+  /** Present when pricingIntent is recalculate_from_rate_plan and available. */
+  proposedCommercial?: StayChangeProposedCommercial | null;
 }
 
 export interface StayChangeCommitResult {

@@ -26,8 +26,11 @@ export * from "./import/CommitReservationImportBatchUseCase";
 export * from "./pricing/PricingCalculator";
 export * from "./pricing/ratePlanTemplate";
 export * from "./pricing/ratePlanContentFingerprint";
+export * from "./pricing/bookingFinancialFingerprint";
 export * from "./application/BulkRatePlanConfirmToken";
 export * from "./application/BulkRatePlanFromTemplateUseCases";
+export * from "./application/BookingFinancialConfirmToken";
+export * from "./application/BookingFinancialRepriceUseCases";
 
 export * from "./booking/domain/QuoteSnapshot";
 export * from "./booking/domain/Hold";
