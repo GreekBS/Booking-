@@ -34,6 +34,7 @@ export async function truncateIntegrationTables(): Promise<void> {
       await tx.reservationImportRejectedRow.deleteMany({ where: { tenantId } });
       await tx.reservationImportRow.deleteMany({ where: { tenantId } });
       await tx.reservationImportBatch.deleteMany({ where: { tenantId } });
+      await tx.bookingCommercialAmendment.deleteMany({ where: { tenantId } });
       await tx.booking.deleteMany({ where: { tenantId } });
       await tx.guest.deleteMany({ where: { tenantId } });
       await tx.quote.deleteMany({ where: { tenantId } });
@@ -69,6 +70,7 @@ export async function truncateIntegrationTables(): Promise<void> {
   await prisma.paymentRecord.deleteMany();
   await prisma.folioLine.deleteMany();
   await prisma.folio.deleteMany();
+  await prisma.bookingCommercialAmendment.deleteMany();
   await prisma.customerBillingProfile.deleteMany();
   await prisma.businessFiscalProfile.deleteMany();
   await prisma.taxRule.deleteMany({ where: { tenantId: { not: null } } });

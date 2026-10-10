@@ -339,6 +339,7 @@ model Tenant {
   paymentRefunds                 PaymentRefund[]
   folios                         Folio[]
   folioLines                     FolioLine[]
+  bookingCommercialAmendments    BookingCommercialAmendment[]
   taxRules                       TaxRule[]
   businessFiscalProfiles         BusinessFiscalProfile[]
   customerBillingProfiles        CustomerBillingProfile[]
@@ -533,6 +534,7 @@ model Property {
   bookingHolds               BookingHold[]
   quotes                     Quote[]
   bookings                   Booking[]
+  bookingCommercialAmendments BookingCommercialAmendment[]
   payments                   Payment[]
   channelConnections         ChannelConnection[]
   businessFiscalProfiles     BusinessFiscalProfile[]
@@ -965,6 +967,8 @@ model Quote {
   unit     Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
   property Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   bookings Booking[]
+  amendmentsAsPrevious BookingCommercialAmendment[] @relation("AmendmentPreviousQuote")
+  amendmentsAsNew      BookingCommercialAmendment[] @relation("AmendmentNewQuote")
 
   @@index([tenantId, holdId])
   @@map("quotes")
@@ -1012,6 +1016,7 @@ model Booking {
   paymentRecords PaymentRecord[]
   payments       Payment[]
   folios         Folio[]
+  commercialAmendments BookingCommercialAmendment[]
   tasks          Task[]
   conversations            Conversation[]
   escalations              OwnerEscalation[]
@@ -1027,6 +1032,39 @@ model Booking {
   @@index([tenantId, guestId])
   @@index([tenantId, supersededByBookingId])
   @@map("bookings")
+}
+
+/// Durable commercial amendment record (BFS-3a). Append-only history; apply TX is BFS-3b.
+model BookingCommercialAmendment {
+  id                    String   @id @db.Uuid
+  tenantId              String   @map("tenant_id") @db.Uuid
+  propertyId            String   @map("property_id") @db.Uuid
+  bookingId             String   @map("booking_id") @db.Uuid
+  previousQuoteId       String   @map("previous_quote_id") @db.Uuid
+  newQuoteId            String   @map("new_quote_id") @db.Uuid
+  previousTotalAmount   Decimal  @map("previous_total_amount") @db.Decimal(19, 4)
+  newTotalAmount        Decimal  @map("new_total_amount") @db.Decimal(19, 4)
+  deltaAmount           Decimal  @map("delta_amount") @db.Decimal(19, 4)
+  currency              String   @db.Char(3)
+  pricingIntent         String   @map("pricing_intent") @db.VarChar(64)
+  reason                String   @db.VarChar(500)
+  actorId               String   @map("actor_id") @db.Uuid
+  mutationOrigin        String   @map("mutation_origin") @db.VarChar(64)
+  confirmationReference String   @map("confirmation_reference") @db.VarChar(128)
+  idempotencyKey        String   @map("idempotency_key") @db.VarChar(64)
+  pricingFingerprint    String   @map("pricing_fingerprint") @db.VarChar(64)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property      Property @relation(fields: [tenantId, propertyId], references: [tenantId, id], onDelete: Restrict)
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  previousQuote Quote    @relation("AmendmentPreviousQuote", fields: [previousQuoteId], references: [id], onDelete: Restrict)
+  newQuote      Quote    @relation("AmendmentNewQuote", fields: [newQuoteId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, bookingId, createdAt])
+  @@index([tenantId, propertyId, createdAt])
+  @@map("booking_commercial_amendments")
 }
 
 /// Operator CSV reservation import batch (draft + durable terminal audit).

@@ -64,6 +64,7 @@ export {
   PLATFORM_SUPER_ADMIN_ADVISORY_LOCK_KEY2,
 } from "./repositories/PlatformSuperAdminMutation";
 export { PrismaFolioRepository } from "./repositories/billing/FolioRepository";
+export { PrismaBookingCommercialAmendmentRepository } from "./repositories/commerce/BookingCommercialAmendmentRepository";
 export {
   PrismaPaymentRepository,
   PrismaPaymentSettlementRepository,

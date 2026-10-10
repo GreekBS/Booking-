@@ -30,7 +30,9 @@ export type FolioLineSourceType =
   | "quote_snapshot_fee_placeholder"
   | "quote_snapshot_tax_placeholder"
   | "manual"
-  | "tax_evaluation";
+  | "tax_evaluation"
+  /** Future BFS-3b commercial amendment adjustment provenance (VARCHAR; no DB enum). */
+  | "booking_commercial_amendment";
 
 export interface FolioLineSource {
   sourceType: FolioLineSourceType;

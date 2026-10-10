@@ -31,6 +31,9 @@ export * from "./application/BulkRatePlanConfirmToken";
 export * from "./application/BulkRatePlanFromTemplateUseCases";
 export * from "./application/BookingFinancialConfirmToken";
 export * from "./application/BookingFinancialRepriceUseCases";
+export * from "./amendment/BookingCommercialAmendment";
+export * from "./amendment/commercialRepriceSafety";
+export * from "./ports/IBookingCommercialAmendmentRepository";
 
 export * from "./booking/domain/QuoteSnapshot";
 export * from "./booking/domain/Hold";
