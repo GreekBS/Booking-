@@ -169,6 +169,36 @@ export const ratePlanSchema = z.object({
     .default([]),
 });
 
+/** C3-H2c — bulk RatePlan copy from a template Unit. */
+export const bulkRatePlanPropagateModeSchema = z.enum([
+  "skip_customized",
+  "overwrite_all",
+]);
+
+export const previewBulkRatePlanFromTemplateSchema = z
+  .object({
+    sourceUnitId: z.string().uuid(),
+    targetUnitIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+    roomTypeId: z.string().uuid().optional(),
+    mode: bulkRatePlanPropagateModeSchema.default("skip_customized"),
+  })
+  .superRefine((value, ctx) => {
+    const hasTargets = (value.targetUnitIds?.length ?? 0) > 0;
+    const hasRoomType = Boolean(value.roomTypeId);
+    if (hasTargets === hasRoomType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide exactly one of targetUnitIds or roomTypeId",
+        path: hasTargets ? ["roomTypeId"] : ["targetUnitIds"],
+      });
+    }
+  });
+
+export const applyBulkRatePlanFromTemplateSchema = z.object({
+  confirmationToken: z.string().trim().min(16).max(8192),
+  confirmOverwrite: z.boolean().optional(),
+});
+
 export const listBookingsQuerySchema = paginationSchema.extend({
   unitId: z.string().uuid().optional(),
   propertyId: z.string().uuid().optional(),

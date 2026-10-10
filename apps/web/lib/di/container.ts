@@ -60,6 +60,10 @@ import {
 
   BulkCreateUnitsUseCase,
 
+  PreviewBulkRatePlanFromTemplateUseCase,
+
+  ApplyBulkRatePlanFromTemplateUseCase,
+
   CreateRoomTypeUseCase,
 
   ListRoomTypesUseCase,
@@ -730,6 +734,7 @@ import { PollingFeatureGatedPollJobHandler } from "@/lib/channels/PollingFeature
 import { isChannelsPollingEnabled } from "@/lib/channels/polling-enabled";
 import { createAssistantProvider } from "@/lib/ai/createAssistantProvider";
 import { createOperatorCopilotProvider } from "@/lib/ai/createOperatorCopilotProvider";
+import { HmacBulkRatePlanConfirmTokenService } from "@/lib/pricing/bulk-rate-confirm-token";
 
 
 
@@ -1292,6 +1297,28 @@ export const bulkCreateUnitsUseCase = new BulkCreateUnitsUseCase(
   ratePlanRepository,
   outboxRepository,
 );
+
+const bulkRatePlanConfirmTokenService = new HmacBulkRatePlanConfirmTokenService();
+
+export const previewBulkRatePlanFromTemplateUseCase =
+  new PreviewBulkRatePlanFromTemplateUseCase(
+    propertyRepository,
+    ratePlanRepository,
+    permissionChecker,
+    bulkRatePlanConfirmTokenService,
+  );
+
+export const applyBulkRatePlanFromTemplateUseCase =
+  new ApplyBulkRatePlanFromTemplateUseCase(
+    propertyRepository,
+    ratePlanRepository,
+    permissionChecker,
+    idGenerator,
+    outboxRepository,
+    auditLogRepository,
+    bulkRatePlanConfirmTokenService,
+    previewBulkRatePlanFromTemplateUseCase,
+  );
 
 const availabilityRulesRepository = new PrismaAvailabilityRulesRepository();
 export { availabilityRulesRepository };

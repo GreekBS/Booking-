@@ -25,6 +25,9 @@ export * from "./import/CommitReservationImportBatchUseCase";
 
 export * from "./pricing/PricingCalculator";
 export * from "./pricing/ratePlanTemplate";
+export * from "./pricing/ratePlanContentFingerprint";
+export * from "./application/BulkRatePlanConfirmToken";
+export * from "./application/BulkRatePlanFromTemplateUseCases";
 
 export * from "./booking/domain/QuoteSnapshot";
 export * from "./booking/domain/Hold";
