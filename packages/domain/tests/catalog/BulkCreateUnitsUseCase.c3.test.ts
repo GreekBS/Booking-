@@ -71,9 +71,10 @@ function buildRepos(opts?: {
     existsBySlug: vi.fn(),
     findAll: vi.fn(),
     listUnitCatalog: vi.fn(),
-    mutateUnderLock: vi.fn(async (_t, _p, mutator) => {
+    mutateUnderLock: vi.fn(async (_t, _p, mutator, afterPersist) => {
       const locked = property!;
       await mutator(locked);
+      if (afterPersist) await afterPersist(locked);
       return locked;
     }),
   };
@@ -127,6 +128,7 @@ describe("BulkCreateUnitsUseCase C3", () => {
     expect(result.getValue().preview).toBe(true);
     expect(result.getValue().planned).toHaveLength(20);
     expect(result.getValue().units).toHaveLength(0);
+    expect(result.getValue().pricingTemplate).toBeNull();
     expect(deps.propertyRepository.mutateUnderLock).not.toHaveBeenCalled();
   });
 
@@ -163,6 +165,7 @@ describe("BulkCreateUnitsUseCase C3", () => {
     expect(result.getValue().units.every((u) => u.status === "active")).toBe(
       true,
     );
+    expect(result.getValue().pricingTemplate).toBeNull();
     expect(deps.propertyRepository.mutateUnderLock).toHaveBeenCalled();
   });
 

@@ -80,6 +80,7 @@ describe("Units bulk C3 admin API", () => {
         ],
         units: [unit],
         clientRequestId: "req-1",
+        pricingTemplate: null,
       }),
     );
 
@@ -109,6 +110,49 @@ describe("Units bulk C3 admin API", () => {
     const json = await res.json();
     expect(json.count).toBe(1);
     expect(json.units[0].roomNumber).toBe("101");
+    expect(json.pricingTemplate).toBeNull();
+  });
+
+  it("passes templateUnitId and returns pricingTemplate summary", async () => {
+    const templateUnitId = "55555555-5555-4555-8555-555555555555";
+    bulkExecute.mockResolvedValue(
+      Result.ok({
+        preview: true,
+        planned: [],
+        units: [],
+        clientRequestId: null,
+        pricingTemplate: {
+          templateUnitId,
+          copiedFromTemplate: true,
+          currency: "EUR",
+          baseNightlyAmount: "120.0000",
+          seasons: [],
+          dowModifiers: [],
+          seasonCount: 0,
+          dowModifierCount: 0,
+        },
+      }),
+    );
+
+    const res = await bulkCreate(
+      req({
+        roomTypeId: RT,
+        numbering: { mode: "sequential", start: 101, count: 2 },
+        templateUnitId,
+        preview: true,
+      }),
+      { params: Promise.resolve({ propertyId: PROP }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(bulkExecute).toHaveBeenCalledWith(
+      expect.objectContaining({ templateUnitId, preview: true }),
+      actor,
+    );
+    const json = await res.json();
+    expect(json.pricingTemplate.templateUnitId).toBe(templateUnitId);
+    expect(json.pricingTemplate.copiedFromTemplate).toBe(true);
+    expect(json.pricingTemplate.baseNightlyAmount).toBe("120.0000");
   });
 
   it("returns preview without creation status 200", async () => {
@@ -127,6 +171,7 @@ describe("Units bulk C3 admin API", () => {
         })),
         units: [],
         clientRequestId: null,
+        pricingTemplate: null,
       }),
     );
 

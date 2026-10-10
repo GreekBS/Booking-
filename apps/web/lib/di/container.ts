@@ -952,20 +952,6 @@ export const updateUnitUseCase = new UpdateUnitUseCase(
 
 );
 
-export const bulkCreateUnitsUseCase = new BulkCreateUnitsUseCase(
-
-  propertyRepository,
-
-  roomTypeRepository,
-
-  permissionChecker,
-
-  idGenerator,
-
-  unitHousekeepingStatusRepository,
-
-);
-
 export const removeUnitUseCase = new RemoveUnitUseCase(
 
   propertyRepository,
@@ -1296,6 +1282,16 @@ export { calendarBlockRepository };
 
 const ratePlanRepository = new PrismaRatePlanRepository();
 export { ratePlanRepository };
+
+export const bulkCreateUnitsUseCase = new BulkCreateUnitsUseCase(
+  propertyRepository,
+  roomTypeRepository,
+  permissionChecker,
+  idGenerator,
+  unitHousekeepingStatusRepository,
+  ratePlanRepository,
+  outboxRepository,
+);
 
 const availabilityRulesRepository = new PrismaAvailabilityRulesRepository();
 export { availabilityRulesRepository };

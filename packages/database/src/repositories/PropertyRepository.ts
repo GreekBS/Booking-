@@ -211,6 +211,7 @@ export class PrismaPropertyRepository implements IPropertyRepository {
     tenantId: string,
     propertyId: string,
     mutator: (property: Property) => void | Promise<void>,
+    afterPersist?: (property: Property) => void | Promise<void>,
   ): Promise<Property> {
     return withTenantTransaction(tenantId, async (tx) => {
       const locked = await tx.$queryRaw<Array<{ id: string }>>`
@@ -231,6 +232,9 @@ export class PrismaPropertyRepository implements IPropertyRepository {
 
       await mutator(property);
       await this.save(property);
+      if (afterPersist) {
+        await afterPersist(property);
+      }
       return property;
     });
   }

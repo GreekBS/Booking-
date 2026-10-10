@@ -59,6 +59,7 @@ export async function POST(
         floor: body.floor,
         bedrooms: body.bedrooms,
         bathrooms: body.bathrooms,
+        templateUnitId: body.templateUnitId,
         preview: body.preview,
         clientRequestId: headerRequestId ?? body.clientRequestId ?? null,
       },
@@ -77,6 +78,7 @@ export async function POST(
         planned: value.planned,
         units: value.units.map(serializeUnit),
         count: value.preview ? value.planned.length : value.units.length,
+        pricingTemplate: value.pricingTemplate,
       },
       value.preview ? 200 : 201,
     );

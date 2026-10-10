@@ -23,12 +23,14 @@ export interface IPropertyRepository {
   ): Promise<PropertyUnitCatalogResult>;
   /**
    * Property-row FOR UPDATE → load → mutator → save in one tenant TX.
-   * Used for atomic bulk unit creation and other inventory mutations.
+   * Optional afterPersist runs after units are written, still inside the same TX
+   * (e.g. RatePlan clones + outbox for C3-H2b).
    */
   mutateUnderLock(
     tenantId: string,
     propertyId: string,
     mutator: (property: Property) => void | Promise<void>,
+    afterPersist?: (property: Property) => void | Promise<void>,
   ): Promise<Property>;
 }
 

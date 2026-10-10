@@ -62,10 +62,12 @@ export class PrismaOutboxRepository implements IOutboxRepository {
       status: "pending" as const,
     }));
 
-    if (tx) {
-      await tx.outboxEvent.createMany({ data });
+    // Prefer explicit tx, then ambient withTenantTransaction (C3-H2b atomic bulk).
+    const client = tx ?? getTenantTransaction();
+    if (client) {
+      await client.outboxEvent.createMany({ data });
       // Same TX as durable write → NOTIFY after commit.
-      await notifyTalosAsyncWake(tx, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
+      await notifyTalosAsyncWake(client, TALOS_ASYNC_WAKE_OUTBOX_CHANNEL);
       return;
     }
 

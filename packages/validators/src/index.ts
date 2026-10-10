@@ -134,6 +134,8 @@ export const bulkCreateUnitsSchema = z.object({
   floor: z.string().trim().min(1).max(32).nullable().optional(),
   bedrooms: z.number().int().min(0).max(20).optional(),
   bathrooms: z.number().int().min(0).max(20).optional(),
+  /** Optional Unit whose RatePlan is cloned onto every new Unit (C3-H2b). */
+  templateUnitId: z.string().uuid().nullable().optional(),
   preview: z.boolean().optional(),
   clientRequestId: z.string().trim().min(1).max(128).nullable().optional(),
 });
