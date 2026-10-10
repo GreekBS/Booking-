@@ -58,6 +58,8 @@ import {
 
   GetUnitUseCase,
 
+  BulkCreateUnitsUseCase,
+
   CreateRoomTypeUseCase,
 
   ListRoomTypesUseCase,
@@ -936,6 +938,8 @@ export const addUnitUseCase = new AddUnitUseCase(
 
   unitHousekeepingStatusRepository,
 
+  roomTypeRepository,
+
 );
 
 export const updateUnitUseCase = new UpdateUnitUseCase(
@@ -943,6 +947,22 @@ export const updateUnitUseCase = new UpdateUnitUseCase(
   propertyRepository,
 
   permissionChecker,
+
+  roomTypeRepository,
+
+);
+
+export const bulkCreateUnitsUseCase = new BulkCreateUnitsUseCase(
+
+  propertyRepository,
+
+  roomTypeRepository,
+
+  permissionChecker,
+
+  idGenerator,
+
+  unitHousekeepingStatusRepository,
 
 );
 

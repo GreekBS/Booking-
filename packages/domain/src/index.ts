@@ -135,6 +135,10 @@ export * from "./catalog/application/PropertyQueryUseCases";
 
 export * from "./catalog/application/UnitUseCases";
 
+export * from "./catalog/application/BulkCreateUnitsUseCase";
+
+export * from "./catalog/application/roomInventoryPlanning";
+
 export * from "./catalog/application/RoomTypeUseCases";
 
 export * from "./catalog/application/AmenityUseCases";

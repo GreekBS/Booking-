@@ -110,6 +110,34 @@ export const updateUnitSchema = z.object({
   floor: z.string().trim().min(1).max(32).nullable().optional(),
 });
 
+/** Phase C3 — bulk physical room creation (max 200). */
+export const bulkCreateUnitsNumberingSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("sequential"),
+    prefix: z.string().trim().max(16).optional(),
+    start: z.number().int().min(0).max(1_000_000),
+    count: z.number().int().min(1).max(200),
+    padWidth: z.number().int().min(1).max(16).optional(),
+  }),
+  z.object({
+    mode: z.literal("explicit"),
+    roomNumbers: z
+      .array(z.string().trim().min(1).max(64))
+      .min(1)
+      .max(200),
+  }),
+]);
+
+export const bulkCreateUnitsSchema = z.object({
+  roomTypeId: z.string().uuid(),
+  numbering: bulkCreateUnitsNumberingSchema,
+  floor: z.string().trim().min(1).max(32).nullable().optional(),
+  bedrooms: z.number().int().min(0).max(20).optional(),
+  bathrooms: z.number().int().min(0).max(20).optional(),
+  preview: z.boolean().optional(),
+  clientRequestId: z.string().trim().min(1).max(128).nullable().optional(),
+});
+
 /** Phase C1 contracts — RoomType CRUD routes arrive in C2. */
 export const roomTypeStatusSchema = z.enum(["active", "inactive"]);
 

@@ -1,11 +1,19 @@
 import { Result } from "../../shared/kernel/Result";
 import { PropertySlug } from "../../shared/value-objects/Slug";
-import { ForbiddenError, ValidationError } from "../../shared/errors/DomainError";
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "../../shared/errors/DomainError";
 import type { Unit } from "../domain/Unit";
-import type { IPropertyRepository } from "../ports/ICatalogRepositories";
+import type {
+  IPropertyRepository,
+  IRoomTypeRepository,
+} from "../ports/ICatalogRepositories";
 import type { IIdGenerator } from "../../shared/ports/IIdGenerator";
 import type { PermissionChecker, ActorContext } from "../../shared/services/PermissionChecker";
 import type { IUnitHousekeepingStatusRepository } from "../../operations/ports/IUnitHousekeepingStatusRepository";
+import { assertAssignableRoomType } from "./roomTypeAssignment";
 
 export interface AddUnitCommand {
   tenantId: string;
@@ -15,6 +23,9 @@ export interface AddUnitCommand {
   maxGuests: number;
   bedrooms?: number;
   bathrooms?: number;
+  roomTypeId?: string | null;
+  roomNumber?: string | null;
+  floor?: string | null;
 }
 
 export class AddUnitUseCase {
@@ -23,6 +34,7 @@ export class AddUnitUseCase {
     private readonly permissionChecker: PermissionChecker,
     private readonly idGenerator: IIdGenerator,
     private readonly housekeepingStatuses?: IUnitHousekeepingStatusRepository,
+    private readonly roomTypeRepository?: IRoomTypeRepository,
   ) {}
 
   async execute(
@@ -35,7 +47,7 @@ export class AddUnitUseCase {
         command.propertyId,
       );
       if (!property) {
-        return Result.fail(new ValidationError("Property not found"));
+        return Result.fail(new NotFoundError("Property", command.propertyId));
       }
 
       if (
@@ -49,6 +61,22 @@ export class AddUnitUseCase {
         return Result.fail(new ForbiddenError());
       }
 
+      let roomTypeId: string | null | undefined = command.roomTypeId;
+      if (command.roomTypeId !== undefined) {
+        if (!this.roomTypeRepository) {
+          return Result.fail(
+            new ValidationError("RoomType assignment is not available"),
+          );
+        }
+        const assignment = await assertAssignableRoomType(this.roomTypeRepository, {
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          roomTypeId: command.roomTypeId,
+        });
+        if (assignment.isFailure) return Result.fail(assignment.getError());
+        roomTypeId = assignment.getValue().roomTypeId;
+      }
+
       const slug = command.slug
         ? PropertySlug.create(command.slug).value
         : PropertySlug.fromName(command.name).value;
@@ -60,6 +88,9 @@ export class AddUnitUseCase {
         maxGuests: command.maxGuests,
         bedrooms: command.bedrooms,
         bathrooms: command.bathrooms,
+        roomTypeId,
+        roomNumber: command.roomNumber,
+        floor: command.floor,
       });
 
       await this.propertyRepository.save(property);
@@ -88,12 +119,16 @@ export interface UpdateUnitCommand {
   bedrooms?: number;
   bathrooms?: number;
   status?: "active" | "inactive" | "archived";
+  roomTypeId?: string | null;
+  roomNumber?: string | null;
+  floor?: string | null;
 }
 
 export class UpdateUnitUseCase {
   constructor(
     private readonly propertyRepository: IPropertyRepository,
     private readonly permissionChecker: PermissionChecker,
+    private readonly roomTypeRepository?: IRoomTypeRepository,
   ) {}
 
   async execute(
@@ -106,7 +141,7 @@ export class UpdateUnitUseCase {
         command.propertyId,
       );
       if (!property) {
-        return Result.fail(new ValidationError("Property not found"));
+        return Result.fail(new NotFoundError("Property", command.propertyId));
       }
 
       if (
@@ -120,12 +155,31 @@ export class UpdateUnitUseCase {
         return Result.fail(new ForbiddenError());
       }
 
+      let roomTypeId = command.roomTypeId;
+      if (command.roomTypeId !== undefined) {
+        if (!this.roomTypeRepository) {
+          return Result.fail(
+            new ValidationError("RoomType assignment is not available"),
+          );
+        }
+        const assignment = await assertAssignableRoomType(this.roomTypeRepository, {
+          tenantId: command.tenantId,
+          propertyId: command.propertyId,
+          roomTypeId: command.roomTypeId,
+        });
+        if (assignment.isFailure) return Result.fail(assignment.getError());
+        roomTypeId = assignment.getValue().roomTypeId;
+      }
+
       const unit = property.updateUnit(command.unitId, {
         name: command.name,
         maxGuests: command.maxGuests,
         bedrooms: command.bedrooms,
         bathrooms: command.bathrooms,
         status: command.status,
+        roomTypeId,
+        roomNumber: command.roomNumber,
+        floor: command.floor,
       });
 
       await this.propertyRepository.save(property);
@@ -158,7 +212,7 @@ export class RemoveUnitUseCase {
         command.propertyId,
       );
       if (!property) {
-        return Result.fail(new ValidationError("Property not found"));
+        return Result.fail(new NotFoundError("Property", command.propertyId));
       }
 
       if (
@@ -196,7 +250,7 @@ export class GetUnitUseCase {
     try {
       const property = await this.propertyRepository.findById(tenantId, propertyId);
       if (!property) {
-        return Result.fail(new ValidationError("Property not found"));
+        return Result.fail(new NotFoundError("Property", propertyId));
       }
 
       if (
@@ -212,7 +266,7 @@ export class GetUnitUseCase {
 
       const unit = property.units.find((u) => u.id === unitId);
       if (!unit) {
-        return Result.fail(new ValidationError("Unit not found"));
+        return Result.fail(new NotFoundError("Unit", unitId));
       }
 
       return Result.ok(unit);

@@ -1,4 +1,6 @@
 import {
+  ConflictError,
+  NotFoundError,
   Property,
   Location,
   PropertyPolicies,
@@ -7,6 +9,7 @@ import {
   type PaginatedResult,
   type PaginationParams,
 } from "@hcp/domain";
+import { Prisma } from "@prisma/client";
 import { withTenantTransaction } from "../client";
 import {
   PrismaOutboxRepository,
@@ -20,6 +23,12 @@ import type {
   PropertyType,
   CancellationPolicyType,
 } from "@prisma/client";
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"
+  );
+}
 
 function mapLocation(record: PrismaProperty): Location {
   return Location.create({
@@ -89,103 +98,140 @@ export class PrismaPropertyRepository implements IPropertyRepository {
     const props = property.toProps();
     const events = property.pullDomainEvents();
 
-    await withTenantTransaction(props.tenantId, async () => {
-      await saveAggregateWithOutbox(
-        this.outboxRepository,
-        events,
-        async (tx: TransactionClient) => {
-        await tx.property.upsert({
-        where: { id: props.id },
-        create: {
-          id: props.id,
-          tenantId: props.tenantId,
-          name: props.name,
-          slug: props.slug,
-          description: props.description,
-          type: props.type as PropertyType,
-          status: props.status as PropertyStatus,
-          timezone: props.timezone,
-          addressLine: props.location.addressLine,
-          city: props.location.city,
-          region: props.location.region,
-          postalCode: props.location.postalCode,
-          country: props.location.country,
-          latitude: props.location.latitude,
-          longitude: props.location.longitude,
-          checkInTime: props.policies.checkInTime,
-          checkOutTime: props.policies.checkOutTime,
-          cancellationPolicyType: props.policies
-            .cancellationPolicyType as CancellationPolicyType,
-          websiteUrl: props.websiteUrl,
-          deletedAt: props.deletedAt,
-        },
-        update: {
-          name: props.name,
-          slug: props.slug,
-          description: props.description,
-          type: props.type as PropertyType,
-          status: props.status as PropertyStatus,
-          timezone: props.timezone,
-          addressLine: props.location.addressLine,
-          city: props.location.city,
-          region: props.location.region,
-          postalCode: props.location.postalCode,
-          country: props.location.country,
-          latitude: props.location.latitude,
-          longitude: props.location.longitude,
-          checkInTime: props.policies.checkInTime,
-          checkOutTime: props.policies.checkOutTime,
-          cancellationPolicyType: props.policies
-            .cancellationPolicyType as CancellationPolicyType,
-          websiteUrl: props.websiteUrl,
-          deletedAt: props.deletedAt,
-        },
-      });
-
-      for (const unit of props.units) {
-        await tx.unit.upsert({
-          where: { id: unit.id },
+    try {
+      await withTenantTransaction(props.tenantId, async () => {
+        await saveAggregateWithOutbox(
+          this.outboxRepository,
+          events,
+          async (tx: TransactionClient) => {
+          await tx.property.upsert({
+          where: { id: props.id },
           create: {
-            id: unit.id,
-            tenantId: unit.tenantId,
-            propertyId: unit.propertyId,
-            name: unit.name,
-            slug: unit.slug,
-            maxGuests: unit.maxGuests,
-            bedrooms: unit.bedrooms,
-            bathrooms: unit.bathrooms,
-            status: unit.status,
-            roomTypeId: unit.roomTypeId,
-            roomNumber: unit.roomNumber,
-            floor: unit.floor,
-            deletedAt: unit.deletedAt,
+            id: props.id,
+            tenantId: props.tenantId,
+            name: props.name,
+            slug: props.slug,
+            description: props.description,
+            type: props.type as PropertyType,
+            status: props.status as PropertyStatus,
+            timezone: props.timezone,
+            addressLine: props.location.addressLine,
+            city: props.location.city,
+            region: props.location.region,
+            postalCode: props.location.postalCode,
+            country: props.location.country,
+            latitude: props.location.latitude,
+            longitude: props.location.longitude,
+            checkInTime: props.policies.checkInTime,
+            checkOutTime: props.policies.checkOutTime,
+            cancellationPolicyType: props.policies
+              .cancellationPolicyType as CancellationPolicyType,
+            websiteUrl: props.websiteUrl,
+            deletedAt: props.deletedAt,
           },
           update: {
-            name: unit.name,
-            slug: unit.slug,
-            maxGuests: unit.maxGuests,
-            bedrooms: unit.bedrooms,
-            bathrooms: unit.bathrooms,
-            status: unit.status,
-            roomTypeId: unit.roomTypeId,
-            roomNumber: unit.roomNumber,
-            floor: unit.floor,
-            deletedAt: unit.deletedAt,
+            name: props.name,
+            slug: props.slug,
+            description: props.description,
+            type: props.type as PropertyType,
+            status: props.status as PropertyStatus,
+            timezone: props.timezone,
+            addressLine: props.location.addressLine,
+            city: props.location.city,
+            region: props.location.region,
+            postalCode: props.location.postalCode,
+            country: props.location.country,
+            latitude: props.location.latitude,
+            longitude: props.location.longitude,
+            checkInTime: props.policies.checkInTime,
+            checkOutTime: props.policies.checkOutTime,
+            cancellationPolicyType: props.policies
+              .cancellationPolicyType as CancellationPolicyType,
+            websiteUrl: props.websiteUrl,
+            deletedAt: props.deletedAt,
           },
         });
+
+        for (const unit of props.units) {
+          await tx.unit.upsert({
+            where: { id: unit.id },
+            create: {
+              id: unit.id,
+              tenantId: unit.tenantId,
+              propertyId: unit.propertyId,
+              name: unit.name,
+              slug: unit.slug,
+              maxGuests: unit.maxGuests,
+              bedrooms: unit.bedrooms,
+              bathrooms: unit.bathrooms,
+              status: unit.status,
+              roomTypeId: unit.roomTypeId,
+              roomNumber: unit.roomNumber,
+              floor: unit.floor,
+              deletedAt: unit.deletedAt,
+            },
+            update: {
+              name: unit.name,
+              slug: unit.slug,
+              maxGuests: unit.maxGuests,
+              bedrooms: unit.bedrooms,
+              bathrooms: unit.bathrooms,
+              status: unit.status,
+              roomTypeId: unit.roomTypeId,
+              roomNumber: unit.roomNumber,
+              floor: unit.floor,
+              deletedAt: unit.deletedAt,
+            },
+          });
+        }
+
+        await tx.propertyAmenity.deleteMany({ where: { propertyId: props.id } });
+        if (props.amenityIds.length > 0) {
+          await tx.propertyAmenity.createMany({
+            data: props.amenityIds.map((amenityId) => ({
+              propertyId: props.id,
+              amenityId,
+            })),
+          });
+        }
+        },
+        );
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictError(
+          "Unit slug or room number conflicts with existing inventory",
+        );
+      }
+      throw error;
+    }
+  }
+
+  async mutateUnderLock(
+    tenantId: string,
+    propertyId: string,
+    mutator: (property: Property) => void | Promise<void>,
+  ): Promise<Property> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM properties
+        WHERE id = ${propertyId}::uuid
+          AND tenant_id = ${tenantId}::uuid
+          AND deleted_at IS NULL
+        FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new NotFoundError("Property", propertyId);
       }
 
-      await tx.propertyAmenity.deleteMany({ where: { propertyId: props.id } });
-      if (props.amenityIds.length > 0) {
-        await tx.propertyAmenity.createMany({
-          data: props.amenityIds.map((amenityId) => ({
-            propertyId: props.id,
-            amenityId,
-          })),
-        });
+      const property = await this.findById(tenantId, propertyId);
+      if (!property) {
+        throw new NotFoundError("Property", propertyId);
       }
-      },
-      );
+
+      await mutator(property);
+      await this.save(property);
+      return property;
     });
   }
 

@@ -60,6 +60,9 @@ export interface AddUnitProps {
   maxGuests: number;
   bedrooms?: number;
   bathrooms?: number;
+  roomTypeId?: string | null;
+  roomNumber?: string | null;
+  floor?: string | null;
 }
 
 export class Property extends AggregateRoot<PropertyProps> {
@@ -239,6 +242,28 @@ export class Property extends AggregateRoot<PropertyProps> {
   }
 
   addUnit(props: AddUnitProps): Unit {
+    const slug = props.slug;
+    const existingSlug = this._units.some(
+      (u) => u.deletedAt === null && u.slug === slug,
+    );
+    if (existingSlug) {
+      throw new ValidationError(`Unit slug already exists: ${slug}`);
+    }
+
+    const roomNumber = props.roomNumber?.trim() || null;
+    if (roomNumber) {
+      const normalized = roomNumber.toLowerCase();
+      const dup = this._units.some(
+        (u) =>
+          u.deletedAt === null &&
+          u.roomNumber !== null &&
+          u.roomNumber.trim().toLowerCase() === normalized,
+      );
+      if (dup) {
+        throw new ValidationError(`Room number already exists: ${roomNumber}`);
+      }
+    }
+
     const unit = Unit.create({
       id: props.id,
       tenantId: this.props.tenantId,
@@ -248,6 +273,9 @@ export class Property extends AggregateRoot<PropertyProps> {
       maxGuests: props.maxGuests,
       bedrooms: props.bedrooms,
       bathrooms: props.bathrooms,
+      roomTypeId: props.roomTypeId,
+      roomNumber: props.roomNumber,
+      floor: props.floor,
     });
 
     this._units.push(unit);
@@ -266,11 +294,41 @@ export class Property extends AggregateRoot<PropertyProps> {
 
   updateUnit(
     unitId: string,
-    details: Partial<Pick<UnitProps, "name" | "maxGuests" | "bedrooms" | "bathrooms" | "status">>,
+    details: Partial<
+      Pick<
+        UnitProps,
+        | "name"
+        | "maxGuests"
+        | "bedrooms"
+        | "bathrooms"
+        | "status"
+        | "roomTypeId"
+        | "roomNumber"
+        | "floor"
+      >
+    >,
   ): Unit {
     const unit = this._units.find((u) => u.id === unitId && u.deletedAt === null);
     if (!unit) {
       throw new Error(`Unit not found: ${unitId}`);
+    }
+
+    if (details.roomNumber !== undefined && details.roomNumber !== null) {
+      const normalized = details.roomNumber.trim().toLowerCase();
+      if (normalized.length > 0) {
+        const dup = this._units.some(
+          (u) =>
+            u.id !== unitId &&
+            u.deletedAt === null &&
+            u.roomNumber !== null &&
+            u.roomNumber.trim().toLowerCase() === normalized,
+        );
+        if (dup) {
+          throw new ValidationError(
+            `Room number already exists: ${details.roomNumber.trim()}`,
+          );
+        }
+      }
     }
 
     unit.update(details);

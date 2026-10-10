@@ -15,6 +15,9 @@ function serializeUnit(unit: {
   bedrooms: number;
   bathrooms: number;
   status: string;
+  roomTypeId?: string | null;
+  roomNumber?: string | null;
+  floor?: string | null;
 }) {
   return {
     id: unit.id,
@@ -24,6 +27,9 @@ function serializeUnit(unit: {
     bedrooms: unit.bedrooms,
     bathrooms: unit.bathrooms,
     status: unit.status,
+    roomTypeId: unit.roomTypeId ?? null,
+    roomNumber: unit.roomNumber ?? null,
+    floor: unit.floor ?? null,
   };
 }
 

@@ -88,6 +88,7 @@ function repos(opts?: {
     existsBySlug: vi.fn(),
     findAll: vi.fn(),
     listUnitCatalog: vi.fn(),
+    mutateUnderLock: vi.fn(),
   };
 
   const roomTypeRepository: IRoomTypeRepository = {

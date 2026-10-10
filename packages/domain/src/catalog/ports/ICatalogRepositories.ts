@@ -21,6 +21,15 @@ export interface IPropertyRepository {
     tenantId: string,
     propertyIds?: string[] | null,
   ): Promise<PropertyUnitCatalogResult>;
+  /**
+   * Property-row FOR UPDATE → load → mutator → save in one tenant TX.
+   * Used for atomic bulk unit creation and other inventory mutations.
+   */
+  mutateUnderLock(
+    tenantId: string,
+    propertyId: string,
+    mutator: (property: Property) => void | Promise<void>,
+  ): Promise<Property>;
 }
 
 export interface AmenityRecord {

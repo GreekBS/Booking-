@@ -134,12 +134,35 @@ export class Unit extends Entity<UnitProps> {
     });
   }
 
-  update(details: Partial<Pick<UnitProps, "name" | "maxGuests" | "bedrooms" | "bathrooms" | "status">>): void {
+  update(
+    details: Partial<
+      Pick<
+        UnitProps,
+        | "name"
+        | "maxGuests"
+        | "bedrooms"
+        | "bathrooms"
+        | "status"
+        | "roomTypeId"
+        | "roomNumber"
+        | "floor"
+      >
+    >,
+  ): void {
     if (details.name !== undefined) this.props.name = details.name.trim();
     if (details.maxGuests !== undefined) this.props.maxGuests = details.maxGuests;
     if (details.bedrooms !== undefined) this.props.bedrooms = details.bedrooms;
     if (details.bathrooms !== undefined) this.props.bathrooms = details.bathrooms;
     if (details.status !== undefined) this.props.status = details.status;
+    if (details.roomTypeId !== undefined) {
+      this.props.roomTypeId = details.roomTypeId;
+    }
+    if (details.roomNumber !== undefined) {
+      this.props.roomNumber = normalizeOptionalLabel(details.roomNumber);
+    }
+    if (details.floor !== undefined) {
+      this.props.floor = normalizeOptionalLabel(details.floor);
+    }
     this.props.updatedAt = new Date();
   }
 
