@@ -18,7 +18,6 @@ import {
   PreviewBookingFinancialRepriceUseCase,
   ReservationOrchestrator,
   ResolveOrCreateGuest,
-  ValidationError,
   type BookingFinancialConfirmClaims,
   type IBookingFinancialConfirmTokenService,
 } from "@hcp/domain";
@@ -105,7 +104,7 @@ class TestFinancialConfirmTokens implements IBookingFinancialConfirmTokenService
     return { token: `${payload}.${sig}`, claims };
   }
 
-  verify(token: string, now: Date = new Date()) {
+  verifySignature(token: string) {
     const parts = token.split(".");
     if (parts.length !== 2) return null;
     const [payload, sig] = parts;
@@ -116,9 +115,14 @@ class TestFinancialConfirmTokens implements IBookingFinancialConfirmTokenService
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-    const claims = JSON.parse(
+    return JSON.parse(
       fromB64url(payload).toString("utf8"),
     ) as BookingFinancialConfirmClaims;
+  }
+
+  verify(token: string, now: Date = new Date()) {
+    const claims = this.verifySignature(token);
+    if (!claims) return null;
     if (Math.floor(now.getTime() / 1000) > claims.exp) return null;
     return claims;
   }

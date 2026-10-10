@@ -26,7 +26,10 @@ import {
 import { ReservationOrchestrator } from "../reservation/ReservationOrchestrator";
 import type { StayChangePreview } from "../reservation/types";
 import { assertCommercePropertyAccess } from "./commerceAccess";
-import { type IBookingFinancialConfirmTokenService } from "./BookingFinancialConfirmToken";
+import {
+  isBookingFinancialConfirmExpired,
+  type IBookingFinancialConfirmTokenService,
+} from "./BookingFinancialConfirmToken";
 import {
   bookingProposedCommercialFingerprint,
   hashFinancialReason,
@@ -308,7 +311,11 @@ export class ApplyBookingFinancialRepriceUseCase {
       const reason = normalizeReason(command.reason);
       if (reason.isFailure) return Result.fail(reason.getError());
 
-      const claims = this.confirmTokens.verify(command.confirmationToken);
+      // Cryptographic validity first — do not enforce exp yet so an already
+      // committed amendment can still be replayed after wall-clock expiry.
+      const claims = this.confirmTokens.verifySignature(
+        command.confirmationToken,
+      );
       if (!claims) {
         return Result.fail(
           new ValidationError("Confirmation token is invalid or expired"),
@@ -382,7 +389,8 @@ export class ApplyBookingFinancialRepriceUseCase {
             );
           }
 
-          // Replay-before-stale: completed amendment for this confirmation.
+          // Replay-before-stale / replay-before-expiry: completed amendment
+          // for this confirmation digest may be returned even when exp elapsed.
           const existing =
             await this.safety.amendmentRepository.findByIdempotencyKey(
               command.tenantId,
@@ -414,6 +422,13 @@ export class ApplyBookingFinancialRepriceUseCase {
               currency: existing.currency,
               replayed: true,
             });
+          }
+
+          // No committed amendment — expired tokens must not create new writes.
+          if (isBookingFinancialConfirmExpired(claims)) {
+            return Result.fail(
+              new ValidationError("Confirmation token is invalid or expired"),
+            );
           }
 
           // Identity recheck must NOT FOR UPDATE after booking lock — that would

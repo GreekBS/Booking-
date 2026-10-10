@@ -37,7 +37,26 @@ export interface IBookingFinancialConfirmTokenService {
     },
   ): { token: string; claims: BookingFinancialConfirmClaims };
 
+  /**
+   * Cryptographic validity only: HMAC + required claim shape.
+   * Does **not** enforce `exp`. Used by apply so an already-committed
+   * amendment can be replayed after wall-clock expiry.
+   */
+  verifySignature(token: string): BookingFinancialConfirmClaims | null;
+
+  /**
+   * Full verification: signature + claims + expiry.
+   * Prefer for preview issuance consumers that must reject expired tokens.
+   */
   verify(token: string, now?: Date): BookingFinancialConfirmClaims | null;
+}
+
+/** True when claim `exp` is strictly before `now` (unix seconds). */
+export function isBookingFinancialConfirmExpired(
+  claims: Pick<BookingFinancialConfirmClaims, "exp">,
+  now: Date = new Date(),
+): boolean {
+  return Math.floor(now.getTime() / 1000) > claims.exp;
 }
 
 /** Controlled error code for apply attempts blocked until BFS-3. */

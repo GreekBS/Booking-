@@ -87,7 +87,7 @@ class TestTokens implements IBookingFinancialConfirmTokenService {
     );
     return { token: `${payload}.${sig}`, claims };
   }
-  verify(token: string, now: Date = new Date()) {
+  verifySignature(token: string) {
     const parts = token.split(".");
     if (parts.length !== 2) return null;
     const [payload, sig] = parts;
@@ -103,11 +103,17 @@ class TestTokens implements IBookingFinancialConfirmTokenService {
         fromB64url(payload).toString("utf8"),
       ) as BookingFinancialConfirmClaims;
       if (claims.typ !== BOOKING_FINANCIAL_CONFIRM_TYP) return null;
-      if (claims.exp < Math.floor(now.getTime() / 1000)) return null;
       return claims;
     } catch {
       return null;
     }
+  }
+
+  verify(token: string, now: Date = new Date()) {
+    const claims = this.verifySignature(token);
+    if (!claims) return null;
+    if (claims.exp < Math.floor(now.getTime() / 1000)) return null;
+    return claims;
   }
 }
 

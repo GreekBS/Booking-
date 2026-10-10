@@ -14,7 +14,6 @@ import {
   PreviewBookingFinancialRepriceUseCase,
   Quote,
   Result,
-  ValidationError,
   bookingProposedCommercialFingerprint,
   hashFinancialReason,
   type ActorContext,
@@ -101,7 +100,7 @@ class TestFinancialConfirmTokens implements IBookingFinancialConfirmTokenService
     return { token: `${payload}.${sig}`, claims };
   }
 
-  verify(token: string, now: Date = new Date()) {
+  verifySignature(token: string) {
     const parts = token.split(".");
     if (parts.length !== 2) return null;
     const [payload, sig] = parts;
@@ -120,12 +119,14 @@ class TestFinancialConfirmTokens implements IBookingFinancialConfirmTokenService
     } catch {
       return null;
     }
-    if (
-      claims.typ !== BOOKING_FINANCIAL_CONFIRM_TYP ||
-      Math.floor(now.getTime() / 1000) > claims.exp
-    ) {
-      return null;
-    }
+    if (claims.typ !== BOOKING_FINANCIAL_CONFIRM_TYP) return null;
+    return claims;
+  }
+
+  verify(token: string, now: Date = new Date()) {
+    const claims = this.verifySignature(token);
+    if (!claims) return null;
+    if (Math.floor(now.getTime() / 1000) > claims.exp) return null;
     return claims;
   }
 }

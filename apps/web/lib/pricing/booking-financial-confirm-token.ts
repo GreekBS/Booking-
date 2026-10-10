@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   BOOKING_FINANCIAL_CONFIRM_TTL_SECONDS,
   BOOKING_FINANCIAL_CONFIRM_TYP,
+  isBookingFinancialConfirmExpired,
   type BookingFinancialConfirmClaims,
   type IBookingFinancialConfirmTokenService,
 } from "@hcp/domain";
@@ -90,7 +91,7 @@ export class HmacBookingFinancialConfirmTokenService
     return { token: `${payload}.${sig}`, claims };
   }
 
-  verify(token: string, now: Date = new Date()): BookingFinancialConfirmClaims | null {
+  verifySignature(token: string): BookingFinancialConfirmClaims | null {
     const parts = token.split(".");
     if (parts.length !== 2) return null;
     const [payload, sig] = parts;
@@ -129,10 +130,13 @@ export class HmacBookingFinancialConfirmTokenService
       return null;
     }
 
-    if (Math.floor(now.getTime() / 1000) > claims.exp) {
-      return null;
-    }
+    return claims;
+  }
 
+  verify(token: string, now: Date = new Date()): BookingFinancialConfirmClaims | null {
+    const claims = this.verifySignature(token);
+    if (!claims) return null;
+    if (isBookingFinancialConfirmExpired(claims, now)) return null;
     return claims;
   }
 }
