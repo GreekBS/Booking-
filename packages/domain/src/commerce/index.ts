@@ -24,6 +24,7 @@ export * from "./import/ReservationImportCommitRevalidation";
 export * from "./import/CommitReservationImportBatchUseCase";
 
 export * from "./pricing/PricingCalculator";
+export * from "./pricing/ratePlanTemplate";
 
 export * from "./booking/domain/QuoteSnapshot";
 export * from "./booking/domain/Hold";
