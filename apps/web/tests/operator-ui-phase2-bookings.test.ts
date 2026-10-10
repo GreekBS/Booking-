@@ -40,6 +40,8 @@ describe("Talos operator Phase 2 — bookings workspace", () => {
     expect(view).toContain("BookingPaymentsSection");
     expect(view).toContain("BookingBillingFiscalSection");
     expect(view).toContain("BookingTimelineSection");
+    expect(view).toContain("BookingFinancialRepricePanel");
+    expect(view).toContain("BookingCommercialAmendmentsSection");
   });
 
   it("guest section does not invent country/language/special requests", () => {

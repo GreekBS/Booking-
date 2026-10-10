@@ -8,7 +8,10 @@ import { WorkspaceFooter } from "@/features/workspace/components/WorkspaceFooter
 import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import type { WorkspaceSessionStatus } from "@/features/workspace/lib/workspace-types";
 import { useWorkspaceEditorSession } from "@/features/workspace/hooks/useWorkspaceEditorSession";
-import type { BookingRecord } from "@/lib/admin/types";
+import { useTenant } from "@/hooks/use-tenant";
+import { canAdjustBookingFinancials } from "@/lib/admin/can-adjust-booking-financials";
+import type { BookingRecord, FinancialRepriceApplyRecord } from "@/lib/admin/types";
+import { toastSuccess } from "@/lib/admin/toast";
 import { formatMoney } from "@/lib/admin/utils";
 import { BookingWorkspaceHeader } from "./BookingWorkspaceHeader";
 import { useBookingActions } from "./hooks/useBookingActions";
@@ -23,6 +26,8 @@ import { BookingNotesSection } from "./sections/BookingNotesSection";
 import { BookingOperationsTasksSection } from "./sections/BookingOperationsTasksSection";
 import { BookingPaymentsSection } from "./sections/BookingPaymentsSection";
 import { BookingPricingSection } from "./sections/BookingPricingSection";
+import { BookingFinancialRepricePanel } from "./sections/BookingFinancialRepricePanel";
+import { BookingCommercialAmendmentsSection } from "./sections/BookingCommercialAmendmentsSection";
 import { BookingStaySection } from "./sections/BookingStaySection";
 import { BookingTimelineSection } from "./sections/BookingTimelineSection";
 import type { BookingWorkspaceLabels, WorkspaceUnitOption } from "./types";
@@ -64,13 +69,16 @@ export function BookingWorkspaceView({
   showWorkspaceFooter = false,
 }: BookingWorkspaceViewProps) {
   const { requestClose, confirmSave, discardEdits } = useWorkspace();
+  const { tenantId, profile } = useTenant();
   const [saveError, setSaveError] = useState(false);
   const [tab, setTab] = useState("overview");
   const [outstandingLabel, setOutstandingLabel] = useState<string | null>(null);
+  const [financialRefreshNonce, setFinancialRefreshNonce] = useState(0);
 
   useEffect(() => {
     setTab("overview");
     setOutstandingLabel(null);
+    setFinancialRefreshNonce(0);
   }, [bookingId]);
 
   const { booking, quote, discountTotal, loading, error, setBooking, setQuote, refresh } =
@@ -78,6 +86,8 @@ export function BookingWorkspaceView({
       bookingId,
       active,
     });
+
+  const canAdjustFinancials = canAdjustBookingFinancials(profile, tenantId);
 
   const handleUpdated = useCallback(
     (updated: BookingRecord) => {
@@ -164,6 +174,22 @@ export function BookingWorkspaceView({
   const reservationTotalLabel = quote
     ? formatMoney(quote.totalAmount, quote.currency)
     : null;
+
+  const handleFinancialRepriceApplied = useCallback(
+    (result: FinancialRepriceApplyRecord) => {
+      const delta = formatMoney(result.deltaAmount, result.currency);
+      const message = result.replayed
+        ? `Η προσαρμογή τιμής είχε ήδη εφαρμοστεί (επαναληπτική επιβεβαίωση). Νέο σύνολο ${formatMoney(result.newTotalAmount, result.currency)} (διαφορά ${delta}). Δεν έγινε αυτόματη πληρωμή ή επιστροφή.`
+        : `Η συμφωνημένη τιμή ενημερώθηκε. Νέο σύνολο ${formatMoney(result.newTotalAmount, result.currency)} (διαφορά ${delta}). Δεν έγινε αυτόματη πληρωμή ή επιστροφή.`;
+      toastSuccess(message);
+      setFinancialRefreshNonce((n) => n + 1);
+      void (async () => {
+        const fresh = await refresh();
+        if (fresh) onUpdated?.(fresh);
+      })();
+    },
+    [onUpdated, refresh],
+  );
 
   if (!active) return null;
 
@@ -296,9 +322,23 @@ export function BookingWorkspaceView({
             }
           >
             <BookingPricingSection {...pricingProps} />
+            <BookingFinancialRepricePanel
+              tenantId={tenantId}
+              booking={currentBooking}
+              quote={quote}
+              canAdjust={canAdjustFinancials}
+              stayDirty={isDirty}
+              onApplied={handleFinancialRepriceApplied}
+            />
+            <BookingCommercialAmendmentsSection
+              bookingId={currentBooking.id}
+              refreshNonce={financialRefreshNonce}
+              active={tab === "financials"}
+            />
             <BookingPaymentsSection
               {...sectionProps}
               active
+              refreshNonce={financialRefreshNonce}
               onOutstandingChange={setOutstandingLabel}
             />
           </TabsContent>

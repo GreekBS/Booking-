@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
 import { formatMoney } from "@/lib/admin/utils";
 import { adminFetch } from "@/lib/admin/api";
@@ -107,12 +107,15 @@ function newIdempotencyKey(): string {
 export interface BookingPaymentsSectionProps extends BookingSectionProps {
   /** When false, skip loading (tab lazy-load). Default true for calendar host. */
   active?: boolean;
+  /** Bump after financial reprice so folio/payments reload. */
+  refreshNonce?: number;
   onOutstandingChange?: (label: string | null) => void;
 }
 
 export function BookingPaymentsSection({
   booking,
   active = true,
+  refreshNonce = 0,
   onOutstandingChange,
 }: BookingPaymentsSectionProps) {
   const { tenantId } = useTenant();
@@ -122,6 +125,7 @@ export function BookingPaymentsSection({
   const [evaluating, setEvaluating] = useState(false);
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadRequestIdRef = useRef(0);
 
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState<"CASH" | "CARD" | "BANK_TRANSFER">(
@@ -139,6 +143,7 @@ export function BookingPaymentsSection({
 
   const load = useCallback(async () => {
     if (!booking?.id || !tenantId || !active) return;
+    const requestId = ++loadRequestIdRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -147,24 +152,35 @@ export function BookingPaymentsSection({
         tenantId,
         body: JSON.stringify({}),
       });
+      if (requestId !== loadRequestIdRef.current) return;
       const summary = await adminFetch<{
         payments: PaymentDto[];
         folios: FolioDto[];
       }>(`/bookings/${booking.id}/payments`, { tenantId });
+      if (requestId !== loadRequestIdRef.current) return;
       setFolios(summary.folios ?? []);
       setPayments(summary.payments ?? []);
     } catch (err) {
+      if (requestId !== loadRequestIdRef.current) return;
       setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης λογαριασμού");
       setFolios([]);
       setPayments([]);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [booking?.id, tenantId, active]);
 
   useEffect(() => {
+    // Invalidate any in-flight response and clear rows before refetch so a
+    // slower prior booking/tenant response cannot overwrite refreshed data.
+    loadRequestIdRef.current += 1;
+    setFolios([]);
+    setPayments([]);
+    setError(null);
     void load();
-  }, [load]);
+  }, [load, refreshNonce]);
 
   useEffect(() => {
     if (!onOutstandingChange) return;

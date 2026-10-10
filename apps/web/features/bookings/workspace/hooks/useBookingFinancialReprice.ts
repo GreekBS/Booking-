@@ -168,9 +168,10 @@ export function useBookingFinancialReprice({
   }, []);
 
   const bookingId = committedStay?.bookingId ?? null;
+  // Booking or tenant switch must drop any in-memory confirmation token.
   useEffect(() => {
     resetWorkflow();
-  }, [bookingId, resetWorkflow]);
+  }, [bookingId, tenantId, resetWorkflow]);
 
   // Invalidate when committed stay or reason diverges from the bound preview.
   useEffect(() => {

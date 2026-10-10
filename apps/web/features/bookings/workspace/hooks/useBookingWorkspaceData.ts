@@ -18,7 +18,7 @@ export interface UseBookingWorkspaceDataResult {
   discountTotal: number | null;
   loading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<BookingRecord | null>;
   setBooking: (booking: BookingRecord) => void;
   setQuote: (quote: QuoteRecord | null) => void;
 }
@@ -34,8 +34,8 @@ export function useBookingWorkspaceData({
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
-  const load = useCallback(async () => {
-    if (!tenantId || !active) return;
+  const load = useCallback(async (): Promise<BookingRecord | null> => {
+    if (!tenantId || !active) return null;
 
     const requestId = ++requestIdRef.current;
     setLoading(true);
@@ -43,19 +43,21 @@ export function useBookingWorkspaceData({
 
     try {
       const freshBooking = await fetchBookingDetail(tenantId, bookingId);
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return null;
 
       setBooking(freshBooking);
 
       const quoteData = await fetchQuote(tenantId, freshBooking.quoteId).catch(() => null);
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return null;
 
       setQuote(quoteData);
+      return freshBooking;
     } catch (err) {
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return null;
       const message = err instanceof Error ? err.message : "Αποτυχία φόρτωσης στοιχείων κράτησης";
       setError(message);
       toastError(message);
+      return null;
     } finally {
       if (requestId === requestIdRef.current) {
         setLoading(false);
