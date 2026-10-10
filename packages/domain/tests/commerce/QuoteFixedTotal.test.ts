@@ -221,6 +221,8 @@ describe("Quote.createFromFixedTotal", () => {
       // no pricingMode
     });
     expect(legacy.pricingMode).toBe("talos_calculated");
+    // API exposure must not invent a mode for omitted legacy provenance.
+    expect(legacy.storedPricingMode).toBeNull();
     const roundTrip = QuoteSnapshot.create(legacy.toJSON());
     expect(roundTrip.pricingMode).toBe("talos_calculated");
   });

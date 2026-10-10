@@ -254,6 +254,83 @@ export interface StayChangePreviewRecord {
   priceDelta: { amount: string; currency: string } | null;
 }
 
+/** BFS-2/BFS-4 — financial reprice preview (extends stay-change preview fields). */
+export interface FinancialRepricePreviewRecord {
+  available: boolean;
+  unchanged: boolean;
+  reasons: Array<{ code: string; message: string }>;
+  current: {
+    checkIn: string;
+    checkOut: string;
+    unitId: string;
+    guestCount: number;
+    totalAmount: string;
+    currency: string;
+  };
+  proposed: {
+    checkIn: string;
+    checkOut: string;
+    unitId: string;
+    guestCount: number;
+    totalAmount: string;
+    currency: string;
+  } | null;
+  priceDelta: { amount: string; currency: string } | null;
+  pricingIntent?: "preserve_agreed_total" | "recalculate_from_rate_plan" | "manual_total";
+  proposedCommercial?: {
+    subtotalAmount: string;
+    feesAmount: string;
+    taxesAmount: string;
+    discountAmount: string;
+    totalAmount: string;
+    currency: string;
+    lineItems: Array<{
+      date: string;
+      baseAmount: string;
+      adjustedAmount: string;
+      currency: string;
+    }>;
+    ratePlanFingerprint: string;
+    pricingFingerprint: string;
+  } | null;
+  bookingId: string;
+  currentQuoteId: string;
+  reason: string;
+  confirmationToken: string;
+  confirmationExpiresAt: string;
+}
+
+/** BFS-3b-2 / BFS-4 — financial reprice apply result. */
+export interface FinancialRepriceApplyRecord {
+  bookingId: string;
+  amendmentId: string;
+  previousQuoteId: string;
+  newQuoteId: string;
+  previousTotalAmount: string;
+  newTotalAmount: string;
+  deltaAmount: string;
+  currency: string;
+  replayed: boolean;
+}
+
+/** Safe commercial amendment list item (no confirmation secrets). */
+export interface CommercialAmendmentRecord {
+  id: string;
+  bookingId: string;
+  propertyId: string;
+  previousQuoteId: string;
+  newQuoteId: string;
+  previousTotalAmount: string;
+  newTotalAmount: string;
+  deltaAmount: string;
+  currency: string;
+  pricingIntent: "recalculate_from_rate_plan" | "preserve_agreed_total" | "manual_total";
+  reason: string;
+  actorId: string;
+  mutationOrigin: string;
+  createdAt: string;
+}
+
 export interface RatePlanRecord {
   baseNightlyAmount: string;
   currency: string;
@@ -467,6 +544,11 @@ export interface QuoteRecord {
     adjustedAmount: string;
     currency: string;
   }>;
+  /**
+   * Stored quote provenance. Null when legacy snapshot omitted pricingMode
+   * (API does not invent talos_calculated).
+   */
+  pricingMode: "talos_calculated" | "imported_csv" | "operator_entered" | null;
   quotedAt: string;
   expiresAt: string;
   createdAt: string;

@@ -425,6 +425,52 @@ export async function commitBookingStayChange(
   });
 }
 
+/** BFS-2 — read-only RatePlan financial reprice preview + confirmation token. */
+export async function previewBookingFinancialReprice(
+  tenantId: string,
+  bookingId: string,
+  body: {
+    unitId: string;
+    checkIn: string;
+    checkOut: string;
+    guestCount: number;
+    reason: string;
+  },
+): Promise<import("./types").FinancialRepricePreviewRecord> {
+  return adminFetch(`/bookings/${bookingId}/financial-reprice/preview`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+/** BFS-3b-2 — atomic confirmed financial reprice apply. */
+export async function applyBookingFinancialReprice(
+  tenantId: string,
+  bookingId: string,
+  body: {
+    confirmationToken: string;
+    reason: string;
+  },
+): Promise<import("./types").FinancialRepriceApplyRecord> {
+  return adminFetch(`/bookings/${bookingId}/financial-reprice/apply`, {
+    method: "POST",
+    tenantId,
+    body: JSON.stringify(body),
+  });
+}
+
+/** BFS-4 Phase 0 — read-only commercial amendment history (newest first). */
+export async function fetchBookingCommercialAmendments(
+  tenantId: string,
+  bookingId: string,
+): Promise<import("./types").CommercialAmendmentRecord[]> {
+  const payload = await adminFetch<{
+    amendments: import("./types").CommercialAmendmentRecord[];
+  }>(`/bookings/${bookingId}/commercial-amendments`, { tenantId });
+  return payload.amendments;
+}
+
 export async function fetchUnitCalendar(
   tenantId: string,
   unitId: string,

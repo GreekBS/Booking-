@@ -279,6 +279,15 @@ export function serializeQuote(quote: {
       currency: string;
     }>;
     quotedAt: Date;
+    /**
+     * Stored provenance only. Null when legacy snapshot omitted pricingMode —
+     * do not invent talos_calculated for API clients.
+     */
+    storedPricingMode:
+      | "talos_calculated"
+      | "imported_csv"
+      | "operator_entered"
+      | null;
   };
   expiresAt: Date;
   createdAt: Date;
@@ -296,6 +305,7 @@ export function serializeQuote(quote: {
     taxesAmount: quote.snapshot.taxesAmount,
     totalAmount: quote.snapshot.totalAmount,
     lineItems: quote.snapshot.lineItems.map((item) => ({ ...item })),
+    pricingMode: quote.snapshot.storedPricingMode,
     quotedAt: quote.snapshot.quotedAt.toISOString(),
     expiresAt: quote.expiresAt.toISOString(),
     createdAt: quote.createdAt.toISOString(),

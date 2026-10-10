@@ -100,6 +100,14 @@ export class QuoteSnapshot extends ValueObject<QuoteSnapshotProps> {
     return this.props.pricingMode ?? "talos_calculated";
   }
 
+  /**
+   * Stored provenance only — null when the snapshot JSON omitted `pricingMode`
+   * (legacy v1). Does not invent `talos_calculated` for API exposure.
+   */
+  get storedPricingMode(): QuotePricingMode | null {
+    return this.props.pricingMode ?? null;
+  }
+
   get preservedCommercialEvidence(): PreservedCommercialEvidence | null {
     return this.props.preservedCommercialEvidence
       ? clonePreservedEvidence(this.props.preservedCommercialEvidence)

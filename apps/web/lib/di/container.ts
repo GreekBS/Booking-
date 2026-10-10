@@ -255,6 +255,8 @@ import {
 
   GetBookingUseCase,
 
+  ListBookingCommercialAmendmentsUseCase,
+
   OpenPrimaryFolioFromBookingUseCase,
 
   ListFoliosForBookingUseCase,
@@ -2357,6 +2359,13 @@ export const getBookingUseCase = new GetBookingUseCase(
   permissionChecker,
 
 );
+
+export const listBookingCommercialAmendmentsUseCase =
+  new ListBookingCommercialAmendmentsUseCase(
+    bookingRepository,
+    bookingCommercialAmendmentRepository,
+    permissionChecker,
+  );
 
 export const openPrimaryFolioFromBookingUseCase = new OpenPrimaryFolioFromBookingUseCase(
   bookingRepository,
