@@ -113,16 +113,8 @@ runIntegration("Booking commercial amendment BFS-3a", () => {
     });
     await quoteRepository.save(previousQuote);
 
-    const booking = Booking.create({
-      id: randomUUID(),
-      hold,
-      quote: previousQuote,
-      guest: { name: "BFS3a Guest", email: "bfs3a@test.com", phone: null },
-      confirmationMode: "manual",
-    });
-    await bookingRepository.save(booking);
-
-    // Second quote exists for FK only — booking still points at previousQuote.
+    // Second quote must be created while hold is still active (FK only;
+    // booking remains on previousQuote).
     const newQuote = Quote.create({
       id: randomUUID(),
       snapshotId: randomUUID(),
@@ -135,6 +127,18 @@ runIntegration("Booking commercial amendment BFS-3a", () => {
       propertyTimezone: "Europe/Athens",
     });
     await quoteRepository.save(newQuote);
+
+    const booking = Booking.create({
+      id: randomUUID(),
+      hold,
+      quote: previousQuote,
+      guest: { name: "BFS3a Guest", email: "bfs3a@test.com", phone: null },
+      confirmationMode: "manual",
+    });
+    // Booking.create converts the hold; persist that so the hold calendar block
+    // releases before the booking block insert (unit_calendar_no_overlap).
+    await holdRepository.save(hold);
+    await bookingRepository.save(booking);
 
     return { booking, previousQuote, newQuote };
   }
@@ -243,16 +247,41 @@ runIntegration("Booking commercial amendment BFS-3a", () => {
     expect(rls[0]?.relrowsecurity).toBe(true);
     expect(rls[0]?.relforcerowsecurity).toBe(true);
 
-    await setTenantContext(prisma, otherTenantId);
-    const cross = await prisma.bookingCommercialAmendment.findMany({
-      where: { id: amendment.id },
+    // Disposable-local only: exercise FORCE RLS via a non-superuser / NOBYPASSRLS
+    // role (SET LOCAL ROLE inside one TX). Never touches Production Supabase roles.
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'talos_bfs3b1_rls_test') THEN
+          CREATE ROLE talos_bfs3b1_rls_test NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOLOGIN INHERIT;
+        END IF;
+      END $$;
+    `);
+    await prisma.$executeRawUnsafe(
+      `GRANT USAGE ON SCHEMA public TO talos_bfs3b1_rls_test`,
+    );
+    await prisma.$executeRawUnsafe(
+      `GRANT SELECT ON TABLE booking_commercial_amendments TO talos_bfs3b1_rls_test`,
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL ROLE talos_bfs3b1_rls_test`);
+      await tx.$executeRawUnsafe(
+        `SELECT set_config('app.current_tenant', '${otherTenantId}', true)`,
+      );
+      const crossAsRole = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+        `SELECT id::text AS id FROM booking_commercial_amendments WHERE id = '${amendment.id}'::uuid`,
+      );
+      expect(crossAsRole).toHaveLength(0);
+
+      await tx.$executeRawUnsafe(
+        `SELECT set_config('app.current_tenant', '${tenantId}', true)`,
+      );
+      const ownAsRole = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+        `SELECT id::text AS id FROM booking_commercial_amendments WHERE id = '${amendment.id}'::uuid`,
+      );
+      expect(ownAsRole).toHaveLength(1);
     });
-    expect(cross).toHaveLength(0);
-    await setTenantContext(prisma, tenantId);
-    const own = await prisma.bookingCommercialAmendment.findMany({
-      where: { id: amendment.id },
-    });
-    expect(own).toHaveLength(1);
     await clearTenantContext(prisma);
 
     const crossRepo = await amendmentRepository.findByIdempotencyKey(
@@ -300,6 +329,14 @@ runIntegration("Booking commercial amendment BFS-3a", () => {
           throw new Error("unused");
         },
         verify: () => null,
+      },
+      {
+        folioRepository: {
+          findByBookingAndKey: async () => null,
+          findByBooking: async () => [],
+        } as never,
+        paymentRepository: { listByBooking: async () => [] } as never,
+        fiscalAllocationRepository: { listByFolioId: async () => [] } as never,
       },
     );
 

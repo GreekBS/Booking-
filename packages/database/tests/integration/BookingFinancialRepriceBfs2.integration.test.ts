@@ -36,7 +36,11 @@ import { TimezoneService } from "../../src/adapters/TimezoneService";
 import { PrismaOutboxRepository } from "../../src/repositories/OutboxRepository";
 import { PrismaAuditLogRepository } from "../../src/repositories/AuditLogRepository";
 import { PrismaFolioRepository } from "../../src/repositories/billing/FolioRepository";
-import { PrismaPaymentSettlementRepository } from "../../src/repositories/billing/PaymentRepositories";
+import {
+  PrismaPaymentRepository,
+  PrismaPaymentSettlementRepository,
+} from "../../src/repositories/billing/PaymentRepositories";
+import { PrismaFiscalAllocationRepository } from "../../src/repositories/fiscal/FiscalDocumentRepositories";
 import { UuidIdGenerator } from "../../src/UuidIdGenerator";
 import { truncateIntegrationTables, prisma } from "./helpers";
 import { withTenantTransaction } from "../../src/client";
@@ -210,6 +214,11 @@ runIntegration("Booking financial reprice BFS-2", () => {
     reservationOrchestrator,
     permissionChecker,
     confirmTokens,
+    {
+      folioRepository,
+      paymentRepository: new PrismaPaymentRepository(),
+      fiscalAllocationRepository: new PrismaFiscalAllocationRepository(),
+    },
   );
   const openFolioUseCase = new OpenPrimaryFolioFromBookingUseCase(
     bookingRepository,

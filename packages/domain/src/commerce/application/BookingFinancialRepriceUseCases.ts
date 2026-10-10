@@ -12,6 +12,10 @@ import type {
   IQuoteRepository,
   IRatePlanRepository,
 } from "../ports/CommercePorts";
+import type { IFolioRepository } from "../../billing/ports/IFolioRepository";
+import type { IPaymentRepository } from "../../billing/payments/ports/IPaymentRepositories";
+import type { IFiscalAllocationRepository } from "../../fiscal/ports/IFiscalDocumentRepositories";
+import { Folio } from "../../billing/domain/Folio";
 import { ReservationOrchestrator } from "../reservation/ReservationOrchestrator";
 import type { StayChangePreview } from "../reservation/types";
 import { assertCommercePropertyAccess } from "./commerceAccess";
@@ -23,6 +27,10 @@ import {
   bookingProposedCommercialFingerprint,
   hashFinancialReason,
 } from "../pricing/bookingFinancialFingerprint";
+import {
+  assertFinancialRepriceFolioGuards,
+  assertFinancialRepriceQuoteGuards,
+} from "../amendment/financialRepriceApplyGuards";
 
 const MIN_REASON_LENGTH = 3;
 const MAX_REASON_LENGTH = 500;
@@ -113,6 +121,23 @@ export class PreviewBookingFinancialRepriceUseCase {
       }
 
       const commercial = value.proposedCommercial;
+      try {
+        assertFinancialRepriceQuoteGuards({
+          pricingMode: currentQuote.snapshot.pricingMode,
+          currentFeesAmount: currentQuote.snapshot.feesAmount,
+          currentTaxesAmount: currentQuote.snapshot.taxesAmount,
+          proposedFeesAmount: commercial.feesAmount,
+          proposedTaxesAmount: commercial.taxesAmount,
+          currency: currentQuote.snapshot.currency,
+          currentTotalAmount: currentQuote.snapshot.totalAmount,
+          proposedTotalAmount: commercial.totalAmount,
+        });
+      } catch (error) {
+        return Result.fail(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+
       const { token, claims } = this.confirmTokens.issue({
         tenantId: command.tenantId,
         propertyId: booking.propertyId,
@@ -193,10 +218,18 @@ export class PreviewBookingFinancialRepriceUseCase {
   }
 }
 
+/** Read-only deps for BFS-3b-1 fail-closed folio/payment/fiscal guards. */
+export interface FinancialRepriceApplySafetyPorts {
+  folioRepository: IFolioRepository;
+  paymentRepository: IPaymentRepository;
+  fiscalAllocationRepository: IFiscalAllocationRepository;
+}
+
 /**
- * BFS-2 confirmation validation + hard apply gate.
- * Revalidates token against current booking/quote/RatePlan state inside a
- * tenant transaction, then always rejects mutation until BFS-3.
+ * BFS-2/3b-1 confirmation validation + hard apply gate.
+ * Revalidates token, quote, RatePlan fingerprint, and financial safety guards
+ * inside a tenant transaction, then always rejects mutation until BFS-3b-2.
+ * Never writes booking/quote/folio/payment rows.
  */
 export class ApplyBookingFinancialRepriceUseCase {
   constructor(
@@ -207,6 +240,7 @@ export class ApplyBookingFinancialRepriceUseCase {
     private readonly orchestrator: ReservationOrchestrator,
     private readonly permissionChecker: PermissionChecker,
     private readonly confirmTokens: IBookingFinancialConfirmTokenService,
+    private readonly safety: FinancialRepriceApplySafetyPorts,
   ) {}
 
   async execute(
@@ -385,7 +419,61 @@ export class ApplyBookingFinancialRepriceUseCase {
             );
           }
 
-          // Hard gate: valid confirmation is NOT sufficient to mutate money in BFS-2.
+          try {
+            assertFinancialRepriceQuoteGuards({
+              pricingMode: currentQuote.snapshot.pricingMode,
+              currentFeesAmount: currentQuote.snapshot.feesAmount,
+              currentTaxesAmount: currentQuote.snapshot.taxesAmount,
+              proposedFeesAmount: commercial.feesAmount,
+              proposedTaxesAmount: commercial.taxesAmount,
+              currency: currentQuote.snapshot.currency,
+              currentTotalAmount: currentQuote.snapshot.totalAmount,
+              proposedTotalAmount: commercial.totalAmount,
+            });
+
+            const primary = await this.safety.folioRepository.findByBookingAndKey(
+              command.tenantId,
+              command.bookingId,
+              Folio.primaryKey(),
+            );
+            const payments = await this.safety.paymentRepository.listByBooking(
+              command.tenantId,
+              command.bookingId,
+            );
+            const bookingFolios = await this.safety.folioRepository.findByBooking(
+              command.tenantId,
+              command.bookingId,
+            );
+            let fiscalAllocationCount = 0;
+            for (const entry of bookingFolios) {
+              const allocs =
+                await this.safety.fiscalAllocationRepository.listByFolioId(
+                  command.tenantId,
+                  entry.folio.id,
+                );
+              fiscalAllocationCount += allocs.length;
+            }
+            const allocationsOnPrimary = primary
+              ? await this.safety.fiscalAllocationRepository.listByFolioId(
+                  command.tenantId,
+                  primary.folio.id,
+                )
+              : [];
+
+            assertFinancialRepriceFolioGuards({
+              primaryFolio: primary?.folio ?? null,
+              paymentCount: payments.length,
+              fiscalAllocationCount,
+              expectedAgreedTotal: currentQuote.snapshot.totalAmount,
+              allocationsOnPrimary,
+            });
+          } catch (error) {
+            return Result.fail(
+              error instanceof Error ? error : new Error(String(error)),
+            );
+          }
+
+          // Hard gate: valid confirmation + safety checks still cannot mutate money.
           return Result.fail(
             new ValidationError(BFS3_FINANCIAL_APPLY_GATE_MESSAGE),
           );

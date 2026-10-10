@@ -309,6 +309,18 @@ function buildApplyUseCase(opts?: {
     ),
     saveStayChange,
   };
+  const safety = {
+    folioRepository: {
+      findByBookingAndKey: vi.fn(async () => null),
+      findByBooking: vi.fn(async () => []),
+    },
+    paymentRepository: {
+      listByBooking: vi.fn(async () => []),
+    },
+    fiscalAllocationRepository: {
+      listByFolioId: vi.fn(async () => []),
+    },
+  };
   const useCase = new ApplyBookingFinancialRepriceUseCase(
     { findById: vi.fn(async () => activeBooking) } as never,
     { findById: vi.fn(async () => activeQuote) } as never,
@@ -319,6 +331,7 @@ function buildApplyUseCase(opts?: {
     orchestrator as never,
     opts?.permissionChecker ?? new PermissionChecker(),
     tokens,
+    safety as never,
   );
   return {
     useCase,

@@ -33,6 +33,8 @@ export * from "./application/BookingFinancialConfirmToken";
 export * from "./application/BookingFinancialRepriceUseCases";
 export * from "./amendment/BookingCommercialAmendment";
 export * from "./amendment/commercialRepriceSafety";
+export * from "./amendment/financialRepriceApplyGuards";
+export * from "./amendment/financialRepriceLockOrder";
 export * from "./ports/IBookingCommercialAmendmentRepository";
 
 export * from "./booking/domain/QuoteSnapshot";

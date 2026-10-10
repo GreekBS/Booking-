@@ -1431,6 +1431,11 @@ export const applyBookingFinancialRepriceUseCase =
     reservationOrchestrator,
     permissionChecker,
     bookingFinancialConfirmTokenService,
+    {
+      folioRepository,
+      paymentRepository,
+      fiscalAllocationRepository,
+    },
   );
 
 export const createManualBlockUseCase = new CreateManualBlockUseCase(
