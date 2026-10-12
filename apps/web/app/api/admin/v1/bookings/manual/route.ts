@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { ConflictError } from "@hcp/domain";
 import {
   checkAvailabilityUseCase,
-  confirmBookingUseCase,
   createBookingUseCase,
   createHoldUseCase,
   createQuoteUseCase,
@@ -71,6 +70,8 @@ export async function POST(request: NextRequest) {
       return mapResultError(quoteResult.getError());
     }
 
+    // Default: confirm. Explicit confirm:false → operatorHold pending.
+    const operatorHold = body.confirm === false;
     const bookingResult = await createBookingUseCase.execute(
       {
         tenantId: actor.tenantId,
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
           phone: body.guest.phone ?? null,
         },
         confirmationMode: "manual",
+        operatorHold,
         guestId: body.guestId ?? null,
       },
       permissionActor,
@@ -91,21 +93,7 @@ export async function POST(request: NextRequest) {
       return mapResultError(bookingResult.getError());
     }
 
-    let booking = bookingResult.getValue();
-
-    if (body.confirm) {
-      const confirmResult = await confirmBookingUseCase.execute(
-        { tenantId: actor.tenantId, bookingId: booking.id },
-        permissionActor,
-        { ipAddress: getClientIp(request) },
-      );
-
-      if (confirmResult.isFailure) {
-        return mapResultError(confirmResult.getError());
-      }
-
-      booking = confirmResult.getValue();
-    }
+    const booking = bookingResult.getValue();
 
     return apiSuccess(
       {

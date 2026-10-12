@@ -199,10 +199,10 @@ export function ReservationImportDraftPage() {
   const { detail } = state;
   const { batch, rows, rejectedRows, conflictBookings } = detail;
   const isCompleted = batch.status === "completed";
-  const counts = computeReadinessCounts(rows, rejectedRows);
+  const conflictBookingsList = conflictBookings ?? [];
+  const counts = computeReadinessCounts(rows, rejectedRows, conflictBookingsList);
   const tabs = tabCounts(rows, rejectedRows);
   const unresolvedEligible = countEligibleUnresolvedPrices(rows);
-  const conflictBookingsList = conflictBookings ?? [];
   const nonSupersedeableCount = countNonSupersedeableConflictRows(
     rows,
     conflictBookingsList,

@@ -43,7 +43,9 @@ import {
   isImportAvailabilityNonFatalCode,
 } from "./ReservationImportExclusivity";
 import {
+  evaluateKeepCsvReplaceTargetDependencies,
   evaluateKeepCsvReplaceTargets,
+  type KeepCsvReplaceTargetDependencyProbe,
   type KeepCsvReplaceTargetIssue,
 } from "./ReservationImportCommitRevalidation";
 import { StayPeriod } from "../shared/value-objects/StayPeriod";
@@ -95,6 +97,8 @@ export class CreateReservationImportDraftUseCase {
     private readonly permissionChecker: PermissionChecker = new PermissionChecker(),
     /** Optional for legacy tests; Production DI always injects bookings. */
     private readonly bookings: IBookingRepository | null = null,
+    /** Optional; Production DI injects. Missing probe fail-closes keep_csv. */
+    private readonly replaceDeps: KeepCsvReplaceTargetDependencyProbe | null = null,
   ) {
     this.availability = new StayAvailabilityEngine(
       catalog,
@@ -177,6 +181,7 @@ export class CreateReservationImportDraftUseCase {
 
       const today = await this.timezoneService.propertyLocalToday(
         scopedProperty.timezone,
+        now,
       );
 
       const parsed = parseAndValidateCsvImport({
@@ -557,20 +562,33 @@ export class CreateReservationImportDraftUseCase {
         let replaceTargetIssue: KeepCsvReplaceTargetIssue | null = null;
         if (
           row.conflictResolution === "keep_csv" &&
-          (row.replaceBookingIds?.length ?? 0) > 0 &&
-          this.bookings
+          (row.replaceBookingIds?.length ?? 0) > 0
         ) {
           const replaceIds = [...(row.replaceBookingIds ?? [])];
-          const targets = await this.bookings.findByIds(replaceIds, tenantId);
-          replaceTargetIssue = evaluateKeepCsvReplaceTargets({
-            row: {
-              ...row,
-              replaceBookingIds: replaceIds,
-            },
-            liveExistingBookingIds: replaceIds,
-            targets,
-            requireLiveSetEquality: false,
-          });
+          if (!this.bookings) {
+            replaceTargetIssue = {
+              code: "REPLACE_TARGET_DEPS_UNAVAILABLE",
+              bookingId: replaceIds[0],
+            };
+          } else {
+            const targets = await this.bookings.findByIds(replaceIds, tenantId);
+            replaceTargetIssue = evaluateKeepCsvReplaceTargets({
+              row: {
+                ...row,
+                replaceBookingIds: replaceIds,
+              },
+              liveExistingBookingIds: replaceIds,
+              targets,
+              requireLiveSetEquality: false,
+            });
+            if (!replaceTargetIssue) {
+              replaceTargetIssue = await evaluateKeepCsvReplaceTargetDependencies({
+                tenantId,
+                replaceBookingIds: replaceIds,
+                probe: this.replaceDeps,
+              });
+            }
+          }
         }
 
         if (snapshot.nonBookingBlockers.length > 0) {
@@ -582,8 +600,7 @@ export class CreateReservationImportDraftUseCase {
           errorCode = "KEEP_EXISTING";
           errorMessage = "Operator chose to keep existing occupancy";
         } else if (replaceTargetIssue) {
-          // Keep keep_csv decision; block readiness until operator chooses keep_existing
-          // or the replace target becomes completed.
+          // Keep keep_csv decision; block readiness until keep_existing or target becomes eligible.
           status = "pending";
           errorCode = replaceTargetIssue.code;
           errorMessage = replaceTargetIssue.bookingStatus

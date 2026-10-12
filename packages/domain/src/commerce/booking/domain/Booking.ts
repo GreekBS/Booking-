@@ -334,14 +334,14 @@ export class Booking extends AggregateRoot<BookingProps> {
   }
 
   /**
-   * Supersede a completed booking for import replacement.
+   * Supersede a confirmed or completed booking for import replacement.
    * Does not cancel, hard-delete, or alter stay/guest/quote.
    * Emits BookingSupersededEvent — calendar occupancy release is a persistence concern.
    */
   supersedeForImport(props: SupersedeForImportProps): void {
-    if (this.props.status !== "completed") {
+    if (this.props.status !== "completed" && this.props.status !== "confirmed") {
       throw new ConflictError(
-        `Only completed bookings can be superseded for import (status: ${this.props.status})`,
+        `Only confirmed or completed bookings can be superseded for import (status: ${this.props.status})`,
       );
     }
     if (this.isSuperseded) {

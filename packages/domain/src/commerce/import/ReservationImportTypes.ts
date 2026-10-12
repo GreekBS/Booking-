@@ -133,6 +133,14 @@ export interface ReservationImportConflictBookingRecord {
   status: string;
   /** True when already superseded and cannot be replaced again. */
   isSuperseded: boolean;
+  /** Active (non-archived) channel reservation link present — blocks keep_csv. */
+  hasChannelLink: boolean;
+  /** Any payment records present — blocks keep_csv. */
+  hasPayments: boolean;
+  /** Any folio records present — blocks keep_csv. */
+  hasFolio: boolean;
+  /** True when channel/payment/folio probes could not be evaluated safely. */
+  depsUnavailable: boolean;
 }
 
 /** Durable create-time exclusions that never became reservation_import_rows. */

@@ -80,6 +80,10 @@ export interface ReservationImportConflictBookingDto {
   checkOut: string;
   status: string;
   isSuperseded: boolean;
+  hasChannelLink: boolean;
+  hasPayments: boolean;
+  hasFolio: boolean;
+  depsUnavailable: boolean;
 }
 
 export interface ReservationImportDraftDetail {
@@ -145,6 +149,10 @@ export async function getReservationImportDraft(
       checkOut: b.checkOut,
       status: typeof b.status === "string" ? b.status : "unknown",
       isSuperseded: Boolean(b.isSuperseded),
+      hasChannelLink: Boolean(b.hasChannelLink),
+      hasPayments: Boolean(b.hasPayments),
+      hasFolio: Boolean(b.hasFolio),
+      depsUnavailable: Boolean(b.depsUnavailable),
     })),
   };
 }

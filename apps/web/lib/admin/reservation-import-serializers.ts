@@ -15,6 +15,10 @@ export function serializeReservationImportConflictBooking(
     checkOut: booking.checkOut,
     status: booking.status,
     isSuperseded: booking.isSuperseded,
+    hasChannelLink: booking.hasChannelLink,
+    hasPayments: booking.hasPayments,
+    hasFolio: booking.hasFolio,
+    depsUnavailable: booking.depsUnavailable,
   };
 }
 

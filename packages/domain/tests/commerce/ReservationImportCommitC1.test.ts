@@ -326,7 +326,7 @@ describe("Quote.createFromFixedTotal talos_calculated provenance", () => {
 });
 
 describe("keep_csv replace target fail-closed", () => {
-  it("rejects confirmed (non-completed) replacement targets", () => {
+  it("accepts confirmed replacement targets", () => {
     const batchId = randomUUID();
     const row = makeRow(batchId, {
       status: "ready",
@@ -366,6 +366,47 @@ describe("keep_csv replace target fail-closed", () => {
         row,
         liveExistingBookingIds: ["b1"],
         targets: [confirmed],
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects pending replacement targets", () => {
+    const batchId = randomUUID();
+    const hold = createHoldForUnit(
+      villaProperty.units[0].id,
+      villaProperty.id,
+      "2025-08-01",
+      "2025-08-04",
+    );
+    const quote = Quote.createFromFixedTotal({
+      id: "q-pend",
+      snapshotId: "s-pend",
+      hold,
+      propertyTimezone: "Europe/Athens",
+      total: Money.create("10.00", "EUR"),
+      pricingMode: "imported_csv",
+      quotedAt: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    const pending = Booking.create({
+      id: "b-pend",
+      hold,
+      quote,
+      guest: { name: "G", email: "g@t.com", phone: null },
+      confirmationMode: "manual",
+      now: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    pending.pullDomainEvents();
+    const row = makeRow(batchId, {
+      conflictResolution: "keep_csv",
+      replaceBookingIds: ["b-pend"],
+      unitId: villaProperty.units[0].id,
+    });
+    (row as { tenantId: string }).tenantId = TENANT_ID;
+    expect(() =>
+      assertKeepCsvReplaceTargetsValid({
+        row,
+        liveExistingBookingIds: ["b-pend"],
+        targets: [pending],
       }),
     ).toThrow(ConflictError);
   });
@@ -411,7 +452,7 @@ describe("keep_csv replace target fail-closed", () => {
     ).toThrow(/stale/i);
   });
 
-  it("accepts four completed replacement targets and rejects four confirmed", () => {
+  it("accepts four completed and four confirmed replacement targets", () => {
     const batchId = randomUUID();
     const completed = ["a1", "a2", "a3", "a4"].map((id) => completedBooking(id));
     const rowOk = makeRow(batchId, {
@@ -458,28 +499,22 @@ describe("keep_csv replace target fail-closed", () => {
       booking.pullDomainEvents();
       return booking;
     });
-    const rowBad = makeRow(batchId, {
+    const rowConfirmed = makeRow(batchId, {
       conflictResolution: "keep_csv",
       replaceBookingIds: confirmedTargets.map((b) => b.id),
       unitId: villaProperty.units[0].id,
     });
-    (rowBad as { tenantId: string }).tenantId = TENANT_ID;
-    try {
+    (rowConfirmed as { tenantId: string }).tenantId = TENANT_ID;
+    expect(() =>
       assertKeepCsvReplaceTargetsValid({
-        row: rowBad,
+        row: rowConfirmed,
         liveExistingBookingIds: confirmedTargets.map((b) => b.id),
         targets: confirmedTargets,
-      });
-      expect.unreachable();
-    } catch (e) {
-      expect(e).toBeInstanceOf(ConflictError);
-      expect((e as ConflictError).conflictType).toBe(
-        "REPLACE_TARGET_NOT_SUPERSEDEABLE",
-      );
-    }
+      }),
+    ).not.toThrow();
   });
 
-  it("rejects mixed completed+confirmed replace targets", () => {
+  it("accepts mixed completed+confirmed and rejects pending in mix", () => {
     const batchId = randomUUID();
     const completed = completedBooking("m-ok");
     const hold = createHoldForUnit(
@@ -487,11 +522,11 @@ describe("keep_csv replace target fail-closed", () => {
       villaProperty.id,
       "2025-08-01",
       "2025-08-04",
-      { holdId: "hold-m-bad" },
+      { holdId: "hold-m-conf" },
     );
     const quote = Quote.createFromFixedTotal({
-      id: "q-m-bad",
-      snapshotId: "s-m-bad",
+      id: "q-m-conf",
+      snapshotId: "s-m-conf",
       hold,
       propertyTimezone: "Europe/Athens",
       total: Money.create("10.00", "EUR"),
@@ -499,7 +534,7 @@ describe("keep_csv replace target fail-closed", () => {
       quotedAt: new Date(HOLD_CREATED_AT.getTime() + 5_000),
     });
     const confirmed = Booking.create({
-      id: "m-bad",
+      id: "m-conf",
       hold,
       quote,
       guest: { name: "G", email: "g@t.com", phone: null },
@@ -511,21 +546,61 @@ describe("keep_csv replace target fail-closed", () => {
 
     const rowMixed = makeRow(batchId, {
       conflictResolution: "keep_csv",
-      replaceBookingIds: ["m-ok", "m-bad"],
+      replaceBookingIds: ["m-ok", "m-conf"],
       unitId: villaProperty.units[0].id,
     });
     (rowMixed as { tenantId: string }).tenantId = TENANT_ID;
+    expect(
+      evaluateKeepCsvReplaceTargets({
+        row: rowMixed,
+        liveExistingBookingIds: ["m-ok", "m-conf"],
+        targets: [completed, confirmed],
+        requireLiveSetEquality: false,
+      }),
+    ).toBeNull();
+
+    const holdPend = createHoldForUnit(
+      villaProperty.units[0].id,
+      villaProperty.id,
+      "2025-08-01",
+      "2025-08-04",
+      { holdId: "hold-m-pend" },
+    );
+    const quotePend = Quote.createFromFixedTotal({
+      id: "q-m-pend",
+      snapshotId: "s-m-pend",
+      hold: holdPend,
+      propertyTimezone: "Europe/Athens",
+      total: Money.create("10.00", "EUR"),
+      pricingMode: "imported_csv",
+      quotedAt: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    const pending = Booking.create({
+      id: "m-pend",
+      hold: holdPend,
+      quote: quotePend,
+      guest: { name: "G", email: "g@t.com", phone: null },
+      confirmationMode: "manual",
+      now: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    pending.pullDomainEvents();
+    const rowWithPending = makeRow(batchId, {
+      conflictResolution: "keep_csv",
+      replaceBookingIds: ["m-ok", "m-pend"],
+      unitId: villaProperty.units[0].id,
+    });
+    (rowWithPending as { tenantId: string }).tenantId = TENANT_ID;
     const issue = evaluateKeepCsvReplaceTargets({
-      row: rowMixed,
-      liveExistingBookingIds: ["m-ok", "m-bad"],
-      targets: [completed, confirmed],
+      row: rowWithPending,
+      liveExistingBookingIds: ["m-ok", "m-pend"],
+      targets: [completed, pending],
       requireLiveSetEquality: false,
     });
     expect(issue?.code).toBe("REPLACE_TARGET_NOT_SUPERSEDEABLE");
-    expect(issue?.bookingId).toBe("m-bad");
+    expect(issue?.bookingId).toBe("m-pend");
   });
 
-  it("evaluateKeepCsvReplaceTargets shares preflight/commit codes without live equality", () => {
+  it("evaluateKeepCsvReplaceTargets accepts confirmed and completed without live equality", () => {
     const batchId = randomUUID();
     const completed = completedBooking("b-completed");
     const hold = createHoldForUnit(
@@ -561,14 +636,14 @@ describe("keep_csv replace target fail-closed", () => {
     });
     (rowConfirmed as { tenantId: string }).tenantId = TENANT_ID;
 
-    const issue = evaluateKeepCsvReplaceTargets({
-      row: rowConfirmed,
-      liveExistingBookingIds: ["b-confirmed"],
-      targets: [confirmedOnly],
-      requireLiveSetEquality: false,
-    });
-    expect(issue?.code).toBe("REPLACE_TARGET_NOT_SUPERSEDEABLE");
-    expect(issue?.bookingStatus).toBe("confirmed");
+    expect(
+      evaluateKeepCsvReplaceTargets({
+        row: rowConfirmed,
+        liveExistingBookingIds: ["b-confirmed"],
+        targets: [confirmedOnly],
+        requireLiveSetEquality: false,
+      }),
+    ).toBeNull();
 
     const rowOk = makeRow(batchId, {
       conflictResolution: "keep_csv",
@@ -584,20 +659,67 @@ describe("keep_csv replace target fail-closed", () => {
         requireLiveSetEquality: false,
       }),
     ).toBeNull();
+  });
 
-    try {
-      assertKeepCsvReplaceTargetsValid({
-        row: rowConfirmed,
-        liveExistingBookingIds: ["b-confirmed"],
-        targets: [confirmedOnly],
-      });
-      expect.unreachable();
-    } catch (e) {
-      expect(e).toBeInstanceOf(ConflictError);
-      expect((e as ConflictError).conflictType).toBe(
-        "REPLACE_TARGET_NOT_SUPERSEDEABLE",
-      );
-    }
+  it("fail-closes keep_csv when channel/payment/folio deps exist or probe missing", async () => {
+    const { evaluateKeepCsvReplaceTargetDependencies } = await import(
+      "../../src/commerce/import/ReservationImportCommitRevalidation"
+    );
+    expect(
+      await evaluateKeepCsvReplaceTargetDependencies({
+        tenantId: TENANT_ID,
+        replaceBookingIds: ["b1"],
+        probe: null,
+      }),
+    ).toMatchObject({ code: "REPLACE_TARGET_DEPS_UNAVAILABLE" });
+
+    expect(
+      await evaluateKeepCsvReplaceTargetDependencies({
+        tenantId: TENANT_ID,
+        replaceBookingIds: ["b1"],
+        probe: {
+          listChannelLinksByBookingId: async () => [{ status: "linked" }],
+          listPaymentsByBookingId: async () => [],
+          listFoliosByBookingId: async () => [],
+        },
+      }),
+    ).toMatchObject({ code: "REPLACE_TARGET_HAS_CHANNEL_LINK", bookingId: "b1" });
+
+    expect(
+      await evaluateKeepCsvReplaceTargetDependencies({
+        tenantId: TENANT_ID,
+        replaceBookingIds: ["b1"],
+        probe: {
+          listChannelLinksByBookingId: async () => [{ status: "archived" }],
+          listPaymentsByBookingId: async () => [{ id: "p1" }],
+          listFoliosByBookingId: async () => [],
+        },
+      }),
+    ).toMatchObject({ code: "REPLACE_TARGET_HAS_PAYMENTS", bookingId: "b1" });
+
+    expect(
+      await evaluateKeepCsvReplaceTargetDependencies({
+        tenantId: TENANT_ID,
+        replaceBookingIds: ["b1"],
+        probe: {
+          listChannelLinksByBookingId: async () => [],
+          listPaymentsByBookingId: async () => [],
+          listFoliosByBookingId: async () => [{ folio: { id: "f1" } }],
+        },
+      }),
+    ).toMatchObject({ code: "REPLACE_TARGET_HAS_FOLIO", bookingId: "b1" });
+
+    expect(
+      await evaluateKeepCsvReplaceTargetDependencies({
+        tenantId: TENANT_ID,
+        replaceBookingIds: ["b1"],
+        probe: {
+          listChannelLinksByBookingId: async () => [{ status: "archived" }],
+          listPaymentsByBookingId: async () => [],
+          listFoliosByBookingId: async () => [],
+        },
+      }),
+    ).toBeNull();
   });
 });
 

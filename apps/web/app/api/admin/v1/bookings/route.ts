@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
           phone: body.guest.phone ?? null,
         },
         confirmationMode: body.confirmationMode,
+        operatorHold: body.operatorHold === true,
         guestId: body.guestId ?? null,
       },
       toPermissionActor(actor),

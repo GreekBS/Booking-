@@ -291,20 +291,14 @@ export function ManualBookingPage() {
       let created: BookingRecord;
 
       if (commercialQuote) {
-        // Consume the Hold-backed Quote (Hold → Booking path).
+        // Default confirms; confirm=false is explicit operator hold.
         created = (await createBookingFromQuote(tenantId, {
           quoteId: commercialQuote.id,
           guest: { name: guest.name, email: guest.email, phone: guest.phone || null },
           guestId: selectedGuestId,
           confirmationMode: "manual",
+          operatorHold: !confirm,
         })) as BookingRecord;
-
-        if (confirm) {
-          created = (await adminFetch<BookingRecord>(
-            `/bookings/${created.id}/confirm`,
-            { method: "POST", tenantId },
-          )) as BookingRecord;
-        }
       } else {
         // Single Hold+Quote+Booking via manual pipeline (no orphan preview Hold).
         const result = (await createManualBooking(tenantId, {
@@ -320,7 +314,11 @@ export function ManualBookingPage() {
       }
 
       setBooking(created);
-      toastSuccess(confirm ? "Η κράτηση επιβεβαιώθηκε" : "Η κράτηση δημιουργήθηκε");
+      toastSuccess(
+        confirm
+          ? "Η κράτηση επιβεβαιώθηκε"
+          : "Η κράτηση δημιουργήθηκε σε αναμονή (ρητή επιλογή)",
+      );
       if (confirm) {
         setStep(5);
       } else {
@@ -633,16 +631,16 @@ export function ManualBookingPage() {
                 ) : null}
                 <Button
                   disabled={submitting || !guest.name || !guest.email}
-                  onClick={() => void createBooking(false)}
-                >
-                  Δημιουργία (σε αναμονή)
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={submitting || !guest.name || !guest.email}
                   onClick={() => void createBooking(true)}
                 >
                   Δημιουργία &amp; επιβεβαίωση
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={submitting || !guest.name || !guest.email}
+                  onClick={() => void createBooking(false)}
+                >
+                  Δημιουργία σε αναμονή
                 </Button>
               </div>
             </>

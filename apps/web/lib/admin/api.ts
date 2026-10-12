@@ -1048,6 +1048,8 @@ export async function createBookingFromQuote(
     guest: { name: string; email: string; phone?: string | null };
     guestId?: string | null;
     confirmationMode?: "manual" | "payment_required";
+    /** Explicit opt-in to leave booking pending (operator hold). */
+    operatorHold?: boolean;
   },
 ) {
   return adminFetch("/bookings", {

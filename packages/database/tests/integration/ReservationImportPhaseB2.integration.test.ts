@@ -58,6 +58,11 @@ runIntegration("Reservation import Phase B2", () => {
     },
   };
 
+  const emptyReplaceDeps = {
+    listChannelLinksByBookingId: async () => [],
+    listPaymentsByBookingId: async () => [],
+    listFoliosByBookingId: async () => [],
+  };
   const createDraft = new CreateReservationImportDraftUseCase(
     imports,
     unitResolver,
@@ -68,9 +73,16 @@ runIntegration("Reservation import Phase B2", () => {
     pricing,
     { generate: () => randomUUID() },
     permissionChecker,
+    bookingRepository,
+    emptyReplaceDeps,
   );
   const listDrafts = new ListReservationImportDraftsUseCase(imports, permissionChecker);
-  const getDraft = new GetReservationImportDraftUseCase(imports, permissionChecker);
+  const getDraft = new GetReservationImportDraftUseCase(
+    imports,
+    permissionChecker,
+    bookingRepository,
+    emptyReplaceDeps,
+  );
   const discardDraft = new DiscardReservationImportDraftUseCase(imports, permissionChecker);
   const updateStrategy = new UpdateReservationImportMissingPriceStrategyUseCase(
     imports,
@@ -238,27 +250,43 @@ runIntegration("Reservation import Phase B2", () => {
       },
     ]);
 
-    const empty = await imports.updateRow(idEmpty, tenantA, {
-      replaceBookingIds: [],
-      replaceBookingId: null,
-      conflictResolution: "undecided",
-    });
+    const frozenNow = new Date("2026-10-04T08:30:00.000Z");
+    const empty = await imports.updateRow(
+      idEmpty,
+      tenantA,
+      {
+        replaceBookingIds: [],
+        replaceBookingId: null,
+        conflictResolution: "undecided",
+      },
+      frozenNow,
+    );
     expect(empty.replaceBookingIds).toEqual([]);
     expect(empty.replaceBookingId).toBeNull();
 
-    const one = await imports.updateRow(idOne, tenantA, {
-      replaceBookingIds: [bookingOne],
-      replaceBookingId: null, // JSON is canonical; legacy FK optional when target may not exist
-      conflictResolution: "keep_csv",
-    });
+    const one = await imports.updateRow(
+      idOne,
+      tenantA,
+      {
+        replaceBookingIds: [bookingOne],
+        replaceBookingId: null, // JSON is canonical; legacy FK optional when target may not exist
+        conflictResolution: "keep_csv",
+      },
+      frozenNow,
+    );
     expect(one.replaceBookingIds).toEqual([bookingOne]);
     expect(one.replaceBookingId).toBeNull();
 
-    const multi = await imports.updateRow(idMulti, tenantA, {
-      replaceBookingIds: [bookingA, bookingB],
-      replaceBookingId: null,
-      conflictResolution: "keep_csv",
-    });
+    const multi = await imports.updateRow(
+      idMulti,
+      tenantA,
+      {
+        replaceBookingIds: [bookingA, bookingB],
+        replaceBookingId: null,
+        conflictResolution: "keep_csv",
+      },
+      frozenNow,
+    );
     expect(multi.replaceBookingIds).toEqual([bookingA, bookingB]);
 
     const reloaded = await imports.listRowsForBatch(batch.id, tenantA);

@@ -103,7 +103,7 @@ function makeQuote(hold: Hold, total = "450.0000") {
 }
 
 function makeBooking(hold: Hold, quote: Quote) {
-  return Booking.create({
+  const booking = Booking.create({
     id: "booking-1",
     hold,
     quote,
@@ -115,6 +115,9 @@ function makeBooking(hold: Hold, quote: Quote) {
     guestId: "guest-1",
     confirmationMode: "manual",
   });
+  // Mirrors CreateBookingUseCase default: accepted bookings confirm immediately.
+  booking.confirm(new Date());
+  return booking;
 }
 
 const baseCommand = {
@@ -194,13 +197,13 @@ function buildUseCase(opts?: {
 }
 
 describe("CreateDirectBookingBookUseCase", () => {
-  it("converts Hold+Quote into pending Booking with authoritative €450 total", async () => {
+  it("converts Hold+Quote into confirmed Booking with authoritative €450 total", async () => {
     const { useCase, createBookingExecute, idempotencySave, integration } = buildUseCase();
     const result = await useCase.execute(integration, baseCommand);
 
     expect(result.isSuccess).toBe(true);
     const dto = result.getValue();
-    expect(dto.status).toBe("pending");
+    expect(dto.status).toBe("confirmed");
     expect(dto.total).toBe("450.0000");
     expect(dto.currency).toBe("EUR");
     expect(dto.nights).toBe(3);

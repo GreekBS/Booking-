@@ -15,6 +15,7 @@ import type {
   ReservationImportRejectedRowDto,
   ReservationImportRowDto,
 } from "@/lib/admin/reservation-import-api";
+import { rowLooksReadyForImport } from "./reservation-import-errors";
 
 /**
  * Thin DTO→domain adapter for C1 eligibility.
@@ -250,6 +251,20 @@ export function evaluateClientCommitEligibility(
       kind: "blocked",
       reasonKey: "not_draft",
       message: BLOCK_MESSAGES.not_draft,
+      counts,
+    };
+  }
+
+  const conflictBookings = detail.conflictBookings ?? [];
+  const staleReady = detail.rows.some(
+    (r) =>
+      r.status === "ready" && !rowLooksReadyForImport(r, conflictBookings),
+  );
+  if (staleReady) {
+    return {
+      kind: "blocked",
+      reasonKey: "not_ready",
+      message: BLOCK_MESSAGES.not_ready,
       counts,
     };
   }

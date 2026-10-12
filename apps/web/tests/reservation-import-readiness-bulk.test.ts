@@ -82,29 +82,43 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
     expect(message).not.toMatch(/Import commit blocked/i);
   });
 
-  it("detects confirmed conflict bookings as non-supersedeable", () => {
-    const bookings: ReservationImportConflictBookingDto[] = [
-      {
-        id: "bk1",
-        guestName: "A",
-        checkIn: "2026-12-01",
-        checkOut: "2026-12-05",
-        status: "confirmed",
-        isSuperseded: false,
-      },
+  it("treats confirmed/completed as supersedeable and pending as blocked", () => {
+    const base = {
+      id: "bk1",
+      guestName: "A",
+      checkIn: "2026-12-01",
+      checkOut: "2026-12-05",
+      isSuperseded: false,
+      hasChannelLink: false,
+      hasPayments: false,
+      hasFolio: false,
+      depsUnavailable: false,
+    };
+    const confirmed: ReservationImportConflictBookingDto[] = [
+      { ...base, status: "confirmed" },
     ];
-    expect(rowHasNonSupersedeableKeepCsvTarget(row(), bookings)).toBe(true);
+    expect(rowHasNonSupersedeableKeepCsvTarget(row(), confirmed)).toBe(false);
+
+    const completed: ReservationImportConflictBookingDto[] = [
+      { ...base, status: "completed" },
+    ];
+    expect(rowHasNonSupersedeableKeepCsvTarget(row(), completed)).toBe(false);
+
+    const pending: ReservationImportConflictBookingDto[] = [
+      { ...base, status: "pending" },
+    ];
+    expect(rowHasNonSupersedeableKeepCsvTarget(row(), pending)).toBe(true);
     expect(
       countNonSupersedeableConflictRows(
         [row(), row({ id: "r2", rowNumber: 2, conflictResolution: "keep_csv" })],
-        bookings,
+        pending,
       ),
     ).toBe(2);
 
-    const completed: ReservationImportConflictBookingDto[] = [
-      { ...bookings[0]!, status: "completed" },
+    const withPayments: ReservationImportConflictBookingDto[] = [
+      { ...base, status: "confirmed", hasPayments: true },
     ];
-    expect(rowHasNonSupersedeableKeepCsvTarget(row(), completed)).toBe(false);
+    expect(rowHasNonSupersedeableKeepCsvTarget(row(), withPayments)).toBe(true);
   });
 
   it("classifies commit ConflictError supersedeability as replace_blocked toast path", () => {
@@ -152,9 +166,15 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
     expect(reval).toContain("issue.code");
   });
 
-  it("counts four confirmed targets as non-supersedeable and four completed as eligible", () => {
+  it("counts four confirmed and four completed targets as supersedeable", () => {
     const confirmedIds = ["c1", "c2", "c3", "c4"];
     const completedIds = ["d1", "d2", "d3", "d4"];
+    const deps = {
+      hasChannelLink: false,
+      hasPayments: false,
+      hasFolio: false,
+      depsUnavailable: false,
+    };
     const confirmedBookings: ReservationImportConflictBookingDto[] = confirmedIds.map(
       (id) => ({
         id,
@@ -163,6 +183,7 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
         checkOut: "2026-12-05",
         status: "confirmed",
         isSuperseded: false,
+        ...deps,
       }),
     );
     const completedBookings: ReservationImportConflictBookingDto[] = completedIds.map(
@@ -173,6 +194,7 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
         checkOut: "2026-12-05",
         status: "completed",
         isSuperseded: false,
+        ...deps,
       }),
     );
     const confirmedRows = confirmedIds.map((id, i) =>
@@ -203,11 +225,17 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
         },
       }),
     );
-    expect(countNonSupersedeableConflictRows(confirmedRows, confirmedBookings)).toBe(4);
+    expect(countNonSupersedeableConflictRows(confirmedRows, confirmedBookings)).toBe(0);
     expect(countNonSupersedeableConflictRows(completedRows, completedBookings)).toBe(0);
   });
 
-  it("treats mixed booking statuses as blocked when any target is not completed", () => {
+  it("treats mixed booking statuses as blocked when any target is pending", () => {
+    const deps = {
+      hasChannelLink: false,
+      hasPayments: false,
+      hasFolio: false,
+      depsUnavailable: false,
+    };
     const bookings: ReservationImportConflictBookingDto[] = [
       {
         id: "bk-ok",
@@ -216,14 +244,16 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
         checkOut: "2026-12-05",
         status: "completed",
         isSuperseded: false,
+        ...deps,
       },
       {
         id: "bk-bad",
         guestName: "B",
         checkIn: "2026-12-02",
         checkOut: "2026-12-06",
-        status: "confirmed",
+        status: "pending",
         isSuperseded: false,
+        ...deps,
       },
     ];
     const mixed = row({

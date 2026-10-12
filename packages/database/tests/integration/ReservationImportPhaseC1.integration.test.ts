@@ -66,6 +66,11 @@ runIntegration("Reservation import Phase C1 commit", () => {
     },
   };
 
+  const emptyReplaceDeps = {
+    listChannelLinksByBookingId: async () => [],
+    listPaymentsByBookingId: async () => [],
+    listFoliosByBookingId: async () => [],
+  };
   const createDraft = new CreateReservationImportDraftUseCase(
     imports,
     unitResolver,
@@ -76,6 +81,8 @@ runIntegration("Reservation import Phase C1 commit", () => {
     pricing,
     idGenerator,
     permissionChecker,
+    bookingRepository,
+    emptyReplaceDeps,
   );
   const updateDecision = new UpdateReservationImportRowDecisionUseCase(
     imports,
@@ -94,6 +101,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     resolveOrCreateGuest,
     idGenerator,
     permissionChecker,
+    emptyReplaceDeps,
   );
 
   const tenantA = "550e8400-e29b-41d4-a716-4466554400a1";
@@ -602,12 +610,17 @@ runIntegration("Reservation import Phase C1 commit", () => {
     );
 
     // Corrupt stored replace set so it no longer matches live calendar conflicts.
-    await imports.updateRow(row.id, tenantA, {
-      replaceBookingIds: [bookingA],
-      replaceBookingId: bookingA,
-      status: "ready",
-      conflictResolution: "keep_csv",
-    });
+    await imports.updateRow(
+      row.id,
+      tenantA,
+      {
+        replaceBookingIds: [bookingA],
+        replaceBookingId: bookingA,
+        status: "ready",
+        conflictResolution: "keep_csv",
+      },
+      new Date("2026-10-04T08:45:00.000Z"),
+    );
 
     const result = await commit.execute(
       created.getValue().batch.id,
@@ -622,7 +635,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     expect(batch!.status).toBe("draft");
   });
 
-  it("11) confirmed (non-completed) replacement target fails closed", async () => {
+  it("11) confirmed replacement target succeeds when deps are clear", async () => {
     const liveId = "550e8400-e29b-41d4-a716-446655440901";
     await createConfirmedBooking({
       tenantId: tenantA,
@@ -666,8 +679,113 @@ runIntegration("Reservation import Phase C1 commit", () => {
       actor,
       new Date("2026-10-04T09:00:00.000Z"),
     );
+    expect(result.isSuccess).toBe(true);
+    const superseded = await bookingRepository.findById(liveId, tenantA);
+    expect(superseded!.isSuperseded).toBe(true);
+    expect(superseded!.status).toBe("confirmed");
+  });
+
+  it("11b) confirmed keep_csv blocked when payments/folios/channel links exist", async () => {
+    const liveId = "550e8400-e29b-41d4-a716-446655440902";
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId: liveId,
+      checkIn: "2026-12-01",
+      checkOut: "2026-12-05",
+    });
+
+    const paymentProbe = {
+      listChannelLinksByBookingId: async () => [],
+      listPaymentsByBookingId: async () => [{ id: "pay-1" }],
+      listFoliosByBookingId: async () => [],
+    };
+    const createDraftBlocked = new CreateReservationImportDraftUseCase(
+      imports,
+      unitResolver,
+      catalog,
+      calendarBlocks,
+      availabilityRules,
+      timezoneService,
+      pricing,
+      idGenerator,
+      permissionChecker,
+      bookingRepository,
+      paymentProbe,
+    );
+    const updateDecisionBlocked = new UpdateReservationImportRowDecisionUseCase(
+      imports,
+      createDraftBlocked,
+      permissionChecker,
+      pricing,
+    );
+    const commitBlocked = new CommitReservationImportBatchUseCase(
+      imports,
+      commerceFlow,
+      bookingRepository,
+      catalog,
+      calendarBlocks,
+      availabilityRules,
+      timezoneService,
+      resolveOrCreateGuest,
+      idGenerator,
+      permissionChecker,
+      paymentProbe,
+    );
+
+    const csv = [
+      "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
+      `C1-DEPS,${unitA},D,d@test.com,2026-12-01,2026-12-05,2,500,EUR`,
+    ].join("\n");
+    const created = await createDraftBlocked.execute(
+      {
+        tenantId: tenantA,
+        propertyId: propertyA,
+        filename: "deps.csv",
+        content: csv,
+        dateFormat: "iso",
+        now: new Date("2026-10-04T08:00:00.000Z"),
+      },
+      actor,
+    );
+    const row = created.getValue().rows[0]!;
+    const decided = await updateDecisionBlocked.execute(
+      {
+        batchId: created.getValue().batch.id,
+        rowId: row.id,
+        tenantId: tenantA,
+        conflictResolution: "keep_csv",
+        now: new Date("2026-10-04T08:30:00.000Z"),
+      },
+      actor,
+    );
+    expect(decided.isSuccess).toBe(true);
+    expect(decided.getValue().status).toBe("pending");
+    expect(decided.getValue().errorCode).toBe("REPLACE_TARGET_HAS_PAYMENTS");
+
+    // Force ready to prove commit still fails closed on protected deps.
+    await imports.updateRow(
+      row.id,
+      tenantA,
+      { status: "ready", errorCode: null, errorMessage: null },
+      new Date("2026-10-04T08:45:00.000Z"),
+    );
+    const beforeBlocks = await activeBookingBlocks(unitA, tenantA);
+    const result = await commitBlocked.execute(
+      created.getValue().batch.id,
+      tenantA,
+      actor,
+      new Date("2026-10-04T09:00:00.000Z"),
+    );
     expect(result.isFailure).toBe(true);
-    expect(result.getError().message).toMatch(/not supersedeable|confirmed/i);
+    expect(result.getError().message).toMatch(/payment|REPLACE_TARGET_HAS_PAYMENTS|dependency/i);
+    const stillLive = await bookingRepository.findById(liveId, tenantA);
+    expect(stillLive!.isSuperseded).toBe(false);
+    const afterBlocks = await activeBookingBlocks(unitA, tenantA);
+    expect(afterBlocks.map((b) => b.sourceId).sort()).toEqual(
+      beforeBlocks.map((b) => b.sourceId).sort(),
+    );
   });
 
   it("12) hard blocker after preflight fails commit", async () => {
@@ -733,16 +851,27 @@ runIntegration("Reservation import Phase C1 commit", () => {
     );
     // Force both to keep_csv via direct row update to simulate invalid state.
     const [r1, r2] = created.getValue().rows;
-    await imports.updateRow(r1!.id, tenantA, {
-      status: "ready",
-      conflictResolution: "keep_csv",
-      priceSource: "imported_csv",
-    });
-    await imports.updateRow(r2!.id, tenantA, {
-      status: "ready",
-      conflictResolution: "keep_csv",
-      priceSource: "imported_csv",
-    });
+    const peerNow = new Date("2026-10-04T08:45:00.000Z");
+    await imports.updateRow(
+      r1!.id,
+      tenantA,
+      {
+        status: "ready",
+        conflictResolution: "keep_csv",
+        priceSource: "imported_csv",
+      },
+      peerNow,
+    );
+    await imports.updateRow(
+      r2!.id,
+      tenantA,
+      {
+        status: "ready",
+        conflictResolution: "keep_csv",
+        priceSource: "imported_csv",
+      },
+      peerNow,
+    );
 
     const result = await commit.execute(
       created.getValue().batch.id,
@@ -794,7 +923,12 @@ runIntegration("Reservation import Phase C1 commit", () => {
       },
     ]);
     // Ensure first row ready
-    await imports.updateRow(row.id, tenantA, { status: "ready" });
+    await imports.updateRow(
+      row.id,
+      tenantA,
+      { status: "ready" },
+      new Date("2026-10-04T08:45:00.000Z"),
+    );
 
     const result = await commit.execute(
       created.getValue().batch.id,
@@ -889,12 +1023,17 @@ runIntegration("Reservation import Phase C1 commit", () => {
       actor,
     );
     // Inject failure by making price invalid after draft ready.
-    await imports.updateRow(created.getValue().rows[0]!.id, tenantA, {
-      priceSource: "imported_csv",
-      importedTotalAmount: "0",
-      importedCurrency: "EUR",
-      status: "ready",
-    });
+    await imports.updateRow(
+      created.getValue().rows[0]!.id,
+      tenantA,
+      {
+        priceSource: "imported_csv",
+        importedTotalAmount: "0",
+        importedCurrency: "EUR",
+        status: "ready",
+      },
+      new Date("2026-10-04T08:45:00.000Z"),
+    );
 
     const result = await commit.execute(
       created.getValue().batch.id,

@@ -442,6 +442,13 @@ export interface CreateBookingCommand {
   };
   confirmationMode?: ConfirmationMode;
   /**
+   * Explicit operator opt-in to leave the booking in `pending` (on hold).
+   * Default is false — newly accepted bookings are confirmed immediately.
+   * Ignored for `payment_required` (payment lifecycle stays payment_pending).
+   * Public/storefront/direct-booking clients must not supply this.
+   */
+  operatorHold?: boolean;
+  /**
    * Explicit operator-selected Guest (admin/operator only).
    * Public/storefront/direct-booking clients must not supply this.
    */
@@ -479,7 +486,7 @@ export class CreateBookingUseCase {
       const isPublic =
         actor.userId.startsWith("storefront:") ||
         actor.userId.startsWith("direct-booking:");
-      if (isPublic && command.guestId) {
+      if (isPublic && (command.guestId || command.operatorHold)) {
         return Result.fail(new ForbiddenError());
       }
 
@@ -493,10 +500,21 @@ export class CreateBookingUseCase {
         return Result.fail(new ValidationError("Hold not found"));
       }
 
+      const confirmationMode = command.confirmationMode ?? "manual";
+      const operatorHold = Boolean(command.operatorHold);
+      if (operatorHold && confirmationMode === "payment_required") {
+        return Result.fail(
+          new ValidationError(
+            "operatorHold cannot be combined with payment_required confirmation mode",
+          ),
+        );
+      }
+
       const booking = await this.commerceFlowRepository.runInTenantTransaction(
         command.tenantId,
         async () => {
           const guestId = await this.resolveGuestIdForCreate(command, actor);
+          const origin = isPublic ? mutationOriginDirect() : mutationOriginOperator();
 
           const created = Booking.create({
             id: this.idGenerator.generate(),
@@ -508,9 +526,19 @@ export class CreateBookingUseCase {
               phone: command.guest.phone,
             },
             guestId,
-            confirmationMode: command.confirmationMode ?? "manual",
-            mutationOrigin: isPublic ? mutationOriginDirect() : mutationOriginOperator(),
+            confirmationMode,
+            mutationOrigin: origin,
           });
+
+          // Default accepted bookings to confirmed. payment_required stays payment_pending.
+          // Explicit operatorHold leaves manual creates in pending.
+          if (
+            confirmationMode === "manual" &&
+            !operatorHold &&
+            created.status === "pending"
+          ) {
+            created.confirm(new Date(), origin);
+          }
 
           await this.commerceFlowRepository.saveHoldAndBooking(hold, created);
           return created;
@@ -528,6 +556,8 @@ export class CreateBookingUseCase {
             quoteId: booking.quoteId,
             holdId: booking.holdId,
             guestId: booking.guestId,
+            operatorHold,
+            status: booking.status,
           },
           ipAddress: audit?.ipAddress ?? null,
         });

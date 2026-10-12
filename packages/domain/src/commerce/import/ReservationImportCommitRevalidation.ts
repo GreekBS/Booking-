@@ -94,7 +94,11 @@ export type KeepCsvReplaceTargetIssueCode =
   | "REPLACE_TARGET_TENANT_MISMATCH"
   | "REPLACE_TARGET_UNIT_MISMATCH"
   | "REPLACE_TARGET_NOT_SUPERSEDEABLE"
-  | "REPLACE_TARGET_ALREADY_SUPERSEDED";
+  | "REPLACE_TARGET_ALREADY_SUPERSEDED"
+  | "REPLACE_TARGET_HAS_CHANNEL_LINK"
+  | "REPLACE_TARGET_HAS_PAYMENTS"
+  | "REPLACE_TARGET_HAS_FOLIO"
+  | "REPLACE_TARGET_DEPS_UNAVAILABLE";
 
 export interface KeepCsvReplaceTargetIssue {
   code: KeepCsvReplaceTargetIssueCode;
@@ -102,9 +106,15 @@ export interface KeepCsvReplaceTargetIssue {
   bookingStatus?: string;
 }
 
+/** Lifecycle statuses that may be superseded by an explicit keep_csv decision. */
+export function isKeepCsvReplaceTargetStatusEligible(status: string): boolean {
+  return status === "completed" || status === "confirmed";
+}
+
 /**
  * Shared keep_csv replace-target rules for draft preflight and commit.
- * Only `completed` + non-superseded bookings may be replaced (policy unchanged).
+ * Eligible: confirmed or completed, non-superseded, same tenant/unit.
+ * Rejects pending / payment_pending / cancelled.
  */
 export function evaluateKeepCsvReplaceTargets(input: {
   row: ReservationImportRowRecord;
@@ -141,7 +151,7 @@ export function evaluateKeepCsvReplaceTargets(input: {
         bookingStatus: booking.status,
       };
     }
-    if (booking.status !== "completed") {
+    if (!isKeepCsvReplaceTargetStatusEligible(booking.status)) {
       return {
         code: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
         bookingId: id,
@@ -159,6 +169,128 @@ export function evaluateKeepCsvReplaceTargets(input: {
   return null;
 }
 
+/**
+ * Fail-closed financial/channel dependency probe for keep_csv targets.
+ * Does not detach or rewrite links/payments/folios — only reports blockers.
+ */
+export interface KeepCsvReplaceTargetDependencyProbe {
+  listChannelLinksByBookingId(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<Array<{ status: string }>>;
+  listPaymentsByBookingId(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<unknown[]>;
+  listFoliosByBookingId(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<unknown[]>;
+}
+
+export async function evaluateKeepCsvReplaceTargetDependencies(input: {
+  tenantId: string;
+  replaceBookingIds: string[];
+  probe: KeepCsvReplaceTargetDependencyProbe | null | undefined;
+}): Promise<KeepCsvReplaceTargetIssue | null> {
+  const ids = [...input.replaceBookingIds];
+  if (ids.length === 0) return null;
+  if (!input.probe) {
+    return { code: "REPLACE_TARGET_DEPS_UNAVAILABLE", bookingId: ids[0] };
+  }
+
+  for (const id of ids) {
+    let links: Array<{ status: string }>;
+    let payments: unknown[];
+    let folios: unknown[];
+    try {
+      [links, payments, folios] = await Promise.all([
+        input.probe.listChannelLinksByBookingId(input.tenantId, id),
+        input.probe.listPaymentsByBookingId(input.tenantId, id),
+        input.probe.listFoliosByBookingId(input.tenantId, id),
+      ]);
+    } catch {
+      return { code: "REPLACE_TARGET_DEPS_UNAVAILABLE", bookingId: id };
+    }
+
+    const activeLink = links.find((l) => l.status !== "archived");
+    if (activeLink) {
+      return { code: "REPLACE_TARGET_HAS_CHANNEL_LINK", bookingId: id };
+    }
+    if (payments.length > 0) {
+      return { code: "REPLACE_TARGET_HAS_PAYMENTS", bookingId: id };
+    }
+    if (folios.length > 0) {
+      return { code: "REPLACE_TARGET_HAS_FOLIO", bookingId: id };
+    }
+  }
+  return null;
+}
+
+export function throwKeepCsvReplaceTargetIssue(
+  rowNumber: number,
+  issue: KeepCsvReplaceTargetIssue,
+): never {
+  const id = issue.bookingId ?? "?";
+  switch (issue.code) {
+    case "REPLACE_TARGETS_STALE":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replaceBookingIds are stale — recheck required`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_NOT_FOUND":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} not found`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_TENANT_MISMATCH":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} tenant mismatch`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_UNIT_MISMATCH":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} unit mismatch`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_NOT_SUPERSEDEABLE":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} is not supersedeable (status: ${issue.bookingStatus}) — recheck required`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_ALREADY_SUPERSEDED":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} is already superseded — recheck required`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_HAS_CHANNEL_LINK":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} has an active channel reservation link`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_HAS_PAYMENTS":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} has payment records`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_HAS_FOLIO":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target ${id} has folio records`,
+        issue.code,
+      );
+    case "REPLACE_TARGET_DEPS_UNAVAILABLE":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace target dependencies could not be evaluated safely`,
+        issue.code,
+      );
+    default:
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNumber} replace targets invalid`,
+        "REPLACE_TARGETS_STALE",
+      );
+  }
+}
+
 export function assertKeepCsvReplaceTargetsValid(input: {
   row: ReservationImportRowRecord;
   liveExistingBookingIds: string[];
@@ -169,46 +301,7 @@ export function assertKeepCsvReplaceTargetsValid(input: {
     requireLiveSetEquality: true,
   });
   if (!issue) return;
-
-  const rowNo = input.row.rowNumber;
-  const id = issue.bookingId ?? "?";
-  switch (issue.code) {
-    case "REPLACE_TARGETS_STALE":
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replaceBookingIds are stale — recheck required`,
-        issue.code,
-      );
-    case "REPLACE_TARGET_NOT_FOUND":
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replace target ${id} not found`,
-        issue.code,
-      );
-    case "REPLACE_TARGET_TENANT_MISMATCH":
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replace target ${id} tenant mismatch`,
-        issue.code,
-      );
-    case "REPLACE_TARGET_UNIT_MISMATCH":
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replace target ${id} unit mismatch`,
-        issue.code,
-      );
-    case "REPLACE_TARGET_NOT_SUPERSEDEABLE":
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replace target ${id} is not supersedeable (status: ${issue.bookingStatus}) — recheck required`,
-        issue.code,
-      );
-    case "REPLACE_TARGET_ALREADY_SUPERSEDED":
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replace target ${id} is already superseded — recheck required`,
-        issue.code,
-      );
-    default:
-      throw new ConflictError(
-        `Import commit blocked: row ${rowNo} replace targets invalid`,
-        "REPLACE_TARGETS_STALE",
-      );
-  }
+  throwKeepCsvReplaceTargetIssue(input.row.rowNumber, issue);
 }
 
 export function assertNoNonBookingBlockers(

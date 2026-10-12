@@ -143,6 +143,10 @@ describe("B3.3b GetReservationImportDraftUseCase conflictBookings", () => {
         checkOut: "2026-11-12",
         status: "pending",
         isSuperseded: false,
+        hasChannelLink: false,
+        hasPayments: false,
+        hasFolio: false,
+        depsUnavailable: true,
       },
     ]);
     expect(findByIds).toHaveBeenCalledOnce();

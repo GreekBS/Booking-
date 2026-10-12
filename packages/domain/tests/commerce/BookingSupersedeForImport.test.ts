@@ -77,16 +77,18 @@ describe("Booking.supersedeForImport", () => {
     });
   });
 
-  it("rejects pending / confirmed / cancelled", () => {
-    const pending = createManualBooking("pending-1");
-    expect(() =>
-      pending.supersedeForImport({ supersededByBookingId: "x" }),
-    ).toThrow(ConflictError);
-
+  it("accepts confirmed and rejects pending / cancelled / payment_pending", () => {
     const confirmed = createManualBooking("confirmed-1");
     confirmed.confirm(bookingNow);
     expect(() =>
       confirmed.supersedeForImport({ supersededByBookingId: "x" }),
+    ).not.toThrow();
+    expect(confirmed.isSuperseded).toBe(true);
+    expect(confirmed.status).toBe("confirmed");
+
+    const pending = createManualBooking("pending-1");
+    expect(() =>
+      pending.supersedeForImport({ supersededByBookingId: "x" }),
     ).toThrow(ConflictError);
 
     const cancelled = createManualBooking("cancelled-1");

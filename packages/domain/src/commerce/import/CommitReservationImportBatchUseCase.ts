@@ -32,8 +32,11 @@ import {
   assertNoNonBookingBlockers,
   assertPeerExclusivityForCommit,
   csvImportSupersedeReason,
+  evaluateKeepCsvReplaceTargetDependencies,
   importAvailabilityPolicyForRow,
   scanImportCalendarConflicts,
+  throwKeepCsvReplaceTargetIssue,
+  type KeepCsvReplaceTargetDependencyProbe,
 } from "./ReservationImportCommitRevalidation";
 import {
   CSV_RESERVATION_IMPORT_NAMESPACE,
@@ -80,6 +83,7 @@ export class CommitReservationImportBatchUseCase {
     private readonly resolveOrCreateGuest: ResolveOrCreateGuest,
     private readonly idGenerator: IIdGenerator,
     private readonly permissionChecker: PermissionChecker = new PermissionChecker(),
+    private readonly replaceDeps: KeepCsvReplaceTargetDependencyProbe | null = null,
   ) {
     this.availability = new StayAvailabilityEngine(
       catalog,
@@ -342,6 +346,14 @@ export class CommitReservationImportBatchUseCase {
         liveExistingBookingIds: liveScan.existingBookingIds,
         targets,
       });
+      const depIssue = await evaluateKeepCsvReplaceTargetDependencies({
+        tenantId,
+        replaceBookingIds: sortedReplace,
+        probe: this.replaceDeps,
+      });
+      if (depIssue) {
+        throwKeepCsvReplaceTargetIssue(row.rowNumber, depIssue);
+      }
     } else if (scanned.existingBookingIds.length > 0) {
       throw new ConflictError(
         `Import commit blocked: row ${row.rowNumber} has unresolved booking conflicts — recheck required`,

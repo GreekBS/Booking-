@@ -5,10 +5,15 @@ import type { ReservationImportRowDto } from "@/lib/admin/reservation-import-api
 import {
   RESERVATION_IMPORT_COMMIT_ERROR,
   RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR,
+  RESERVATION_IMPORT_COMMIT_REPLACE_DEPS,
   RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
   RESERVATION_IMPORT_COMMIT_REPLACE_STALE,
   RESERVATION_IMPORT_COMMIT_STALE_ERROR,
   RESERVATION_IMPORT_ROW_REPLACE_ALREADY_SUPERSEDED,
+  RESERVATION_IMPORT_ROW_REPLACE_DEPS_CHANNEL,
+  RESERVATION_IMPORT_ROW_REPLACE_DEPS_FOLIO,
+  RESERVATION_IMPORT_ROW_REPLACE_DEPS_PAYMENTS,
+  RESERVATION_IMPORT_ROW_REPLACE_DEPS_UNAVAILABLE,
   RESERVATION_IMPORT_ROW_REPLACE_NOT_FOUND,
   RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE,
 } from "./reservation-import-copy";
@@ -20,6 +25,17 @@ const REPLACE_ISSUE_CODES = new Set([
   "REPLACE_TARGET_UNIT_MISMATCH",
   "REPLACE_TARGET_NOT_SUPERSEDEABLE",
   "REPLACE_TARGET_ALREADY_SUPERSEDED",
+  "REPLACE_TARGET_HAS_CHANNEL_LINK",
+  "REPLACE_TARGET_HAS_PAYMENTS",
+  "REPLACE_TARGET_HAS_FOLIO",
+  "REPLACE_TARGET_DEPS_UNAVAILABLE",
+]);
+
+const REPLACE_DEP_CODES = new Set([
+  "REPLACE_TARGET_HAS_CHANNEL_LINK",
+  "REPLACE_TARGET_HAS_PAYMENTS",
+  "REPLACE_TARGET_HAS_FOLIO",
+  "REPLACE_TARGET_DEPS_UNAVAILABLE",
 ]);
 
 export function bookingStatusLabelEl(status: string): string {
@@ -52,6 +68,18 @@ export function importRowOperatorErrorMessage(row: ReservationImportRowDto): str
   if (code === "REPLACE_TARGET_ALREADY_SUPERSEDED") {
     return RESERVATION_IMPORT_ROW_REPLACE_ALREADY_SUPERSEDED;
   }
+  if (code === "REPLACE_TARGET_HAS_CHANNEL_LINK") {
+    return RESERVATION_IMPORT_ROW_REPLACE_DEPS_CHANNEL;
+  }
+  if (code === "REPLACE_TARGET_HAS_PAYMENTS") {
+    return RESERVATION_IMPORT_ROW_REPLACE_DEPS_PAYMENTS;
+  }
+  if (code === "REPLACE_TARGET_HAS_FOLIO") {
+    return RESERVATION_IMPORT_ROW_REPLACE_DEPS_FOLIO;
+  }
+  if (code === "REPLACE_TARGET_DEPS_UNAVAILABLE") {
+    return RESERVATION_IMPORT_ROW_REPLACE_DEPS_UNAVAILABLE;
+  }
   if (
     code === "REPLACE_TARGET_NOT_FOUND" ||
     code === "REPLACE_TARGET_TENANT_MISMATCH" ||
@@ -61,7 +89,6 @@ export function importRowOperatorErrorMessage(row: ReservationImportRowDto): str
     return RESERVATION_IMPORT_ROW_REPLACE_NOT_FOUND;
   }
   if (!row.errorCode && !row.errorMessage) return null;
-  // Hard blockers / price: keep existing short messages without dumping internals.
   if (row.errorCode?.startsWith("BLOCKED_BY_")) {
     return row.errorMessage ?? row.errorCode;
   }
@@ -71,7 +98,6 @@ export function importRowOperatorErrorMessage(row: ReservationImportRowDto): str
   if (row.errorCode === "KEEP_EXISTING" || row.errorCode === "ALREADY_IMPORTED") {
     return null;
   }
-  // Avoid showing English machine dumps; fall back to code when unknown.
   if (row.errorCode && REPLACE_ISSUE_CODES.has(row.errorCode)) {
     return RESERVATION_IMPORT_ROW_REPLACE_NOT_FOUND;
   }
@@ -81,14 +107,22 @@ export function importRowOperatorErrorMessage(row: ReservationImportRowDto): str
 export function conflictBookingIsSupersedeable(
   booking: ReservationImportConflictBookingDto,
 ): boolean {
-  return booking.status === "completed" && !booking.isSuperseded;
+  if (booking.isSuperseded) return false;
+  if (booking.status !== "completed" && booking.status !== "confirmed") return false;
+  if (booking.depsUnavailable) return false;
+  if (booking.hasChannelLink || booking.hasPayments || booking.hasFolio) return false;
+  return true;
 }
 
 export function rowHasNonSupersedeableKeepCsvTarget(
   row: ReservationImportRowDto,
   conflictBookings: ReservationImportConflictBookingDto[],
 ): boolean {
-  if (row.errorCode && REPLACE_ISSUE_CODES.has(row.errorCode) && row.errorCode !== "REPLACE_TARGETS_STALE") {
+  if (
+    row.errorCode &&
+    REPLACE_ISSUE_CODES.has(row.errorCode) &&
+    row.errorCode !== "REPLACE_TARGETS_STALE"
+  ) {
     return true;
   }
   const snap = parseConflictSnapshot(row.conflictSnapshot);
@@ -99,6 +133,22 @@ export function rowHasNonSupersedeableKeepCsvTarget(
     if (!b) return true;
     return !conflictBookingIsSupersedeable(b);
   });
+}
+
+/**
+ * Persisted `ready` can be stale vs live conflict enrichment (status/deps).
+ * Used so UI readiness / Import gate never overstates eligibility.
+ */
+export function rowLooksReadyForImport(
+  row: ReservationImportRowDto,
+  conflictBookings: ReservationImportConflictBookingDto[],
+): boolean {
+  if (row.status !== "ready") return false;
+  if (row.conflictResolution === "keep_csv") {
+    if (rowHasNonSupersedeableKeepCsvTarget(row, conflictBookings)) return false;
+  }
+  if (row.errorCode && REPLACE_ISSUE_CODES.has(row.errorCode)) return false;
+  return true;
 }
 
 export function countNonSupersedeableConflictRows(
@@ -132,6 +182,12 @@ export function mapCommitFailureToOperatorMessage(error: unknown): {
       message: RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
     };
   }
+  if (conflictType && REPLACE_DEP_CODES.has(conflictType)) {
+    return {
+      kind: "replace_blocked",
+      message: RESERVATION_IMPORT_COMMIT_REPLACE_DEPS,
+    };
+  }
   if (
     conflictType === "REPLACE_TARGETS_STALE" ||
     conflictType === "REPLACE_TARGET_NOT_FOUND" ||
@@ -145,6 +201,17 @@ export function mapCommitFailureToOperatorMessage(error: unknown): {
       return {
         kind: "replace_blocked",
         message: RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
+      };
+    }
+    if (
+      msg.includes("channel reservation link") ||
+      msg.includes("payment records") ||
+      msg.includes("folio records") ||
+      msg.includes("dependencies could not be evaluated")
+    ) {
+      return {
+        kind: "replace_blocked",
+        message: RESERVATION_IMPORT_COMMIT_REPLACE_DEPS,
       };
     }
     return { kind: "stale", message: RESERVATION_IMPORT_COMMIT_STALE_ERROR };

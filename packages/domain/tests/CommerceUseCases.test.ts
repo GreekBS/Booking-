@@ -214,54 +214,56 @@ describe("CommerceUseCases", () => {
     };
 
     const now = new Date();
-    const hold = Hold.create({
-      id: "hold-1",
-      tenantId: "tenant-1",
-      unitId: "unit-1",
-      propertyId: "property-1",
-      checkIn: "2026-08-01",
-      checkOut: "2026-08-05",
-      guestCount: 2,
-      ttlSeconds: 3600,
-      now,
-    });
-
-    const pricing = new PricingCalculator().calculate(
-      {
-        baseNightlyAmount: "100.0000",
-        currency: "EUR",
-        seasons: [],
-        dowModifiers: [],
-        losDiscounts: [],
-      },
-      hold.stayPeriod,
-      now,
-    );
-
-    const quote = Quote.create({
-      id: "quote-1",
-      snapshotId: "snapshot-1",
-      hold,
-      pricing,
-      propertyTimezone: "Europe/Athens",
-    });
-
-    const useCase = new CreateBookingUseCase(
-      { findById: vi.fn().mockResolvedValue(hold) } as never,
-      { findById: vi.fn().mockResolvedValue(quote) } as never,
-      { saveHoldAndBooking, runInTenantTransaction } as never,
-      permissionChecker,
-      { append } as never,
-      { generate: vi.fn().mockReturnValue("booking-1") } as never,
-      resolveGuest as never,
-      guestRepository as never,
-    );
+    const findHoldById = vi.fn();
+    const findQuoteById = vi.fn();
+    let useCase: CreateBookingUseCase;
 
     beforeEach(() => {
+      const hold = Hold.create({
+        id: "hold-1",
+        tenantId: "tenant-1",
+        unitId: "unit-1",
+        propertyId: "property-1",
+        checkIn: "2026-08-01",
+        checkOut: "2026-08-05",
+        guestCount: 2,
+        ttlSeconds: 3600,
+        now,
+      });
+      const pricing = new PricingCalculator().calculate(
+        {
+          baseNightlyAmount: "100.0000",
+          currency: "EUR",
+          seasons: [],
+          dowModifiers: [],
+          losDiscounts: [],
+        },
+        hold.stayPeriod,
+        now,
+      );
+      const quote = Quote.create({
+        id: "quote-1",
+        snapshotId: "snapshot-1",
+        hold,
+        pricing,
+        propertyTimezone: "Europe/Athens",
+      });
+      findHoldById.mockReset().mockResolvedValue(hold);
+      findQuoteById.mockReset().mockResolvedValue(quote);
       saveHoldAndBooking.mockReset();
       append.mockReset();
       runInTenantTransaction.mockClear();
       resolveGuest.executeForBookingCreate.mockClear();
+      useCase = new CreateBookingUseCase(
+        { findById: findHoldById } as never,
+        { findById: findQuoteById } as never,
+        { saveHoldAndBooking, runInTenantTransaction } as never,
+        permissionChecker,
+        { append } as never,
+        { generate: vi.fn().mockReturnValue("booking-1") } as never,
+        resolveGuest as never,
+        guestRepository as never,
+      );
     });
 
     it("creates booking transactionally with Guest link", async () => {
@@ -281,6 +283,27 @@ describe("CommerceUseCases", () => {
       expect(append).toHaveBeenCalledOnce();
       expect(result.getValue()).toBeInstanceOf(Booking);
       expect(result.getValue().guestId).toBe("guest-1");
+      expect(result.getValue().status).toBe("confirmed");
+    });
+
+    it("keeps pending when operatorHold is explicit", async () => {
+      const result = await useCase.execute(
+        {
+          tenantId: "tenant-1",
+          quoteId: "quote-1",
+          guest: { name: "Guest", email: "guest@test.com", phone: null },
+          operatorHold: true,
+        },
+        adminActor,
+      );
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().status).toBe("pending");
+      expect(append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ operatorHold: true, status: "pending" }),
+        }),
+      );
     });
 
     it("rejects storefront-supplied guestId", async () => {

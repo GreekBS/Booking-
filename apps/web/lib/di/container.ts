@@ -1292,6 +1292,8 @@ const fiscalAllocationRepository = new PrismaFiscalAllocationRepository();
 
 const paymentRepository = new PrismaPaymentRepository();
 
+const externalReservationLinkRepository = new PrismaExternalReservationLinkRepository();
+
 const paymentSettlementRepository = new PrismaPaymentSettlementRepository();
 
 const calendarBlockRepository = new PrismaCalendarBlockRepository();
@@ -1523,6 +1525,16 @@ const reservationImportPricingPort = {
   },
 };
 
+/** Fail-closed keep_csv dependency probe (channel / payments / folios). Lazy refs OK. */
+const reservationImportReplaceDepsProbe = {
+  listChannelLinksByBookingId: (tenantId: string, bookingId: string) =>
+    externalReservationLinkRepository.listByBookingId(tenantId, bookingId),
+  listPaymentsByBookingId: (tenantId: string, bookingId: string) =>
+    paymentRepository.listByBooking(tenantId, bookingId),
+  listFoliosByBookingId: (tenantId: string, bookingId: string) =>
+    folioRepository.findByBooking(tenantId, bookingId),
+};
+
 export const createReservationImportDraftUseCase =
   new CreateReservationImportDraftUseCase(
     reservationImportRepository,
@@ -1535,6 +1547,7 @@ export const createReservationImportDraftUseCase =
     idGenerator,
     permissionChecker,
     bookingRepository,
+    reservationImportReplaceDepsProbe,
   );
 
 export const listReservationImportDraftsUseCase =
@@ -1548,6 +1561,7 @@ export const getReservationImportDraftUseCase =
     reservationImportRepository,
     permissionChecker,
     bookingRepository,
+    reservationImportReplaceDepsProbe,
   );
 
 export const discardReservationImportDraftUseCase =
@@ -1613,6 +1627,7 @@ export const commitReservationImportBatchUseCase =
     resolveOrCreateGuest,
     idGenerator,
     permissionChecker,
+    reservationImportReplaceDepsProbe,
   );
 
 export const getGuestUseCase = new GetGuestUseCase(
@@ -2772,7 +2787,6 @@ const channelConnectionProviderSetupRepository =
 const bookingComActivationGate = new BookingComActivationGate(
   channelConnectionProviderSetupRepository,
 );
-const externalReservationLinkRepository = new PrismaExternalReservationLinkRepository();
 const channelInboxRepository = new PrismaChannelInboxRepository();
 const channelImportPersistence = new PrismaChannelReservationImportPersistence(outboxRepository);
 

@@ -54,6 +54,11 @@ runIntegration("Reservation import B3.3a", () => {
     },
   };
 
+  const emptyReplaceDeps = {
+    listChannelLinksByBookingId: async () => [],
+    listPaymentsByBookingId: async () => [],
+    listFoliosByBookingId: async () => [],
+  };
   const createDraft = new CreateReservationImportDraftUseCase(
     imports,
     unitResolver,
@@ -64,11 +69,14 @@ runIntegration("Reservation import B3.3a", () => {
     pricing,
     { generate: () => randomUUID() },
     permissionChecker,
+    bookingRepository,
+    emptyReplaceDeps,
   );
   const getDraft = new GetReservationImportDraftUseCase(
     imports,
     permissionChecker,
     bookingRepository,
+    emptyReplaceDeps,
   );
   const discardDraft = new DiscardReservationImportDraftUseCase(imports, permissionChecker);
   const updateDecision = new UpdateReservationImportRowDecisionUseCase(

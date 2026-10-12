@@ -4,6 +4,7 @@ import type {
   ReservationImportRejectedRowDto,
   ReservationImportRowDto,
 } from "@/lib/admin/reservation-import-api";
+import { rowLooksReadyForImport } from "./reservation-import-errors";
 
 export type ReviewTabId = "all" | "action" | "ready" | "conflicts" | "rejected";
 
@@ -18,15 +19,20 @@ export interface ReadinessCounts {
 export function computeReadinessCounts(
   rows: ReservationImportRowDto[],
   rejectedRows: ReservationImportRejectedRowDto[],
+  conflictBookings: ReservationImportConflictBookingDto[] = [],
 ): ReadinessCounts {
   let ready = 0;
   let skipped = 0;
   let needAction = 0;
   for (const row of rows) {
-    if (row.status === "ready") ready += 1;
+    if (rowLooksReadyForImport(row, conflictBookings)) ready += 1;
     else if (row.status === "skipped" || row.status === "skipped_already_imported") {
       skipped += 1;
-    } else if (row.status === "pending" || row.status === "failed") {
+    } else if (
+      row.status === "pending" ||
+      row.status === "failed" ||
+      (row.status === "ready" && !rowLooksReadyForImport(row, conflictBookings))
+    ) {
       needAction += 1;
     }
   }

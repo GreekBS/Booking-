@@ -347,10 +347,14 @@ export function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manual">Χειροκίνητα</SelectItem>
+                    <SelectItem value="manual">Αποδοχή (προεπιλογή: επιβεβαιωμένη)</SelectItem>
                     <SelectItem value="payment_required">Απαιτείται πληρωμή</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Οι νέες αποδεκτές κρατήσεις επιβεβαιώνονται αυτόματα. Η «σε αναμονή» είναι ρητή
+                  επιλογή χειριστή. Το «Απαιτείται πληρωμή» διατηρεί τον κύκλο payment_pending.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Νόμισμα εμπορίου</Label>

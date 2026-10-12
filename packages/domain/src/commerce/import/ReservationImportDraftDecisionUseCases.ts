@@ -21,6 +21,7 @@ import type { CreateReservationImportDraftUseCase } from "./CreateReservationImp
 import {
   parseConflictSnapshot,
 } from "./ReservationImportConflictGraph";
+import type { KeepCsvReplaceTargetDependencyProbe } from "./ReservationImportCommitRevalidation";
 
 function assertBookingCreate(
   checker: PermissionChecker,
@@ -58,6 +59,7 @@ export class GetReservationImportDraftUseCase {
     private readonly imports: IReservationImportRepository,
     private readonly permissionChecker: PermissionChecker = new PermissionChecker(),
     private readonly bookings?: IBookingRepository,
+    private readonly replaceDeps?: KeepCsvReplaceTargetDependencyProbe | null,
   ) {}
 
   async execute(
@@ -100,20 +102,61 @@ export class GetReservationImportDraftUseCase {
     const ids = collectConflictBookingIdsFromImportRows(rows);
     if (ids.length === 0) return [];
     const bookings = await this.bookings.findByIds(ids, tenantId);
-    const byId = new Map(
-      bookings.map((b) => [
-        b.id,
-        {
-          id: b.id,
-          guestName: b.guest.name,
-          checkIn: b.stayPeriod.checkIn.value,
-          checkOut: b.stayPeriod.checkOut.value,
-          status: b.status,
-          isSuperseded: b.isSuperseded,
-        } satisfies ReservationImportConflictBookingRecord,
-      ]),
-    );
-    return ids.filter((id) => byId.has(id)).map((id) => byId.get(id)!);
+    const enriched: ReservationImportConflictBookingRecord[] = [];
+    for (const id of ids) {
+      const b = bookings.find((x) => x.id === id);
+      if (!b) continue;
+      const deps = await this.probeConflictDeps(tenantId, id);
+      enriched.push({
+        id: b.id,
+        guestName: b.guest.name,
+        checkIn: b.stayPeriod.checkIn.value,
+        checkOut: b.stayPeriod.checkOut.value,
+        status: b.status,
+        isSuperseded: b.isSuperseded,
+        ...deps,
+      });
+    }
+    return enriched;
+  }
+
+  private async probeConflictDeps(
+    tenantId: string,
+    bookingId: string,
+  ): Promise<{
+    hasChannelLink: boolean;
+    hasPayments: boolean;
+    hasFolio: boolean;
+    depsUnavailable: boolean;
+  }> {
+    if (!this.replaceDeps) {
+      return {
+        hasChannelLink: false,
+        hasPayments: false,
+        hasFolio: false,
+        depsUnavailable: true,
+      };
+    }
+    try {
+      const [links, payments, folios] = await Promise.all([
+        this.replaceDeps.listChannelLinksByBookingId(tenantId, bookingId),
+        this.replaceDeps.listPaymentsByBookingId(tenantId, bookingId),
+        this.replaceDeps.listFoliosByBookingId(tenantId, bookingId),
+      ]);
+      return {
+        hasChannelLink: links.some((l) => l.status !== "archived"),
+        hasPayments: payments.length > 0,
+        hasFolio: folios.length > 0,
+        depsUnavailable: false,
+      };
+    } catch {
+      return {
+        hasChannelLink: false,
+        hasPayments: false,
+        hasFolio: false,
+        depsUnavailable: true,
+      };
+    }
   }
 }
 
