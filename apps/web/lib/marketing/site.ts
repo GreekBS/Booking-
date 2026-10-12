@@ -37,19 +37,19 @@ export const MARKETING_ROUTES = [
   },
   {
     path: "/pms",
-    title: "Property management system",
+    title: "Σύστημα διαχείρισης καταλυμάτων",
     changeFrequency: "monthly" as const,
     priority: 0.9,
   },
   {
     path: "/website-builder",
-    title: "Branded property presence",
+    title: "Επωνυμική παρουσία καταλύματος",
     changeFrequency: "monthly" as const,
     priority: 0.9,
   },
   {
     path: "/direct-bookings",
-    title: "Direct bookings",
+    title: "Απευθείας κρατήσεις",
     changeFrequency: "monthly" as const,
     priority: 0.85,
   },
@@ -61,7 +61,7 @@ export const MARKETING_ROUTES = [
   },
   {
     path: "/property-management",
-    title: "Full property management",
+    title: "Πλήρης διαχείριση καταλυμάτων",
     changeFrequency: "monthly" as const,
     priority: 0.9,
   },

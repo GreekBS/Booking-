@@ -314,7 +314,7 @@ export function PresenceTransformation() {
 
 /** Used on /pms supporting page — catalog chrome distinct from homepage hero. */
 export function ProductShell({
-  caption = "Talos operations workspace",
+  caption = "Χώρος εργασίας λειτουργιών Talos",
 }: {
   caption?: string;
 }) {
@@ -325,46 +325,53 @@ export function ProductShell({
         <span className="h-2 w-2 rounded-full bg-[var(--talos-mist)]" />
         <span className="h-2 w-2 rounded-full bg-[var(--talos-mist)]" />
         <span className="ml-2 text-[11px] font-medium tracking-wide text-[var(--talos-muted)]">
-          app.talos · operations
+          app.talos · λειτουργίες
         </span>
       </div>
       <div className="grid min-h-[280px] grid-cols-[minmax(7.5rem,28%)_1fr] md:min-h-[340px]">
         <aside className="border-r border-[var(--talos-line)] bg-[#f8f7f4] p-3">
           <p className="talos-display px-2 text-lg font-semibold tracking-tight">Talos</p>
           <ul className="mt-4 space-y-1">
-            {["Dashboard", "Properties", "Units", "Availability", "Pricing", "Bookings"].map(
-              (label, i) => (
-                <li
-                  key={label}
-                  className={
-                    i === 1
-                      ? "rounded-sm bg-[var(--talos-forest)]/10 px-2 py-1.5 text-xs font-semibold text-[var(--talos-forest)]"
-                      : "px-2 py-1.5 text-xs text-[var(--talos-muted)]"
-                  }
-                >
-                  {label}
-                </li>
-              ),
-            )}
+            {[
+              "Πίνακας ελέγχου",
+              "Καταλύματα",
+              "Μονάδες",
+              "Διαθεσιμότητα",
+              "Τιμολόγηση",
+              "Κρατήσεις",
+            ].map((label, i) => (
+              <li
+                key={label}
+                className={
+                  i === 1
+                    ? "rounded-sm bg-[var(--talos-forest)]/10 px-2 py-1.5 text-xs font-semibold text-[var(--talos-forest)]"
+                    : "px-2 py-1.5 text-xs text-[var(--talos-muted)]"
+                }
+              >
+                {label}
+              </li>
+            ))}
           </ul>
         </aside>
         <div className="p-4 md:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--talos-muted)]">
-            Properties
+            Καταλύματα
           </p>
-          <p className="mt-1 text-lg font-semibold text-[var(--talos-ink)]">Catalog</p>
+          <p className="mt-1 text-lg font-semibold text-[var(--talos-ink)]">Κατάλογος</p>
           <div className="mt-5 space-y-2">
-            {["Coastal villa", "Townhouse suite", "Garden apartment"].map((name, i) => (
+            {["Παραθαλάσσια βίλα", "Σουίτα σε μεζονέτα", "Διαμέρισμα με κήπο"].map((name, i) => (
               <div
                 key={name}
                 className="flex items-center justify-between border border-[var(--talos-line)] bg-[var(--talos-paper)] px-3 py-3"
               >
                 <div>
                   <p className="text-sm font-medium text-[var(--talos-ink)]">{name}</p>
-                  <p className="text-xs text-[var(--talos-muted)]">Units · Availability · Pricing</p>
+                  <p className="text-xs text-[var(--talos-muted)]">
+                    Μονάδες · Διαθεσιμότητα · Τιμολόγηση
+                  </p>
                 </div>
                 <span className="text-[11px] font-medium text-[var(--talos-forest)]">
-                  {i === 0 ? "Selected" : "Open"}
+                  {i === 0 ? "Επιλεγμένο" : "Άνοιγμα"}
                 </span>
               </div>
             ))}

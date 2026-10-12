@@ -5,9 +5,9 @@ import { FinalCtaSection } from "@/components/marketing/sections/FinalCtaSection
 import { buildPageMetadata, JsonLd, serviceJsonLd } from "@/lib/marketing/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Full property management",
+  title: "Πλήρης διαχείριση καταλυμάτων",
   description:
-    "Let Talos manage your vacation rental for a commission — listing coordination, reservations, guest communication, and owner visibility through the platform.",
+    "Αφήστε το Talos να διαχειριστεί τη βραχυχρόνια μίσθωσή σας με προμήθεια — συντονισμός αγγελιών, κρατήσεων, επικοινωνίας επισκεπτών και ορατότητα ιδιοκτήτη μέσω της πλατφόρμας.",
   path: "/property-management",
 });
 
@@ -16,37 +16,37 @@ export default function PropertyManagementPage() {
     <>
       <JsonLd
         data={serviceJsonLd({
-          name: "Talos full property management",
+          name: "Πλήρης διαχείριση καταλυμάτων Talos",
           description:
-            "Professional vacation rental management with owner visibility through the Talos platform.",
+            "Επαγγελματική διαχείριση βραχυχρόνιας μίσθωσης με ορατότητα ιδιοκτήτη μέσω της πλατφόρμας Talos.",
           path: "/property-management",
         })}
       />
       <section className="talos-section border-b border-[var(--talos-line)]">
         <div className="talos-container grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <p className="talos-kicker">Managed service</p>
+            <p className="talos-kicker">Υπηρεσία διαχείρισης</p>
             <h1 className="talos-display mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
-              Prefer to leave the operations to us?
+              Προτιμάτε να αναθέσετε τις λειτουργίες σε εμάς;
             </h1>
             <p className="talos-lede mt-5">
-              Talos is both a hospitality technology company and a management partner. Owners can
-              choose professional vacation-rental management while retaining visibility through the
-              platform where supported.
+              Το Talos είναι εταιρεία τεχνολογίας φιλοξενίας και συνεργάτης διαχείρισης. Οι
+              ιδιοκτήτες μπορούν να επιλέξουν επαγγελματική διαχείριση βραχυχρόνιας μίσθωσης,
+              διατηρώντας ορατότητα μέσω της πλατφόρμας όπου υποστηρίζεται.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <MarketingButton href="/get-started?source=property_management">
-                Talk to us about property management
+                Μιλήστε μαζί μας για διαχείριση καταλυμάτων
               </MarketingButton>
               <MarketingButton href="/get-started?source=pms" variant="secondary">
-                Or run it yourself
+                Ή διαχειριστείτε το μόνοι σας
               </MarketingButton>
             </div>
           </div>
           <div className="relative aspect-[4/5] overflow-hidden rounded-sm border border-[var(--talos-line)]">
             <Image
               src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
-              alt="Modern villa living space with large windows"
+              alt="Μοντέρνος χώρος καθιστικού βίλας με μεγάλα παράθυρα"
               fill
               className="object-cover"
               sizes="(max-width: 1024px) 100vw, 40vw"
@@ -56,15 +56,17 @@ export default function PropertyManagementPage() {
       </section>
       <section className="talos-section border-b border-[var(--talos-line)] bg-white">
         <div className="talos-container">
-          <h2 className="talos-display text-3xl font-semibold">Services we discuss with owners</h2>
+          <h2 className="talos-display text-3xl font-semibold">
+            Υπηρεσίες που συζητάμε με ιδιοκτήτες
+          </h2>
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             {[
-              "Listing management and presentation",
-              "Reservation coordination",
-              "Guest communication",
-              "Distribution and direct-presence strategy",
-              "Pricing and revenue support conversations",
-              "Owner reporting and platform visibility",
+              "Διαχείριση και παρουσίαση αγγελιών",
+              "Συντονισμός κρατήσεων",
+              "Επικοινωνία επισκεπτών",
+              "Στρατηγική διανομής και απευθείας παρουσίας",
+              "Συζητήσεις υποστήριξης τιμολόγησης και εσόδων",
+              "Αναφορές ιδιοκτήτη και ορατότητα πλατφόρμας",
             ].map((item) => (
               <p
                 key={item}
@@ -75,8 +77,8 @@ export default function PropertyManagementPage() {
             ))}
           </div>
           <p className="mt-10 max-w-2xl text-sm text-[var(--talos-muted)]">
-            Commission models, coverage hours, and on-the-ground services are agreed per engagement.
-            This page does not publish guarantees for occupancy, revenue, or response SLAs.
+            Μοντέλα προμήθειας, ώρες κάλυψης και επιτόπιες υπηρεσίες συμφωνούνται ανά συνεργασία.
+            Αυτή η σελίδα δεν δημοσιεύει εγγυήσεις πληρότητας, εσόδων ή SLA απόκρισης.
           </p>
         </div>
       </section>

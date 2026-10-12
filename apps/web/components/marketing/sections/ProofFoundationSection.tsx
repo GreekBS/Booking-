@@ -27,7 +27,7 @@ export function ProofFoundationSection() {
               <li>Property portfolio highlights</li>
             </ul>
           </div>
-          <ProductShell caption="Talos product preview while public proof is collected" />
+          <ProductShell caption="Προεπισκόπηση προϊόντος Talos όσο συλλέγονται δημόσιες αποδείξεις" />
         </div>
       </div>
     </section>

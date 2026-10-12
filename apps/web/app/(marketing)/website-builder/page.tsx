@@ -6,9 +6,9 @@ import { FinalCtaSection } from "@/components/marketing/sections/FinalCtaSection
 import { buildPageMetadata, JsonLd, serviceJsonLd } from "@/lib/marketing/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Branded property presence",
+  title: "Επωνυμική παρουσία καταλύματος",
   description:
-    "Turn Talos property data into a guest-facing branded presence — photos, details, and booking-ready experiences connected to the same system of record.",
+    "Μετατρέψτε τα δεδομένα καταλύματος του Talos σε επωνυμική παρουσία προς επισκέπτες — φωτογραφίες, λεπτομέρειες και εμπειρίες έτοιμες για κράτηση, συνδεδεμένες με το ίδιο σύστημα αναφοράς.",
   path: "/website-builder",
 });
 
@@ -17,29 +17,29 @@ export default function WebsiteBuilderPage() {
     <>
       <JsonLd
         data={serviceJsonLd({
-          name: "Talos branded property presence",
+          name: "Επωνυμική παρουσία καταλύματος Talos",
           description:
-            "Guest-facing property presence powered by Talos property data and booking capabilities.",
+            "Παρουσία καταλύματος προς επισκέπτες, με βάση τα δεδομένα καταλύματος και τις δυνατότητες κράτησης του Talos.",
           path: "/website-builder",
         })}
       />
       <section className="talos-section border-b border-[var(--talos-line)]">
         <div className="talos-container max-w-3xl">
-          <p className="talos-kicker">Property presence</p>
+          <p className="talos-kicker">Παρουσία καταλύματος</p>
           <h1 className="talos-display mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
-            Create your own branded property presence.
+            Δημιουργήστε τη δική σας επωνυμική παρουσία καταλύματος.
           </h1>
           <p className="talos-lede mt-5">
-            Guests should meet your property on a presence that reflects your brand. Talos keeps
-            property content and availability in one place — then helps you present that property to
-            direct guests.
+            Οι επισκέπτες αξίζει να συναντούν το κατάλυμά σας σε μια παρουσία που αντανακλά την
+            επωνυμία σας. Το Talos κρατά το περιεχόμενο και τη διαθεσιμότητα σε ένα μέρος — και σας
+            βοηθά να τα παρουσιάσετε σε απευθείας επισκέπτες.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <MarketingButton href="/get-started?source=website_builder">
-              Get started
+              Ξεκινήστε
             </MarketingButton>
             <MarketingButton href="/direct-bookings" variant="secondary">
-              Direct booking journey
+              Διαδρομή απευθείας κράτησης
             </MarketingButton>
           </div>
         </div>
@@ -51,16 +51,16 @@ export default function WebsiteBuilderPage() {
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             {[
               [
-                "Property content",
-                "Details and presentation stay attached to the property you already operate in Talos.",
+                "Περιεχόμενο καταλύματος",
+                "Λεπτομέρειες και παρουσίαση παραμένουν συνδεδεμένες με το κατάλυμα που ήδη λειτουργείτε στο Talos.",
               ],
               [
-                "Brand experience",
-                "A guest-facing presence designed around the property — desktop and mobile.",
+                "Εμπειρία επωνυμίας",
+                "Παρουσία προς τον επισκέπτη σχεδιασμένη γύρω από το κατάλυμα — σε υπολογιστή και κινητό.",
               ],
               [
-                "Connected to booking",
-                "Availability and booking capability remain part of the same operational foundation.",
+                "Συνδεδεμένη με την κράτηση",
+                "Διαθεσιμότητα και δυνατότητα κράτησης παραμένουν μέρος της ίδιας λειτουργικής βάσης.",
               ],
             ].map(([title, body]) => (
               <div key={title}>
@@ -75,8 +75,8 @@ export default function WebsiteBuilderPage() {
       <section className="talos-section border-b border-[var(--talos-line)]">
         <div className="talos-container">
           <SectionHeader
-            title="What ships today — and what is next"
-            lede="Today Talos provides storefront capabilities and embeddable booking experiences that power a booking-ready presence from your property data. A full self-service CMS / one-click hosted marketing site generator is on the roadmap — this page markets the foundation that already exists, not a finished website studio."
+            title="Τι υπάρχει σήμερα — και τι ακολουθεί"
+            lede="Σήμερα το Talos παρέχει δυνατότητες βιτρίνας και ενσωματώσιμες εμπειρίες κράτησης που τροφοδοτούν μια παρουσία έτοιμη για κράτηση από τα δεδομένα του καταλύματός σας. Ένας πλήρης αυτοεξυπηρετούμενος CMS / δημιουργός φιλοξενούμενου marketing site με ένα κλικ βρίσκεται στον οδικό χάρτη — αυτή η σελίδα προβάλλει τη βάση που υπάρχει ήδη, όχι ένα ολοκληρωμένο στούντιο ιστοσελίδων."
           />
         </div>
       </section>
