@@ -83,6 +83,7 @@ export class PrismaHousekeepingTodayQuery implements IHousekeepingTodayQuery {
               tenantId: input.tenantId,
               propertyId: input.propertyId,
               status: "confirmed",
+              supersededByBookingId: null,
               OR: [{ checkOut: todayDate }, { checkIn: todayDate }],
             },
             select: {

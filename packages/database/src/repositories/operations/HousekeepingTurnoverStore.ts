@@ -158,7 +158,12 @@ export class PrismaHousekeepingTurnoverStore
   ): Promise<TurnoverBookingSnapshot | null> {
     return withTenantTransaction(tenantId, async (tx) => {
       const row = await tx.booking.findFirst({
-        where: { id: bookingId, tenantId, status: "confirmed" },
+        where: {
+          id: bookingId,
+          tenantId,
+          status: "confirmed",
+          supersededByBookingId: null,
+        },
         include: { property: { select: { timezone: true } } },
       });
       return row ? mapBookingSnapshot(row) : null;
@@ -184,6 +189,7 @@ export class PrismaHousekeepingTurnoverStore
     const rows = await prisma.booking.findMany({
       where: {
         status: "confirmed",
+        supersededByBookingId: null,
         checkOut: {
           gte: start,
           lte: end,

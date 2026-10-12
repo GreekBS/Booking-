@@ -147,6 +147,8 @@ describe("B3.3b GetReservationImportDraftUseCase conflictBookings", () => {
         hasChannelLink: false,
         hasPayments: false,
         hasFolio: false,
+        hasPostedFolioLines: false,
+        hasFiscalDocuments: false,
         depsUnavailable: true,
       },
     ]);

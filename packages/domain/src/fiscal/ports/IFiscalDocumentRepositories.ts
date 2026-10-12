@@ -57,6 +57,11 @@ export interface IFiscalDocumentRepository {
     tenantId: string,
     opts?: { propertyId?: string; limit?: number },
   ): Promise<FiscalDocument[]>;
+  /** Lightweight lookup for import archival warnings (ids only). */
+  listIdsBySourceBookingId(
+    tenantId: string,
+    sourceBookingId: string,
+  ): Promise<string[]>;
   listCreditsAgainst(
     tenantId: string,
     originalDocumentId: string,

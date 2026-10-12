@@ -812,13 +812,16 @@ export class GetUnitCalendarUseCase {
           status: hold.status,
           expiresAt: hold.expiresAt.toISOString(),
         })),
-        bookings: bookings.map((booking) => ({
-          id: booking.id,
-          checkIn: booking.stayPeriod.checkIn.value,
-          checkOut: booking.stayPeriod.checkOut.value,
-          status: booking.status,
-          guestName: booking.guest.name,
-        })),
+        // Superseded stays are history-only; calendar occupancy uses live stays.
+        bookings: bookings
+          .filter((booking) => !booking.isSuperseded)
+          .map((booking) => ({
+            id: booking.id,
+            checkIn: booking.stayPeriod.checkIn.value,
+            checkOut: booking.stayPeriod.checkOut.value,
+            status: booking.status,
+            guestName: booking.guest.name,
+          })),
       });
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));

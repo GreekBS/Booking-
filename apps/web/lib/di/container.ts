@@ -1525,7 +1525,7 @@ const reservationImportPricingPort = {
   },
 };
 
-/** Fail-closed keep_csv dependency probe (channel / payments / folios). Lazy refs OK. */
+/** keep_csv archival probe: active channel links block; folio/payment/fiscal are warnings. */
 const reservationImportReplaceDepsProbe = {
   listChannelLinksByBookingId: (tenantId: string, bookingId: string) =>
     externalReservationLinkRepository.listByBookingId(tenantId, bookingId),
@@ -1533,6 +1533,8 @@ const reservationImportReplaceDepsProbe = {
     paymentRepository.listByBooking(tenantId, bookingId),
   listFoliosByBookingId: (tenantId: string, bookingId: string) =>
     folioRepository.findByBooking(tenantId, bookingId),
+  listFiscalDocumentsByBookingId: (tenantId: string, bookingId: string) =>
+    fiscalDocumentRepository.listIdsBySourceBookingId(tenantId, bookingId),
 };
 
 export const createReservationImportDraftUseCase =

@@ -229,6 +229,10 @@ export interface BookingRecord {
   } | null;
   status: string;
   confirmationMode: string;
+  /** True when booking was archived via CSV/import supersede. */
+  isSuperseded?: boolean;
+  supersededByBookingId?: string | null;
+  supersededAt?: string | null;
 }
 
 export interface StayChangePreviewRecord {

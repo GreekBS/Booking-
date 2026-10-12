@@ -10,6 +10,7 @@ import type {
   ReservationImportRowDto,
 } from "@/lib/admin/reservation-import-api";
 import {
+  RESERVATION_IMPORT_ARCHIVE_FINANCIAL_WARNING,
   RESERVATION_IMPORT_CONFLICT_PROMPT,
   RESERVATION_IMPORT_HARD_BLOCKER_NO_DECISION,
   RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY,
@@ -23,6 +24,7 @@ import {
 } from "./reservation-import-copy";
 import {
   bookingStatusLabelEl,
+  conflictBookingHasFinancialArchiveWarning,
   conflictBookingIsSupersedeable,
 } from "./reservation-import-errors";
 import {
@@ -108,11 +110,12 @@ export function ReservationImportConflictDecisionPanel({
     (bookings.length > 0
       ? bookings.some((b) => !conflictBookingIsSupersedeable(b))
       : false);
-  const blockedStatusLabel = bookings.find((b) => !conflictBookingIsSupersedeable(b))
-    ? bookingStatusLabelEl(
-        bookings.find((b) => !conflictBookingIsSupersedeable(b))!.status,
-      )
+  const blockedBooking = bookings.find((b) => !conflictBookingIsSupersedeable(b));
+  const blockedStatusLabel = blockedBooking
+    ? bookingStatusLabelEl(blockedBooking.status)
     : "μη ολοκληρωμένη";
+  const showFinancialArchiveWarning =
+    hasExisting && bookings.some((b) => conflictBookingHasFinancialArchiveWarning(b));
 
   if (hardBlocked) {
     return (
@@ -210,9 +213,19 @@ export function ReservationImportConflictDecisionPanel({
             selected={resolution === "keep_csv"}
           />
 
+          {showFinancialArchiveWarning ? (
+            <p
+              className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-950 dark:text-amber-100"
+              role="status"
+              data-testid="archive-financial-warning"
+            >
+              {RESERVATION_IMPORT_ARCHIVE_FINANCIAL_WARNING}
+            </p>
+          ) : null}
+
           {resolution === "keep_csv" && row.replaceBookingIds.length > 0 ? (
             <p className="text-xs text-muted-foreground" role="status">
-              Στόχοι μελλοντικής αντικατάστασης ({row.replaceBookingIds.length}):{" "}
+              Στόχοι μελλοντικής αρχειοθέτησης ({row.replaceBookingIds.length}):{" "}
               {row.replaceBookingIds.map((id) => id.slice(0, 8)).join(", ")}…
               <span className="mt-1 block">{RESERVATION_IMPORT_KEEP_CSV_NOT_YET_REPLACED}</span>
             </p>

@@ -13,8 +13,13 @@ import {
   ResolveOrCreateGuest,
   mutationOriginOperator,
   Money,
+  Folio,
+  FolioLine,
+  Payment,
   type ActorContext,
 } from "@hcp/domain";
+import { PrismaFolioRepository } from "../../src/repositories/billing/FolioRepository";
+import { PrismaPaymentRepository } from "../../src/repositories/billing/PaymentRepositories";
 import { PrismaReservationImportRepository } from "../../src/repositories/commerce/ReservationImportRepository";
 import { PrismaCsvImportUnitResolver } from "../../src/adapters/PrismaCsvImportUnitResolver";
 import { PrismaCatalogQueryAdapter } from "../../src/adapters/CatalogQueryAdapter";
@@ -773,7 +778,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
     expect(superseded!.isSuperseded).toBe(true);
   });
 
-  it("11b) confirmed keep_csv blocked when payments/folios/channel links exist", async () => {
+  it("11b) confirmed keep_csv archives when folio/payments exist; channel link still blocks", async () => {
     const liveId = "550e8400-e29b-41d4-a716-446655440902";
     await createConfirmedBooking({
       tenantId: tenantA,
@@ -784,12 +789,13 @@ runIntegration("Reservation import Phase C1 commit", () => {
       checkOut: "2026-12-05",
     });
 
-    const paymentProbe = {
+    const financeOkProbe = {
       listChannelLinksByBookingId: async () => [],
       listPaymentsByBookingId: async () => [{ id: "pay-1" }],
-      listFoliosByBookingId: async () => [],
+      listFoliosByBookingId: async () => [{ lines: [{ id: "line-1" }] }],
+      listFiscalDocumentsByBookingId: async () => [{ id: "fd-1" }],
     };
-    const createDraftBlocked = new CreateReservationImportDraftUseCase(
+    const createDraftFinance = new CreateReservationImportDraftUseCase(
       imports,
       unitResolver,
       catalog,
@@ -800,15 +806,15 @@ runIntegration("Reservation import Phase C1 commit", () => {
       idGenerator,
       permissionChecker,
       bookingRepository,
-      paymentProbe,
+      financeOkProbe,
     );
-    const updateDecisionBlocked = new UpdateReservationImportRowDecisionUseCase(
+    const updateDecisionFinance = new UpdateReservationImportRowDecisionUseCase(
       imports,
-      createDraftBlocked,
+      createDraftFinance,
       permissionChecker,
       pricing,
     );
-    const commitBlocked = new CommitReservationImportBatchUseCase(
+    const commitFinance = new CommitReservationImportBatchUseCase(
       imports,
       commerceFlow,
       bookingRepository,
@@ -819,18 +825,18 @@ runIntegration("Reservation import Phase C1 commit", () => {
       resolveOrCreateGuest,
       idGenerator,
       permissionChecker,
-      paymentProbe,
+      financeOkProbe,
     );
 
     const csv = [
       "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
-      `C1-DEPS,${unitA},D,d@test.com,2026-12-01,2026-12-05,2,500,EUR`,
+      `C1-FIN,${unitA},F,f@test.com,2026-12-01,2026-12-05,2,500,EUR`,
     ].join("\n");
-    const created = await createDraftBlocked.execute(
+    const created = await createDraftFinance.execute(
       {
         tenantId: tenantA,
         propertyId: propertyA,
-        filename: "deps.csv",
+        filename: "fin.csv",
         content: csv,
         dateFormat: "iso",
         now: new Date("2026-10-04T08:00:00.000Z"),
@@ -838,7 +844,7 @@ runIntegration("Reservation import Phase C1 commit", () => {
       actor,
     );
     const row = created.getValue().rows[0]!;
-    const decided = await updateDecisionBlocked.execute(
+    const decided = await updateDecisionFinance.execute(
       {
         batchId: created.getValue().batch.id,
         rowId: row.id,
@@ -849,31 +855,338 @@ runIntegration("Reservation import Phase C1 commit", () => {
       actor,
     );
     expect(decided.isSuccess).toBe(true);
-    expect(decided.getValue().status).toBe("pending");
-    expect(decided.getValue().errorCode).toBe("REPLACE_TARGET_HAS_PAYMENTS");
+    expect(decided.getValue().status).toBe("ready");
+    expect(decided.getValue().errorCode).toBeNull();
 
-    // Force ready to prove commit still fails closed on protected deps.
-    await imports.updateRow(
-      row.id,
-      tenantA,
-      { status: "ready", errorCode: null, errorMessage: null },
-      new Date("2026-10-04T08:45:00.000Z"),
-    );
     const beforeBlocks = await activeBookingBlocks(unitA, tenantA);
-    const result = await commitBlocked.execute(
+    expect(beforeBlocks.some((b) => b.sourceId === liveId)).toBe(true);
+
+    const result = await commitFinance.execute(
       created.getValue().batch.id,
       tenantA,
       actor,
       new Date("2026-10-04T09:00:00.000Z"),
     );
-    expect(result.isFailure).toBe(true);
-    expect(result.getError().message).toMatch(/payment|REPLACE_TARGET_HAS_PAYMENTS|dependency/i);
-    const stillLive = await bookingRepository.findById(liveId, tenantA);
-    expect(stillLive!.isSuperseded).toBe(false);
+    expect(result.isSuccess).toBe(true);
+    const superseded = await bookingRepository.findById(liveId, tenantA);
+    expect(superseded!.isSuperseded).toBe(true);
+    expect(superseded!.status).toBe("confirmed");
     const afterBlocks = await activeBookingBlocks(unitA, tenantA);
-    expect(afterBlocks.map((b) => b.sourceId).sort()).toEqual(
-      beforeBlocks.map((b) => b.sourceId).sort(),
+    expect(afterBlocks.some((b) => b.sourceId === liveId)).toBe(false);
+    const createdId = result.getValue().rows[0]!.createdBookingId!;
+    const successor = await bookingRepository.findById(createdId, tenantA);
+    expect(successor!.status).toBe("confirmed");
+
+    // Active channel link still blocks archival.
+    const liveId2 = "550e8400-e29b-41d4-a716-446655440904";
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId: liveId2,
+      checkIn: "2026-12-10",
+      checkOut: "2026-12-14",
+    });
+    const channelProbe = {
+      listChannelLinksByBookingId: async () => [{ status: "linked" }],
+      listPaymentsByBookingId: async () => [],
+      listFoliosByBookingId: async () => [],
+    };
+    const createDraftChannel = new CreateReservationImportDraftUseCase(
+      imports,
+      unitResolver,
+      catalog,
+      calendarBlocks,
+      availabilityRules,
+      timezoneService,
+      pricing,
+      idGenerator,
+      permissionChecker,
+      bookingRepository,
+      channelProbe,
     );
+    const updateDecisionChannel = new UpdateReservationImportRowDecisionUseCase(
+      imports,
+      createDraftChannel,
+      permissionChecker,
+      pricing,
+    );
+    const commitChannel = new CommitReservationImportBatchUseCase(
+      imports,
+      commerceFlow,
+      bookingRepository,
+      catalog,
+      calendarBlocks,
+      availabilityRules,
+      timezoneService,
+      resolveOrCreateGuest,
+      idGenerator,
+      permissionChecker,
+      channelProbe,
+    );
+    const created2 = await createDraftChannel.execute(
+      {
+        tenantId: tenantA,
+        propertyId: propertyA,
+        filename: "chan.csv",
+        content: [
+          "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
+          `C1-CHAN,${unitA},C,c@test.com,2026-12-10,2026-12-14,2,500,EUR`,
+        ].join("\n"),
+        dateFormat: "iso",
+        now: new Date("2026-10-04T08:00:00.000Z"),
+      },
+      actor,
+    );
+    const decided2 = await updateDecisionChannel.execute(
+      {
+        batchId: created2.getValue().batch.id,
+        rowId: created2.getValue().rows[0]!.id,
+        tenantId: tenantA,
+        conflictResolution: "keep_csv",
+        now: new Date("2026-10-04T08:30:00.000Z"),
+      },
+      actor,
+    );
+    expect(decided2.isSuccess).toBe(true);
+    expect(decided2.getValue().status).toBe("pending");
+    expect(decided2.getValue().errorCode).toBe("REPLACE_TARGET_HAS_CHANNEL_LINK");
+    await imports.updateRow(
+      created2.getValue().rows[0]!.id,
+      tenantA,
+      { status: "ready", errorCode: null, errorMessage: null },
+      new Date("2026-10-04T08:45:00.000Z"),
+    );
+    const blocked = await commitChannel.execute(
+      created2.getValue().batch.id,
+      tenantA,
+      actor,
+      new Date("2026-10-04T09:00:00.000Z"),
+    );
+    expect(blocked.isFailure).toBe(true);
+    expect(blocked.getError().message).toMatch(/channel reservation link/i);
+    expect((await bookingRepository.findById(liveId2, tenantA))!.isSuperseded).toBe(false);
+  });
+
+  it("11c) archive with real empty folio, posted folio, and payment preserves financial refs", async () => {
+    const folioRepository = new PrismaFolioRepository();
+    const paymentRepository = new PrismaPaymentRepository();
+    const emptyFolioBookingId = "550e8400-e29b-41d4-a716-446655440910";
+    const postedFolioBookingId = "550e8400-e29b-41d4-a716-446655440911";
+    const paymentBookingId = "550e8400-e29b-41d4-a716-446655440912";
+
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId: emptyFolioBookingId,
+      checkIn: "2026-11-01",
+      checkOut: "2026-11-05",
+    });
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId: postedFolioBookingId,
+      checkIn: "2026-11-10",
+      checkOut: "2026-11-14",
+    });
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId: paymentBookingId,
+      checkIn: "2026-11-20",
+      checkOut: "2026-11-24",
+    });
+
+    const emptyFolioId = "550e8400-e29b-41d4-a716-446655440920";
+    expect(
+      await folioRepository.saveNew(
+        Folio.open({
+          id: emptyFolioId,
+          tenantId: tenantA,
+          bookingId: emptyFolioBookingId,
+          currency: "EUR",
+          folioKey: Folio.primaryKey(),
+          label: "Primary empty",
+        }),
+      ),
+    ).toBe("created");
+
+    const postedFolioId = "550e8400-e29b-41d4-a716-446655440921";
+    const postedFolio = Folio.open({
+      id: postedFolioId,
+      tenantId: tenantA,
+      bookingId: postedFolioBookingId,
+      currency: "EUR",
+      folioKey: Folio.primaryKey(),
+      label: "Primary posted",
+    });
+    postedFolio.appendPostedLine(
+      FolioLine.createPosted({
+        id: "550e8400-e29b-41d4-a716-446655440922",
+        tenantId: tenantA,
+        folioId: postedFolioId,
+        lineType: "accommodation",
+        description: "Stay",
+        amount: Money.create("100.0000", "EUR"),
+        source: {
+          sourceType: "manual",
+          sourceId: postedFolioBookingId,
+          sourceLineRef: "manual:1",
+        },
+        sortOrder: 0,
+      }),
+    );
+    expect(await folioRepository.saveNew(postedFolio)).toBe("created");
+
+    const paymentId = "550e8400-e29b-41d4-a716-446655440923";
+    await paymentRepository.saveNew(
+      Payment.create({
+        id: paymentId,
+        tenantId: tenantA,
+        propertyId: propertyA,
+        currency: "EUR",
+        amount: Money.create("50.0000", "EUR"),
+        status: "SUCCEEDED",
+        method: "CASH",
+        collectionSource: "PROPERTY",
+        bookingId: paymentBookingId,
+        idempotencyKey: "c1-11c-pay",
+      }),
+    );
+
+    const realProbe = {
+      listChannelLinksByBookingId: async () => [],
+      listPaymentsByBookingId: (tid: string, bid: string) =>
+        paymentRepository.listByBooking(tid, bid),
+      listFoliosByBookingId: (tid: string, bid: string) =>
+        folioRepository.findByBooking(tid, bid),
+      listFiscalDocumentsByBookingId: async () => [],
+    };
+    const createDraftReal = new CreateReservationImportDraftUseCase(
+      imports,
+      unitResolver,
+      catalog,
+      calendarBlocks,
+      availabilityRules,
+      timezoneService,
+      pricing,
+      idGenerator,
+      permissionChecker,
+      bookingRepository,
+      realProbe,
+    );
+    const updateDecisionReal = new UpdateReservationImportRowDecisionUseCase(
+      imports,
+      createDraftReal,
+      permissionChecker,
+      pricing,
+    );
+    const commitReal = new CommitReservationImportBatchUseCase(
+      imports,
+      commerceFlow,
+      bookingRepository,
+      catalog,
+      calendarBlocks,
+      availabilityRules,
+      timezoneService,
+      resolveOrCreateGuest,
+      idGenerator,
+      permissionChecker,
+      realProbe,
+    );
+
+    async function archiveRow(args: {
+      ref: string;
+      checkIn: string;
+      checkOut: string;
+      liveId: string;
+    }) {
+      const created = await createDraftReal.execute(
+        {
+          tenantId: tenantA,
+          propertyId: propertyA,
+          filename: `${args.ref}.csv`,
+          content: [
+            "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
+            `${args.ref},${unitA},G,g@test.com,${args.checkIn},${args.checkOut},2,200,EUR`,
+          ].join("\n"),
+          dateFormat: "iso",
+          now: new Date("2026-10-04T08:00:00.000Z"),
+        },
+        actor,
+      );
+      expect(created.isSuccess).toBe(true);
+      const decided = await updateDecisionReal.execute(
+        {
+          batchId: created.getValue().batch.id,
+          rowId: created.getValue().rows[0]!.id,
+          tenantId: tenantA,
+          conflictResolution: "keep_csv",
+          now: new Date("2026-10-04T08:30:00.000Z"),
+        },
+        actor,
+      );
+      expect(decided.isSuccess).toBe(true);
+      expect(decided.getValue().status).toBe("ready");
+      const result = await commitReal.execute(
+        created.getValue().batch.id,
+        tenantA,
+        actor,
+        new Date("2026-10-04T09:00:00.000Z"),
+      );
+      expect(result.isSuccess).toBe(true);
+      const old = await bookingRepository.findById(args.liveId, tenantA);
+      expect(old!.isSuperseded).toBe(true);
+      expect(old!.status).toBe("confirmed");
+      const blocks = await activeBookingBlocks(unitA, tenantA);
+      expect(blocks.some((b) => b.sourceId === args.liveId)).toBe(false);
+      return result.getValue().summary;
+    }
+
+    const emptySummary = await archiveRow({
+      ref: "C1-EMPTY-FOLIO",
+      checkIn: "2026-11-01",
+      checkOut: "2026-11-05",
+      liveId: emptyFolioBookingId,
+    });
+    expect(emptySummary.createdBookingIds).toHaveLength(1);
+    expect(emptySummary.supersededBookingIds).toEqual([emptyFolioBookingId]);
+    const emptyFolios = await folioRepository.findByBooking(tenantA, emptyFolioBookingId);
+    expect(emptyFolios).toHaveLength(1);
+    expect(emptyFolios[0]!.folio.id).toBe(emptyFolioId);
+    expect(emptyFolios[0]!.folio.bookingId).toBe(emptyFolioBookingId);
+    expect(emptyFolios[0]!.lines).toHaveLength(0);
+
+    const postedSummary = await archiveRow({
+      ref: "C1-POSTED-FOLIO",
+      checkIn: "2026-11-10",
+      checkOut: "2026-11-14",
+      liveId: postedFolioBookingId,
+    });
+    expect(postedSummary.supersededBookingIds).toEqual([postedFolioBookingId]);
+    const postedFolios = await folioRepository.findByBooking(
+      tenantA,
+      postedFolioBookingId,
+    );
+    expect(postedFolios).toHaveLength(1);
+    expect(postedFolios[0]!.folio.id).toBe(postedFolioId);
+    expect(postedFolios[0]!.folio.bookingId).toBe(postedFolioBookingId);
+    expect(postedFolios[0]!.lines).toHaveLength(1);
+
+    const paySummary = await archiveRow({
+      ref: "C1-PAY",
+      checkIn: "2026-11-20",
+      checkOut: "2026-11-24",
+      liveId: paymentBookingId,
+    });
+    expect(paySummary.supersededBookingIds).toEqual([paymentBookingId]);
+    const payments = await paymentRepository.listByBooking(tenantA, paymentBookingId);
+    expect(payments).toHaveLength(1);
+    expect(payments[0]!.id).toBe(paymentId);
+    expect(payments[0]!.bookingId).toBe(paymentBookingId);
   });
 
   it("12) hard blocker after preflight fails commit", async () => {

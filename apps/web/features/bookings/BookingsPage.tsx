@@ -29,6 +29,8 @@ import { Surface } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { Badge } from "@/components/ui/badge";
+import { RESERVATION_IMPORT_SUPERSEDED_BADGE } from "@/features/reservation-import/reservation-import-copy";
 import { Pagination } from "@/components/admin/pagination";
 import { BookingDetailDrawer } from "@/features/bookings/BookingDetailDrawer";
 import { BookingCreateMenu } from "@/features/reservation-import/BookingCreateMenu";
@@ -547,7 +549,18 @@ function BookingsPageContent() {
                       <TableCell className="hidden tabular-nums md:table-cell">{nights}</TableCell>
                       <TableCell className="hidden sm:table-cell">{booking.guestCount}</TableCell>
                       <TableCell>
-                        <StatusBadge status={booking.status} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <StatusBadge status={booking.status} />
+                          {booking.isSuperseded ? (
+                            <Badge
+                              variant="outline"
+                              className="rounded-md px-2 py-0.5 text-[13px] font-medium"
+                              data-testid="booking-superseded-badge"
+                            >
+                              {RESERVATION_IMPORT_SUPERSEDED_BADGE}
+                            </Badge>
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -83,6 +83,8 @@ export interface ReservationImportConflictBookingDto {
   hasChannelLink: boolean;
   hasPayments: boolean;
   hasFolio: boolean;
+  hasPostedFolioLines: boolean;
+  hasFiscalDocuments: boolean;
   depsUnavailable: boolean;
 }
 
@@ -152,6 +154,8 @@ export async function getReservationImportDraft(
       hasChannelLink: Boolean(b.hasChannelLink),
       hasPayments: Boolean(b.hasPayments),
       hasFolio: Boolean(b.hasFolio),
+      hasPostedFolioLines: Boolean(b.hasPostedFolioLines),
+      hasFiscalDocuments: Boolean(b.hasFiscalDocuments),
       depsUnavailable: Boolean(b.depsUnavailable),
     })),
   };

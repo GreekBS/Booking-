@@ -170,8 +170,9 @@ export function evaluateKeepCsvReplaceTargets(input: {
 }
 
 /**
- * Fail-closed financial/channel dependency probe for keep_csv targets.
- * Does not detach or rewrite links/payments/folios — only reports blockers.
+ * Fail-closed channel dependency probe for keep_csv archival (supersede).
+ * Folios/payments are preserved on the superseded booking and are warnings only —
+ * not automatic blockers. Does not detach or rewrite links/payments/folios.
  */
 export interface KeepCsvReplaceTargetDependencyProbe {
   listChannelLinksByBookingId(
@@ -185,7 +186,47 @@ export interface KeepCsvReplaceTargetDependencyProbe {
   listFoliosByBookingId(
     tenantId: string,
     bookingId: string,
+  ): Promise<Array<{ lines?: unknown[] } | unknown>>;
+  /** Optional — issued fiscal documents linked to the booking (warning signal). */
+  listFiscalDocumentsByBookingId?(
+    tenantId: string,
+    bookingId: string,
   ): Promise<unknown[]>;
+}
+
+/** Warning-only financial/fiscal signals for operator UX (never auto-block archive). */
+export interface KeepCsvReplaceTargetFinancialWarnings {
+  hasPayments: boolean;
+  hasFolio: boolean;
+  hasPostedFolioLines: boolean;
+  hasFiscalDocuments: boolean;
+}
+
+export function folioHasPostedLines(folio: unknown): boolean {
+  if (!folio || typeof folio !== "object") return false;
+  const record = folio as { lines?: unknown[]; folio?: { lines?: unknown[] } };
+  const lines = record.lines ?? record.folio?.lines;
+  return Array.isArray(lines) && lines.length > 0;
+}
+
+export async function collectKeepCsvReplaceTargetFinancialWarnings(input: {
+  tenantId: string;
+  bookingId: string;
+  probe: KeepCsvReplaceTargetDependencyProbe;
+}): Promise<KeepCsvReplaceTargetFinancialWarnings> {
+  const [payments, folios, fiscal] = await Promise.all([
+    input.probe.listPaymentsByBookingId(input.tenantId, input.bookingId),
+    input.probe.listFoliosByBookingId(input.tenantId, input.bookingId),
+    input.probe.listFiscalDocumentsByBookingId
+      ? input.probe.listFiscalDocumentsByBookingId(input.tenantId, input.bookingId)
+      : Promise.resolve([]),
+  ]);
+  return {
+    hasPayments: payments.length > 0,
+    hasFolio: folios.length > 0,
+    hasPostedFolioLines: folios.some(folioHasPostedLines),
+    hasFiscalDocuments: fiscal.length > 0,
+  };
 }
 
 export async function evaluateKeepCsvReplaceTargetDependencies(input: {
@@ -201,14 +242,14 @@ export async function evaluateKeepCsvReplaceTargetDependencies(input: {
 
   for (const id of ids) {
     let links: Array<{ status: string }>;
-    let payments: unknown[];
-    let folios: unknown[];
     try {
-      [links, payments, folios] = await Promise.all([
+      // Still touch payments/folios so probe failures remain fail-closed.
+      const [channelLinks] = await Promise.all([
         input.probe.listChannelLinksByBookingId(input.tenantId, id),
         input.probe.listPaymentsByBookingId(input.tenantId, id),
         input.probe.listFoliosByBookingId(input.tenantId, id),
       ]);
+      links = channelLinks;
     } catch {
       return { code: "REPLACE_TARGET_DEPS_UNAVAILABLE", bookingId: id };
     }
@@ -217,12 +258,7 @@ export async function evaluateKeepCsvReplaceTargetDependencies(input: {
     if (activeLink) {
       return { code: "REPLACE_TARGET_HAS_CHANNEL_LINK", bookingId: id };
     }
-    if (payments.length > 0) {
-      return { code: "REPLACE_TARGET_HAS_PAYMENTS", bookingId: id };
-    }
-    if (folios.length > 0) {
-      return { code: "REPLACE_TARGET_HAS_FOLIO", bookingId: id };
-    }
+    // Folio / payment presence does not block archival (supersede preserves them).
   }
   return null;
 }

@@ -217,7 +217,7 @@ export function conflictResolutionLabel(resolution: string): string {
     case "keep_existing":
       return "Διατήρηση υπάρχουσας";
     case "keep_csv":
-      return "Διατήρηση CSV";
+      return "Διατήρηση CSV — Αρχειοθέτηση υπάρχουσας";
     case "undecided":
       return "Δεν έχει επιλεγεί";
     default:

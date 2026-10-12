@@ -21,7 +21,10 @@ import type { CreateReservationImportDraftUseCase } from "./CreateReservationImp
 import {
   parseConflictSnapshot,
 } from "./ReservationImportConflictGraph";
-import type { KeepCsvReplaceTargetDependencyProbe } from "./ReservationImportCommitRevalidation";
+import {
+  collectKeepCsvReplaceTargetFinancialWarnings,
+  type KeepCsvReplaceTargetDependencyProbe,
+} from "./ReservationImportCommitRevalidation";
 
 function assertBookingCreate(
   checker: PermissionChecker,
@@ -146,6 +149,8 @@ export class GetReservationImportDraftUseCase {
     hasChannelLink: boolean;
     hasPayments: boolean;
     hasFolio: boolean;
+    hasPostedFolioLines: boolean;
+    hasFiscalDocuments: boolean;
     depsUnavailable: boolean;
   }> {
     if (!this.replaceDeps) {
@@ -153,19 +158,23 @@ export class GetReservationImportDraftUseCase {
         hasChannelLink: false,
         hasPayments: false,
         hasFolio: false,
+        hasPostedFolioLines: false,
+        hasFiscalDocuments: false,
         depsUnavailable: true,
       };
     }
     try {
-      const [links, payments, folios] = await Promise.all([
+      const [links, warnings] = await Promise.all([
         this.replaceDeps.listChannelLinksByBookingId(tenantId, bookingId),
-        this.replaceDeps.listPaymentsByBookingId(tenantId, bookingId),
-        this.replaceDeps.listFoliosByBookingId(tenantId, bookingId),
+        collectKeepCsvReplaceTargetFinancialWarnings({
+          tenantId,
+          bookingId,
+          probe: this.replaceDeps,
+        }),
       ]);
       return {
         hasChannelLink: links.some((l) => l.status !== "archived"),
-        hasPayments: payments.length > 0,
-        hasFolio: folios.length > 0,
+        ...warnings,
         depsUnavailable: false,
       };
     } catch {
@@ -173,6 +182,8 @@ export class GetReservationImportDraftUseCase {
         hasChannelLink: false,
         hasPayments: false,
         hasFolio: false,
+        hasPostedFolioLines: false,
+        hasFiscalDocuments: false,
         depsUnavailable: true,
       };
     }

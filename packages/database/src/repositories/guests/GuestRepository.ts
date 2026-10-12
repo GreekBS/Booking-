@@ -393,12 +393,18 @@ export class PrismaGuestRepository implements IGuestRepository {
           g.anonymized_at,
           g.created_at,
           g.updated_at,
-          COUNT(b.id) FILTER (WHERE b.status <> 'cancelled')::int AS stay_count,
+          COUNT(b.id) FILTER (
+            WHERE b.status <> 'cancelled' AND b.superseded_by_booking_id IS NULL
+          )::int AS stay_count,
           MAX(b.check_out) FILTER (
-            WHERE b.status <> 'cancelled' AND b.check_out < CURRENT_DATE
+            WHERE b.status <> 'cancelled'
+              AND b.superseded_by_booking_id IS NULL
+              AND b.check_out < CURRENT_DATE
           ) AS last_stay_check_out,
           MIN(b.check_in) FILTER (
-            WHERE b.status <> 'cancelled' AND b.check_in >= CURRENT_DATE
+            WHERE b.status <> 'cancelled'
+              AND b.superseded_by_booking_id IS NULL
+              AND b.check_in >= CURRENT_DATE
           ) AS next_stay_check_in
         FROM guests g
         INNER JOIN bookings b
@@ -473,7 +479,12 @@ export class PrismaGuestRepository implements IGuestRepository {
     allowedPropertyIds: string[] | null,
   ): Promise<GuestProfileMetrics> {
     return withTenantTransaction(tenantId, async (tx) => {
-      const where = bookingPropertyWhere(tenantId, guestId, allowedPropertyIds);
+      // Operational stay metrics exclude superseded archives; guest booking
+      // history listing still uses bookingPropertyWhere (includes superseded).
+      const where = {
+        ...bookingPropertyWhere(tenantId, guestId, allowedPropertyIds),
+        supersededByBookingId: null,
+      };
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 

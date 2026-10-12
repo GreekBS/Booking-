@@ -158,6 +158,48 @@ describe("Batch calendar read use cases", () => {
       expect(value[UNIT_A2]!.holds).toEqual([]);
     });
 
+    it("omits superseded bookings from operational calendar occupancy", async () => {
+      findByUnits.mockResolvedValue([
+        {
+          id: "bk-live",
+          unitId: UNIT_A1,
+          isSuperseded: false,
+          status: "confirmed",
+          guest: { name: "Live" },
+          stayPeriod: {
+            checkIn: { value: "2026-06-10" },
+            checkOut: { value: "2026-06-14" },
+          },
+        },
+        {
+          id: "bk-archived",
+          unitId: UNIT_A1,
+          isSuperseded: true,
+          status: "confirmed",
+          guest: { name: "Archived" },
+          stayPeriod: {
+            checkIn: { value: "2026-06-10" },
+            checkOut: { value: "2026-06-14" },
+          },
+        },
+      ]);
+
+      const result = await useCase.execute(
+        {
+          tenantId: TENANT_A,
+          unitIds: [UNIT_A1],
+          from: "2026-06-01",
+          to: "2026-07-01",
+        },
+        adminActor,
+      );
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue()[UNIT_A1]!.bookings.map((b) => b.id)).toEqual([
+        "bk-live",
+      ]);
+    });
+
     it("fails safely when a foreign unit id is mixed in (no leak)", async () => {
       getUnitPropertyContextsByUnitIds.mockResolvedValue([
         { unitId: UNIT_A1, propertyId: PROP_A },

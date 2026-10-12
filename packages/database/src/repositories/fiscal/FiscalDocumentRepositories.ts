@@ -519,6 +519,19 @@ export class PrismaFiscalDocumentRepository implements IFiscalDocumentRepository
     });
   }
 
+  async listIdsBySourceBookingId(
+    tenantId: string,
+    sourceBookingId: string,
+  ): Promise<string[]> {
+    return withTenantTransaction(tenantId, async (tx) => {
+      const rows = await tx.fiscalDocument.findMany({
+        where: { tenantId, sourceBookingId },
+        select: { id: true },
+      });
+      return rows.map((r) => r.id);
+    });
+  }
+
   async listCreditsAgainst(
     tenantId: string,
     originalDocumentId: string,

@@ -115,8 +115,21 @@ export function conflictBookingIsSupersedeable(
   if (booking.isSuperseded) return false;
   if (booking.status !== "completed" && booking.status !== "confirmed") return false;
   if (booking.depsUnavailable) return false;
-  if (booking.hasChannelLink || booking.hasPayments || booking.hasFolio) return false;
+  // Folio/payments are archive warnings only; active channel links still block.
+  if (booking.hasChannelLink) return false;
   return true;
+}
+
+/** True when archival should show a prominent financial/fiscal warning. */
+export function conflictBookingHasFinancialArchiveWarning(
+  booking: ReservationImportConflictBookingDto,
+): boolean {
+  return (
+    booking.hasPayments ||
+    booking.hasPostedFolioLines ||
+    booking.hasFiscalDocuments ||
+    (booking.hasFolio && !booking.hasPostedFolioLines)
+  );
 }
 
 export function rowHasNonSupersedeableKeepCsvTarget(

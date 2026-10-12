@@ -3,11 +3,13 @@
 import { X } from "lucide-react";
 import type { BookingRecord } from "@/lib/admin/types";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { nightsBetween } from "@/lib/admin/utils";
 import { formatBookingDisplayId } from "./lib/booking-display";
 import { BookingQuickActions } from "./BookingQuickActions";
 import { elCommon } from "@/lib/i18n";
+import { RESERVATION_IMPORT_SUPERSEDED_BADGE } from "@/features/reservation-import/reservation-import-copy";
 
 interface BookingWorkspaceHeaderProps {
   booking: BookingRecord;
@@ -44,6 +46,15 @@ export function BookingWorkspaceHeader({
               {booking.guest.name}
             </h2>
             <StatusBadge status={booking.status} />
+            {booking.isSuperseded ? (
+              <Badge
+                variant="outline"
+                className="rounded-md px-2 py-0.5 text-[13px] font-medium"
+                data-testid="booking-superseded-badge"
+              >
+                {RESERVATION_IMPORT_SUPERSEDED_BADGE}
+              </Badge>
+            ) : null}
           </div>
 
           <p className="mt-1 font-mono text-[11px] text-muted-foreground">

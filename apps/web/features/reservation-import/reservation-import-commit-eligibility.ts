@@ -26,8 +26,10 @@ export interface CommitPreviewCounts {
   importCount: number;
   skipCount: number;
   rejectedCount: number;
-  /** Distinct existing booking ids that keep_csv rows would replace. */
+  /** Distinct existing booking ids that keep_csv rows would archive (supersede). */
   replacementBookingCount: number;
+  /** Rows blocked from import (failed / pending with replace blockers). */
+  blockedCount: number;
 }
 
 export type ClientCommitEligibility =
@@ -122,6 +124,7 @@ export function computeCommitPreviewCounts(
 ): CommitPreviewCounts {
   let importCount = 0;
   let skipCount = 0;
+  let blockedCount = 0;
   const replaceIds = new Set<string>();
   for (const row of rows) {
     if (row.status === "ready") {
@@ -144,6 +147,8 @@ export function computeCommitPreviewCounts(
           if (typeof id === "string") replaceIds.add(id);
         }
       }
+    } else if (row.status === "failed" || row.status === "pending") {
+      blockedCount += 1;
     }
   }
   return {
@@ -151,6 +156,7 @@ export function computeCommitPreviewCounts(
     skipCount,
     rejectedCount: rejectedRows.length,
     replacementBookingCount: replaceIds.size,
+    blockedCount,
   };
 }
 
@@ -304,6 +310,7 @@ export function evaluateClientCommitEligibility(
       skipCount,
       rejectedCount: detail.rejectedRows.length,
       replacementBookingCount: replaceIds.size,
+      blockedCount: counts.blockedCount,
     },
   };
 }

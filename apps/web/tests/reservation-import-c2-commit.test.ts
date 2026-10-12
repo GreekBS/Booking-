@@ -295,19 +295,40 @@ describe("Phase C2 — client eligibility reuses C1 domain helper", () => {
         errorCode: "KEEP_EXISTING",
         externalReference: "REF-2",
       }),
+      row({
+        id: "r3",
+        status: "pending",
+        conflictResolution: "keep_csv",
+        replaceBookingIds: ["bk-blocked"],
+        errorCode: "REPLACE_TARGET_HAS_CHANNEL_LINK",
+        externalReference: "REF-3",
+      }),
     ];
     const counts = computeCommitPreviewCounts(rows, [{ id: "rej" } as never]);
     expect(counts.importCount).toBe(1);
     expect(counts.skipCount).toBe(1);
     expect(counts.replacementBookingCount).toBe(2);
+    expect(counts.blockedCount).toBe(1);
     expect(counts.rejectedCount).toBe(1);
 
     const gate = evaluateClientCommitEligibility(detail({ rows, rejectedRows: [] }));
-    expect(gate.kind).toBe("eligible");
-    if (gate.kind === "eligible") {
+    expect(gate.kind).toBe("blocked");
+    if (gate.kind === "blocked") {
       expect(gate.counts.replacementBookingCount).toBe(2);
       expect(gate.counts.skipCount).toBe(1);
+      expect(gate.counts.blockedCount).toBe(1);
+      expect(gate.counts.importCount).toBe(1);
     }
+
+    const page = readFileSync(
+      join(__dirname, "../features/reservation-import/ReservationImportDraftPage.tsx"),
+      "utf8",
+    );
+    expect(page).toContain("previewCounts.importCount");
+    expect(page).toContain("previewCounts.replacementBookingCount");
+    expect(page).toContain("previewCounts.skipCount");
+    expect(page).toContain("previewCounts.blockedCount");
+    expect(page).toContain("Αρχειοθέτηση υπαρχουσών");
   });
 
   it("fail-closed on refetchFailed / mutationBusy / completed", () => {
@@ -382,6 +403,8 @@ describe("Phase C2 — UI commit workflow wiring", () => {
     const copy = read("features/reservation-import/reservation-import-copy.ts");
     expect(copy).toContain("RESERVATION_IMPORT_COMMIT_CONFIRM_BODY");
     expect(copy).toContain("supersede");
-    expect(copy).toContain("δεν διαγράφονται οριστικά");
+    expect(copy).toContain("Δεν διαγράφονται οριστικά");
+    expect(copy).toContain("Αντικαταστάθηκε");
+    expect(copy).toContain("αρχειοθετηθούν");
   });
 });

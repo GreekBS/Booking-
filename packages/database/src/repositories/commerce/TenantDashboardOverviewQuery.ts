@@ -76,6 +76,10 @@ function formatMoney4(n: number): string {
  * Analytics status policy (locked): confirmed + completed only
  * for revenue, booking count, occupied nights, occupancy, ADR.
  * Operational today widgets continue to use non-cancelled.
+ *
+ * Active-stay policy: exclude superseded bookings (CSV archive). They remain
+ * in booking history and keep payments/folios/fiscal links; they must not
+ * inflate occupancy, ADR, arrivals/in-house, or projected stay revenue.
  */
 export class PrismaTenantDashboardOverviewQuery
   implements ITenantDashboardOverviewQuery
@@ -103,15 +107,22 @@ export class PrismaTenantDashboardOverviewQuery
       );
       const todayListLimit = Math.min(8, input.recentLimit);
 
+      /** Live commercial stays only — never payments/folios/fiscal queries. */
+      const activeStay = {
+        supersededByBookingId: null as string | null,
+      };
+
       const nonCancelled = {
         tenantId: input.tenantId,
         ...bookingScope,
+        ...activeStay,
         status: { not: "cancelled" as const },
       };
 
       const analyticsStatuses = {
         tenantId: input.tenantId,
         ...bookingScope,
+        ...activeStay,
         status: { in: ["confirmed", "completed"] as Array<"confirmed" | "completed"> },
       };
 

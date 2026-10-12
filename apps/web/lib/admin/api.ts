@@ -980,7 +980,10 @@ export async function estimateRevenueFromBookings(
   tenantId: string,
   bookings: import("./types").BookingRecord[],
 ): Promise<{ total: number; currency: string } | null> {
-  const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "completed");
+  const confirmed = bookings.filter(
+    (b) =>
+      (b.status === "confirmed" || b.status === "completed") && !b.isSuperseded,
+  );
   if (confirmed.length === 0) return null;
 
   const quotes = await Promise.all(

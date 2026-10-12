@@ -7,12 +7,17 @@ import {
   type ReservationImportRowDto,
 } from "@/lib/admin/reservation-import-api";
 import {
+  RESERVATION_IMPORT_ARCHIVE_FINANCIAL_WARNING,
   RESERVATION_IMPORT_CONFLICT_PROMPT,
   RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY,
   RESERVATION_IMPORT_KEEP_CSV_CONFIRM_ONE,
   RESERVATION_IMPORT_KEEP_CSV_LABEL,
   RESERVATION_IMPORT_KEEP_EXISTING_LABEL,
+  RESERVATION_IMPORT_SUPERSEDED_BADGE,
 } from "@/features/reservation-import/reservation-import-copy";
+import {
+  conflictBookingHasFinancialArchiveWarning,
+} from "@/features/reservation-import/reservation-import-errors";
 import {
   computeReadinessCounts,
   conflictResolutionLabel,
@@ -22,6 +27,7 @@ import {
   rowHasHardBlockers,
   rowHasPeerConflicts,
 } from "@/features/reservation-import/reservation-import-review-utils";
+import type { ReservationImportConflictBookingDto } from "@/lib/admin/reservation-import-api";
 
 const root = join(__dirname, "..");
 
@@ -146,8 +152,10 @@ describe("B3.3c — conflict decision UI", () => {
     expect(panel).toContain("RESERVATION_IMPORT_KEEP_CSV_CONFIRM_TITLE");
     expect(panel).toContain("RESERVATION_IMPORT_KEEP_CSV_CONFIRM_ONE");
     expect(panel).toContain("RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY");
-    expect(RESERVATION_IMPORT_KEEP_CSV_CONFIRM_ONE).toContain("δεν θα αλλάξει ακόμη");
-    expect(RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY(2)).toContain("2 υπαρχουσών");
+    expect(RESERVATION_IMPORT_KEEP_CSV_CONFIRM_ONE).toContain("Αντικαταστάθηκε");
+    expect(RESERVATION_IMPORT_KEEP_CSV_CONFIRM_ONE).toContain("Δεν θα διαγραφεί οριστικά");
+    expect(RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY(2)).toContain("2 υπάρχουσες");
+    expect(RESERVATION_IMPORT_KEEP_CSV_CONFIRM_MANY(2)).toContain("Δεν διαγράφονται οριστικά");
   });
 
   it("keep_csv PATCH helper sends conflictResolution", async () => {
@@ -185,7 +193,7 @@ describe("B3.3c — conflict decision UI", () => {
       "features/reservation-import/ReservationImportConflictDecisionPanel.tsx",
     );
     expect(panel).toContain("replaceBookingIds");
-    expect(panel).toContain("Στόχοι μελλοντικής αντικατάστασης");
+    expect(panel).toContain("Στόχοι μελλοντικής αρχειοθέτησης");
     expect(panel).toContain("RESERVATION_IMPORT_KEEP_CSV_NOT_YET_REPLACED");
     const r = row({
       conflictResolution: "keep_csv",
@@ -443,11 +451,68 @@ describe("B3.3c — conflict decision UI", () => {
       RESERVATION_IMPORT_KEEP_EXISTING_LABEL,
     );
     expect(conflictResolutionLabel("keep_csv")).toBe(RESERVATION_IMPORT_KEEP_CSV_LABEL);
+    expect(RESERVATION_IMPORT_KEEP_EXISTING_LABEL).toBe("Διατήρηση υπάρχουσας");
+    expect(RESERVATION_IMPORT_KEEP_CSV_LABEL).toBe(
+      "Διατήρηση CSV — Αρχειοθέτηση υπάρχουσας",
+    );
     const panel = read(
       "features/reservation-import/ReservationImportConflictDecisionPanel.tsx",
     );
     expect(panel).toContain("conflictResolutionLabel(resolution)");
     expect(panel).toContain("aria-pressed");
+    expect(panel).toContain("RESERVATION_IMPORT_ARCHIVE_FINANCIAL_WARNING");
+    expect(panel).toContain("archive-financial-warning");
+    expect(panel).toContain("RESERVATION_IMPORT_KEEP_CSV_NOT_YET_REPLACED");
+  });
+
+  it("flags financial/fiscal archive warnings without treating them as blockers", () => {
+    const base: ReservationImportConflictBookingDto = {
+      id: "bk1",
+      guestName: "A",
+      checkIn: "2026-12-01",
+      checkOut: "2026-12-05",
+      status: "confirmed",
+      isSuperseded: false,
+      hasChannelLink: false,
+      hasPayments: false,
+      hasFolio: false,
+      hasPostedFolioLines: false,
+      hasFiscalDocuments: false,
+      depsUnavailable: false,
+    };
+    expect(conflictBookingHasFinancialArchiveWarning(base)).toBe(false);
+    expect(
+      conflictBookingHasFinancialArchiveWarning({ ...base, hasPayments: true }),
+    ).toBe(true);
+    expect(
+      conflictBookingHasFinancialArchiveWarning({
+        ...base,
+        hasFolio: true,
+        hasPostedFolioLines: false,
+      }),
+    ).toBe(true);
+    expect(
+      conflictBookingHasFinancialArchiveWarning({
+        ...base,
+        hasPostedFolioLines: true,
+      }),
+    ).toBe(true);
+    expect(
+      conflictBookingHasFinancialArchiveWarning({
+        ...base,
+        hasFiscalDocuments: true,
+      }),
+    ).toBe(true);
+    expect(RESERVATION_IMPORT_ARCHIVE_FINANCIAL_WARNING).toMatch(/πληρωμές|folio|φορολογ/i);
+    expect(RESERVATION_IMPORT_SUPERSEDED_BADGE).toBe("Αντικαταστάθηκε");
+
+    const bookingsPage = read("features/bookings/BookingsPage.tsx");
+    expect(bookingsPage).toContain("booking.isSuperseded");
+    expect(bookingsPage).toContain("RESERVATION_IMPORT_SUPERSEDED_BADGE");
+    expect(bookingsPage).toContain("booking-superseded-badge");
+    const header = read("features/bookings/workspace/BookingWorkspaceHeader.tsx");
+    expect(header).toContain("booking.isSuperseded");
+    expect(header).toContain("RESERVATION_IMPORT_SUPERSEDED_BADGE");
   });
 
   it("related peer ids used for conflict locking helpers", () => {

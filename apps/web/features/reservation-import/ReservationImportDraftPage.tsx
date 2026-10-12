@@ -674,22 +674,26 @@ export function ReservationImportDraftPage() {
             <h3 className="text-sm font-medium">{RESERVATION_IMPORT_FINAL_SUMMARY_TITLE}</h3>
             <ul className="grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
               <li>
-                Προς εισαγωγή:{" "}
+                Νέες κρατήσεις:{" "}
                 <strong className="text-foreground">{previewCounts.importCount}</strong>
               </li>
               <li>
-                Προς παράλειψη:{" "}
+                Αρχειοθέτηση υπαρχουσών:{" "}
+                <strong className="text-foreground">
+                  {previewCounts.replacementBookingCount}
+                </strong>
+              </li>
+              <li>
+                Παράλειψη:{" "}
                 <strong className="text-foreground">{previewCounts.skipCount}</strong>
+              </li>
+              <li>
+                Αποκλεισμένες:{" "}
+                <strong className="text-foreground">{previewCounts.blockedCount}</strong>
               </li>
               <li>
                 Απορριφθείσες:{" "}
                 <strong className="text-foreground">{previewCounts.rejectedCount}</strong>
-              </li>
-              <li>
-                Αντικαταστάσεις υπαρχουσών:{" "}
-                <strong className="text-foreground">
-                  {previewCounts.replacementBookingCount}
-                </strong>
               </li>
             </ul>
 
@@ -855,6 +859,7 @@ export function ReservationImportDraftPage() {
               previewCounts.importCount,
               previewCounts.skipCount,
               previewCounts.replacementBookingCount,
+              previewCounts.blockedCount,
             )}
             confirmLabel={RESERVATION_IMPORT_COMMIT_LABEL}
             loading={committing}

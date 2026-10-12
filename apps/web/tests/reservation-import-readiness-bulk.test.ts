@@ -107,6 +107,8 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
         hasChannelLink: false,
         hasPayments: false,
         hasFolio: false,
+        hasPostedFolioLines: false,
+        hasFiscalDocuments: false,
         depsUnavailable: false,
       },
     ];
@@ -121,7 +123,7 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
     expect(rowLooksReadyForImport({ ...stale, status: "ready" }, confirmed)).toBe(true);
   });
 
-  it("treats confirmed/completed as supersedeable and pending as blocked", () => {
+  it("treats confirmed/completed as supersedeable; payments/folio warn only; channel/pending block", () => {
     const base = {
       id: "bk1",
       guestName: "A",
@@ -131,6 +133,8 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
       hasChannelLink: false,
       hasPayments: false,
       hasFolio: false,
+      hasPostedFolioLines: false,
+      hasFiscalDocuments: false,
       depsUnavailable: false,
     };
     const confirmed: ReservationImportConflictBookingDto[] = [
@@ -155,9 +159,14 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
     ).toBe(2);
 
     const withPayments: ReservationImportConflictBookingDto[] = [
-      { ...base, status: "confirmed", hasPayments: true },
+      { ...base, status: "confirmed", hasPayments: true, hasPostedFolioLines: true },
     ];
-    expect(rowHasNonSupersedeableKeepCsvTarget(row(), withPayments)).toBe(true);
+    expect(rowHasNonSupersedeableKeepCsvTarget(row(), withPayments)).toBe(false);
+
+    const withChannel: ReservationImportConflictBookingDto[] = [
+      { ...base, status: "confirmed", hasChannelLink: true },
+    ];
+    expect(rowHasNonSupersedeableKeepCsvTarget(row(), withChannel)).toBe(true);
   });
 
   it("classifies commit ConflictError supersedeability as replace_blocked toast path", () => {
@@ -212,6 +221,8 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
       hasChannelLink: false,
       hasPayments: false,
       hasFolio: false,
+      hasPostedFolioLines: false,
+      hasFiscalDocuments: false,
       depsUnavailable: false,
     };
     const confirmedBookings: ReservationImportConflictBookingDto[] = confirmedIds.map(
@@ -273,6 +284,8 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
       hasChannelLink: false,
       hasPayments: false,
       hasFolio: false,
+      hasPostedFolioLines: false,
+      hasFiscalDocuments: false,
       depsUnavailable: false,
     };
     const bookings: ReservationImportConflictBookingDto[] = [

@@ -661,10 +661,11 @@ describe("keep_csv replace target fail-closed", () => {
     ).toBeNull();
   });
 
-  it("fail-closes keep_csv when channel/payment/folio deps exist or probe missing", async () => {
-    const { evaluateKeepCsvReplaceTargetDependencies } = await import(
-      "../../src/commerce/import/ReservationImportCommitRevalidation"
-    );
+  it("fail-closes keep_csv only for active channel links or missing probe; folio/payments warn only", async () => {
+    const {
+      evaluateKeepCsvReplaceTargetDependencies,
+      collectKeepCsvReplaceTargetFinancialWarnings,
+    } = await import("../../src/commerce/import/ReservationImportCommitRevalidation");
     expect(
       await evaluateKeepCsvReplaceTargetDependencies({
         tenantId: TENANT_ID,
@@ -692,10 +693,11 @@ describe("keep_csv replace target fail-closed", () => {
         probe: {
           listChannelLinksByBookingId: async () => [{ status: "archived" }],
           listPaymentsByBookingId: async () => [{ id: "p1" }],
-          listFoliosByBookingId: async () => [],
+          listFoliosByBookingId: async () => [{ lines: [{ id: "l1" }] }],
+          listFiscalDocumentsByBookingId: async () => [{ id: "fd1" }],
         },
       }),
-    ).toMatchObject({ code: "REPLACE_TARGET_HAS_PAYMENTS", bookingId: "b1" });
+    ).toBeNull();
 
     expect(
       await evaluateKeepCsvReplaceTargetDependencies({
@@ -704,22 +706,27 @@ describe("keep_csv replace target fail-closed", () => {
         probe: {
           listChannelLinksByBookingId: async () => [],
           listPaymentsByBookingId: async () => [],
-          listFoliosByBookingId: async () => [{ folio: { id: "f1" } }],
-        },
-      }),
-    ).toMatchObject({ code: "REPLACE_TARGET_HAS_FOLIO", bookingId: "b1" });
-
-    expect(
-      await evaluateKeepCsvReplaceTargetDependencies({
-        tenantId: TENANT_ID,
-        replaceBookingIds: ["b1"],
-        probe: {
-          listChannelLinksByBookingId: async () => [{ status: "archived" }],
-          listPaymentsByBookingId: async () => [],
-          listFoliosByBookingId: async () => [],
+          listFoliosByBookingId: async () => [{ folio: { id: "f1" }, lines: [] }],
         },
       }),
     ).toBeNull();
+
+    const warnings = await collectKeepCsvReplaceTargetFinancialWarnings({
+      tenantId: TENANT_ID,
+      bookingId: "b1",
+      probe: {
+        listChannelLinksByBookingId: async () => [],
+        listPaymentsByBookingId: async () => [{ id: "p1" }],
+        listFoliosByBookingId: async () => [{ lines: [{ id: "l1" }] }],
+        listFiscalDocumentsByBookingId: async () => [{ id: "fd1" }],
+      },
+    });
+    expect(warnings).toEqual({
+      hasPayments: true,
+      hasFolio: true,
+      hasPostedFolioLines: true,
+      hasFiscalDocuments: true,
+    });
   });
 });
 

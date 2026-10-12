@@ -145,6 +145,8 @@ export class GetUnitsCalendarBatchUseCase {
         }
       }
       for (const booking of bookings) {
+        // Superseded stays are history-only; calendar occupancy uses live stays.
+        if (booking.isSuperseded) continue;
         const entry = byUnit[booking.unitId];
         if (entry) {
           entry.bookings.push({

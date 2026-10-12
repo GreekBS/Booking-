@@ -133,12 +133,16 @@ export interface ReservationImportConflictBookingRecord {
   status: string;
   /** True when already superseded and cannot be replaced again. */
   isSuperseded: boolean;
-  /** Active (non-archived) channel reservation link present — blocks keep_csv. */
+  /** Active (non-archived) channel reservation link present — blocks keep_csv archival. */
   hasChannelLink: boolean;
-  /** Any payment records present — blocks keep_csv. */
+  /** Payment records present — warning for archival (not an automatic blocker). */
   hasPayments: boolean;
-  /** Any folio records present — blocks keep_csv. */
+  /** Folio records present — warning for archival (not an automatic blocker). */
   hasFolio: boolean;
+  /** Folio has posted lines — stronger financial warning. */
+  hasPostedFolioLines: boolean;
+  /** Issued/linked fiscal documents present — warning; never deleted by archival. */
+  hasFiscalDocuments: boolean;
   /** True when channel/payment/folio probes could not be evaluated safely. */
   depsUnavailable: boolean;
 }

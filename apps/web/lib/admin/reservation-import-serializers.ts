@@ -18,6 +18,8 @@ export function serializeReservationImportConflictBooking(
     hasChannelLink: booking.hasChannelLink,
     hasPayments: booking.hasPayments,
     hasFolio: booking.hasFolio,
+    hasPostedFolioLines: booking.hasPostedFolioLines,
+    hasFiscalDocuments: booking.hasFiscalDocuments,
     depsUnavailable: booking.depsUnavailable,
   };
 }

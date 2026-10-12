@@ -18,11 +18,14 @@ export interface DashboardRecentBookingReadModel {
 
 export interface DashboardPeriodAnalyticsReadModel {
   period: AnalyticsPeriodWindow;
-  /** Confirmed + completed stay-prorated revenue in period. */
+  /**
+   * Confirmed + completed stay-prorated projected revenue in period
+   * (booking.totalAmount). Excludes superseded archives. Not settled payments.
+   */
   revenue: { total: string; currency: string } | null;
-  /** Confirmed + completed bookings overlapping period. */
+  /** Confirmed + completed non-superseded bookings overlapping period. */
   bookingCount: number;
-  /** Confirmed + completed occupied nights in period. */
+  /** Confirmed + completed non-superseded occupied nights in period. */
   occupiedNights: number;
   /** Occupied nights / (unitCount × period days), 0–100. */
   occupancyPct: number;
