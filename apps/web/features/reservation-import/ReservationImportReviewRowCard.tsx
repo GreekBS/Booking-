@@ -10,7 +10,11 @@ import type {
 } from "@/lib/admin/reservation-import-api";
 import { ReservationImportConflictDecisionPanel } from "./ReservationImportConflictDecisionPanel";
 import { ReservationImportPriceDecisionPanel } from "./ReservationImportPriceDecisionPanel";
-import { RESERVATION_IMPORT_VIEW_BOOKING_LABEL } from "./reservation-import-copy";
+import {
+  RESERVATION_IMPORT_CURRENCY_DEFAULTED_HINT,
+  RESERVATION_IMPORT_NET_INCOME_WARNING,
+  RESERVATION_IMPORT_VIEW_BOOKING_LABEL,
+} from "./reservation-import-copy";
 import { importRowOperatorErrorMessage } from "./reservation-import-errors";
 import {
   bookingDrawerHref,
@@ -19,6 +23,7 @@ import {
   priceDisplayKind,
   priceDisplayLabel,
   rowAllowsPriceDecision,
+  rowCurrencyWasDefaulted,
   rowHasExistingBookingConflicts,
   rowHasHardBlockers,
   rowHasPeerConflicts,
@@ -120,9 +125,24 @@ export function ReservationImportReviewRowCard({
           <dd>
             {priceDisplayLabel(priceKind)}
             {priceAmount ? ` · ${priceAmount}` : null}
+            {rowCurrencyWasDefaulted(row) ? (
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {RESERVATION_IMPORT_CURRENCY_DEFAULTED_HINT}
+              </span>
+            ) : null}
           </dd>
         </div>
       </dl>
+
+      {(Array.isArray(row.payload?.financialWarnings) &&
+        row.payload.financialWarnings.includes("imported_amount_may_be_net_income")) ||
+      (row.payload?.raw &&
+        typeof row.payload.raw === "object" &&
+        Object.keys(row.payload.raw as object).some(
+          (k) => k.trim().toLowerCase().replace(/[\s_-]+/g, "_") === "net_income",
+        )) ? (
+        <p className="text-xs text-muted-foreground">{RESERVATION_IMPORT_NET_INCOME_WARNING}</p>
+      ) : null}
 
       {operatorError ? (
         <p className="text-sm text-destructive" role="alert">

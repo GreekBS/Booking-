@@ -65,7 +65,13 @@ export type CsvImportPriceState =
   | {
       status: "present";
       amount: string;
-      currency: string | null;
+      /** Resolved ISO currency (never null when status is present). */
+      currency: string;
+      /**
+       * True when CSV had no currency and EUR (or property default) was applied.
+       * Informational only — not a blocker.
+       */
+      currencyDefaulted?: boolean;
       /** Suitable for later `imported_csv` fixed-total Quote path. */
       readyForImportedCsvQuote: boolean;
     };
@@ -143,6 +149,11 @@ export interface CsvImportParseOptions {
    * are provided, empty unitRef fails closed.
    */
   bookableUnitCount?: number;
+  /**
+   * Missing CSV currency fallback (villa import policy).
+   * Prefer `property.policies.defaultCurrency`; defaults to EUR when omitted.
+   */
+  defaultCurrency?: string | null;
 }
 
 export type CsvImportUnitResolution =

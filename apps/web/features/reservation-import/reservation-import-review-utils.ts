@@ -132,9 +132,33 @@ export function priceDisplayLabel(kind: PriceDisplayKind): string {
   }
 }
 
+/** Villa CSV policy: missing stored currency displays as EUR (read-time, no draft rewrite). */
+export function resolveRowDisplayCurrency(row: ReservationImportRowDto): string | null {
+  if (row.priceSource === "imported_csv" && row.importedTotalAmount) {
+    const stored = row.importedCurrency?.trim();
+    if (stored) return stored.toUpperCase();
+    return "EUR";
+  }
+  if (
+    (row.priceSource === "talos_calculated" || row.priceSource === "operator_entered") &&
+    row.operatorTotalAmount &&
+    row.operatorCurrency
+  ) {
+    return row.operatorCurrency.trim().toUpperCase();
+  }
+  return null;
+}
+
+export function rowCurrencyWasDefaulted(row: ReservationImportRowDto): boolean {
+  if (row.priceSource !== "imported_csv" || !row.importedTotalAmount) return false;
+  if (row.payload?.currencyDefaulted === true) return true;
+  return row.importedCurrency == null || String(row.importedCurrency).trim() === "";
+}
+
 export function formatRowPriceAmount(row: ReservationImportRowDto): string | null {
-  if (row.priceSource === "imported_csv" && row.importedTotalAmount && row.importedCurrency) {
-    return `${row.importedTotalAmount} ${row.importedCurrency}`;
+  if (row.priceSource === "imported_csv" && row.importedTotalAmount) {
+    const currency = resolveRowDisplayCurrency(row);
+    return currency ? `${row.importedTotalAmount} ${currency}` : row.importedTotalAmount;
   }
   if (
     (row.priceSource === "talos_calculated" || row.priceSource === "operator_entered") &&

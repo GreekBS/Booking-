@@ -97,6 +97,8 @@ const ALIAS_ENTRIES: ReadonlyArray<readonly [string, CsvImportCanonicalField]> =
   ["price", "totalAmount"],
   ["amount", "totalAmount"],
   ["grand_total", "totalAmount"],
+  // Guesty-style: NET INCOME (do not also alias OWNER REVENUE — dual columns → ambiguous)
+  ["net_income", "totalAmount"],
   ["συνολο", "totalAmount"],
   ["τιμη", "totalAmount"],
   ["ποσο", "totalAmount"],

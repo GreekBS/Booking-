@@ -5,6 +5,10 @@ import type { ReservationImportRowDto } from "@/lib/admin/reservation-import-api
 import {
   RESERVATION_IMPORT_COMMIT_ERROR,
   RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR,
+  RESERVATION_IMPORT_COMMIT_UNRESOLVED_CONFLICTS,
+  RESERVATION_IMPORT_COMMIT_SHARED_REPLACE_ISSUE,
+  RESERVATION_IMPORT_COMMIT_INVALID_AMOUNT,
+  RESERVATION_IMPORT_COMMIT_INVALID_CURRENCY,
   RESERVATION_IMPORT_COMMIT_REPLACE_DEPS,
   RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
   RESERVATION_IMPORT_COMMIT_REPLACE_STALE,
@@ -255,13 +259,47 @@ export function mapCommitFailureToOperatorMessage(error: unknown): {
   }
   if (error.status === 400) {
     const msg = error.message.toLowerCase();
+    if (msg.includes("pending") || msg.includes("unresolved booking conflicts")) {
+      return {
+        kind: "not_ready",
+        message: RESERVATION_IMPORT_COMMIT_UNRESOLVED_CONFLICTS,
+      };
+    }
+    if (
+      msg.includes("overlapping keep_csv") ||
+      msg.includes("exclusivity") ||
+      msg.includes("shared replace")
+    ) {
+      return {
+        kind: "not_ready",
+        message: RESERVATION_IMPORT_COMMIT_SHARED_REPLACE_ISSUE,
+      };
+    }
+    if (
+      msg.includes("must be positive") ||
+      msg.includes("missing amount") ||
+      msg.includes("amount is invalid") ||
+      msg.includes("invalid frozen price")
+    ) {
+      return {
+        kind: "not_ready",
+        message: RESERVATION_IMPORT_COMMIT_INVALID_AMOUNT,
+      };
+    }
+    // Invalid explicit currency is a blocker; missing currency resolves to EUR and must not block.
+    if (
+      msg.includes("currency is invalid") ||
+      msg.includes("invalid currency")
+    ) {
+      return {
+        kind: "not_ready",
+        message: RESERVATION_IMPORT_COMMIT_INVALID_CURRENCY,
+      };
+    }
     if (
       msg.includes("commit blocked") ||
-      msg.includes("pending") ||
       msg.includes("unresolved") ||
-      msg.includes("recheck") ||
-      msg.includes("must be positive") ||
-      msg.includes("price is missing")
+      msg.includes("recheck")
     ) {
       return { kind: "not_ready", message: RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR };
     }

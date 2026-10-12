@@ -29,6 +29,8 @@ export interface ValidateCsvImportRowInput {
   defaultUnitResolution?: Extract<CsvImportUnitResolution, { status: "resolved" }> | null;
   /** When true, emit UNIT_UNRESOLVED if resolution missing/failed. */
   requireUnitResolution?: boolean;
+  /** Missing CSV currency fallback (property base / EUR). */
+  defaultCurrency?: string | null;
 }
 
 export function validateCsvImportRow(
@@ -125,7 +127,9 @@ export function validateCsvImportRow(
     }
   }
 
-  const price = parseCsvImportPrice(v.totalAmount, v.currency);
+  const price = parseCsvImportPrice(v.totalAmount, v.currency, {
+    defaultCurrency: input.defaultCurrency,
+  });
   let totalAmount: string | null = null;
   let currency: string | null = null;
   if (price.status === "present") {

@@ -373,7 +373,10 @@ export class CommitReservationImportBatchUseCase {
       throw unitCtx.getError();
     }
     const { property } = unitCtx.getValue();
+    // Villa CSV policy: missing currency → EUR (same helper as readiness).
+    // Future extension: plumb property.policies.defaultCurrency via CatalogPropertyReadModel.
     const frozen = resolveFrozenImportCommitPrice(row);
+    const frozenTotal = Money.create(frozen.amount, frozen.currency);
 
     const holdId = this.idGenerator.generate();
     const quoteId = this.idGenerator.generate();
@@ -405,7 +408,7 @@ export class CommitReservationImportBatchUseCase {
       snapshotId,
       hold,
       propertyTimezone: property.timezone,
-      total: Money.create(frozen.amount, frozen.currency),
+      total: frozenTotal,
       pricingMode: frozen.pricingMode,
       quotedAt: now,
     });
@@ -458,6 +461,8 @@ export class CommitReservationImportBatchUseCase {
     await this.commerceFlow.saveImportReservation(hold, quote, booking);
 
     // Only AFTER X exists: supersede A…N → X (FK is immediate).
+    // Shared replace targets: archive exactly once in this batch TX. Later import
+    // rows that also keep_csv the same booking skip re-supersede (calendar already freed).
     const supersededIds: string[] = [];
     for (const oldId of replaceIds) {
       const old = await this.bookings.findById(oldId, tenantId);
@@ -465,6 +470,11 @@ export class CommitReservationImportBatchUseCase {
         throw new ConflictError(
           `Import commit blocked: replace target ${oldId} disappeared during commit`,
         );
+      }
+      if (old.isSuperseded) {
+        // Already archived earlier in this commit (or previously) — do not re-link.
+        await this.commerceFlow.releaseBookingCalendarOccupancy(tenantId, oldId);
+        continue;
       }
       old.supersedeForImport({
         supersededByBookingId: bookingId,

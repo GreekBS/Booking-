@@ -182,6 +182,38 @@ describe("reservation-import readiness + bulk (Phase A/B)", () => {
     expect(mapped.message).toBe(RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE);
   });
 
+  it("maps pending conflicts and invalid amounts to specific Greek messages (not currency blocks)", () => {
+    const pending = mapCommitFailureToOperatorMessage(
+      new AdminApiError(
+        "VALIDATION_ERROR",
+        "Import commit blocked: row 2 is still pending",
+        400,
+      ),
+    );
+    expect(pending.kind).toBe("not_ready");
+    expect(pending.message).toContain("συγκρούσεις");
+
+    const amount = mapCommitFailureToOperatorMessage(
+      new AdminApiError(
+        "VALIDATION_ERROR",
+        "Row 3: imported_csv total must be positive",
+        400,
+      ),
+    );
+    expect(amount.message).toContain("ποσό");
+
+    const channel = mapCommitFailureToOperatorMessage(
+      new AdminApiError(
+        "CONFLICT",
+        "Import commit blocked: row 1 replace target has active channel reservation link",
+        409,
+        { conflictType: "REPLACE_TARGET_HAS_CHANNEL_LINK" },
+      ),
+    );
+    expect(channel.kind).toBe("replace_blocked");
+    expect(channel.message).toContain("κανάλι");
+  });
+
   it("wires bulk bar + shared evaluateKeepCsvReplaceTargets into draft/create paths", () => {
     const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
     expect(page).toContain("ReservationImportBulkConflictBar");

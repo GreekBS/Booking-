@@ -19,6 +19,7 @@ import {
   peerRowsForRow,
   priceDisplayKind,
   priceDisplayLabel,
+  rowCurrencyWasDefaulted,
   tabCounts,
 } from "@/features/reservation-import/reservation-import-review-utils";
 
@@ -161,6 +162,23 @@ describe("B3.3b — review utils & wiring", () => {
     const r = row({ priceSource: "imported_csv" });
     expect(priceDisplayLabel(priceDisplayKind(r))).toBe("Τιμή CSV");
     expect(formatRowPriceAmount(r)).toBe("120.00 EUR");
+  });
+
+  it("legacy draft null currency displays EUR (read-time default)", () => {
+    const r = row({
+      priceSource: "imported_csv",
+      importedTotalAmount: "150.00",
+      importedCurrency: null,
+    });
+    expect(formatRowPriceAmount(r)).toBe("150.00 EUR");
+    expect(rowCurrencyWasDefaulted(r)).toBe(true);
+    const copy = read("features/reservation-import/reservation-import-copy.ts");
+    expect(copy).toContain(
+      "Δεν ορίστηκε νόμισμα στο CSV. Τα ποσά θα εισαχθούν σε ευρώ (€).",
+    );
+    expect(copy).toContain(
+      "Το ποσό προέρχεται από το πεδίο NET INCOME και ενδέχεται να διαφέρει από τη συνολική τιμή που πλήρωσε ο επισκέπτης.",
+    );
   });
 
   it("unresolved price display", () => {

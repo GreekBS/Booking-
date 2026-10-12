@@ -20,6 +20,7 @@ import {
 } from "./ReservationImportTypes";
 import type { IReservationImportRepository } from "./IReservationImportRepository";
 import {
+  CSV_IMPORT_DEFAULT_CURRENCY,
   parseAndValidateCsvImport,
   resolveCsvImportUnitRefs,
   type CsvImportCanonicalField,
@@ -193,6 +194,9 @@ export class CreateReservationImportDraftUseCase {
         defaultUnitResolution,
         bookableUnitCount: bookableUnits.length,
         propertyLocalToday: today,
+        // Villa CSV policy: missing currency → EUR.
+        // Future extension: plumb property.policies.defaultCurrency via CatalogPropertyReadModel.
+        defaultCurrency: CSV_IMPORT_DEFAULT_CURRENCY,
       });
 
       const batchId = this.idGenerator.generate();
@@ -323,6 +327,10 @@ export class CreateReservationImportDraftUseCase {
             raw: row.raw,
             parseErrors: row.errors,
             parseWarnings: row.warnings,
+            ...(row.price.status === "present" && row.price.currencyDefaulted
+              ? { currencyDefaulted: true }
+              : {}),
+            ...importedAmountSemanticsFromRaw(row.raw),
           },
           conflictSnapshot: emptyConflictSnapshot() as unknown as Record<string, unknown>,
         });
@@ -644,4 +652,24 @@ export class CreateReservationImportDraftUseCase {
     }
     return out;
   }
+}
+
+/**
+ * Guesty-style NET INCOME is often a net payout, not guest gross.
+ * Preserve the numeric amount but mark semantics so reporting does not treat it as verified gross.
+ */
+function importedAmountSemanticsFromRaw(
+  raw: Record<string, string> | null | undefined,
+): Record<string, unknown> {
+  if (!raw || typeof raw !== "object") return {};
+  const keys = Object.keys(raw);
+  const hasNetIncome = keys.some(
+    (k) => k.trim().toLowerCase().replace(/[\s_-]+/g, "_") === "net_income",
+  );
+  if (!hasNetIncome) return {};
+  return {
+    importedAmountSemantics: "net_income_unverified",
+    sourceAmountColumn: "NET INCOME",
+    financialWarnings: ["imported_amount_may_be_net_income"],
+  };
 }

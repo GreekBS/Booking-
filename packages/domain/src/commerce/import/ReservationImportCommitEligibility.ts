@@ -1,6 +1,7 @@
 import { ValidationError } from "../../shared/errors/DomainError";
 import { Result } from "../../shared/kernel/Result";
 import { findKeepCsvExclusivityViolations } from "./ReservationImportExclusivity";
+import { resolveFrozenImportCommitPrice } from "./ReservationImportCommitPricing";
 import {
   canResumeReservationImportDraft,
   type ReservationImportBatchRecord,
@@ -153,6 +154,18 @@ function classifyCommitRow(
         new ValidationError(
           `Import commit blocked: row ${row.rowNumber} has unresolved price`,
         ),
+      );
+    }
+    // Same freeze rules as commit — missing CSV currency resolves to EUR.
+    try {
+      resolveFrozenImportCommitPrice(row);
+    } catch (error) {
+      return Result.fail(
+        error instanceof Error
+          ? error
+          : new ValidationError(
+              `Import commit blocked: row ${row.rowNumber} has invalid frozen price`,
+            ),
       );
     }
     if (row.conflictResolution === "keep_existing") {

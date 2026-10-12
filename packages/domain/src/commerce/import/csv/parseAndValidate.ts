@@ -93,6 +93,7 @@ export function parseAndValidateCsvImport(
       unitResolution,
       defaultUnitResolution,
       requireUnitResolution,
+      defaultCurrency: input.defaultCurrency,
     });
     rows.push(row);
     issues.push(...row.errors, ...row.warnings);

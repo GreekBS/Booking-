@@ -66,7 +66,7 @@ describe("Phase C3 — completed summary + booking links", () => {
     const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
     expect(page).toContain("isCompleted");
     expect(page).toContain("{!isCompleted ? (");
-    expect(page).toContain("decisionBusy={isCompleted || decisionBusy}");
+    expect(page).toContain("decisionBusy={isCompleted || decisionBusy || bulkBusy}");
     expect(page).toContain("RESERVATION_IMPORT_BACK_TO_BOOKINGS");
   });
 });

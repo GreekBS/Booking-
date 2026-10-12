@@ -104,6 +104,29 @@ export const RESERVATION_IMPORT_COMMIT_STALE_ERROR =
 export const RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR =
   "Η εισαγωγή δεν είναι ακόμη έτοιμη. Ανανεώστε και ολοκληρώστε τις εκκρεμότητες πριν πατήσετε «Εισαγωγή κρατήσεων».";
 
+export const RESERVATION_IMPORT_COMMIT_UNRESOLVED_CONFLICTS =
+  "Υπάρχουν συγκρούσεις κρατήσεων που δεν έχουν επιλυθεί.";
+
+export const RESERVATION_IMPORT_COMMIT_SHARED_REPLACE_ISSUE =
+  "Πολλαπλές κρατήσεις αντικαθιστούν την ίδια υπάρχουσα κράτηση. Ελέγξτε τις επιλογές αρχειοθέτησης.";
+
+export const RESERVATION_IMPORT_COMMIT_INVALID_AMOUNT =
+  "Το ποσό της κράτησης δεν είναι έγκυρο.";
+
+/** Informational — not a blocker. Missing CSV currency → EUR villa import policy. */
+export const RESERVATION_IMPORT_CURRENCY_DEFAULTED_HINT =
+  "Δεν ορίστηκε νόμισμα στο CSV. Τα ποσά θα εισαχθούν σε ευρώ (€).";
+
+/** @deprecated Use RESERVATION_IMPORT_CURRENCY_DEFAULTED_HINT */
+export const RESERVATION_IMPORT_CURRENCY_UNSET_HINT =
+  RESERVATION_IMPORT_CURRENCY_DEFAULTED_HINT;
+
+export const RESERVATION_IMPORT_COMMIT_INVALID_CURRENCY =
+  "Το νόμισμα της κράτησης δεν είναι έγκυρο. Διορθώστε το CSV ή επιλέξτε έγκυρο νόμισμα.";
+
+export const RESERVATION_IMPORT_NET_INCOME_WARNING =
+  "Το ποσό προέρχεται από το πεδίο NET INCOME και ενδέχεται να διαφέρει από τη συνολική τιμή που πλήρωσε ο επισκέπτης.";
+
 export const RESERVATION_IMPORT_COMMIT_REFETCH_ERROR =
   "Η εισαγωγή μπορεί να πέτυχε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
 
@@ -113,7 +136,7 @@ export const RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE =
   "Τουλάχιστον μία υπάρχουσα κράτηση δεν μπορεί να αντικατασταθεί (επιτρέπονται μόνο επιβεβαιωμένες ή ολοκληρωμένες). Επιλέξτε «Διατήρηση υπάρχουσας» ή αλλάξτε την απόφαση πριν επαναλάβετε.";
 
 export const RESERVATION_IMPORT_COMMIT_REPLACE_DEPS =
-  "Η αρχειοθέτηση αποκλείστηκε επειδή η υπάρχουσα κράτηση έχει ενεργή σύνδεση καναλιού (OTA). Δεν αφαιρέθηκαν οικονομικά/κανάλια δεδομένα. Επιλέξτε «Διατήρηση υπάρχουσας» ή επιλύστε τη σύνδεση καναλιού ξεχωριστά.";
+  "Η υπάρχουσα κράτηση έχει ενεργή σύνδεση με κανάλι και δεν μπορεί να αρχειοθετηθεί μέσω CSV.";
 
 export const RESERVATION_IMPORT_COMMIT_REPLACE_STALE =
   "Οι στόχοι αντικατάστασης δεν ταιριάζουν πλέον με το ημερολόγιο. Δεν δημιουργήθηκε καμία κράτηση. Πατήστε επανέλεγχο και επιλέξτε ξανά.";
