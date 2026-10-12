@@ -2,16 +2,16 @@ import { SectionHeader } from "../SectionHeader";
 
 const SEGMENTS = [
   {
-    title: "Property owners",
-    body: "Owners who want clearer control, a stronger direct presence, or a professional partner to operate the property.",
+    title: "Ιδιοκτήτες καταλυμάτων",
+    body: "Ιδιοκτήτες που θέλουν σαφέστερο έλεγχο, ισχυρότερη απευθείας παρουσία ή έναν επαγγελματία συνεργάτη για τη λειτουργία του καταλύματος.",
   },
   {
-    title: "Property managers",
-    body: "Operators running multiple vacation rentals who need centralized catalog, calendar, and booking workflows.",
+    title: "Διαχειριστές καταλυμάτων",
+    body: "Επαγγελματίες που διαχειρίζονται πολλές βραχυχρόνιες μισθώσεις και χρειάζονται κεντρικό κατάλογο, ημερολόγιο και ροές κρατήσεων.",
   },
   {
-    title: "Hospitality businesses",
-    body: "Professional accommodation businesses that need dependable operations software and room to grow distribution.",
+    title: "Επιχειρήσεις φιλοξενίας",
+    body: "Επαγγελματικές επιχειρήσεις διαμονής που χρειάζονται αξιόπιστο λογισμικό λειτουργιών και χώρο για ανάπτυξη της διανομής.",
   },
 ] as const;
 
@@ -20,8 +20,8 @@ export function SegmentsSection() {
     <section className="talos-section border-b border-[var(--talos-line)] bg-white">
       <div className="talos-container">
         <SectionHeader
-          kicker="Who Talos is for"
-          title="Built for owners and operators alike."
+          kicker="Για ποιους είναι το Talos"
+          title="Σχεδιασμένο για ιδιοκτήτες και διαχειριστές."
           align="center"
         />
         <div className="mt-12 grid gap-8 md:grid-cols-3">

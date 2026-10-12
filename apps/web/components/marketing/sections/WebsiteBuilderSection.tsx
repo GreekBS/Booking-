@@ -7,9 +7,9 @@ export function WebsiteBuilderSection() {
     <section id="direct-presence" className="talos-section border-b border-[var(--talos-line)]">
       <div className="talos-container">
         <SectionHeader
-          kicker="Direct presence"
-          title="Your property. Your brand. Direct guests."
-          lede="The property information you already run in Talos can power a guest-facing presence — so visitors discover your brand and book through channels you control."
+          kicker="Απευθείας παρουσία"
+          title="Το κατάλυμά σας. Η επωνυμία σας. Απευθείας επισκέπτες."
+          lede="Οι πληροφορίες καταλύματος που ήδη διαχειρίζεστε στο Talos μπορούν να τροφοδοτήσουν μια παρουσία προς τον επισκέπτη — ώστε οι επισκέπτες να ανακαλύπτουν την επωνυμία σας και να κάνουν κράτηση μέσω καναλιών που ελέγχετε εσείς."
         />
 
         <div className="mt-12">
@@ -19,16 +19,16 @@ export function WebsiteBuilderSection() {
         <div className="mt-10 grid gap-6 border-t border-[var(--talos-line)] pt-8 md:grid-cols-3">
           {[
             [
-              "One property record",
-              "Photos, details, and availability stay authoritative in Talos — then surface to guests.",
+              "Ένα αρχείο καταλύματος",
+              "Φωτογραφίες, λεπτομέρειες και διαθεσιμότητα παραμένουν έγκυρες στο Talos — και εμφανίζονται στους επισκέπτες.",
             ],
             [
-              "Booking-ready presence",
-              "Embeddable booking experiences and storefront capabilities turn that data into a direct path to reserve.",
+              "Παρουσία έτοιμη για κράτηση",
+              "Ενσωματωμένες εμπειρίες κράτησης και δυνατότητες βιτρίνας μετατρέπουν αυτά τα δεδομένα σε απευθείας διαδρομή προς κράτηση.",
             ],
             [
-              "Brand you own",
-              "Guests meet your property on a presence that reflects you — not only a third-party listing.",
+              "Επωνυμία που σας ανήκει",
+              "Οι επισκέπτες συναντούν το κατάλυμά σας σε μια παρουσία που σας εκφράζει — όχι μόνο σε μια τρίτη αγγελία.",
             ],
           ].map(([title, body]) => (
             <div key={title}>
@@ -40,10 +40,13 @@ export function WebsiteBuilderSection() {
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl text-sm leading-relaxed text-[var(--talos-muted)]">
-            Talos is not a one-click CMS today. It is the operational foundation for a booking-ready
-            web presence — with deeper site-builder tooling on the roadmap.
+            Το Talos δεν είναι σήμερα ένα CMS με ένα κλικ. Είναι η λειτουργική βάση για μια
+            διαδικτυακή παρουσία έτοιμη για κρατήσεις — με βαθύτερα εργαλεία δημιουργίας ιστοτόπου
+            στον οδικό χάρτη.
           </p>
-          <MarketingButton href="/website-builder">Explore your property presence</MarketingButton>
+          <MarketingButton href="/website-builder">
+            Εξερευνήστε την παρουσία του καταλύματός σας
+          </MarketingButton>
         </div>
       </div>
     </section>

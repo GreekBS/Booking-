@@ -57,11 +57,13 @@ describe("Marketing unified auth modal", () => {
     const dialog = await openDialog(user);
     expect(window.location.pathname).toBe("/website-builder");
 
-    await user.click(within(dialog).getByRole("button", { name: /create account/i }));
+    await user.click(within(dialog).getByRole("button", { name: /δημιουργία λογαριασμού/i }));
 
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    expect(within(await screen.findByRole("dialog")).getByText(/^create account$/i)).toBeInTheDocument();
-    expect(within(screen.getByRole("dialog")).getByLabelText(/^name$/i)).toBeInTheDocument();
+    expect(
+      within(await screen.findByRole("dialog")).getByText(/^δημιουργία λογαριασμού$/i),
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole("dialog")).getByLabelText(/^όνομα$/i)).toBeInTheDocument();
     expect(window.location.pathname).toBe("/website-builder");
   });
 
@@ -69,13 +71,13 @@ describe("Marketing unified auth modal", () => {
     const user = userEvent.setup();
     const dialog = await openDialog(user);
 
-    await user.click(within(dialog).getByRole("button", { name: /create account/i }));
+    await user.click(within(dialog).getByRole("button", { name: /δημιουργία λογαριασμού/i }));
     const registerDialog = await screen.findByRole("dialog");
-    await user.click(within(registerDialog).getByRole("button", { name: /^sign in$/i }));
+    await user.click(within(registerDialog).getByRole("button", { name: /^σύνδεση$/i }));
 
     const signInDialog = await screen.findByRole("dialog");
-    expect(within(signInDialog).getByText(/welcome back/i)).toBeInTheDocument();
-    expect(within(signInDialog).getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
+    expect(within(signInDialog).getByText(/καλώς ήρθατε ξανά/i)).toBeInTheDocument();
+    expect(within(signInDialog).getByRole("button", { name: /^σύνδεση$/i })).toBeInTheDocument();
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 
@@ -84,10 +86,10 @@ describe("Marketing unified auth modal", () => {
     window.history.pushState({}, "", "/pms");
     const dialog = await openDialog(user);
 
-    await user.click(within(dialog).getByRole("button", { name: /forgot password/i }));
+    await user.click(within(dialog).getByRole("button", { name: /ξεχάσατε τον κωδικό/i }));
 
     const forgotDialog = await screen.findByRole("dialog");
-    expect(within(forgotDialog).getByText(/^reset password$/i)).toBeInTheDocument();
+    expect(within(forgotDialog).getByText(/^επαναφορά κωδικού$/i)).toBeInTheDocument();
     expect(window.location.pathname).toBe("/pms");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
@@ -96,12 +98,12 @@ describe("Marketing unified auth modal", () => {
     const user = userEvent.setup();
     const dialog = await openDialog(user);
 
-    await user.click(within(dialog).getByRole("button", { name: /forgot password/i }));
+    await user.click(within(dialog).getByRole("button", { name: /ξεχάσατε τον κωδικό/i }));
     const forgotDialog = await screen.findByRole("dialog");
-    await user.click(within(forgotDialog).getByRole("button", { name: /back to login/i }));
+    await user.click(within(forgotDialog).getByRole("button", { name: /επιστροφή στη σύνδεση/i }));
 
     const signInDialog = await screen.findByRole("dialog");
-    expect(within(signInDialog).getByText(/welcome back/i)).toBeInTheDocument();
+    expect(within(signInDialog).getByText(/καλώς ήρθατε ξανά/i)).toBeInTheDocument();
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 
@@ -109,10 +111,12 @@ describe("Marketing unified auth modal", () => {
     const user = userEvent.setup();
     const dialog = await openDialog(user);
 
-    await user.click(within(dialog).getByRole("button", { name: /create account/i }));
-    expect(within(await screen.findByRole("dialog")).getByText(/^create account$/i)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: /δημιουργία λογαριασμού/i }));
+    expect(
+      within(await screen.findByRole("dialog")).getByText(/^δημιουργία λογαριασμού$/i),
+    ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /close authentication/i }));
+    await user.click(screen.getByRole("button", { name: /κλείσιμο ταυτοποίησης/i }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
@@ -122,8 +126,8 @@ describe("Marketing unified auth modal", () => {
 
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));
     const reopened = await screen.findByRole("dialog");
-    expect(within(reopened).getByText(/welcome back/i)).toBeInTheDocument();
-    expect(within(reopened).queryByLabelText(/^name$/i)).not.toBeInTheDocument();
+    expect(within(reopened).getByText(/καλώς ήρθατε ξανά/i)).toBeInTheDocument();
+    expect(within(reopened).queryByLabelText(/^όνομα$/i)).not.toBeInTheDocument();
   });
 
   it("closes via Escape and close control", async () => {
@@ -138,7 +142,7 @@ describe("Marketing unified auth modal", () => {
 
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /close authentication/i }));
+    await user.click(screen.getByRole("button", { name: /κλείσιμο ταυτοποίησης/i }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });

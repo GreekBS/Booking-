@@ -11,8 +11,8 @@ export function MarketingFooter() {
         <div>
           <p className="talos-display text-3xl font-semibold">TALOS</p>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/70">
-            Hospitality software and optional full property management — built for
-            operators who want control, and owners who want a trusted partner.
+            Λογισμικό φιλοξενίας και προαιρετική πλήρης διαχείριση καταλυμάτων — για διαχειριστές που
+            θέλουν έλεγχο και ιδιοκτήτες που θέλουν έναν αξιόπιστο συνεργάτη.
           </p>
           {email ? (
             <a
@@ -46,8 +46,8 @@ export function MarketingFooter() {
       </div>
       <div className="border-t border-white/10">
         <div className="talos-container flex flex-col gap-2 py-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} Talos. All rights reserved.</p>
-          <p>Hospitality technology · Direct presence · Managed service</p>
+          <p>© {year} Talos. Με επιφύλαξη παντός δικαιώματος.</p>
+          <p>Τεχνολογία φιλοξενίας · Απευθείας παρουσία · Υπηρεσία διαχείρισης</p>
         </div>
       </div>
     </footer>

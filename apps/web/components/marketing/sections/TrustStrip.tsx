@@ -4,16 +4,16 @@ export function TrustStrip() {
       <div className="talos-container grid gap-6 py-10 md:grid-cols-3 md:gap-8">
         {[
           {
-            title: "Run",
-            body: "Hospitality operations software for properties, calendars, and reservations.",
+            title: "Λειτουργία",
+            body: "Λογισμικό λειτουργιών φιλοξενίας για καταλύματα, ημερολόγια και κρατήσεις.",
           },
           {
-            title: "Grow",
-            body: "A direct booking presence powered by the same property data you already manage.",
+            title: "Ανάπτυξη",
+            body: "Απευθείας παρουσία κρατήσεων, με βάση τα ίδια δεδομένα καταλύματος που ήδη διαχειρίζεστε.",
           },
           {
-            title: "Or let Talos manage it",
-            body: "Professional vacation-rental management on the same operating platform.",
+            title: "Ή αφήστε το Talos να το διαχειριστεί",
+            body: "Επαγγελματική διαχείριση βραχυχρόνιας μίσθωσης στην ίδια πλατφόρμα λειτουργίας.",
           },
         ].map((item) => (
           <div key={item.title}>

@@ -35,17 +35,17 @@ function renderWizard(
 }
 
 async function fillStep1(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText(/^Full name/), "Ada Owner");
+  await user.type(screen.getByLabelText(/^Ονοματεπώνυμο/), "Ada Owner");
   await user.type(screen.getByLabelText(/^Email/), "ada@example.com");
-  await user.selectOptions(screen.getByLabelText(/^Country/), "Greece");
-  await user.click(screen.getByRole("radio", { name: "Owner" }));
+  await user.selectOptions(screen.getByLabelText(/^Χώρα$/), "Greece");
+  await user.click(screen.getByRole("radio", { name: "Ιδιοκτήτης" }));
 }
 
 async function fillStep2(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("radio", { name: "2–5" }));
-  await user.click(screen.getByRole("checkbox", { name: "Villa" }));
-  await user.selectOptions(screen.getByLabelText(/^Property country/), "Greece");
-  await user.click(screen.getByRole("radio", { name: "Already operating" }));
+  await user.click(screen.getByRole("checkbox", { name: "Βίλα" }));
+  await user.selectOptions(screen.getByLabelText(/^Χώρα καταλύματος/), "Greece");
+  await user.click(screen.getByRole("radio", { name: "Ήδη σε λειτουργία" }));
 }
 
 describe("GetStartedWizard", () => {
@@ -68,9 +68,9 @@ describe("GetStartedWizard", () => {
   it("starts at step 1 and blocks Next when invalid", async () => {
     const user = userEvent.setup();
     renderWizard();
-    expect(screen.getByText(/Step 1 of 5/i)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    expect(screen.getByText(/Step 1 of 5/i)).toBeTruthy();
+    expect(screen.getByText(/Βήμα 1 από 5/i)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    expect(screen.getByText(/Βήμα 1 από 5/i)).toBeTruthy();
     expect(screen.getAllByRole("alert").length).toBeGreaterThan(0);
   });
 
@@ -78,10 +78,10 @@ describe("GetStartedWizard", () => {
     const user = userEvent.setup();
     renderWizard();
     await fillStep1(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    expect(screen.getByText(/Step 2 of 5/i)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: /Back/i }));
-    expect(screen.getByLabelText(/^Full name/)).toHaveValue("Ada Owner");
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    expect(screen.getByText(/Βήμα 2 από 5/i)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Πίσω/i }));
+    expect(screen.getByLabelText(/^Ονοματεπώνυμο/)).toHaveValue("Ada Owner");
     expect(screen.getByLabelText(/^Email/)).toHaveValue("ada@example.com");
   });
 
@@ -100,20 +100,20 @@ describe("GetStartedWizard", () => {
 
     renderWizard();
     await fillStep1(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
     await fillStep2(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("checkbox", { name: /Run/i }));
-    await user.click(screen.getByRole("button", { name: /^Submit$/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("checkbox", { name: /Λειτουργία/i }));
+    await user.click(screen.getByRole("button", { name: /^Υποβολή$/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(screen.getByText(/Temporary failure/i)).toBeTruthy();
     // Still on step 5 — interests preserved
-    expect(screen.getByRole("checkbox", { name: /Run/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Λειτουργία/i })).toBeChecked();
 
-    await user.click(screen.getByRole("button", { name: /Try again/i }));
+    await user.click(screen.getByRole("button", { name: /Δοκιμάστε ξανά/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
     const body1 = JSON.parse(String(fetchMock.mock.calls[0]![1]!.body));
@@ -126,29 +126,29 @@ describe("GetStartedWizard", () => {
     expect(body1.interests).toEqual(["run"]);
 
     await waitFor(() =>
-      expect(screen.getByText(/Thanks, Ada/i)).toBeTruthy(),
+      expect(screen.getByText(/Ευχαριστούμε, Ada/i)).toBeTruthy(),
     );
-    expect(screen.getByRole("button", { name: /Create Account/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Book a Demo/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Δημιουργία λογαριασμού/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Ζητήστε επίδειξη/i })).toBeTruthy();
   });
 
   it("transitions to registration in the same wizard after Create Account", async () => {
     const user = userEvent.setup();
     renderWizard();
     await fillStep1(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
     await fillStep2(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("checkbox", { name: /Run/i }));
-    await user.click(screen.getByRole("button", { name: /^Submit$/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("checkbox", { name: /Λειτουργία/i }));
+    await user.click(screen.getByRole("button", { name: /^Υποβολή$/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Create Account/i })).toBeTruthy(),
+      expect(screen.getByRole("button", { name: /Δημιουργία λογαριασμού/i })).toBeTruthy(),
     );
-    await user.click(screen.getByRole("button", { name: /Create Account/i }));
-    expect(screen.getByRole("button", { name: /Register/i })).toBeTruthy();
-    expect(screen.getByLabelText(/^Name/)).toHaveValue("Ada Owner");
+    await user.click(screen.getByRole("button", { name: /Δημιουργία λογαριασμού/i }));
+    expect(screen.getByRole("button", { name: /Εγγραφή/i })).toBeTruthy();
+    expect(screen.getByLabelText(/^Όνομα/)).toHaveValue("Ada Owner");
     expect(screen.getByLabelText(/^Email/)).toHaveValue("ada@example.com");
   });
 
@@ -175,24 +175,24 @@ describe("GetStartedWizard", () => {
 
     renderWizard();
     await fillStep1(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
     await fillStep2(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("checkbox", { name: /Run/i }));
-    await user.click(screen.getByRole("button", { name: /^Submit$/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("checkbox", { name: /Λειτουργία/i }));
+    await user.click(screen.getByRole("button", { name: /^Υποβολή$/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Book a Demo/i })).toBeTruthy(),
+      expect(screen.getByRole("button", { name: /Ζητήστε επίδειξη/i })).toBeTruthy(),
     );
 
-    await user.click(screen.getByRole("button", { name: /Book a Demo/i }));
+    await user.click(screen.getByRole("button", { name: /Ζητήστε επίδειξη/i }));
     await waitFor(() => expect(screen.getByText(/Demo unavailable/i)).toBeTruthy());
-    expect(screen.getByRole("button", { name: /Create Account/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Δημιουργία λογαριασμού/i })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: /Book a Demo/i }));
+    await user.click(screen.getByRole("button", { name: /Ζητήστε επίδειξη/i }));
     await waitFor(() =>
-      expect(screen.getByText(/Your demo request is in/i)).toBeTruthy(),
+      expect(screen.getByText(/Το αίτημα επίδειξης καταχωρήθηκε/i)).toBeTruthy(),
     );
     expect(fetchMock.mock.calls[1]![0]).toBe("/api/marketing/v1/leads/lead-1/demo");
     expect(fetchMock.mock.calls[2]![0]).toBe("/api/marketing/v1/leads/lead-1/demo");
@@ -211,37 +211,37 @@ describe("GetStartedWizard", () => {
 
     renderWizard();
     await fillStep1(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
     await fillStep2(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("checkbox", { name: /Run/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("checkbox", { name: /Λειτουργία/i }));
 
-    const submit = screen.getByRole("button", { name: /^Submit$/i });
+    const submit = screen.getByRole("button", { name: /^Υποβολή$/i });
     await user.click(submit);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole("button", { name: /Sending/i }));
+    await user.click(screen.getByRole("button", { name: /Αποστολή/i }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     resolveFetch({
       ok: true,
       json: async () => ({ id: "lead-1" }),
     });
-    await waitFor(() => expect(screen.getByText(/Thanks, Ada/i)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Ευχαριστούμε, Ada/i)).toBeTruthy());
   });
 
   it("shows managed preselection on final step", async () => {
     const user = userEvent.setup();
     renderWizard({ source: "property_management", preselectManaged: true });
     await fillStep1(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
     await fillStep2(user);
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
-    await user.click(screen.getByRole("button", { name: /Continue/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
+    await user.click(screen.getByRole("button", { name: /Συνέχεια/i }));
     expect(
-      screen.getByRole("checkbox", { name: /Let Talos manage it/i }),
+      screen.getByRole("checkbox", { name: /Αφήστε το Talos να το διαχειριστεί/i }),
     ).toBeChecked();
   });
 });

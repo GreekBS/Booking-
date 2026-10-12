@@ -73,10 +73,10 @@ describe("CredentialsSignInForm", () => {
     render(<CredentialsSignInForm variant="marketing" />);
 
     await user.type(screen.getByLabelText(/^email$/i), "bad@example.com");
-    await user.type(screen.getByLabelText(/^password$/i), "wrong");
-    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await user.type(screen.getByLabelText(/^κωδικός$/i), "wrong");
+    await user.click(screen.getByRole("button", { name: /^σύνδεση$/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid credentials");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Μη έγκυρα στοιχεία σύνδεσης");
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -116,11 +116,11 @@ describe("CredentialsSignInForm", () => {
 
   it("links Create account and Forgot password by default", () => {
     render(<CredentialsSignInForm variant="marketing" />);
-    expect(screen.getByRole("link", { name: /create account/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /δημιουργία λογαριασμού/i })).toHaveAttribute(
       "href",
       "/register",
     );
-    expect(screen.getByRole("link", { name: /forgot password/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /ξεχάσατε τον κωδικό/i })).toHaveAttribute(
       "href",
       "/forgot-password",
     );
@@ -145,10 +145,10 @@ describe("CredentialsSignInForm", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /create account/i }));
-    await user.click(screen.getByRole("button", { name: /forgot password/i }));
+    await user.click(screen.getByRole("button", { name: /δημιουργία λογαριασμού/i }));
+    await user.click(screen.getByRole("button", { name: /ξεχάσατε τον κωδικό/i }));
     expect(onCreateAccount).toHaveBeenCalledTimes(1);
     expect(onForgotPassword).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("link", { name: /create account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /δημιουργία λογαριασμού/i })).not.toBeInTheDocument();
   });
 });

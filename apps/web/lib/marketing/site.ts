@@ -5,7 +5,7 @@
 
 export const TALOS_BRAND = {
   name: "Talos",
-  tagline: "One platform for running and growing a hospitality business.",
+  tagline: "Μια πλατφόρμα για τη λειτουργία και την ανάπτυξη μιας επιχείρησης φιλοξενίας.",
   legalName: "Talos",
 } as const;
 
@@ -31,7 +31,7 @@ export function getContactEmail(): string | null {
 export const MARKETING_ROUTES = [
   {
     path: "/",
-    title: "Hospitality platform for operators and owners",
+    title: "Πλατφόρμα φιλοξενίας για διαχειριστές και ιδιοκτήτες",
     changeFrequency: "weekly" as const,
     priority: 1,
   },
@@ -103,10 +103,10 @@ export type MarketingNavItem = {
 };
 
 export const PRIMARY_NAV: MarketingNavItem[] = [
-  { label: "Platform", href: "/pms" },
-  { label: "Property presence", href: "/website-builder" },
-  { label: "Direct Bookings", href: "/direct-bookings" },
-  { label: "Property Management", href: "/property-management" },
+  { label: "Πλατφόρμα", href: "/pms" },
+  { label: "Παρουσία καταλύματος", href: "/website-builder" },
+  { label: "Απευθείας κρατήσεις", href: "/direct-bookings" },
+  { label: "Διαχείριση καταλυμάτων", href: "/property-management" },
 ];
 
 export const FOOTER_GROUPS: Array<{
@@ -114,30 +114,30 @@ export const FOOTER_GROUPS: Array<{
   links: MarketingNavItem[];
 }> = [
   {
-    title: "Platform",
+    title: "Πλατφόρμα",
     links: [
       { label: "PMS", href: "/pms" },
-      { label: "Channel distribution", href: "/channel-manager" },
-      { label: "Direct bookings", href: "/direct-bookings" },
-      { label: "Property presence", href: "/website-builder" },
-      { label: "Vacation rental software", href: "/vacation-rental-software" },
+      { label: "Διανομή καναλιών", href: "/channel-manager" },
+      { label: "Απευθείας κρατήσεις", href: "/direct-bookings" },
+      { label: "Παρουσία καταλύματος", href: "/website-builder" },
+      { label: "Λογισμικό βραχυχρόνιας μίσθωσης", href: "/vacation-rental-software" },
     ],
   },
   {
-    title: "Solutions",
+    title: "Λύσεις",
     links: [
-      { label: "Full property management", href: "/property-management" },
-      { label: "For operators", href: "/pms" },
-      { label: "For owners", href: "/property-management" },
+      { label: "Πλήρης διαχείριση καταλυμάτων", href: "/property-management" },
+      { label: "Για διαχειριστές", href: "/pms" },
+      { label: "Για ιδιοκτήτες", href: "/property-management" },
     ],
   },
   {
-    title: "Company",
+    title: "Εταιρεία",
     links: [
-      { label: "Contact", href: "/contact" },
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
-      { label: "Data deletion", href: "/data-deletion" },
+      { label: "Επικοινωνία", href: "/contact" },
+      { label: "Απόρρητο", href: "/privacy" },
+      { label: "Όροι", href: "/terms" },
+      { label: "Διαγραφή δεδομένων", href: "/data-deletion" },
     ],
   },
 ];

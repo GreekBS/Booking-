@@ -39,12 +39,17 @@ export function ForgotPasswordForm({
         body: JSON.stringify({ email }),
       });
       // Preserve intentional generic response (no account enumeration).
-      setMessage("If the account exists, a reset link was sent.");
+      setMessage(
+        isMarketing
+          ? "Εάν υπάρχει λογαριασμός, στάλθηκε σύνδεσμος επαναφοράς."
+          : "If the account exists, a reset link was sent.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  const backLabel = isMarketing ? "Επιστροφή στη σύνδεση" : "Back to login";
   const backControl = onBackToLogin ? (
     <button
       type="button"
@@ -55,11 +60,11 @@ export function ForgotPasswordForm({
           : "underline"
       }
     >
-      Back to login
+      {backLabel}
     </button>
   ) : (
     <Link href="/login" className={isMarketing ? "underline underline-offset-4" : "underline"}>
-      Back to login
+      {backLabel}
     </Link>
   );
 
@@ -72,10 +77,10 @@ export function ForgotPasswordForm({
             data-auth-heading
             className="talos-display text-2xl font-semibold tracking-tight text-[var(--talos-ink)] outline-none"
           >
-            Reset password
+            Επαναφορά κωδικού
           </p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--talos-muted)]">
-            Enter your email and we will send reset instructions if an account exists.
+            Εισαγάγετε το email σας και θα στείλουμε οδηγίες επαναφοράς εάν υπάρχει λογαριασμός.
           </p>
         </div>
 
@@ -113,7 +118,7 @@ export function ForgotPasswordForm({
           disabled={loading}
           className="inline-flex w-full items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold tracking-wide text-[var(--talos-paper)] transition-colors hover:bg-[var(--talos-forest-deep)] disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {loading ? "Sending..." : "Send reset link"}
+          {loading ? "Αποστολή…" : "Αποστολή συνδέσμου"}
         </button>
 
         <p className="text-center text-sm text-[var(--talos-muted)]">{backControl}</p>

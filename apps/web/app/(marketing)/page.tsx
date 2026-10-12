@@ -10,7 +10,7 @@ import {
 import { TALOS_BRAND } from "@/lib/marketing/site";
 
 export const metadata = buildPageMetadata({
-  title: "One platform for hospitality operations and growth",
+  title: "Μια πλατφόρμα για λειτουργίες και ανάπτυξη στη φιλοξενία",
   description: TALOS_BRAND.tagline,
   path: "/",
 });

@@ -40,12 +40,12 @@ export function MarketingNav() {
         <Link
           href="/"
           className="talos-display text-2xl font-semibold tracking-tight text-[var(--talos-ink)]"
-          aria-label="Talos home"
+          aria-label="Αρχική σελίδα Talos"
         >
           TALOS
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-7 lg:flex" aria-label="Κύρια πλοήγηση">
           {PRIMARY_NAV.map((item) => (
             <Link
               key={item.href}
@@ -64,10 +64,10 @@ export function MarketingNav() {
             data-testid="marketing-sign-in-desktop"
             className="text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
           >
-            Sign in
+            Σύνδεση
           </button>
           <MarketingButton href="/get-started?source=homepage_nav">
-            Get started
+            Ξεκινήστε
           </MarketingButton>
         </div>
 
@@ -76,10 +76,10 @@ export function MarketingNav() {
           className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[var(--talos-line)] lg:hidden"
           aria-expanded={menuOpen}
           aria-controls={panelId}
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-label={menuOpen ? "Κλείσιμο μενού" : "Άνοιγμα μενού"}
           onClick={() => setMenuOpen((v) => !v)}
         >
-          <span className="sr-only">Menu</span>
+          <span className="sr-only">Μενού</span>
           <span aria-hidden className="flex w-4 flex-col gap-1.5">
             <span className="block h-px bg-[var(--talos-ink)]" />
             <span className="block h-px bg-[var(--talos-ink)]" />
@@ -93,7 +93,7 @@ export function MarketingNav() {
           id={panelId}
           className="border-t border-[var(--talos-line)] bg-[var(--talos-paper)] lg:hidden"
         >
-          <nav className="talos-container flex flex-col gap-1 py-4" aria-label="Mobile">
+          <nav className="talos-container flex flex-col gap-1 py-4" aria-label="Πλοήγηση κινητού">
             {PRIMARY_NAV.map((item) => (
               <Link
                 key={item.href}
@@ -111,13 +111,13 @@ export function MarketingNav() {
                 data-testid="marketing-sign-in-mobile"
                 onClick={handleOpenAuth}
               >
-                Sign in
+                Σύνδεση
               </button>
               <MarketingButton
                 href="/get-started?source=homepage_nav"
                 className="w-full"
               >
-                Get started
+                Ξεκινήστε
               </MarketingButton>
             </div>
           </nav>

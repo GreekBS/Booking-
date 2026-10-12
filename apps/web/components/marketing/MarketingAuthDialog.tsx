@@ -19,16 +19,17 @@ const VIEW_COPY: Record<
   { title: string; description: string }
 > = {
   "sign-in": {
-    title: "Sign in to Talos",
-    description: "Sign in to manage your hospitality business.",
+    title: "Σύνδεση στο Talos",
+    description: "Συνδεθείτε για να διαχειριστείτε την επιχείρηση φιλοξενίας σας.",
   },
   register: {
-    title: "Create a Talos account",
-    description: "Register to start configuring your hospitality operation.",
+    title: "Δημιουργία λογαριασμού Talos",
+    description: "Εγγραφείτε για να ξεκινήσετε τη ρύθμιση της λειτουργίας φιλοξενίας σας.",
   },
   "forgot-password": {
-    title: "Reset your Talos password",
-    description: "Request a password reset link if an account exists for your email.",
+    title: "Επαναφορά κωδικού Talos",
+    description:
+      "Ζητήστε σύνδεσμο επαναφοράς κωδικού εάν υπάρχει λογαριασμός για το email σας.",
   },
 };
 
@@ -96,7 +97,7 @@ export function MarketingAuthDialog({ open, onOpenChange }: MarketingAuthDialogP
             <DialogPrimitive.Close
               type="button"
               className="talos-signin-close"
-              aria-label="Close authentication"
+              aria-label="Κλείσιμο ταυτοποίησης"
             >
               <X className="h-4 w-4" aria-hidden />
             </DialogPrimitive.Close>

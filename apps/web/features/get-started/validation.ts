@@ -6,7 +6,7 @@ export type FieldErrors = Record<string, string>;
 
 function humanizeZodMessage(path: string, message: string): string {
   if (path === "email" && message.toLowerCase().includes("email")) {
-    return "Enter a valid email address.";
+    return "Εισαγάγετε έγκυρο email.";
   }
   if (
     message.includes("Required") ||
@@ -14,27 +14,27 @@ function humanizeZodMessage(path: string, message: string): string {
     message.includes("Invalid enum") ||
     message.includes("Invalid input")
   ) {
-    return "This field is required.";
+    return "Αυτό το πεδίο είναι υποχρεωτικό.";
   }
   if (message.includes("at least 1") || message.includes("Too small")) {
     if (path === "accommodationTypes") {
-      return "Select at least one accommodation type.";
+      return "Επιλέξτε τουλάχιστον έναν τύπο καταλύματος.";
     }
     if (path === "interests") {
-      return "Select at least one way Talos can help.";
+      return "Επιλέξτε τουλάχιστον έναν τρόπο με τον οποίο μπορεί να βοηθήσει το Talos.";
     }
     if (path === "fullName" || path === "country" || path === "propertyCountry") {
-      return "This field is required.";
+      return "Αυτό το πεδίο είναι υποχρεωτικό.";
     }
-    return "Please complete this field.";
+    return "Συμπληρώστε αυτό το πεδίο.";
   }
   if (message.includes("String must contain at least")) {
     if (path === "fullName" || path === "country" || path === "propertyCountry") {
-      return "This field is required.";
+      return "Αυτό το πεδίο είναι υποχρεωτικό.";
     }
-    return "Please enter a bit more detail.";
+    return "Προσθέστε λίγο περισσότερες λεπτομέρειες.";
   }
-  return "Please check this field.";
+  return "Ελέγξτε αυτό το πεδίο.";
 }
 
 function zodToFieldErrors(error: z.ZodError): FieldErrors {
@@ -180,6 +180,9 @@ export function validateFullForm(state: GetStartedFormState): {
     if (error instanceof z.ZodError) {
       return { ok: false, errors: zodToFieldErrors(error) };
     }
-    return { ok: false, errors: { _form: "Please check your details and try again." } };
+    return {
+      ok: false,
+      errors: { _form: "Ελέγξτε τα στοιχεία σας και δοκιμάστε ξανά." },
+    };
   }
 }

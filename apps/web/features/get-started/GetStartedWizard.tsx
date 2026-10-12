@@ -57,23 +57,23 @@ function toggleInList<T extends string>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-function firstNameFrom(fullName: string): string {
+function firstNameFrom(fullName: string): string | null {
   const part = fullName.trim().split(/\s+/)[0];
-  return part || "there";
+  return part || null;
 }
 
 function successCopy(interests: LeadInterest[]): string {
   const set = new Set(interests);
   if (set.has("managed") && (set.has("run") || set.has("grow"))) {
-    return "We will use them to understand whether software, managed service, or a blend is the right fit.";
+    return "Θα τα χρησιμοποιήσουμε για να κατανοήσουμε αν το λογισμικό, η υπηρεσία διαχείρισης ή ένας συνδυασμός είναι η σωστή επιλογή.";
   }
   if (set.has("managed")) {
-    return "They will help us start a managed-service conversation — no account was created yet.";
+    return "Θα μας βοηθήσουν να ξεκινήσουμε μια συζήτηση για υπηρεσία διαχείρισης — δεν δημιουργήθηκε ακόμη λογαριασμός.";
   }
   if (set.has("run") || set.has("grow")) {
-    return "We will use them to help you explore the Talos platform path that fits.";
+    return "Θα τα χρησιμοποιήσουμε για να σας βοηθήσουμε να εξερευνήσετε τη διαδρομή πλατφόρμας Talos που σας ταιριάζει.";
   }
-  return "We will help you understand which Talos setup makes sense.";
+  return "Θα σας βοηθήσουμε να κατανοήσετε ποια ρύθμιση Talos έχει νόημα.";
 }
 
 export function GetStartedWizard({
@@ -132,7 +132,7 @@ export function GetStartedWizard({
     const full = validateFullForm(form);
     if (!full.ok) {
       setErrors(full.errors);
-      setSubmitError("Please review the highlighted fields.");
+      setSubmitError("Ελέγξτε τα επισημασμένα πεδία.");
       return;
     }
 
@@ -155,14 +155,16 @@ export function GetStartedWizard({
         setPhase("error");
         setSubmitError(
           data?.error?.message ??
-            "We could not save your details. Please try again.",
+            "Δεν μπορέσαμε να αποθηκεύσουμε τα στοιχεία σας. Δοκιμάστε ξανά.",
         );
         return;
       }
 
       if (!data?.id) {
         setPhase("error");
-        setSubmitError("We could not confirm your submission. Please try again.");
+        setSubmitError(
+          "Δεν μπορέσαμε να επιβεβαιώσουμε την υποβολή σας. Δοκιμάστε ξανά.",
+        );
         return;
       }
 
@@ -171,7 +173,9 @@ export function GetStartedWizard({
       setErrors({});
     } catch {
       setPhase("error");
-      setSubmitError("Network error. Please try again — your answers are still here.");
+      setSubmitError(
+        "Σφάλμα δικτύου. Δοκιμάστε ξανά — οι απαντήσεις σας παραμένουν εδώ.",
+      );
     }
   }
 
@@ -194,14 +198,16 @@ export function GetStartedWizard({
       if (!res.ok || !data?.demoRequestedAt) {
         setDemoError(
           data?.error?.message ??
-            "We could not record your demo request. Please try again.",
+            "Δεν μπορέσαμε να καταγράψουμε το αίτημα επίδειξης. Δοκιμάστε ξανά.",
         );
         return;
       }
 
       setPhase("demo-confirmed");
     } catch {
-      setDemoError("Network error. Please try again — your inquiry is still saved.");
+      setDemoError(
+        "Σφάλμα δικτύου. Δοκιμάστε ξανά — το αίτημά σας παραμένει αποθηκευμένο.",
+      );
     } finally {
       setDemoSubmitting(false);
     }
@@ -239,7 +245,7 @@ export function GetStartedWizard({
           onClick={() => setPhase("success")}
           className="mt-6 text-sm text-[var(--talos-muted)] underline underline-offset-4 hover:text-[var(--talos-ink)]"
         >
-          Back to next steps
+          Επιστροφή στα επόμενα βήματα
         </button>
       </div>
     );
@@ -248,12 +254,12 @@ export function GetStartedWizard({
   if (phase === "demo-confirmed") {
     return (
       <div className="rounded-sm border border-[var(--talos-line)] bg-white p-8 md:p-10">
-        <p className="talos-kicker">Demo request</p>
+        <p className="talos-kicker">Αίτημα επίδειξης</p>
         <h2 className="talos-display mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-          Your demo request is in.
+          Το αίτημα επίδειξης καταχωρήθηκε.
         </h2>
         <p className="mt-4 text-[var(--talos-muted)] leading-relaxed">
-          A Talos representative will contact you soon to arrange the next step.
+          Ένας εκπρόσωπος του Talos θα επικοινωνήσει σύντομα μαζί σας για το επόμενο βήμα.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           {onRequestClose ? (
@@ -262,14 +268,14 @@ export function GetStartedWizard({
               onClick={onRequestClose}
               className="inline-flex items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)]"
             >
-              Close
+              Κλείσιμο
             </button>
           ) : (
             <Link
               href="/"
               className="inline-flex items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)]"
             >
-              Return home
+              Επιστροφή στην αρχική
             </Link>
           )}
           <button
@@ -277,7 +283,7 @@ export function GetStartedWizard({
             onClick={() => setPhase("success")}
             className="inline-flex items-center justify-center rounded-sm border border-[var(--talos-ink)]/20 px-5 py-3 text-sm font-semibold text-[var(--talos-ink)] hover:border-[var(--talos-ink)]/45"
           >
-            Back to choices
+            Επιστροφή στις επιλογές
           </button>
         </div>
       </div>
@@ -285,20 +291,21 @@ export function GetStartedWizard({
   }
 
   if (phase === "success" && leadId) {
+    const firstName = firstNameFrom(form.fullName);
     return (
       <div className="rounded-sm border border-[var(--talos-line)] bg-white p-8 md:p-10">
-        <p className="talos-kicker">Received</p>
+        <p className="talos-kicker">Λήφθηκε</p>
         <h2 className="talos-display mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-          Thanks, {firstNameFrom(form.fullName)}.
+          {firstName ? `Ευχαριστούμε, ${firstName}.` : "Ευχαριστούμε."}
         </h2>
         <p className="mt-4 text-[var(--talos-muted)] leading-relaxed">
-          We have your details.
+          Έχουμε τα στοιχεία σας.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-[var(--talos-ink-soft)]">
           {successCopy(form.interests)}
         </p>
         <p className="mt-6 text-sm font-medium text-[var(--talos-ink)]">
-          What would you like to do next?
+          Τι θα θέλατε να κάνετε στη συνέχεια;
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <button
@@ -307,7 +314,7 @@ export function GetStartedWizard({
             onClick={() => setPhase("register")}
             className="inline-flex items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)]"
           >
-            Create Account
+            Δημιουργία λογαριασμού
           </button>
           <button
             type="button"
@@ -316,7 +323,7 @@ export function GetStartedWizard({
             disabled={demoSubmitting}
             className="inline-flex items-center justify-center rounded-sm border border-[var(--talos-ink)]/20 px-5 py-3 text-sm font-semibold text-[var(--talos-ink)] hover:border-[var(--talos-ink)]/45 disabled:opacity-60"
           >
-            {demoSubmitting ? "Sending…" : "Book a Demo"}
+            {demoSubmitting ? "Αποστολή…" : "Ζητήστε επίδειξη"}
           </button>
         </div>
         {demoError ? (
@@ -329,7 +336,7 @@ export function GetStartedWizard({
             href="/"
             className="mt-8 inline-flex text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
           >
-            Return home
+            Επιστροφή στην αρχική
           </Link>
         ) : onRequestClose ? (
           <button
@@ -337,7 +344,7 @@ export function GetStartedWizard({
             onClick={onRequestClose}
             className="mt-8 text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)]"
           >
-            Close
+            Κλείσιμο
           </button>
         ) : null}
         <button
@@ -345,7 +352,7 @@ export function GetStartedWizard({
           onClick={startFresh}
           className="mt-6 block text-sm text-[var(--talos-muted)] underline underline-offset-4 hover:text-[var(--talos-ink)]"
         >
-          Start another inquiry
+          Ξεκινήστε άλλη αίτηση
         </button>
       </div>
     );
@@ -358,7 +365,7 @@ export function GetStartedWizard({
     <div className="rounded-sm border border-[var(--talos-line)] bg-white p-6 sm:p-8 md:p-10">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="talos-kicker">Step {step} of 5</p>
+          <p className="talos-kicker">Βήμα {step} από 5</p>
           <h2 className="talos-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             {meta.title}
           </h2>
@@ -374,7 +381,7 @@ export function GetStartedWizard({
 
       <ol
         className="mt-5 flex gap-1.5"
-        aria-label="Progress"
+        aria-label="Πρόοδος"
         aria-describedby={progressId}
       >
         {([1, 2, 3, 4, 5] as GetStartedStep[]).map((n) => (
@@ -386,8 +393,8 @@ export function GetStartedWizard({
             aria-current={n === step ? "step" : undefined}
           >
             <span className="sr-only">
-              Step {n}
-              {n === step ? " (current)" : n < step ? " (completed)" : ""}
+              Βήμα {n}
+              {n === step ? " (τρέχον)" : n < step ? " (ολοκληρωμένο)" : ""}
             </span>
           </li>
         ))}
@@ -410,7 +417,7 @@ export function GetStartedWizard({
           <div className="space-y-5">
             <TextInput
               id="gs-fullName"
-              label="Full name"
+              label="Ονοματεπώνυμο"
               autoComplete="name"
               value={form.fullName}
               error={errors.fullName}
@@ -428,7 +435,7 @@ export function GetStartedWizard({
             />
             <TextInput
               id="gs-phone"
-              label="Phone"
+              label="Τηλέφωνο"
               type="tel"
               autoComplete="tel"
               optional
@@ -438,19 +445,22 @@ export function GetStartedWizard({
             />
             <TextSelect
               id="gs-country"
-              label="Country"
+              label="Χώρα"
               value={form.country}
               error={errors.country}
               onChange={(e) => patch({ country: e.target.value })}
             >
-              <option value="">Select country</option>
+              <option value="">Επιλέξτε χώρα</option>
               {LEAD_COUNTRY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
               ))}
             </TextSelect>
-            <ChoiceCardGroup legend="Your relationship to the business" error={errors.relationship}>
+            <ChoiceCardGroup
+              legend="Η σχέση σας με την επιχείρηση"
+              error={errors.relationship}
+            >
               {RELATIONSHIP_OPTIONS.map((opt) => (
                 <ChoiceChip
                   key={opt.value}
@@ -469,7 +479,7 @@ export function GetStartedWizard({
 
         {step === 2 ? (
           <div className="space-y-5">
-            <ChoiceCardGroup legend="Portfolio size" error={errors.portfolioSize}>
+            <ChoiceCardGroup legend="Μέγεθος χαρτοφυλακίου" error={errors.portfolioSize}>
               {PORTFOLIO_OPTIONS.map((opt) => (
                 <ChoiceChip
                   key={opt.value}
@@ -484,7 +494,7 @@ export function GetStartedWizard({
               ))}
             </ChoiceCardGroup>
             <ChoiceCardGroup
-              legend="Accommodation types"
+              legend="Τύποι καταλυμάτων"
               error={errors.accommodationTypes}
             >
               {ACCOMMODATION_OPTIONS.map((opt) => (
@@ -509,12 +519,12 @@ export function GetStartedWizard({
             </ChoiceCardGroup>
             <TextSelect
               id="gs-propertyCountry"
-              label="Property country"
+              label="Χώρα καταλύματος"
               value={form.propertyCountry}
               error={errors.propertyCountry}
               onChange={(e) => patch({ propertyCountry: e.target.value })}
             >
-              <option value="">Select country</option>
+              <option value="">Επιλέξτε χώρα</option>
               {LEAD_COUNTRY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -523,14 +533,14 @@ export function GetStartedWizard({
             </TextSelect>
             <TextInput
               id="gs-propertyCity"
-              label="Property city"
+              label="Πόλη καταλύματος"
               optional
               autoComplete="address-level2"
               value={form.propertyCity}
               error={errors.propertyCity}
               onChange={(e) => patch({ propertyCity: e.target.value })}
             />
-            <ChoiceCardGroup legend="Operating state" error={errors.operatingState}>
+            <ChoiceCardGroup legend="Κατάσταση λειτουργίας" error={errors.operatingState}>
               {OPERATING_STATE_OPTIONS.map((opt) => (
                 <ChoiceChip
                   key={opt.value}
@@ -549,7 +559,7 @@ export function GetStartedWizard({
 
         {step === 3 ? (
           <div className="space-y-5">
-            <ChoiceCardGroup legend="Channels you use today" optional>
+            <ChoiceCardGroup legend="Κανάλια που χρησιμοποιείτε σήμερα" optional>
               {CHANNEL_OPTIONS.map((opt) => (
                 <ChoiceChip
                   key={opt.value}
@@ -565,7 +575,7 @@ export function GetStartedWizard({
                 </ChoiceChip>
               ))}
             </ChoiceCardGroup>
-            <ChoiceCardGroup legend="Tools in use" optional>
+            <ChoiceCardGroup legend="Εργαλεία σε χρήση" optional>
               {TOOL_OPTIONS.map((opt) => (
                 <ChoiceChip
                   key={opt.value}
@@ -583,16 +593,16 @@ export function GetStartedWizard({
             </ChoiceCardGroup>
             <TextInput
               id="gs-softwareName"
-              label="Software name"
+              label="Όνομα λογισμικού"
               optional
-              placeholder="If you use a PMS or other system"
+              placeholder="Αν χρησιμοποιείτε PMS ή άλλο σύστημα"
               value={form.softwareName}
               onChange={(e) => patch({ softwareName: e.target.value })}
             />
-            <ChoiceCardGroup legend="Do you have a website?" optional>
+            <ChoiceCardGroup legend="Έχετε ιστότοπο;" optional>
               {[
-                { label: "Yes", value: true as const },
-                { label: "No", value: false as const },
+                { label: "Ναι", value: true as const },
+                { label: "Όχι", value: false as const },
               ].map((opt) => (
                 <ChoiceChip
                   key={String(opt.value)}
@@ -606,10 +616,10 @@ export function GetStartedWizard({
                 </ChoiceChip>
               ))}
             </ChoiceCardGroup>
-            <ChoiceCardGroup legend="Do you accept direct bookings?" optional>
+            <ChoiceCardGroup legend="Δέχεστε απευθείας κρατήσεις;" optional>
               {[
-                { label: "Yes", value: true as const },
-                { label: "No", value: false as const },
+                { label: "Ναι", value: true as const },
+                { label: "Όχι", value: false as const },
               ].map((opt) => (
                 <ChoiceChip
                   key={String(opt.value)}
@@ -629,7 +639,7 @@ export function GetStartedWizard({
         {step === 4 ? (
           <div className="space-y-5">
             <ChoiceCardGroup
-              legend="Approximate annual revenue"
+              legend="Ενδεικτικά ετήσια έσοδα"
               optional
               error={errors.revenueRange}
             >
@@ -647,7 +657,7 @@ export function GetStartedWizard({
               ))}
             </ChoiceCardGroup>
             <p className="text-sm text-[var(--talos-muted)]">
-              You can skip this step. Exact revenue is never required.
+              Μπορείτε να παραλείψετε αυτό το βήμα. Δεν απαιτούνται ακριβή έσοδα.
             </p>
           </div>
         ) : null}
@@ -656,7 +666,7 @@ export function GetStartedWizard({
           <div className="space-y-5">
             <fieldset>
               <legend className="text-sm font-medium text-[var(--talos-ink)]">
-                What are you interested in?
+                Τι σας ενδιαφέρει;
               </legend>
               <div className="mt-3 grid gap-3">
                 {INTEREST_OPTIONS.map((opt) => {
@@ -700,7 +710,7 @@ export function GetStartedWizard({
             </fieldset>
             <TextTextarea
               id="gs-message"
-              label="Anything else we should know?"
+              label="Κάτι άλλο που πρέπει να γνωρίζουμε;"
               optional
               rows={4}
               maxLength={1000}
@@ -709,10 +719,10 @@ export function GetStartedWizard({
               onChange={(e) => patch({ message: e.target.value })}
             />
             <p className="text-sm leading-relaxed text-[var(--talos-muted)]">
-              By submitting, you share business details with Talos so we can understand your
-              needs. See our{" "}
+              Με την υποβολή, μοιράζεστε επιχειρηματικά στοιχεία με το Talos ώστε να κατανοήσουμε τις
+              ανάγκες σας. Δείτε την{" "}
               <Link href="/privacy" className="underline underline-offset-4">
-                Privacy Policy
+                Πολιτική Απορρήτου
               </Link>
               .
             </p>
@@ -732,7 +742,7 @@ export function GetStartedWizard({
             disabled={step === 1 || submitting}
             className="min-h-11 rounded-sm px-4 py-2.5 text-sm font-medium text-[var(--talos-ink-soft)] hover:text-[var(--talos-ink)] disabled:opacity-40"
           >
-            Back
+            Πίσω
           </button>
           <button
             type="submit"
@@ -740,12 +750,12 @@ export function GetStartedWizard({
             className="min-h-11 rounded-sm bg-[var(--talos-forest)] px-6 py-3 text-sm font-semibold text-[var(--talos-paper)] hover:bg-[var(--talos-forest-deep)] disabled:opacity-60"
           >
             {submitting
-              ? "Sending…"
+              ? "Αποστολή…"
               : step < 5
-                ? "Continue"
+                ? "Συνέχεια"
                 : phase === "error"
-                  ? "Try again"
-                  : "Submit"}
+                  ? "Δοκιμάστε ξανά"
+                  : "Υποβολή"}
           </button>
         </div>
       </form>

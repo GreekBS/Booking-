@@ -13,10 +13,10 @@ export const RELATIONSHIP_OPTIONS: Array<{
   value: LeadRelationship;
   label: string;
 }> = [
-  { value: "owner", label: "Owner" },
-  { value: "property_manager", label: "Property manager" },
-  { value: "hospitality_business", label: "Hospitality business" },
-  { value: "other", label: "Other" },
+  { value: "owner", label: "Ιδιοκτήτης" },
+  { value: "property_manager", label: "Διαχειριστής καταλυμάτων" },
+  { value: "hospitality_business", label: "Επιχείρηση φιλοξενίας" },
+  { value: "other", label: "Άλλο" },
 ];
 
 export const PORTFOLIO_OPTIONS: Array<{
@@ -35,22 +35,22 @@ export const OPERATING_STATE_OPTIONS: Array<{
   value: LeadOperatingState;
   label: string;
 }> = [
-  { value: "operating", label: "Already operating" },
-  { value: "launching_soon", label: "Launching soon" },
-  { value: "planning", label: "Still planning" },
+  { value: "operating", label: "Ήδη σε λειτουργία" },
+  { value: "launching_soon", label: "Έναρξη σύντομα" },
+  { value: "planning", label: "Ακόμα στον σχεδιασμό" },
 ];
 
 export const ACCOMMODATION_OPTIONS: Array<{
   value: LeadAccommodationType;
   label: string;
 }> = [
-  { value: "villa", label: "Villa" },
-  { value: "apartment", label: "Apartment" },
-  { value: "vacation_rental", label: "Vacation rental" },
-  { value: "hotel", label: "Hotel" },
-  { value: "boutique_hotel", label: "Boutique hotel" },
-  { value: "guesthouse", label: "Guesthouse" },
-  { value: "other", label: "Other" },
+  { value: "villa", label: "Βίλα" },
+  { value: "apartment", label: "Διαμέρισμα" },
+  { value: "vacation_rental", label: "Βραχυχρόνια μίσθωση" },
+  { value: "hotel", label: "Ξενοδοχείο" },
+  { value: "boutique_hotel", label: "Boutique ξενοδοχείο" },
+  { value: "guesthouse", label: "Ξενώνας" },
+  { value: "other", label: "Άλλο" },
 ];
 
 export const CHANNEL_OPTIONS: Array<{ value: LeadChannel; label: string }> = [
@@ -58,30 +58,30 @@ export const CHANNEL_OPTIONS: Array<{ value: LeadChannel; label: string }> = [
   { value: "airbnb", label: "Airbnb" },
   { value: "expedia", label: "Expedia" },
   { value: "vrbo", label: "Vrbo" },
-  { value: "direct_bookings", label: "Direct bookings" },
-  { value: "own_website", label: "Own website" },
-  { value: "other", label: "Other" },
+  { value: "direct_bookings", label: "Απευθείας κρατήσεις" },
+  { value: "own_website", label: "Ιδιόκτητος ιστότοπος" },
+  { value: "other", label: "Άλλο" },
 ];
 
 export const TOOL_OPTIONS: Array<{ value: LeadTool; label: string }> = [
   { value: "pms", label: "PMS" },
-  { value: "channel_manager", label: "Channel manager" },
-  { value: "booking_engine", label: "Booking engine" },
-  { value: "website_platform", label: "Website platform" },
-  { value: "none", label: "None yet" },
+  { value: "channel_manager", label: "Διαχείριση καναλιών (Channel Manager)" },
+  { value: "booking_engine", label: "Μηχανή κρατήσεων" },
+  { value: "website_platform", label: "Πλατφόρμα ιστοτόπου" },
+  { value: "none", label: "Κανένα ακόμα" },
 ];
 
 export const REVENUE_OPTIONS: Array<{
   value: LeadRevenueRange;
   label: string;
 }> = [
-  { value: "under_25k", label: "Under €25k" },
+  { value: "under_25k", label: "Κάτω από €25k" },
   { value: "from_25k_to_75k", label: "€25k–€75k" },
   { value: "from_75k_to_150k", label: "€75k–€150k" },
   { value: "from_150k_to_300k", label: "€150k–€300k" },
   { value: "from_300k_to_750k", label: "€300k–€750k" },
   { value: "over_750k", label: "€750k+" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
+  { value: "prefer_not_to_say", label: "Προτιμώ να μην απαντήσω" },
 ];
 
 export const INTEREST_OPTIONS: Array<{
@@ -91,22 +91,23 @@ export const INTEREST_OPTIONS: Array<{
 }> = [
   {
     value: "run",
-    label: "Run",
-    description: "Property operations and PMS.",
+    label: "Λειτουργία",
+    description: "Λειτουργίες καταλύματος και PMS.",
   },
   {
     value: "grow",
-    label: "Grow",
-    description: "Direct presence, direct bookings, distribution, and brand growth.",
+    label: "Ανάπτυξη",
+    description:
+      "Απευθείας παρουσία, απευθείας κρατήσεις, διανομή και ανάπτυξη επωνυμίας.",
   },
   {
     value: "managed",
-    label: "Let Talos manage it",
-    description: "Full-service property management.",
+    label: "Αφήστε το Talos να το διαχειριστεί",
+    description: "Πλήρης διαχείριση καταλυμάτων.",
   },
   {
     value: "unsure",
-    label: "Not sure yet",
-    description: "Help me understand the right setup.",
+    label: "Δεν είμαι ακόμα σίγουρος/η",
+    description: "Βοηθήστε με να καταλάβω τη σωστή ρύθμιση.",
   },
 ];

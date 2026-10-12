@@ -53,19 +53,27 @@ export function RegisterForm({
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error?.message ?? "Registration failed");
+        setError(
+          data.error?.message ??
+            (isMarketing ? "Η εγγραφή απέτυχε" : "Registration failed"),
+        );
         return;
       }
 
-      setMessage("Account created. Check your email to verify.");
+      setMessage(
+        isMarketing
+          ? "Ο λογαριασμός δημιουργήθηκε. Ελέγξτε το email σας για επιβεβαίωση."
+          : "Account created. Check your email to verify.",
+      );
       setPassword("");
     } catch {
-      setError("Registration failed");
+      setError(isMarketing ? "Η εγγραφή απέτυχε" : "Registration failed");
     } finally {
       setLoading(false);
     }
   }
 
+  const backLabel = isMarketing ? "Σύνδεση" : "Sign in";
   const backControl = onBackToLogin ? (
     <button
       type="button"
@@ -76,11 +84,11 @@ export function RegisterForm({
           : "underline"
       }
     >
-      Sign in
+      {backLabel}
     </button>
   ) : (
     <Link href="/login" className={isMarketing ? "underline underline-offset-4" : "underline"}>
-      Sign in
+      {backLabel}
     </Link>
   );
 
@@ -93,10 +101,10 @@ export function RegisterForm({
             data-auth-heading
             className="talos-display text-2xl font-semibold tracking-tight text-[var(--talos-ink)] outline-none"
           >
-            Create account
+            Δημιουργία λογαριασμού
           </p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--talos-muted)]">
-            Start configuring your hospitality operation in Talos.
+            Ξεκινήστε τη ρύθμιση της λειτουργίας φιλοξενίας σας στο Talos.
           </p>
         </div>
 
@@ -122,7 +130,7 @@ export function RegisterForm({
             htmlFor={`${formId}-name`}
             className="mb-1.5 block text-sm font-medium text-[var(--talos-ink)]"
           >
-            Name
+            Όνομα
           </label>
           <input
             id={`${formId}-name`}
@@ -162,7 +170,7 @@ export function RegisterForm({
             htmlFor={`${formId}-password`}
             className="mb-1.5 block text-sm font-medium text-[var(--talos-ink)]"
           >
-            Password
+            Κωδικός
           </label>
           <input
             id={`${formId}-password`}
@@ -182,11 +190,11 @@ export function RegisterForm({
           disabled={loading}
           className="inline-flex w-full items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold tracking-wide text-[var(--talos-paper)] transition-colors hover:bg-[var(--talos-forest-deep)] disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {loading ? "Creating account..." : "Register"}
+          {loading ? "Δημιουργία λογαριασμού…" : "Εγγραφή"}
         </button>
 
         <p className="text-center text-sm text-[var(--talos-muted)]">
-          Already have an account? {backControl}
+          Έχετε ήδη λογαριασμό; {backControl}
         </p>
       </form>
     );

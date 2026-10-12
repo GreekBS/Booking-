@@ -65,7 +65,7 @@ describe("Get started CTA mapping", () => {
     );
     expect(read("app/(auth)/register/page.tsx")).toMatch(/RegisterForm/);
     expect(read("features/get-started/GetStartedWizard.tsx")).toContain(
-      "Create Account",
+      "Δημιουργία λογαριασμού",
     );
     expect(read("features/get-started/GetStartedWizard.tsx")).toContain(
       "RegisterForm",

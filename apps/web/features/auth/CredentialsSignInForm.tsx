@@ -56,11 +56,11 @@ export function CredentialsSignInForm({
     );
   }
 
-  const title = heading ?? (isMarketing ? "Welcome back" : "Talos");
+  const title = heading ?? (isMarketing ? "Καλώς ήρθατε ξανά" : "Talos");
   const lede =
     description ??
     (isMarketing
-      ? "Sign in to manage your hospitality business."
+      ? "Συνδεθείτε για να διαχειριστείτε την επιχείρηση φιλοξενίας σας."
       : "Sign in to your Talos account");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -77,7 +77,7 @@ export function CredentialsSignInForm({
     });
 
     if (result?.error) {
-      setError("Invalid credentials");
+      setError(isMarketing ? "Μη έγκυρα στοιχεία σύνδεσης" : "Invalid credentials");
       setLoading(false);
       return;
     }
@@ -98,6 +98,9 @@ export function CredentialsSignInForm({
     });
   }
 
+  const createAccountLabel = isMarketing ? "Δημιουργία λογαριασμού" : "Create account";
+  const forgotPasswordLabel = isMarketing ? "Ξεχάσατε τον κωδικό;" : "Forgot password";
+
   const createAccountControl = onCreateAccount ? (
     <button
       type="button"
@@ -108,14 +111,14 @@ export function CredentialsSignInForm({
           : "underline"
       }
     >
-      Create account
+      {createAccountLabel}
     </button>
   ) : (
     <Link
       href="/register"
       className={isMarketing ? "underline underline-offset-4 hover:text-[var(--talos-ink)]" : "underline"}
     >
-      Create account
+      {createAccountLabel}
     </Link>
   );
 
@@ -129,14 +132,14 @@ export function CredentialsSignInForm({
           : "underline"
       }
     >
-      Forgot password
+      {forgotPasswordLabel}
     </button>
   ) : (
     <Link
       href="/forgot-password"
       className={isMarketing ? "underline underline-offset-4 hover:text-[var(--talos-ink)]" : "underline"}
     >
-      Forgot password
+      {forgotPasswordLabel}
     </Link>
   );
 
@@ -188,7 +191,7 @@ export function CredentialsSignInForm({
             htmlFor={`${formId}-password`}
             className="mb-1.5 block text-sm font-medium text-[var(--talos-ink)]"
           >
-            Password
+            Κωδικός
           </label>
           <input
             id={`${formId}-password`}
@@ -208,7 +211,7 @@ export function CredentialsSignInForm({
           disabled={loading}
           className="inline-flex w-full items-center justify-center rounded-sm bg-[var(--talos-forest)] px-5 py-3 text-sm font-semibold tracking-wide text-[var(--talos-paper)] transition-colors hover:bg-[var(--talos-forest-deep)] disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Σύνδεση…" : "Σύνδεση"}
         </button>
 
         <button
@@ -217,7 +220,7 @@ export function CredentialsSignInForm({
           disabled={loading}
           className="inline-flex w-full items-center justify-center rounded-sm border border-[var(--talos-line)] bg-[var(--talos-paper)] px-5 py-3 text-sm font-semibold text-[var(--talos-ink)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
         >
-          Continue with Google
+          Συνέχεια με Google
         </button>
 
         <p className="text-center text-sm text-[var(--talos-muted)]">

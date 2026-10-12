@@ -61,19 +61,20 @@ export function GetStartedOverlay({
                 id={titleId}
                 className="talos-display text-xl font-semibold tracking-tight text-[var(--talos-ink)] sm:text-2xl"
               >
-                Get started
+                Ξεκινήστε
               </DialogPrimitive.Title>
               <DialogPrimitive.Description
                 id={descriptionId}
                 className="mt-1 text-sm text-[var(--talos-muted)]"
               >
-                Tell Talos about your hospitality business — qualification only, not account signup.
+                Πείτε στο Talos για την επιχείρηση φιλοξενίας σας — μόνο αξιολόγηση, όχι
+                δημιουργία λογαριασμού.
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close
               type="button"
               className="talos-signin-close"
-              aria-label="Close get started"
+              aria-label="Κλείσιμο έναρξης"
               data-testid="get-started-overlay-close"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -82,12 +83,13 @@ export function GetStartedOverlay({
 
           <div className="talos-get-started-dialog-body">
             <aside className="talos-get-started-aside">
-              <p className="talos-kicker">Qualification</p>
+              <p className="talos-kicker">Αξιολόγηση</p>
               <p className="talos-display mt-3 text-2xl font-semibold tracking-tight">
-                Tell us about your hospitality business.
+                Πείτε μας για την επιχείρηση φιλοξενίας σας.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-[var(--talos-muted)]">
-                No passwords or channel credentials. No User or Tenant is created from this form.
+                Χωρίς κωδικούς ή διαπιστευτήρια καναλιών. Δεν δημιουργείται Χρήστης ή Οργανισμός από
+                αυτή τη φόρμα.
               </p>
             </aside>
             <div className="talos-get-started-wizard-pane">

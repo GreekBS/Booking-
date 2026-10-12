@@ -41,15 +41,15 @@ describe("Get Started overlay CTA", () => {
       <div className="talos-marketing">
         <MarketingFunnelProvider>
           <MarketingButton href="/get-started?source=homepage_hero">
-            Get started
+            Ξεκινήστε
           </MarketingButton>
         </MarketingFunnelProvider>
       </div>,
     );
 
-    await user.click(screen.getByRole("button", { name: /Get started/i }));
+    await user.click(screen.getByRole("button", { name: /Ξεκινήστε/i }));
     expect(screen.getByTestId("get-started-overlay")).toBeTruthy();
-    expect(screen.getByText(/Step 1 of 5/i)).toBeTruthy();
+    expect(screen.getByText(/Βήμα 1 από 5/i)).toBeTruthy();
 
     await user.click(screen.getByTestId("get-started-overlay-close"));
     expect(screen.queryByTestId("get-started-overlay")).toBeNull();

@@ -7,9 +7,9 @@ import {
 import { buildPageMetadata } from "@/lib/marketing/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Get started",
+  title: "Ξεκινήστε",
   description:
-    "Tell Talos about your hospitality business so we can understand the right platform or managed-service path.",
+    "Πείτε στο Talos για την επιχείρηση φιλοξενίας σας, ώστε να κατανοήσουμε τη σωστή διαδρομή πλατφόρμας ή υπηρεσίας διαχείρισης.",
   path: "/get-started",
   noIndex: true,
 });
@@ -34,24 +34,24 @@ export default async function GetStartedPage({
     <section className="relative overflow-hidden border-b border-[var(--talos-line)]">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(232,226,214,0.9),transparent_50%),linear-gradient(180deg,var(--talos-paper),#efebe3)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgb(232,226,214,0.9),transparent_50%),linear-gradient(180deg,var(--talos-paper),#efebe3)]"
       />
       <div className="talos-container relative grid gap-10 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14 lg:py-16">
         <aside className="hidden lg:block">
-          <p className="talos-kicker">Get started</p>
+          <p className="talos-kicker">Ξεκινήστε</p>
           <h1 className="talos-display mt-4 max-w-md text-balance text-4xl font-semibold tracking-tight lg:text-[2.75rem] lg:leading-[1.12]">
-            Tell us about your hospitality business.
+            Πείτε μας για την επιχείρηση φιλοξενίας σας.
           </h1>
           <p className="talos-lede mt-5">
-            This is not account registration. It is a short qualification so Talos can understand
-            who you are, what you operate, and how we can help — software, growth, or managed
-            service.
+            Αυτό δεν είναι εγγραφή λογαριασμού. Είναι μια σύντομη αξιολόγηση ώστε το Talos να
+            κατανοήσει ποιοι είστε, τι διαχειρίζεστε και πώς μπορούμε να βοηθήσουμε — λογισμικό,
+            ανάπτυξη ή υπηρεσία διαχείρισης.
           </p>
           <ul className="mt-8 space-y-3 text-sm text-[var(--talos-ink-soft)]">
             {[
-              "No passwords or channel credentials collected",
-              "No User or Tenant account is created from this form",
-              "You can create an account separately whenever you are ready",
+              "Δεν συλλέγονται κωδικοί ή διαπιστευτήρια καναλιών",
+              "Δεν δημιουργείται λογαριασμός Χρήστη ή Οργανισμού από αυτή τη φόρμα",
+              "Μπορείτε να δημιουργήσετε λογαριασμό ξεχωριστά όποτε είστε έτοιμοι",
             ].map((item) => (
               <li key={item} className="flex gap-2 border-b border-[var(--talos-line)] pb-3">
                 <span aria-hidden className="text-[var(--talos-forest)]">
@@ -65,12 +65,12 @@ export default async function GetStartedPage({
 
         <div>
           <div className="mb-6 lg:hidden">
-            <p className="talos-kicker">Get started</p>
+            <p className="talos-kicker">Ξεκινήστε</p>
             <h1 className="talos-display mt-3 text-3xl font-semibold tracking-tight">
-              Tell us about your business.
+              Πείτε μας για την επιχείρησή σας.
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-[var(--talos-muted)]">
-              Qualification only — not account signup. No credentials collected.
+              Μόνο αξιολόγηση — όχι εγγραφή λογαριασμού. Δεν συλλέγονται διαπιστευτήρια.
             </p>
           </div>
           <GetStartedWizard

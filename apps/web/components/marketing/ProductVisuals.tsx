@@ -4,30 +4,30 @@ import Image from "next/image";
 export const MARKETING_IMAGES = {
   heroHospitality: {
     src: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=80",
-    alt: "Contemporary villa with pool at dusk",
+    alt: "Σύγχρονη βίλα με πισίνα το σούρουπο",
     /** Recommended owned replacement: 4:5 portrait crop, ≥1600px wide */
     aspectHint: "4 / 5",
   },
   managedService: {
     src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
-    alt: "Modern villa living space with large windows",
+    alt: "Μοντέρνος χώρος καθιστικού βίλας με μεγάλα παράθυρα",
     /** Recommended owned replacement: 5:4 landscape, ≥1600px wide */
     aspectHint: "5 / 4",
   },
   presenceHero: {
     src: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80",
-    alt: "Sunlit villa exterior overlooking water",
+    alt: "Ηλιόλουστη πρόσοψη βίλας με θέα στη θάλασσα",
     /** Recommended owned replacement: 16:10 landscape for guest-facing preview */
     aspectHint: "16 / 10",
   },
 } as const;
 
 const SIDE_NAV = [
-  "Dashboard",
-  "Properties",
-  "Units",
-  "Availability",
-  "Bookings",
+  "Πίνακας ελέγχου",
+  "Καταλύματα",
+  "Μονάδες",
+  "Διαθεσιμότητα",
+  "Κρατήσεις",
 ] as const;
 
 /** Compact ops chrome for the hero — property + reservation signal. */
@@ -38,7 +38,7 @@ export function HeroOpsPanel() {
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--talos-mist)]" />
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--talos-mist)]" />
         <span className="text-[10px] font-medium tracking-wide text-[var(--talos-muted)]">
-          Talos · operations
+          Talos · λειτουργίες
         </span>
       </div>
       <div className="grid grid-cols-[5.5rem_1fr]">
@@ -61,22 +61,22 @@ export function HeroOpsPanel() {
         </aside>
         <div className="p-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--talos-muted)]">
-            Property
+            Κατάλυμα
           </p>
-          <p className="mt-1 text-sm font-semibold text-[var(--talos-ink)]">Coastal villa</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--talos-ink)]">Παραθαλάσσια βίλα</p>
           <div className="mt-3 space-y-1.5">
             <div className="border border-[var(--talos-line)] bg-[var(--talos-paper)] px-2.5 py-2">
-              <p className="text-[11px] font-medium">Availability</p>
-              <p className="text-[10px] text-[var(--talos-muted)]">Calendar · blocks · stays</p>
+              <p className="text-[11px] font-medium">Διαθεσιμότητα</p>
+              <p className="text-[10px] text-[var(--talos-muted)]">Ημερολόγιο · δεσμεύσεις · διαμονές</p>
             </div>
             <div className="border border-[var(--talos-line)] bg-[var(--talos-paper)] px-2.5 py-2">
-              <p className="text-[11px] font-medium">Reservation</p>
-              <p className="text-[10px] text-[var(--talos-muted)]">Confirmed · guest stay</p>
+              <p className="text-[11px] font-medium">Κράτηση</p>
+              <p className="text-[10px] text-[var(--talos-muted)]">Επιβεβαιωμένη · διαμονή επισκέπτη</p>
             </div>
           </div>
         </div>
       </div>
-      <figcaption className="sr-only">Talos operations panel</figcaption>
+      <figcaption className="sr-only">Πίνακας λειτουργιών Talos</figcaption>
     </figure>
   );
 }
@@ -87,7 +87,7 @@ export function HeroPresenceCard() {
   return (
     <figure className="overflow-hidden rounded-sm border border-[var(--talos-line)] bg-white shadow-[0_16px_40px_-24px_rgba(18,22,20,0.45)]">
       <div className="border-b border-[var(--talos-line)] px-3 py-1.5 text-[10px] text-[var(--talos-muted)]">
-        Your property presence
+        Η παρουσία του καταλύματός σας
       </div>
       <div className="relative aspect-[16/10]">
         <Image
@@ -99,11 +99,11 @@ export function HeroPresenceCard() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-          <p className="talos-display text-lg font-semibold leading-tight">Coastal villa</p>
-          <p className="mt-1 text-[10px] text-white/80">Check availability · Book directly</p>
+          <p className="talos-display text-lg font-semibold leading-tight">Παραθαλάσσια βίλα</p>
+          <p className="mt-1 text-[10px] text-white/80">Δείτε διαθεσιμότητα · Κάντε κράτηση απευθείας</p>
         </div>
       </div>
-      <figcaption className="sr-only">Guest-facing property presence preview</figcaption>
+      <figcaption className="sr-only">Προεπισκόπηση παρουσίας καταλύματος προς τον επισκέπτη</figcaption>
     </figure>
   );
 }
@@ -167,13 +167,13 @@ export function OperationsDepthPanel() {
     <figure className="overflow-hidden rounded-sm border border-[var(--talos-line)] bg-white shadow-[0_24px_60px_-28px_rgba(18,22,20,0.35)]">
       <div className="flex items-center justify-between border-b border-[var(--talos-line)] bg-[var(--talos-sand)]/40 px-4 py-2.5">
         <p className="text-xs font-semibold tracking-wide text-[var(--talos-ink)]">
-          Availability · Coastal villa
+          Διαθεσιμότητα · Παραθαλάσσια βίλα
         </p>
-        <span className="text-[10px] text-[var(--talos-muted)]">Operational view</span>
+        <span className="text-[10px] text-[var(--talos-muted)]">Λειτουργική προβολή</span>
       </div>
       <div className="p-4 md:p-5">
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--talos-muted)]">
-          {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+          {["Δε", "Τρ", "Τε", "Πε", "Πα", "Σα", "Κυ"].map((d, i) => (
             <span key={`${d}-${i}`}>{d}</span>
           ))}
         </div>
@@ -198,22 +198,22 @@ export function OperationsDepthPanel() {
         <div className="mt-5 space-y-2">
           <div className="flex items-center justify-between border border-[var(--talos-line)] px-3 py-2.5">
             <div>
-              <p className="text-sm font-medium">Stay · Fri–Mon</p>
-              <p className="text-xs text-[var(--talos-muted)]">Confirmed reservation</p>
+              <p className="text-sm font-medium">Διαμονή · Παρ–Δευ</p>
+              <p className="text-xs text-[var(--talos-muted)]">Επιβεβαιωμένη κράτηση</p>
             </div>
-            <span className="text-[11px] font-medium text-[var(--talos-forest)]">Booked</span>
+            <span className="text-[11px] font-medium text-[var(--talos-forest)]">Κρατημένο</span>
           </div>
           <div className="flex items-center justify-between border border-[var(--talos-line)] px-3 py-2.5">
             <div>
-              <p className="text-sm font-medium">Owner block</p>
-              <p className="text-xs text-[var(--talos-muted)]">Calendar hold</p>
+              <p className="text-sm font-medium">Δέσμευση ιδιοκτήτη</p>
+              <p className="text-xs text-[var(--talos-muted)]">Κράτηση ημερολογίου</p>
             </div>
-            <span className="text-[11px] font-medium text-[var(--talos-muted)]">Blocked</span>
+            <span className="text-[11px] font-medium text-[var(--talos-muted)]">Μπλοκαρισμένο</span>
           </div>
         </div>
       </div>
       <figcaption className="sr-only">
-        Illustrative Talos availability calendar and reservation list
+        Ενδεικτικό ημερολόγιο διαθεσιμότητας και λίστα κρατήσεων Talos
       </figcaption>
     </figure>
   );
@@ -227,41 +227,41 @@ export function PresenceTransformation() {
     <div className="grid items-center gap-6 lg:grid-cols-[0.95fr_auto_1.15fr] lg:gap-4">
       <figure className="overflow-hidden rounded-sm border border-[var(--talos-line)] bg-white">
         <div className="border-b border-[var(--talos-line)] bg-[var(--talos-sand)]/40 px-3 py-2 text-[11px] text-[var(--talos-muted)]">
-          In Talos
+          Στο Talos
         </div>
         <div className="p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--talos-muted)]">
-            Property
+            Κατάλυμα
           </p>
-          <p className="mt-1 text-lg font-semibold">Coastal villa</p>
+          <p className="mt-1 text-lg font-semibold">Παραθαλάσσια βίλα</p>
           <ul className="mt-4 space-y-2 text-sm text-[var(--talos-ink-soft)]">
             <li className="flex justify-between border-b border-[var(--talos-line)] pb-2">
-              <span>Photos &amp; details</span>
-              <span className="text-[var(--talos-forest)]">Ready</span>
+              <span>Φωτογραφίες και λεπτομέρειες</span>
+              <span className="text-[var(--talos-forest)]">Έτοιμο</span>
             </li>
             <li className="flex justify-between border-b border-[var(--talos-line)] pb-2">
-              <span>Availability</span>
-              <span className="text-[var(--talos-forest)]">Live</span>
+              <span>Διαθεσιμότητα</span>
+              <span className="text-[var(--talos-forest)]">Ζωντανή</span>
             </li>
             <li className="flex justify-between">
-              <span>Booking capability</span>
-              <span className="text-[var(--talos-forest)]">Connected</span>
+              <span>Δυνατότητα κράτησης</span>
+              <span className="text-[var(--talos-forest)]">Συνδεδεμένη</span>
             </li>
           </ul>
         </div>
-        <figcaption className="sr-only">Property record inside Talos</figcaption>
+        <figcaption className="sr-only">Αρχείο καταλύματος μέσα στο Talos</figcaption>
       </figure>
 
       <div className="flex flex-row items-center justify-center gap-2 lg:flex-col" aria-hidden>
         <span className="hidden h-px w-8 bg-[var(--talos-line)] lg:block lg:h-10 lg:w-px" />
-        <span className="talos-kicker text-[var(--talos-copper)]">Your presence</span>
+        <span className="talos-kicker text-[var(--talos-copper)]">Η παρουσία σας</span>
         <span className="hidden h-px w-8 bg-[var(--talos-line)] lg:block lg:h-10 lg:w-px" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1.2fr_0.75fr]">
         <figure className="overflow-hidden rounded-sm border border-[var(--talos-line)] bg-white shadow-[0_20px_50px_-30px_rgba(18,22,20,0.4)]">
           <div className="border-b border-[var(--talos-line)] px-3 py-2 text-[11px] text-[var(--talos-muted)]">
-            Guest-facing presence · desktop
+            Παρουσία επισκέπτη · υπολογιστής
           </div>
           <div className="relative aspect-[16/10]">
             <Image
@@ -273,21 +273,21 @@ export function PresenceTransformation() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
             <div className="absolute bottom-0 p-4 text-white">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-white/70">Stay</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-white/70">Διαμονή</p>
               <p className="talos-display mt-1 text-2xl font-semibold leading-tight">
-                Coastal villa
+                Παραθαλάσσια βίλα
               </p>
               <span className="mt-3 inline-flex rounded-sm bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--talos-ink)]">
-                Check availability
+                Δείτε διαθεσιμότητα
               </span>
             </div>
           </div>
-          <figcaption className="sr-only">Desktop guest-facing property presence</figcaption>
+          <figcaption className="sr-only">Παρουσία καταλύματος προς επισκέπτη σε υπολογιστή</figcaption>
         </figure>
 
         <figure className="mx-auto w-full max-w-[200px] overflow-hidden rounded-[1.15rem] border border-[var(--talos-line)] bg-white shadow-[0_20px_50px_-30px_rgba(18,22,20,0.4)] sm:mx-0 sm:max-w-none">
           <div className="border-b border-[var(--talos-line)] px-3 py-1.5 text-center text-[10px] text-[var(--talos-muted)]">
-            Mobile
+            Κινητό
           </div>
           <div className="relative aspect-[9/14]">
             <Image
@@ -299,13 +299,13 @@ export function PresenceTransformation() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
             <div className="absolute bottom-0 w-full p-3 text-white">
-              <p className="talos-display text-lg font-semibold">Book your stay</p>
+              <p className="talos-display text-lg font-semibold">Κάντε κράτηση</p>
               <div className="mt-3 rounded-sm bg-white py-2 text-center text-[11px] font-semibold text-[var(--talos-ink)]">
-                Continue
+                Συνέχεια
               </div>
             </div>
           </div>
-          <figcaption className="sr-only">Mobile guest booking presence</figcaption>
+          <figcaption className="sr-only">Παρουσία κράτησης επισκέπτη σε κινητό</figcaption>
         </figure>
       </div>
     </div>

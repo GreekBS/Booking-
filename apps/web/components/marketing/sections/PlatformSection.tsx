@@ -4,28 +4,28 @@ import { MarketingButton } from "../MarketingButton";
 
 const CAPABILITIES = [
   {
-    title: "Properties & units",
-    body: "Catalog structure for villas, apartments, and multi-unit stays — with amenities and policies attached.",
+    title: "Καταλύματα και μονάδες",
+    body: "Δομή καταλόγου για βίλες, διαμερίσματα και πολυμονάδες διαμονές — με παροχές και πολιτικές.",
   },
   {
-    title: "Availability & calendar",
-    body: "A clear operational picture of stays, blocks, and open inventory.",
+    title: "Διαθεσιμότητα και ημερολόγιο",
+    body: "Καθαρή λειτουργική εικόνα διαμονών, δεσμεύσεων και ανοιχτού αποθέματος.",
   },
   {
-    title: "Reservations",
-    body: "Booking workflows that keep guest stays connected to the same property record.",
+    title: "Κρατήσεις",
+    body: "Ροές εργασίας κρατήσεων που συνδέουν τη διαμονή του επισκέπτη με το ίδιο αρχείο καταλύματος.",
   },
   {
-    title: "Pricing tools",
-    body: "Rate plans and pricing controls for units you operate.",
+    title: "Εργαλεία τιμολόγησης",
+    body: "Πλάνα τιμών και έλεγχοι τιμολόγησης για τις μονάδες που διαχειρίζεστε.",
   },
   {
-    title: "Team access",
-    body: "Members and roles so the right people can run day-to-day work.",
+    title: "Πρόσβαση ομάδας",
+    body: "Μέλη και ρόλοι, ώστε τα σωστά άτομα να εκτελούν την καθημερινή εργασία.",
   },
   {
-    title: "Distribution-ready architecture",
-    body: "Built so multi-channel distribution can expand without rewriting your core operations.",
+    title: "Αρχιτεκτονική έτοιμη για διανομή",
+    body: "Σχεδιασμένο ώστε η πολυκαναλική διανομή να επεκτείνεται χωρίς να ξαναγράφονται οι βασικές λειτουργίες.",
   },
 ] as const;
 
@@ -36,12 +36,12 @@ export function PlatformSection() {
         <div className="grid items-start gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
           <div>
             <SectionHeader
-              kicker="Run"
-              title="Operational depth for hospitality teams."
-              lede="Talos is where properties, calendars, and reservations live — the system of record behind both your software workflow and, when you choose, our managed service."
+              kicker="Λειτουργία"
+              title="Λειτουργικό βάθος για ομάδες φιλοξενίας."
+              lede="Το Talos είναι εκεί όπου ζουν τα καταλύματα, τα ημερολόγια και οι κρατήσεις — το σύστημα αναφοράς πίσω από τη ροή εργασίας του λογισμικού σας και, αν το επιλέξετε, την υπηρεσία διαχείρισής μας."
             />
             <div className="mt-8">
-              <MarketingButton href="/pms">Explore the platform</MarketingButton>
+              <MarketingButton href="/pms">Εξερευνήστε την πλατφόρμα</MarketingButton>
             </div>
           </div>
           <OperationsDepthPanel />

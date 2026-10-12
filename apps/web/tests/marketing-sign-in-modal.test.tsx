@@ -76,7 +76,7 @@ describe("MarketingNav sign-in modal", () => {
 
     await user.click(screen.getByTestId("marketing-sign-in-desktop"));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /close authentication/i }));
+    await user.click(screen.getByRole("button", { name: /κλείσιμο ταυτοποίησης/i }));
     await vi.waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
@@ -86,12 +86,12 @@ describe("MarketingNav sign-in modal", () => {
     const user = userEvent.setup();
     renderNav();
 
-    await user.click(screen.getByRole("button", { name: /open menu/i }));
-    expect(screen.getByRole("navigation", { name: /mobile/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /άνοιγμα μενού/i }));
+    expect(screen.getByRole("navigation", { name: /πλοήγηση κινητού/i })).toBeInTheDocument();
 
     await user.click(screen.getByTestId("marketing-sign-in-mobile"));
 
-    expect(screen.queryByRole("navigation", { name: /mobile/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /πλοήγηση κινητού/i })).not.toBeInTheDocument();
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 

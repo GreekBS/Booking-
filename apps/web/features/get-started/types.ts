@@ -43,24 +43,24 @@ export const STEP_META: Record<
   { title: string; lede: string }
 > = {
   1: {
-    title: "About you",
-    lede: "Tell us who we are speaking with — so we can understand your role in the business.",
+    title: "Σχετικά με εσάς",
+    lede: "Πείτε μας με ποιον μιλάμε — ώστε να κατανοήσουμε τον ρόλο σας στην επιχείρηση.",
   },
   2: {
-    title: "Your properties",
-    lede: "A clear picture of what you operate helps us recommend the right Talos path.",
+    title: "Τα καταλύματά σας",
+    lede: "Μια σαφής εικόνα του τι διαχειρίζεστε μας βοηθά να προτείνουμε τη σωστή διαδρομή Talos.",
   },
   3: {
-    title: "How you operate today",
-    lede: "Optional context on channels and tools. No credentials or API keys — ever.",
+    title: "Πώς λειτουργείτε σήμερα",
+    lede: "Προαιρετικό πλαίσιο για κανάλια και εργαλεία. Χωρίς διαπιστευτήρια ή κλειδιά API — ποτέ.",
   },
   4: {
-    title: "Business size",
-    lede: "Optional. Approximate annual revenue only — never an exact figure.",
+    title: "Μέγεθος επιχείρησης",
+    lede: "Προαιρετικό. Μόνο ενδεικτικά ετήσια έσοδα — ποτέ ακριβές αριθμός.",
   },
   5: {
-    title: "How can Talos help?",
-    lede: "Choose the path that fits. You can select more than one.",
+    title: "Πώς μπορεί να βοηθήσει το Talos;",
+    lede: "Επιλέξτε τη διαδρομή που σας ταιριάζει. Μπορείτε να επιλέξετε περισσότερες από μία.",
   },
 };
 

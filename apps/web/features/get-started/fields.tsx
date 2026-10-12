@@ -19,7 +19,7 @@ export function FieldLabel({
     >
       {children}
       {optional ? (
-        <span className="ml-1 font-normal text-[var(--talos-muted)]">(optional)</span>
+        <span className="ml-1 font-normal text-[var(--talos-muted)]">(προαιρετικό)</span>
       ) : null}
     </label>
   );
@@ -159,7 +159,7 @@ export function ChoiceCardGroup({
       <legend className="text-sm font-medium text-[var(--talos-ink)]">
         {legend}
         {optional ? (
-          <span className="ml-1 font-normal text-[var(--talos-muted)]">(optional)</span>
+          <span className="ml-1 font-normal text-[var(--talos-muted)]">(προαιρετικό)</span>
         ) : null}
       </legend>
       <div className="mt-3 flex flex-wrap gap-2">{children}</div>
