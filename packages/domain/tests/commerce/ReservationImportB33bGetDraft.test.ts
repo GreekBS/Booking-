@@ -128,8 +128,9 @@ describe("B3.3b GetReservationImportDraftUseCase conflictBookings", () => {
     });
 
     const bookings = { findByIds } as unknown as IBookingRepository;
+    const now = new Date("2026-10-04T08:00:00.000Z");
     const get = new GetReservationImportDraftUseCase(imports, undefined, bookings);
-    const result = await get.execute(batch.id, "tenant-a", actor);
+    const result = await get.execute(batch.id, "tenant-a", actor, now);
     expect(result.isSuccess).toBe(true);
     const value = result.getValue();
     expect(value.rows).toHaveLength(1);
@@ -140,6 +141,8 @@ describe("B3.3b GetReservationImportDraftUseCase conflictBookings", () => {
         guestName: "Existing Guest",
         checkIn: "2026-11-10",
         checkOut: "2026-11-12",
+        status: "pending",
+        isSuperseded: false,
       },
     ]);
     expect(findByIds).toHaveBeenCalledOnce();
@@ -154,8 +157,9 @@ describe("B3.3b GetReservationImportDraftUseCase conflictBookings", () => {
       listRejectedRowsForBatch: vi.fn(async () => []),
     } as unknown as IReservationImportRepository;
 
+    const now = new Date("2026-10-04T08:00:00.000Z");
     const get = new GetReservationImportDraftUseCase(imports);
-    const result = await get.execute(batch.id, "tenant-a", actor);
+    const result = await get.execute(batch.id, "tenant-a", actor, now);
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().conflictBookings).toEqual([]);
   });

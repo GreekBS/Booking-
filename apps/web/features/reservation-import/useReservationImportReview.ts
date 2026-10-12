@@ -26,6 +26,7 @@ import {
   RESERVATION_IMPORT_LOAD_DRAFT_ERROR,
   RESERVATION_IMPORT_MANUAL_CURRENCY_DEFAULT,
 } from "./reservation-import-copy";
+import { mapCommitFailureToOperatorMessage } from "./reservation-import-errors";
 
 export type ReviewLoadState =
   | { kind: "loading" }
@@ -49,7 +50,15 @@ export type CommitMutationResult =
     }
   | {
       ok: false;
-      phase: "commit" | "stale" | "not_ready" | "refetch" | "expired" | "not_found";
+      phase:
+        | "commit"
+        | "stale"
+        | "not_ready"
+        | "replace_blocked"
+        | "refetch"
+        | "expired"
+        | "not_found";
+      operatorMessage?: string;
     };
 
 export function useReservationImportReview(tenantId: string | null, batchId: string) {
@@ -283,20 +292,47 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
         setState({ kind: "not_found" });
         return { ok: false, phase: "not_found" };
       }
-      if (isReservationImportStaleCommitError(error)) {
+      const mapped = mapCommitFailureToOperatorMessage(error);
+      if (mapped.kind === "replace_blocked") {
+        await refetch();
+        return {
+          ok: false,
+          phase: "replace_blocked",
+          operatorMessage: mapped.message,
+        };
+      }
+      if (
+        mapped.kind === "stale" ||
+        isReservationImportStaleCommitError(error)
+      ) {
         try {
           await recheckReservationImportDraft(tenantId, batchId);
         } catch {
           // Recheck best-effort; still refetch below.
         }
         await refetch();
-        return { ok: false, phase: "stale" };
+        return {
+          ok: false,
+          phase: "stale",
+          operatorMessage: mapped.message,
+        };
       }
-      if (isReservationImportCommitNotReadyError(error)) {
+      if (
+        mapped.kind === "not_ready" ||
+        isReservationImportCommitNotReadyError(error)
+      ) {
         await refetch();
-        return { ok: false, phase: "not_ready" };
+        return {
+          ok: false,
+          phase: "not_ready",
+          operatorMessage: mapped.message,
+        };
       }
-      return { ok: false, phase: "commit" };
+      return {
+        ok: false,
+        phase: "commit",
+        operatorMessage: mapped.message,
+      };
     } finally {
       setCommitting(false);
     }

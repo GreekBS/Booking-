@@ -18,6 +18,12 @@ import { elCommon } from "@/lib/i18n";
 import {
   RESERVATION_IMPORT_BACK_TO_BOOKINGS,
   RESERVATION_IMPORT_CHANGE_FILE_LABEL,
+  RESERVATION_IMPORT_BULK_KEEP_CSV,
+  RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_BODY,
+  RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_TITLE,
+  RESERVATION_IMPORT_BULK_NONE_ELIGIBLE,
+  RESERVATION_IMPORT_BULK_PARTIAL,
+  RESERVATION_IMPORT_BULK_SUCCESS,
   RESERVATION_IMPORT_COMMIT_BUSY_LABEL,
   RESERVATION_IMPORT_COMMIT_CONFIRM_BODY,
   RESERVATION_IMPORT_COMMIT_CONFIRM_TITLE,
@@ -25,6 +31,7 @@ import {
   RESERVATION_IMPORT_COMMIT_LABEL,
   RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR,
   RESERVATION_IMPORT_COMMIT_REFETCH_ERROR,
+  RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
   RESERVATION_IMPORT_COMMIT_STALE_ERROR,
   RESERVATION_IMPORT_COMMIT_SUCCESS,
   RESERVATION_IMPORT_COMPLETED_TITLE,
@@ -43,9 +50,11 @@ import {
   RESERVATION_IMPORT_PRICE_BATCH_SUCCESS,
   RESERVATION_IMPORT_PRICE_ERROR,
   RESERVATION_IMPORT_PRICE_SUCCESS,
+  RESERVATION_IMPORT_READINESS_SUMMARY,
   RESERVATION_IMPORT_RECHECK_DESCRIPTION,
   RESERVATION_IMPORT_RECHECK_ERROR,
   RESERVATION_IMPORT_RECHECK_LABEL,
+  RESERVATION_IMPORT_RECHECK_RESET_HINT,
   RESERVATION_IMPORT_RECHECK_SUCCESS,
   RESERVATION_IMPORT_REFETCH_AFTER_DECISION_ERROR,
   RESERVATION_IMPORT_REVIEW_TITLE,
@@ -54,16 +63,23 @@ import {
   RESERVATION_IMPORT_VIEW_BOOKING_LABEL,
 } from "./reservation-import-copy";
 import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
+import { ReservationImportBulkConflictBar } from "./ReservationImportBulkConflictBar";
 import { ReservationImportDraftPreviewTable } from "./ReservationImportDraftPreviewTable";
 import { ReservationImportRejectedRowCard } from "./ReservationImportRejectedRowCard";
 import { ReservationImportReviewRowCard } from "./ReservationImportReviewRowCard";
 import { evaluateClientCommitEligibility } from "./reservation-import-commit-eligibility";
+import {
+  countNonSupersedeableConflictRows,
+  rowHasNonSupersedeableKeepCsvTarget,
+} from "./reservation-import-errors";
 import {
   bookingDrawerHref,
   collectCreatedBookingIds,
   computeReadinessCounts,
   countEligibleUnresolvedPrices,
   filterRowsForTab,
+  rowAllowsConflictDecision,
+  rowHasExistingBookingConflicts,
   tabCounts,
   type ReviewTabId,
 } from "./reservation-import-review-utils";
@@ -103,8 +119,12 @@ export function ReservationImportDraftPage() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [changeFileOpen, setChangeFileOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
+  const [bulkKeepCsvOpen, setBulkKeepCsvOpen] = useState(false);
   const [tab, setTab] = useState<ReviewTabId>("all");
   const [liveMessage, setLiveMessage] = useState("");
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
 
   const tenantGate = renderTenantGate({
     loading: tenantLoading,
@@ -182,12 +202,66 @@ export function ReservationImportDraftPage() {
   const counts = computeReadinessCounts(rows, rejectedRows);
   const tabs = tabCounts(rows, rejectedRows);
   const unresolvedEligible = countEligibleUnresolvedPrices(rows);
+  const conflictBookingsList = conflictBookings ?? [];
+  const nonSupersedeableCount = countNonSupersedeableConflictRows(
+    rows,
+    conflictBookingsList,
+  );
+  const conflictEligibleRows = rows.filter(
+    (r) => !isCompleted && rowAllowsConflictDecision(r),
+  );
+  const conflictEligibleIds = conflictEligibleRows.map((r) => r.id);
+  const selectedEligibleIds = conflictEligibleIds.filter((id) =>
+    selectedRowIds.has(id),
+  );
   const commitGate = evaluateClientCommitEligibility(detail, {
     refetchFailed,
-    mutationBusy: decisionBusy,
+    mutationBusy: decisionBusy || bulkBusy,
   });
   const canCommit = !isCompleted && commitGate.kind === "eligible";
   const previewCounts = commitGate.counts;
+
+  function toggleRowSelected(rowId: string, selected: boolean) {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(rowId);
+      else next.delete(rowId);
+      return next;
+    });
+  }
+
+  function handleBulkKeepExisting() {
+    if (selectedEligibleIds.length === 0) return;
+    void applyBulkDecision(selectedEligibleIds, "keep_existing");
+  }
+
+  function rowAllowsBulkKeepCsv(rowId: string): boolean {
+    const row = rows.find((r) => r.id === rowId);
+    if (!row || !rowAllowsConflictDecision(row)) return false;
+    if (!rowHasExistingBookingConflicts(row)) return true;
+    return !rowHasNonSupersedeableKeepCsvTarget(row, conflictBookingsList);
+  }
+
+  function handleBulkKeepCsvRequest() {
+    if (selectedEligibleIds.length === 0) return;
+    const replaceable = selectedEligibleIds.filter(rowAllowsBulkKeepCsv);
+    if (replaceable.length === 0) {
+      toastError(RESERVATION_IMPORT_BULK_NONE_ELIGIBLE);
+      setLiveMessage(RESERVATION_IMPORT_BULK_NONE_ELIGIBLE);
+      return;
+    }
+    setBulkKeepCsvOpen(true);
+  }
+
+  async function handleBulkKeepCsvConfirm() {
+    setBulkKeepCsvOpen(false);
+    const replaceableIds = selectedEligibleIds.filter(rowAllowsBulkKeepCsv);
+    if (replaceableIds.length === 0) {
+      toastError(RESERVATION_IMPORT_BULK_NONE_ELIGIBLE);
+      return;
+    }
+    await applyBulkDecision(replaceableIds, "keep_csv");
+  }
 
   async function handleDiscard(destination: "bookings" | "import" = "bookings") {
     const ok = await discard();
@@ -226,14 +300,25 @@ export function ReservationImportDraftPage() {
       return;
     }
     if (result.phase === "stale") {
-      toastError(RESERVATION_IMPORT_COMMIT_STALE_ERROR);
-      setLiveMessage(RESERVATION_IMPORT_COMMIT_STALE_ERROR);
+      const msg = result.operatorMessage ?? RESERVATION_IMPORT_COMMIT_STALE_ERROR;
+      toastError(msg);
+      setLiveMessage(`${msg} ${RESERVATION_IMPORT_RECHECK_RESET_HINT}`);
+      setSelectedRowIds(new Set());
+      setTab("action");
+      return;
+    }
+    if (result.phase === "replace_blocked") {
+      const msg =
+        result.operatorMessage ?? RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE;
+      toastError(msg);
+      setLiveMessage(msg);
       setTab("action");
       return;
     }
     if (result.phase === "not_ready") {
-      toastError(RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR);
-      setLiveMessage(RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR);
+      const msg = result.operatorMessage ?? RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR;
+      toastError(msg);
+      setLiveMessage(msg);
       setTab("action");
       return;
     }
@@ -245,8 +330,37 @@ export function ReservationImportDraftPage() {
     if (result.phase === "expired" || result.phase === "not_found") {
       return;
     }
-    toastError(RESERVATION_IMPORT_COMMIT_ERROR);
-    setLiveMessage(RESERVATION_IMPORT_COMMIT_ERROR);
+    toastError(result.operatorMessage ?? RESERVATION_IMPORT_COMMIT_ERROR);
+    setLiveMessage(result.operatorMessage ?? RESERVATION_IMPORT_COMMIT_ERROR);
+  }
+
+  async function applyBulkDecision(
+    rowIds: string[],
+    resolution: Exclude<ReservationImportConflictResolutionDto, "undecided">,
+  ) {
+    setBulkBusy(true);
+    setBulkProgress({ done: 0, total: rowIds.length });
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const rowId of rowIds) {
+        const result = await decideConflict(rowId, resolution);
+        if (result.ok) ok += 1;
+        else fail += 1;
+        setBulkProgress((p) => ({ ...p, done: p.done + 1 }));
+      }
+    } finally {
+      setBulkBusy(false);
+      setBulkProgress({ done: 0, total: 0 });
+      setSelectedRowIds(new Set());
+    }
+    if (fail === 0) {
+      toastSuccess(RESERVATION_IMPORT_BULK_SUCCESS(ok));
+      setLiveMessage(RESERVATION_IMPORT_BULK_SUCCESS(ok));
+    } else {
+      toastError(RESERVATION_IMPORT_BULK_PARTIAL(ok, fail));
+      setLiveMessage(RESERVATION_IMPORT_BULK_PARTIAL(ok, fail));
+    }
   }
 
   async function handleDecideConflict(
@@ -360,7 +474,8 @@ export function ReservationImportDraftPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={rechecking || refreshing || committing}
+                  disabled={rechecking || refreshing || committing || bulkBusy}
+                  title={RESERVATION_IMPORT_RECHECK_RESET_HINT}
                   onClick={() => void handleRecheck()}
                 >
                   {rechecking ? "Επανέλεγχος…" : RESERVATION_IMPORT_RECHECK_LABEL}
@@ -492,6 +607,9 @@ export function ReservationImportDraftPage() {
             title="Προεπισκόπηση κρατήσεων"
             description={RESERVATION_IMPORT_RECHECK_DESCRIPTION}
           />
+          <p className="text-xs text-muted-foreground" role="note">
+            {RESERVATION_IMPORT_RECHECK_RESET_HINT}
+          </p>
           <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -521,6 +639,14 @@ export function ReservationImportDraftPage() {
             counts={counts}
             unitLabel={unitLabel}
           />
+
+          <p className="text-sm text-muted-foreground" role="status" data-testid="import-readiness-summary">
+            {RESERVATION_IMPORT_READINESS_SUMMARY(
+              counts.ready,
+              counts.needAction,
+              nonSupersedeableCount,
+            )}
+          </p>
 
           {unresolvedEligible > 0 ? (
             <div className="space-y-2 rounded-md border bg-muted/20 p-3">
@@ -597,6 +723,26 @@ export function ReservationImportDraftPage() {
         </Surface>
       )}
 
+      {!isCompleted ? (
+        <ReservationImportBulkConflictBar
+          eligibleCount={conflictEligibleIds.length}
+          selectedCount={selectedEligibleIds.length}
+          allSelected={
+            conflictEligibleIds.length > 0 &&
+            conflictEligibleIds.every((id) => selectedRowIds.has(id))
+          }
+          busy={decisionBusy || bulkBusy}
+          progressDone={bulkProgress.done}
+          progressTotal={bulkProgress.total}
+          onToggleSelectAll={(selected) => {
+            setSelectedRowIds(selected ? new Set(conflictEligibleIds) : new Set());
+          }}
+          onClear={() => setSelectedRowIds(new Set())}
+          onBulkKeepExisting={handleBulkKeepExisting}
+          onBulkKeepCsv={handleBulkKeepCsvRequest}
+        />
+      ) : null}
+
       <Tabs
         value={tab}
         onValueChange={(v) => setTab(v as ReviewTabId)}
@@ -632,11 +778,14 @@ export function ReservationImportDraftPage() {
                     key={row.id}
                     row={row}
                     allRows={rows}
-                    conflictBookings={conflictBookings ?? []}
+                    conflictBookings={conflictBookingsList}
                     unitLabel={unitLabel}
                     decidingRowId={isCompleted ? null : decidingRowId}
                     pricingRowId={isCompleted ? null : pricingRowId}
-                    decisionBusy={isCompleted || decisionBusy}
+                    decisionBusy={isCompleted || decisionBusy || bulkBusy}
+                    selectable={!isCompleted && rowAllowsConflictDecision(row)}
+                    selected={selectedRowIds.has(row.id)}
+                    onSelectedChange={(selected) => toggleRowSelected(row.id, selected)}
                     onDecideConflict={handleDecideConflict}
                     onUseTalosPrice={handleUseTalosPrice}
                     onSaveManualPrice={handleSaveManualPrice}
@@ -710,6 +859,23 @@ export function ReservationImportDraftPage() {
             confirmLabel={RESERVATION_IMPORT_COMMIT_LABEL}
             loading={committing}
             onConfirm={handleCommit}
+          />
+          <ConfirmDialog
+            open={bulkKeepCsvOpen}
+            onOpenChange={(open) => {
+              if (!open && !bulkBusy) setBulkKeepCsvOpen(false);
+            }}
+            title={RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_TITLE}
+            description={RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_BODY(
+              selectedEligibleIds.length,
+              selectedEligibleIds.filter(rowAllowsBulkKeepCsv).length,
+              selectedEligibleIds.length -
+                selectedEligibleIds.filter(rowAllowsBulkKeepCsv).length,
+            )}
+            confirmLabel={RESERVATION_IMPORT_BULK_KEEP_CSV}
+            destructive
+            loading={bulkBusy}
+            onConfirm={() => void handleBulkKeepCsvConfirm()}
           />
         </>
       ) : null}

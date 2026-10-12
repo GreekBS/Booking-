@@ -108,6 +108,8 @@ export class GetReservationImportDraftUseCase {
           guestName: b.guest.name,
           checkIn: b.stayPeriod.checkIn.value,
           checkOut: b.stayPeriod.checkOut.value,
+          status: b.status,
+          isSuperseded: b.isSuperseded,
         } satisfies ReservationImportConflictBookingRecord,
       ]),
     );

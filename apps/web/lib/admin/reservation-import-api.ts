@@ -78,6 +78,8 @@ export interface ReservationImportConflictBookingDto {
   guestName: string;
   checkIn: string;
   checkOut: string;
+  status: string;
+  isSuperseded: boolean;
 }
 
 export interface ReservationImportDraftDetail {
@@ -136,7 +138,14 @@ export async function getReservationImportDraft(
   >(`/reservation-imports/${encodeURIComponent(batchId)}`, { tenantId });
   return {
     ...payload,
-    conflictBookings: payload.conflictBookings ?? [],
+    conflictBookings: (payload.conflictBookings ?? []).map((b) => ({
+      id: b.id,
+      guestName: b.guestName,
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
+      status: typeof b.status === "string" ? b.status : "unknown",
+      isSuperseded: Boolean(b.isSuperseded),
+    })),
   };
 }
 

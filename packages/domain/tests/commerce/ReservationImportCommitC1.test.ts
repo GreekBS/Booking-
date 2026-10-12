@@ -7,6 +7,7 @@ import {
 import { resolveFrozenImportCommitPrice } from "../../src/commerce/import/ReservationImportCommitPricing";
 import {
   assertKeepCsvReplaceTargetsValid,
+  evaluateKeepCsvReplaceTargets,
   scanImportCalendarConflicts,
 } from "../../src/commerce/import/ReservationImportCommitRevalidation";
 import {
@@ -408,6 +409,195 @@ describe("keep_csv replace target fail-closed", () => {
         targets: [a],
       }),
     ).toThrow(/stale/i);
+  });
+
+  it("accepts four completed replacement targets and rejects four confirmed", () => {
+    const batchId = randomUUID();
+    const completed = ["a1", "a2", "a3", "a4"].map((id) => completedBooking(id));
+    const rowOk = makeRow(batchId, {
+      status: "ready",
+      conflictResolution: "keep_csv",
+      replaceBookingIds: completed.map((b) => b.id),
+      unitId: villaProperty.units[0].id,
+    });
+    (rowOk as { tenantId: string }).tenantId = TENANT_ID;
+    expect(() =>
+      assertKeepCsvReplaceTargetsValid({
+        row: rowOk,
+        liveExistingBookingIds: completed.map((b) => b.id),
+        targets: completed,
+      }),
+    ).not.toThrow();
+
+    const confirmedTargets = ["c1", "c2", "c3", "c4"].map((id) => {
+      const hold = createHoldForUnit(
+        villaProperty.units[0].id,
+        villaProperty.id,
+        "2025-08-01",
+        "2025-08-04",
+        { holdId: `hold-${id}` },
+      );
+      const quote = Quote.createFromFixedTotal({
+        id: `q-${id}`,
+        snapshotId: `s-${id}`,
+        hold,
+        propertyTimezone: "Europe/Athens",
+        total: Money.create("10.00", "EUR"),
+        pricingMode: "imported_csv",
+        quotedAt: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+      });
+      const booking = Booking.create({
+        id,
+        hold,
+        quote,
+        guest: { name: "G", email: "g@t.com", phone: null },
+        confirmationMode: "manual",
+        now: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+      });
+      booking.confirm(new Date(HOLD_CREATED_AT.getTime() + 6_000));
+      booking.pullDomainEvents();
+      return booking;
+    });
+    const rowBad = makeRow(batchId, {
+      conflictResolution: "keep_csv",
+      replaceBookingIds: confirmedTargets.map((b) => b.id),
+      unitId: villaProperty.units[0].id,
+    });
+    (rowBad as { tenantId: string }).tenantId = TENANT_ID;
+    try {
+      assertKeepCsvReplaceTargetsValid({
+        row: rowBad,
+        liveExistingBookingIds: confirmedTargets.map((b) => b.id),
+        targets: confirmedTargets,
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ConflictError);
+      expect((e as ConflictError).conflictType).toBe(
+        "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+      );
+    }
+  });
+
+  it("rejects mixed completed+confirmed replace targets", () => {
+    const batchId = randomUUID();
+    const completed = completedBooking("m-ok");
+    const hold = createHoldForUnit(
+      villaProperty.units[0].id,
+      villaProperty.id,
+      "2025-08-01",
+      "2025-08-04",
+      { holdId: "hold-m-bad" },
+    );
+    const quote = Quote.createFromFixedTotal({
+      id: "q-m-bad",
+      snapshotId: "s-m-bad",
+      hold,
+      propertyTimezone: "Europe/Athens",
+      total: Money.create("10.00", "EUR"),
+      pricingMode: "imported_csv",
+      quotedAt: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    const confirmed = Booking.create({
+      id: "m-bad",
+      hold,
+      quote,
+      guest: { name: "G", email: "g@t.com", phone: null },
+      confirmationMode: "manual",
+      now: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    confirmed.confirm(new Date(HOLD_CREATED_AT.getTime() + 6_000));
+    confirmed.pullDomainEvents();
+
+    const rowMixed = makeRow(batchId, {
+      conflictResolution: "keep_csv",
+      replaceBookingIds: ["m-ok", "m-bad"],
+      unitId: villaProperty.units[0].id,
+    });
+    (rowMixed as { tenantId: string }).tenantId = TENANT_ID;
+    const issue = evaluateKeepCsvReplaceTargets({
+      row: rowMixed,
+      liveExistingBookingIds: ["m-ok", "m-bad"],
+      targets: [completed, confirmed],
+      requireLiveSetEquality: false,
+    });
+    expect(issue?.code).toBe("REPLACE_TARGET_NOT_SUPERSEDEABLE");
+    expect(issue?.bookingId).toBe("m-bad");
+  });
+
+  it("evaluateKeepCsvReplaceTargets shares preflight/commit codes without live equality", () => {
+    const batchId = randomUUID();
+    const completed = completedBooking("b-completed");
+    const hold = createHoldForUnit(
+      villaProperty.units[0].id,
+      villaProperty.id,
+      "2025-08-01",
+      "2025-08-04",
+    );
+    const quote = Quote.createFromFixedTotal({
+      id: "q-eval",
+      snapshotId: "s-eval",
+      hold,
+      propertyTimezone: "Europe/Athens",
+      total: Money.create("100.00", "EUR"),
+      pricingMode: "imported_csv",
+      quotedAt: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    const confirmedOnly = Booking.create({
+      id: "b-confirmed",
+      hold,
+      quote,
+      guest: { name: "G", email: "g@t.com", phone: null },
+      confirmationMode: "manual",
+      now: new Date(HOLD_CREATED_AT.getTime() + 5_000),
+    });
+    confirmedOnly.confirm(new Date(HOLD_CREATED_AT.getTime() + 6_000));
+    confirmedOnly.pullDomainEvents();
+
+    const rowConfirmed = makeRow(batchId, {
+      conflictResolution: "keep_csv",
+      replaceBookingIds: ["b-confirmed"],
+      unitId: villaProperty.units[0].id,
+    });
+    (rowConfirmed as { tenantId: string }).tenantId = TENANT_ID;
+
+    const issue = evaluateKeepCsvReplaceTargets({
+      row: rowConfirmed,
+      liveExistingBookingIds: ["b-confirmed"],
+      targets: [confirmedOnly],
+      requireLiveSetEquality: false,
+    });
+    expect(issue?.code).toBe("REPLACE_TARGET_NOT_SUPERSEDEABLE");
+    expect(issue?.bookingStatus).toBe("confirmed");
+
+    const rowOk = makeRow(batchId, {
+      conflictResolution: "keep_csv",
+      replaceBookingIds: [completed.id],
+      unitId: villaProperty.units[0].id,
+    });
+    (rowOk as { tenantId: string }).tenantId = TENANT_ID;
+    expect(
+      evaluateKeepCsvReplaceTargets({
+        row: rowOk,
+        liveExistingBookingIds: [completed.id],
+        targets: [completed],
+        requireLiveSetEquality: false,
+      }),
+    ).toBeNull();
+
+    try {
+      assertKeepCsvReplaceTargetsValid({
+        row: rowConfirmed,
+        liveExistingBookingIds: ["b-confirmed"],
+        targets: [confirmedOnly],
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ConflictError);
+      expect((e as ConflictError).conflictType).toBe(
+        "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+      );
+    }
   });
 });
 

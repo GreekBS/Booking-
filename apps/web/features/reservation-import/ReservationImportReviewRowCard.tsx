@@ -11,6 +11,7 @@ import type {
 import { ReservationImportConflictDecisionPanel } from "./ReservationImportConflictDecisionPanel";
 import { ReservationImportPriceDecisionPanel } from "./ReservationImportPriceDecisionPanel";
 import { RESERVATION_IMPORT_VIEW_BOOKING_LABEL } from "./reservation-import-copy";
+import { importRowOperatorErrorMessage } from "./reservation-import-errors";
 import {
   bookingDrawerHref,
   formatImportStayRange,
@@ -32,6 +33,9 @@ type Props = {
   decidingRowId?: string | null;
   pricingRowId?: string | null;
   decisionBusy?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
   onDecideConflict?: (
     rowId: string,
     resolution: Exclude<ReservationImportConflictResolutionDto, "undecided">,
@@ -48,6 +52,9 @@ export function ReservationImportReviewRowCard({
   decidingRowId = null,
   pricingRowId = null,
   decisionBusy = false,
+  selectable = false,
+  selected = false,
+  onSelectedChange,
   onDecideConflict,
   onUseTalosPrice,
   onSaveManualPrice,
@@ -60,6 +67,7 @@ export function ReservationImportReviewRowCard({
     rowHasPeerConflicts(row) ||
     row.conflictResolution !== "undecided";
   const showPricePanel = rowAllowsPriceDecision(row) && onUseTalosPrice && onSaveManualPrice;
+  const operatorError = importRowOperatorErrorMessage(row);
 
   const rowDeciding = decidingRowId === row.id;
   const rowPricing = pricingRowId === row.id;
@@ -67,13 +75,26 @@ export function ReservationImportReviewRowCard({
   return (
     <Surface variant="panel" padding="md" className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            #{row.rowNumber} · {row.guestName}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {row.externalReference} · {unitLabel(row.unitId)}
-          </p>
+        <div className="flex items-start gap-3">
+          {selectable ? (
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4"
+              checked={selected}
+              disabled={decisionBusy}
+              aria-label={`Επιλογή γραμμής ${row.rowNumber}`}
+              data-testid={`import-row-select-${row.id}`}
+              onChange={(e) => onSelectedChange?.(e.target.checked)}
+            />
+          ) : null}
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              #{row.rowNumber} · {row.guestName}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {row.externalReference} · {unitLabel(row.unitId)}
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {row.temporalClass === "historical" ? (
@@ -103,9 +124,9 @@ export function ReservationImportReviewRowCard({
         </div>
       </dl>
 
-      {row.errorCode || row.errorMessage ? (
+      {operatorError ? (
         <p className="text-sm text-destructive" role="alert">
-          {row.errorMessage ?? row.errorCode}
+          {operatorError}
         </p>
       ) : null}
 

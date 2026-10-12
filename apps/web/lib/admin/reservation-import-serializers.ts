@@ -13,6 +13,8 @@ export function serializeReservationImportConflictBooking(
     guestName: booking.guestName,
     checkIn: booking.checkIn,
     checkOut: booking.checkOut,
+    status: booking.status,
+    isSuperseded: booking.isSuperseded,
   };
 }
 

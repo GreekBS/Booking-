@@ -50,7 +50,10 @@ export const RESERVATION_IMPORT_RECHECK_DESCRIPTION =
   "Η διαθεσιμότητα και οι συγκρούσεις μπορεί να έχουν αλλάξει από την ανέβασμα του CSV.";
 
 export const RESERVATION_IMPORT_RECHECK_SUCCESS =
-  "Οι συγκρούσεις επανελέγχθηκαν. Ελέγξτε τις γραμμές που χρειάζονται ενέργεια.";
+  "Οι συγκρούσεις επανελέγχθηκαν. Οι προηγούμενες αποφάσεις σύγκρουσης μηδενίστηκαν — επιλέξτε ξανά όπου χρειάζεται.";
+
+export const RESERVATION_IMPORT_RECHECK_RESET_HINT =
+  "Ο επανέλεγχος μηδενίζει τις αποθηκευμένες αποφάσεις «Διατήρηση υπάρχουσας / Διατήρηση CSV» και επανυπολογίζει τις συγκρούσεις. Δεν δημιουργεί ούτε διαγράφει κρατήσεις.";
 
 export const RESERVATION_IMPORT_RECHECK_ERROR =
   "Αποτυχία επανελέγχου συγκρούσεων.";
@@ -101,6 +104,77 @@ export const RESERVATION_IMPORT_COMMIT_REFETCH_ERROR =
   "Η εισαγωγή μπορεί να πέτυχε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
 
 export const RESERVATION_IMPORT_COMMIT_BUSY_LABEL = "Εισαγωγή…";
+
+export const RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE =
+  "Τουλάχιστον μία υπάρχουσα κράτηση δεν μπορεί να αντικατασταθεί (μόνο ολοκληρωμένες κρατήσεις επιτρέπονται). Επιλέξτε «Διατήρηση υπάρχουσας» ή ολοκληρώστε την κράτηση πριν επαναλάβετε.";
+
+export const RESERVATION_IMPORT_COMMIT_REPLACE_STALE =
+  "Οι στόχοι αντικατάστασης δεν ταιριάζουν πλέον με το ημερολόγιο. Δεν δημιουργήθηκε καμία κράτηση. Πατήστε επανέλεγχο και επιλέξτε ξανά.";
+
+export const RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE = (statusLabel: string) =>
+  `Η υπάρχουσα κράτηση δεν μπορεί να αντικατασταθεί (κατάσταση: ${statusLabel}). Επιλέξτε «Διατήρηση υπάρχουσας» ή ολοκληρώστε την κράτηση πριν επιλέξετε «Διατήρηση CSV».`;
+
+export const RESERVATION_IMPORT_ROW_REPLACE_ALREADY_SUPERSEDED =
+  "Η υπάρχουσα κράτηση έχει ήδη αντικατασταθεί και δεν μπορεί να αντικατασταθεί ξανά. Επιλέξτε «Διατήρηση υπάρχουσας» ή επανελέγξτε.";
+
+export const RESERVATION_IMPORT_ROW_REPLACE_NOT_FOUND =
+  "Η υπάρχουσα κράτηση προς αντικατάσταση δεν βρέθηκε. Επανελέγξτε τις συγκρούσεις.";
+
+export const RESERVATION_IMPORT_BULK_SELECTED = (count: number) =>
+  `${count} επιλεγμένες συγκρούσεις`;
+
+export const RESERVATION_IMPORT_BULK_SELECT_ALL = "Επιλογή όλων";
+
+export const RESERVATION_IMPORT_BULK_CLEAR = "Καθαρισμός";
+
+export const RESERVATION_IMPORT_BULK_KEEP_EXISTING = "Μαζική διατήρηση υπάρχουσας";
+
+export const RESERVATION_IMPORT_BULK_KEEP_CSV = "Μαζική διατήρηση CSV";
+
+export const RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_TITLE =
+  "Μαζική διατήρηση CSV;";
+
+export const RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_BODY = (
+  selected: number,
+  replaceable: number,
+  blocked: number,
+) => {
+  const parts = [
+    `Θα εφαρμοστεί «Διατήρηση CSV» σε ${replaceable} από ${selected} επιλεγμένες γραμμές.`,
+    blocked > 0
+      ? `${blocked} γραμμές εξαιρούνται επειδή η υπάρχουσα κράτηση δεν μπορεί να αντικατασταθεί νόμιμα.`
+      : null,
+    "Η τελική αντικατάσταση θα γίνει μόνο κατά την ολοκλήρωση της εισαγωγής.",
+  ];
+  return parts.filter(Boolean).join(" ");
+};
+
+export const RESERVATION_IMPORT_BULK_PROGRESS = (done: number, total: number) =>
+  `Εφαρμογή αποφάσεων… ${done}/${total}`;
+
+export const RESERVATION_IMPORT_BULK_PARTIAL = (ok: number, fail: number) =>
+  `Ολοκληρώθηκαν ${ok} αποφάσεις. Αποτυχία σε ${fail} γραμμές — ελέγξτε τα μηνύματα και δοκιμάστε ξανά.`;
+
+export const RESERVATION_IMPORT_BULK_SUCCESS = (ok: number) =>
+  `Αποθηκεύτηκαν ${ok} αποφάσεις σύγκρουσης.`;
+
+export const RESERVATION_IMPORT_BULK_NONE_ELIGIBLE =
+  "Καμία από τις επιλεγμένες γραμμές δεν μπορεί να λάβει «Διατήρηση CSV» αυτή τη στιγμή.";
+
+export const RESERVATION_IMPORT_READINESS_SUMMARY = (
+  ready: number,
+  needAction: number,
+  nonSupersedeable: number,
+) => {
+  const parts = [
+    `Έτοιμες: ${ready}`,
+    `Χρειάζονται ενέργεια: ${needAction}`,
+    nonSupersedeable > 0
+      ? `Μη αντικαταστάσιμες υπάρχουσες: ${nonSupersedeable}`
+      : null,
+  ];
+  return parts.filter(Boolean).join(" · ");
+};
 
 export const RESERVATION_IMPORT_COMPLETED_TITLE = "Η εισαγωγή ολοκληρώθηκε";
 

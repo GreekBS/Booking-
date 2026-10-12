@@ -87,49 +87,127 @@ export function assertAvailabilityAllowsImport(
   }
 }
 
+/** Stable machine codes for keep_csv replace-target validation (UI maps to Greek). */
+export type KeepCsvReplaceTargetIssueCode =
+  | "REPLACE_TARGETS_STALE"
+  | "REPLACE_TARGET_NOT_FOUND"
+  | "REPLACE_TARGET_TENANT_MISMATCH"
+  | "REPLACE_TARGET_UNIT_MISMATCH"
+  | "REPLACE_TARGET_NOT_SUPERSEDEABLE"
+  | "REPLACE_TARGET_ALREADY_SUPERSEDED";
+
+export interface KeepCsvReplaceTargetIssue {
+  code: KeepCsvReplaceTargetIssueCode;
+  bookingId?: string;
+  bookingStatus?: string;
+}
+
+/**
+ * Shared keep_csv replace-target rules for draft preflight and commit.
+ * Only `completed` + non-superseded bookings may be replaced (policy unchanged).
+ */
+export function evaluateKeepCsvReplaceTargets(input: {
+  row: ReservationImportRowRecord;
+  liveExistingBookingIds: string[];
+  targets: Booking[];
+  /** Commit must match live calendar overlaps; preflight may skip. */
+  requireLiveSetEquality?: boolean;
+}): KeepCsvReplaceTargetIssue | null {
+  const requireLiveSetEquality = input.requireLiveSetEquality !== false;
+  const expected = [...(input.row.replaceBookingIds ?? [])].sort();
+  const live = [...input.liveExistingBookingIds].sort();
+
+  if (requireLiveSetEquality && !setsEqual(expected, live)) {
+    return { code: "REPLACE_TARGETS_STALE" };
+  }
+
+  const byId = new Map(input.targets.map((b) => [b.id, b]));
+  for (const id of expected) {
+    const booking = byId.get(id);
+    if (!booking) {
+      return { code: "REPLACE_TARGET_NOT_FOUND", bookingId: id };
+    }
+    if (booking.tenantId !== input.row.tenantId) {
+      return {
+        code: "REPLACE_TARGET_TENANT_MISMATCH",
+        bookingId: id,
+        bookingStatus: booking.status,
+      };
+    }
+    if (booking.unitId !== input.row.unitId) {
+      return {
+        code: "REPLACE_TARGET_UNIT_MISMATCH",
+        bookingId: id,
+        bookingStatus: booking.status,
+      };
+    }
+    if (booking.status !== "completed") {
+      return {
+        code: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+        bookingId: id,
+        bookingStatus: booking.status,
+      };
+    }
+    if (booking.isSuperseded) {
+      return {
+        code: "REPLACE_TARGET_ALREADY_SUPERSEDED",
+        bookingId: id,
+        bookingStatus: booking.status,
+      };
+    }
+  }
+  return null;
+}
+
 export function assertKeepCsvReplaceTargetsValid(input: {
   row: ReservationImportRowRecord;
   liveExistingBookingIds: string[];
   targets: Booking[];
 }): void {
-  const { row, liveExistingBookingIds, targets } = input;
-  const expected = [...(row.replaceBookingIds ?? [])].sort();
-  const live = [...liveExistingBookingIds].sort();
+  const issue = evaluateKeepCsvReplaceTargets({
+    ...input,
+    requireLiveSetEquality: true,
+  });
+  if (!issue) return;
 
-  if (!setsEqual(expected, live)) {
-    throw new ConflictError(
-      `Import commit blocked: row ${row.rowNumber} replaceBookingIds are stale — recheck required`,
-    );
-  }
-
-  const byId = new Map(targets.map((b) => [b.id, b]));
-  for (const id of expected) {
-    const booking = byId.get(id);
-    if (!booking) {
+  const rowNo = input.row.rowNumber;
+  const id = issue.bookingId ?? "?";
+  switch (issue.code) {
+    case "REPLACE_TARGETS_STALE":
       throw new ConflictError(
-        `Import commit blocked: row ${row.rowNumber} replace target ${id} not found`,
+        `Import commit blocked: row ${rowNo} replaceBookingIds are stale — recheck required`,
+        issue.code,
       );
-    }
-    if (booking.tenantId !== row.tenantId) {
+    case "REPLACE_TARGET_NOT_FOUND":
       throw new ConflictError(
-        `Import commit blocked: row ${row.rowNumber} replace target ${id} tenant mismatch`,
+        `Import commit blocked: row ${rowNo} replace target ${id} not found`,
+        issue.code,
       );
-    }
-    if (booking.unitId !== row.unitId) {
+    case "REPLACE_TARGET_TENANT_MISMATCH":
       throw new ConflictError(
-        `Import commit blocked: row ${row.rowNumber} replace target ${id} unit mismatch`,
+        `Import commit blocked: row ${rowNo} replace target ${id} tenant mismatch`,
+        issue.code,
       );
-    }
-    if (booking.status !== "completed") {
+    case "REPLACE_TARGET_UNIT_MISMATCH":
       throw new ConflictError(
-        `Import commit blocked: row ${row.rowNumber} replace target ${id} is not supersedeable (status: ${booking.status}) — recheck required`,
+        `Import commit blocked: row ${rowNo} replace target ${id} unit mismatch`,
+        issue.code,
       );
-    }
-    if (booking.isSuperseded) {
+    case "REPLACE_TARGET_NOT_SUPERSEDEABLE":
       throw new ConflictError(
-        `Import commit blocked: row ${row.rowNumber} replace target ${id} is already superseded — recheck required`,
+        `Import commit blocked: row ${rowNo} replace target ${id} is not supersedeable (status: ${issue.bookingStatus}) — recheck required`,
+        issue.code,
       );
-    }
+    case "REPLACE_TARGET_ALREADY_SUPERSEDED":
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNo} replace target ${id} is already superseded — recheck required`,
+        issue.code,
+      );
+    default:
+      throw new ConflictError(
+        `Import commit blocked: row ${rowNo} replace targets invalid`,
+        "REPLACE_TARGETS_STALE",
+      );
   }
 }
 

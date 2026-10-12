@@ -1534,6 +1534,7 @@ export const createReservationImportDraftUseCase =
     reservationImportPricingPort,
     idGenerator,
     permissionChecker,
+    bookingRepository,
   );
 
 export const listReservationImportDraftsUseCase =

@@ -129,6 +129,10 @@ export interface ReservationImportConflictBookingRecord {
   guestName: string;
   checkIn: string;
   checkOut: string;
+  /** Booking lifecycle status — used to explain non-supersedeable keep_csv targets. */
+  status: string;
+  /** True when already superseded and cannot be replaced again. */
+  isSuperseded: boolean;
 }
 
 /** Durable create-time exclusions that never became reservation_import_rows. */

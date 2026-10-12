@@ -67,11 +67,17 @@ export function apiError(error: unknown): NextResponse {
       PERSISTENCE_CORRUPTION: 500,
     };
 
+    const conflictType =
+      "conflictType" in error && typeof (error as { conflictType?: unknown }).conflictType === "string"
+        ? (error as { conflictType: string }).conflictType
+        : undefined;
+
     return NextResponse.json(
       {
         error: {
           code: error.code,
           message: error.message,
+          ...(conflictType ? { details: { conflictType } } : {}),
         },
       } satisfies ApiErrorBody,
       { status: statusMap[error.code] ?? 400 },

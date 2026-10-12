@@ -6,6 +6,7 @@ import type { IIdGenerator } from "../../shared/ports/IIdGenerator";
 import { PERMISSIONS } from "@hcp/permissions";
 import type {
   IAvailabilityRulesRepository,
+  IBookingRepository,
   ICalendarBlockRepository,
   ICatalogQueryPort,
   ITimezoneService,
@@ -41,6 +42,10 @@ import {
   buildRejectedRowPayload,
   isImportAvailabilityNonFatalCode,
 } from "./ReservationImportExclusivity";
+import {
+  evaluateKeepCsvReplaceTargets,
+  type KeepCsvReplaceTargetIssue,
+} from "./ReservationImportCommitRevalidation";
 import { StayPeriod } from "../shared/value-objects/StayPeriod";
 import type { ReservationImportRejectedRowRecord } from "./ReservationImportTypes";
 
@@ -88,6 +93,8 @@ export class CreateReservationImportDraftUseCase {
     private readonly pricing: ReservationImportPricingPort,
     private readonly idGenerator: IIdGenerator,
     private readonly permissionChecker: PermissionChecker = new PermissionChecker(),
+    /** Optional for legacy tests; Production DI always injects bookings. */
+    private readonly bookings: IBookingRepository | null = null,
   ) {
     this.availability = new StayAvailabilityEngine(
       catalog,
@@ -547,6 +554,25 @@ export class CreateReservationImportDraftUseCase {
             ));
         const peerConflictsResolved = arePeerConflictsResolved(row, rows, snapshot);
 
+        let replaceTargetIssue: KeepCsvReplaceTargetIssue | null = null;
+        if (
+          row.conflictResolution === "keep_csv" &&
+          (row.replaceBookingIds?.length ?? 0) > 0 &&
+          this.bookings
+        ) {
+          const replaceIds = [...(row.replaceBookingIds ?? [])];
+          const targets = await this.bookings.findByIds(replaceIds, tenantId);
+          replaceTargetIssue = evaluateKeepCsvReplaceTargets({
+            row: {
+              ...row,
+              replaceBookingIds: replaceIds,
+            },
+            liveExistingBookingIds: replaceIds,
+            targets,
+            requireLiveSetEquality: false,
+          });
+        }
+
         if (snapshot.nonBookingBlockers.length > 0) {
           status = "failed";
           errorCode = `BLOCKED_BY_${snapshot.nonBookingBlockers[0]!.blockType.toUpperCase()}`;
@@ -555,6 +581,14 @@ export class CreateReservationImportDraftUseCase {
           status = "skipped";
           errorCode = "KEEP_EXISTING";
           errorMessage = "Operator chose to keep existing occupancy";
+        } else if (replaceTargetIssue) {
+          // Keep keep_csv decision; block readiness until operator chooses keep_existing
+          // or the replace target becomes completed.
+          status = "pending";
+          errorCode = replaceTargetIssue.code;
+          errorMessage = replaceTargetIssue.bookingStatus
+            ? `${replaceTargetIssue.code}:${replaceTargetIssue.bookingStatus}`
+            : replaceTargetIssue.code;
         } else if (
           bookingConflictsResolved &&
           peerConflictsResolved &&

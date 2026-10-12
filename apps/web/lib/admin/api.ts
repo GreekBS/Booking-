@@ -3,6 +3,7 @@ export class AdminApiError extends Error {
     public code: string,
     message: string,
     public status: number,
+    public details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "AdminApiError";
@@ -37,7 +38,11 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
   });
 
   const payload = (await response.json()) as {
-    error?: { code?: string; message?: string };
+    error?: {
+      code?: string;
+      message?: string;
+      details?: Record<string, unknown>;
+    };
   } & T;
 
   if (!response.ok) {
@@ -45,6 +50,7 @@ export async function adminFetch<T>(path: string, options: AdminFetchOptions = {
       payload.error?.code ?? "REQUEST_FAILED",
       payload.error?.message ?? "Request failed",
       response.status,
+      payload.error?.details,
     );
   }
 

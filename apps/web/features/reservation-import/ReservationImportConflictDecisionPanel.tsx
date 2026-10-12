@@ -19,7 +19,12 @@ import {
   RESERVATION_IMPORT_KEEP_CSV_LABEL,
   RESERVATION_IMPORT_KEEP_CSV_NOT_YET_REPLACED,
   RESERVATION_IMPORT_KEEP_EXISTING_LABEL,
+  RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE,
 } from "./reservation-import-copy";
+import {
+  bookingStatusLabelEl,
+  conflictBookingIsSupersedeable,
+} from "./reservation-import-errors";
 import {
   conflictBookingsForRow,
   conflictResolutionLabel,
@@ -98,6 +103,16 @@ export function ReservationImportConflictDecisionPanel({
   const resolution = row.conflictResolution;
   const existingCount = Math.max(bookings.length, snap.existingBookingIds.length);
   const controlsDisabled = disabled || deciding;
+  const keepCsvBlockedByStatus =
+    hasExisting &&
+    (bookings.length > 0
+      ? bookings.some((b) => !conflictBookingIsSupersedeable(b))
+      : false);
+  const blockedStatusLabel = bookings.find((b) => !conflictBookingIsSupersedeable(b))
+    ? bookingStatusLabelEl(
+        bookings.find((b) => !conflictBookingIsSupersedeable(b))!.status,
+      )
+    : "μη ολοκληρωμένη";
 
   if (hardBlocked) {
     return (
@@ -256,7 +271,7 @@ export function ReservationImportConflictDecisionPanel({
             type="button"
             size="sm"
             variant={resolution === "keep_csv" ? "default" : "outline"}
-            disabled={controlsDisabled}
+            disabled={controlsDisabled || keepCsvBlockedByStatus}
             aria-pressed={resolution === "keep_csv"}
             aria-label={`${RESERVATION_IMPORT_KEEP_CSV_LABEL} για γραμμή ${row.rowNumber}`}
             onClick={() => setConfirmOpen(true)}
@@ -264,6 +279,12 @@ export function ReservationImportConflictDecisionPanel({
             {RESERVATION_IMPORT_KEEP_CSV_LABEL}
           </Button>
         </div>
+      ) : null}
+
+      {keepCsvBlockedByStatus ? (
+        <p className="text-sm text-amber-800 dark:text-amber-200" role="status">
+          {RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE(blockedStatusLabel)}
+        </p>
       ) : null}
 
       <ConfirmDialog
