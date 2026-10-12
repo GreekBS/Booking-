@@ -306,6 +306,21 @@ describe("CommerceUseCases", () => {
       );
     });
 
+    it("keeps payment_pending for payment_required confirmation mode", async () => {
+      const result = await useCase.execute(
+        {
+          tenantId: "tenant-1",
+          quoteId: "quote-1",
+          guest: { name: "Guest", email: "guest@test.com", phone: null },
+          confirmationMode: "payment_required",
+        },
+        adminActor,
+      );
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().status).toBe("payment_pending");
+    });
+
     it("rejects storefront-supplied guestId", async () => {
       const result = await useCase.execute(
         {

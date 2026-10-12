@@ -77,6 +77,7 @@ runIntegration("Reservation import B3.3a", () => {
     permissionChecker,
     bookingRepository,
     emptyReplaceDeps,
+    createDraft,
   );
   const discardDraft = new DiscardReservationImportDraftUseCase(imports, permissionChecker);
   const updateDecision = new UpdateReservationImportRowDecisionUseCase(

@@ -16,6 +16,7 @@ import {
   RESERVATION_IMPORT_ROW_REPLACE_DEPS_UNAVAILABLE,
   RESERVATION_IMPORT_ROW_REPLACE_NOT_FOUND,
   RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE,
+  RESERVATION_IMPORT_ROW_REPLACE_STALE_ELIGIBILITY,
 } from "./reservation-import-copy";
 
 const REPLACE_ISSUE_CODES = new Set([
@@ -61,8 +62,12 @@ export function importRowOperatorErrorMessage(row: ReservationImportRowDto): str
   if (code === "REPLACE_TARGET_NOT_SUPERSEDEABLE") {
     const status =
       row.errorMessage?.includes(":") === true
-        ? row.errorMessage.split(":").slice(1).join(":")
+        ? row.errorMessage.split(":").slice(1).join(":").trim()
         : "unknown";
+    // Never claim confirmed/completed are both forbidden and allowed.
+    if (status === "confirmed" || status === "completed") {
+      return RESERVATION_IMPORT_ROW_REPLACE_STALE_ELIGIBILITY;
+    }
     return RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE(bookingStatusLabelEl(status));
   }
   if (code === "REPLACE_TARGET_ALREADY_SUPERSEDED") {
@@ -123,7 +128,11 @@ export function rowHasNonSupersedeableKeepCsvTarget(
     REPLACE_ISSUE_CODES.has(row.errorCode) &&
     row.errorCode !== "REPLACE_TARGETS_STALE"
   ) {
-    return true;
+    // Stale pre-rule residue: NOT_SUPERSEDEABLE:confirmed|completed must not
+    // override live enrichment that now marks the target supersedeable.
+    if (!isStaleConfirmedOrCompletedNotSupersedeable(row)) {
+      return true;
+    }
   }
   const snap = parseConflictSnapshot(row.conflictSnapshot);
   if (snap.existingBookingIds.length === 0) return false;
@@ -139,6 +148,15 @@ export function rowHasNonSupersedeableKeepCsvTarget(
  * Persisted `ready` can be stale vs live conflict enrichment (status/deps).
  * Used so UI readiness / Import gate never overstates eligibility.
  */
+function isStaleConfirmedOrCompletedNotSupersedeable(row: ReservationImportRowDto): boolean {
+  if (row.errorCode !== "REPLACE_TARGET_NOT_SUPERSEDEABLE") return false;
+  const status =
+    row.errorMessage?.includes(":") === true
+      ? row.errorMessage.split(":").slice(1).join(":").trim()
+      : "";
+  return status === "confirmed" || status === "completed";
+}
+
 export function rowLooksReadyForImport(
   row: ReservationImportRowDto,
   conflictBookings: ReservationImportConflictBookingDto[],
@@ -147,7 +165,13 @@ export function rowLooksReadyForImport(
   if (row.conflictResolution === "keep_csv") {
     if (rowHasNonSupersedeableKeepCsvTarget(row, conflictBookings)) return false;
   }
-  if (row.errorCode && REPLACE_ISSUE_CODES.has(row.errorCode)) return false;
+  if (
+    row.errorCode &&
+    REPLACE_ISSUE_CODES.has(row.errorCode) &&
+    !isStaleConfirmedOrCompletedNotSupersedeable(row)
+  ) {
+    return false;
+  }
   return true;
 }
 

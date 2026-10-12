@@ -11,10 +11,12 @@ import {
   importRowOperatorErrorMessage,
   mapCommitFailureToOperatorMessage,
   rowHasNonSupersedeableKeepCsvTarget,
+  rowLooksReadyForImport,
 } from "@/features/reservation-import/reservation-import-errors";
 import {
   RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
   RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE,
+  RESERVATION_IMPORT_ROW_REPLACE_STALE_ELIGIBILITY,
 } from "@/features/reservation-import/reservation-import-copy";
 
 const root = join(__dirname, "..");
@@ -69,17 +71,54 @@ function row(partial: Partial<ReservationImportRowDto> = {}): ReservationImportR
 }
 
 describe("reservation-import readiness + bulk (Phase A/B)", () => {
-  it("maps REPLACE_TARGET_NOT_SUPERSEDEABLE to Greek without English dumps", () => {
+  it("maps stale REPLACE_TARGET_NOT_SUPERSEDEABLE:confirmed without contradictory Greek", () => {
     const message = importRowOperatorErrorMessage(
       row({
         errorCode: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
         errorMessage: "REPLACE_TARGET_NOT_SUPERSEDEABLE:confirmed",
       }),
     );
-    expect(message).toBe(
-      RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE("επιβεβαιωμένη"),
-    );
+    expect(message).toBe(RESERVATION_IMPORT_ROW_REPLACE_STALE_ELIGIBILITY);
+    expect(message).not.toMatch(/επιτρέπονται μόνο επιβεβαιωμένες/);
     expect(message).not.toMatch(/Import commit blocked/i);
+  });
+
+  it("maps REPLACE_TARGET_NOT_SUPERSEDEABLE:pending to keep-existing Greek", () => {
+    const message = importRowOperatorErrorMessage(
+      row({
+        errorCode: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+        errorMessage: "REPLACE_TARGET_NOT_SUPERSEDEABLE:pending",
+      }),
+    );
+    expect(message).toBe(
+      RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE("εκκρεμής"),
+    );
+  });
+
+  it("does not treat stale NOT_SUPERSEDEABLE:confirmed as hard block when live target is clear", () => {
+    const confirmed: ReservationImportConflictBookingDto[] = [
+      {
+        id: "bk1",
+        guestName: "A",
+        checkIn: "2026-12-01",
+        checkOut: "2026-12-05",
+        status: "confirmed",
+        isSuperseded: false,
+        hasChannelLink: false,
+        hasPayments: false,
+        hasFolio: false,
+        depsUnavailable: false,
+      },
+    ];
+    const stale = row({
+      conflictResolution: "keep_csv",
+      status: "pending",
+      errorCode: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+      errorMessage: "REPLACE_TARGET_NOT_SUPERSEDEABLE:confirmed",
+      replaceBookingIds: ["bk1"],
+    });
+    expect(rowHasNonSupersedeableKeepCsvTarget(stale, confirmed)).toBe(false);
+    expect(rowLooksReadyForImport({ ...stale, status: "ready" }, confirmed)).toBe(true);
   });
 
   it("treats confirmed/completed as supersedeable and pending as blocked", () => {

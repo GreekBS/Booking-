@@ -117,6 +117,10 @@ export const RESERVATION_IMPORT_COMMIT_REPLACE_STALE =
 export const RESERVATION_IMPORT_ROW_REPLACE_NOT_SUPERSEDEABLE = (statusLabel: string) =>
   `Η υπάρχουσα κράτηση δεν μπορεί να αντικατασταθεί (κατάσταση: ${statusLabel}). Επιλέξτε «Διατήρηση υπάρχουσας» — επιτρέπονται μόνο επιβεβαιωμένες ή ολοκληρωμένες κρατήσεις.`;
 
+/** Stale residue when error claims confirmed/completed is not supersedeable (pre-rule drafts). */
+export const RESERVATION_IMPORT_ROW_REPLACE_STALE_ELIGIBILITY =
+  "Η αποθηκευμένη ένδειξη αποκλεισμού αντικατάστασης είναι παρωχημένη. Ανανεώστε τη σελίδα για επανυπολογισμό — η απόφαση «Διατήρηση CSV» διατηρείται.";
+
 export const RESERVATION_IMPORT_ROW_REPLACE_ALREADY_SUPERSEDED =
   "Η υπάρχουσα κράτηση έχει ήδη αντικατασταθεί και δεν μπορεί να αντικατασταθεί ξανά. Επιλέξτε «Διατήρηση υπάρχουσας» ή επανελέγξτε.";
 

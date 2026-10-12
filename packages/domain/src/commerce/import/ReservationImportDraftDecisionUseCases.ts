@@ -60,6 +60,13 @@ export class GetReservationImportDraftUseCase {
     private readonly permissionChecker: PermissionChecker = new PermissionChecker(),
     private readonly bookings?: IBookingRepository,
     private readonly replaceDeps?: KeepCsvReplaceTargetDependencyProbe | null,
+    /**
+     * When present, draft GET re-runs preflight to clear stale replace eligibility
+     * (e.g. REPLACE_TARGET_NOT_SUPERSEDEABLE:confirmed from older rules) while
+     * preserving operator conflict decisions including keep_csv.
+     * Does not perform Recheck's decision invalidation.
+     */
+    private readonly createDraft?: CreateReservationImportDraftUseCase,
   ) {}
 
   async execute(
@@ -85,7 +92,19 @@ export class GetReservationImportDraftUseCase {
       if (!canResumeReservationImportDraft(batch, now) && batch.status === "draft") {
         return Result.fail(new ValidationError("Import draft has expired"));
       }
-      const rows = await this.imports.listRowsForBatch(batchId, tenantId);
+      let rows = await this.imports.listRowsForBatch(batchId, tenantId);
+      if (
+        this.createDraft &&
+        batch.status === "draft" &&
+        canResumeReservationImportDraft(batch, now)
+      ) {
+        rows = await this.createDraft.preflightRows({
+          tenantId,
+          rows,
+          missingPriceStrategy: batch.missingPriceStrategy,
+          now,
+        });
+      }
       const rejectedRows = await this.imports.listRejectedRowsForBatch(batchId, tenantId);
       const conflictBookings = await this.loadConflictBookings(rows, tenantId);
       return Result.ok({ batch, rows, rejectedRows, conflictBookings });

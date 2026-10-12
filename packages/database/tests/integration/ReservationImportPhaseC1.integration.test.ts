@@ -7,6 +7,7 @@ import {
   PricingCalculator,
   CreateReservationImportDraftUseCase,
   UpdateReservationImportRowDecisionUseCase,
+  GetReservationImportDraftUseCase,
   CommitReservationImportBatchUseCase,
   PermissionChecker,
   ResolveOrCreateGuest,
@@ -89,6 +90,13 @@ runIntegration("Reservation import Phase C1 commit", () => {
     createDraft,
     permissionChecker,
     pricing,
+  );
+  const getDraft = new GetReservationImportDraftUseCase(
+    imports,
+    permissionChecker,
+    bookingRepository,
+    emptyReplaceDeps,
+    createDraft,
   );
   const commit = new CommitReservationImportBatchUseCase(
     imports,
@@ -683,6 +691,86 @@ runIntegration("Reservation import Phase C1 commit", () => {
     const superseded = await bookingRepository.findById(liveId, tenantA);
     expect(superseded!.isSuperseded).toBe(true);
     expect(superseded!.status).toBe("confirmed");
+  });
+
+  it("11a) GetDraft soft-refresh clears stale NOT_SUPERSEDEABLE:confirmed and preserves keep_csv", async () => {
+    const liveId = "550e8400-e29b-41d4-a716-446655440903";
+    await createConfirmedBooking({
+      tenantId: tenantA,
+      propertyId: propertyA,
+      unitId: unitA,
+      bookingId: liveId,
+      checkIn: "2026-12-01",
+      checkOut: "2026-12-05",
+    });
+
+    const csv = [
+      "external_reference,unit,guest_name,guest_email,check_in,check_out,guests,total,currency",
+      `C1-STALE-ELIG,${unitA},S,s@test.com,2026-12-01,2026-12-05,2,500,EUR`,
+    ].join("\n");
+    const created = await createDraft.execute(
+      {
+        tenantId: tenantA,
+        propertyId: propertyA,
+        filename: "stale-elig.csv",
+        content: csv,
+        dateFormat: "iso",
+        now: new Date("2026-10-04T08:00:00.000Z"),
+      },
+      actor,
+    );
+    const row = created.getValue().rows[0]!;
+    await updateDecision.execute(
+      {
+        batchId: created.getValue().batch.id,
+        rowId: row.id,
+        tenantId: tenantA,
+        conflictResolution: "keep_csv",
+        now: new Date("2026-10-04T08:30:00.000Z"),
+      },
+      actor,
+    );
+
+    // Simulate pre-deploy persisted residue that contradicted confirmed eligibility.
+    await imports.updateRow(
+      row.id,
+      tenantA,
+      {
+        status: "pending",
+        errorCode: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+        errorMessage: "REPLACE_TARGET_NOT_SUPERSEDEABLE:confirmed",
+        conflictResolution: "keep_csv",
+        replaceBookingIds: [liveId],
+        replaceBookingId: liveId,
+      },
+      new Date("2026-10-04T08:40:00.000Z"),
+    );
+
+    const refreshed = await getDraft.execute(
+      created.getValue().batch.id,
+      tenantA,
+      actor,
+      new Date("2026-10-04T08:50:00.000Z"),
+    );
+    expect(refreshed.isSuccess).toBe(true);
+    const outRow = refreshed.getValue().rows[0]!;
+    expect(outRow.conflictResolution).toBe("keep_csv");
+    expect(outRow.replaceBookingIds).toEqual([liveId]);
+    expect(outRow.status).toBe("ready");
+    expect(outRow.errorCode).toBeNull();
+
+    const committed = await commit.execute(
+      created.getValue().batch.id,
+      tenantA,
+      actor,
+      new Date("2026-10-04T09:00:00.000Z"),
+    );
+    expect(committed.isSuccess).toBe(true);
+    const createdId = committed.getValue().rows[0]!.createdBookingId!;
+    const successor = await bookingRepository.findById(createdId, tenantA);
+    expect(successor!.status).toBe("confirmed");
+    const superseded = await bookingRepository.findById(liveId, tenantA);
+    expect(superseded!.isSuperseded).toBe(true);
   });
 
   it("11b) confirmed keep_csv blocked when payments/folios/channel links exist", async () => {

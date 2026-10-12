@@ -6,6 +6,7 @@ import type { IReservationImportRepository } from "../../src/commerce/import/IRe
 import type { ReservationImportBatchRecord, ReservationImportRowRecord } from "../../src/commerce/import/ReservationImportTypes";
 import type { IBookingRepository } from "../../src/commerce/ports/CommercePorts";
 import type { ActorContext } from "../../src/shared/services/PermissionChecker";
+import { mutationOriginOperator } from "../../src/shared/types/MutationOrigin";
 
 const actor: ActorContext = { userId: "actor-1", role: "admin", propertyIds: null };
 
@@ -166,5 +167,61 @@ describe("B3.3b GetReservationImportDraftUseCase conflictBookings", () => {
     const result = await get.execute(batch.id, "tenant-a", actor, now);
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().conflictBookings).toEqual([]);
+  });
+
+  it("soft-refreshes stale keep_csv NOT_SUPERSEDEABLE:confirmed via preflight without resetting decision", async () => {
+    const batch = makeBatch("batch-stale");
+    const bookingId = "550e8400-e29b-41d4-a716-446655440203";
+    const staleRow = {
+      ...makeRow(batch.id, bookingId),
+      conflictResolution: "keep_csv" as const,
+      replaceBookingIds: [bookingId],
+      replaceBookingId: bookingId,
+      status: "pending" as const,
+      errorCode: "REPLACE_TARGET_NOT_SUPERSEDEABLE",
+      errorMessage: "REPLACE_TARGET_NOT_SUPERSEDEABLE:confirmed",
+    };
+    const refreshedRow = {
+      ...staleRow,
+      status: "ready" as const,
+      errorCode: null,
+      errorMessage: null,
+    };
+
+    const imports = {
+      findBatchById: vi.fn(async () => batch),
+      listRowsForBatch: vi.fn(async () => [staleRow]),
+      listRejectedRowsForBatch: vi.fn(async () => []),
+    } as unknown as IReservationImportRepository;
+
+    const confirmed = makeBooking(bookingId, "tenant-a");
+    confirmed.confirm(new Date("2026-10-04T08:00:00.000Z"), mutationOriginOperator());
+
+    const bookings = {
+      findByIds: vi.fn(async () => [confirmed]),
+    } as unknown as IBookingRepository;
+
+    const preflightRows = vi.fn(async () => [refreshedRow]);
+    const createDraft = { preflightRows } as never;
+
+    const now = new Date("2026-10-04T08:00:00.000Z");
+    const get = new GetReservationImportDraftUseCase(
+      imports,
+      undefined,
+      bookings,
+      {
+        listChannelLinksByBookingId: async () => [],
+        listPaymentsByBookingId: async () => [],
+        listFoliosByBookingId: async () => [],
+      },
+      createDraft,
+    );
+    const result = await get.execute(batch.id, "tenant-a", actor, now);
+    expect(result.isSuccess).toBe(true);
+    expect(preflightRows).toHaveBeenCalledOnce();
+    expect(preflightRows.mock.calls[0]![0].rows[0]!.conflictResolution).toBe("keep_csv");
+    expect(result.getValue().rows[0]!.status).toBe("ready");
+    expect(result.getValue().rows[0]!.errorCode).toBeNull();
+    expect(result.getValue().rows[0]!.conflictResolution).toBe("keep_csv");
   });
 });
