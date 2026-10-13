@@ -112,9 +112,12 @@ describe("Booking status — confirmed ACTIVE blue / completed GREEN", () => {
   it("status filters keep internal confirmed/completed values", () => {
     const page = readWeb("features/bookings/BookingsPage.tsx");
     const tabs = readWeb("features/bookings/BookingStatusTabs.tsx");
-    expect(tabs).toContain('id: "confirmed"');
-    expect(tabs).toContain('id: "completed"');
-    expect(page).toContain('statusTab !== "all" ? statusTab');
+    expect(tabs).toContain("VISIBLE_BOOKING_STATUS_TABS");
+    expect(tabs).toContain('tone: "info"');
+    expect(tabs).toContain("toneIdle");
+    expect(tabs).toContain("bg-info-subtle text-info");
+    expect(tabs).toContain("bg-success-subtle text-success");
+    expect(page).toContain("statusTabToListParam");
     expect(page).toContain('params.set("status", statusTab)');
   });
 

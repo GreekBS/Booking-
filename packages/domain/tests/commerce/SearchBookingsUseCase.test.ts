@@ -115,6 +115,21 @@ describe("SearchBookingsUseCase", () => {
     );
   });
 
+  it("forwards status filter to repository (Active tab → confirmed only)", async () => {
+    const result = await useCase.execute(
+      baseFilters({ status: "confirmed", propertyId: PROP_A }),
+      adminActor,
+    );
+
+    expect(result.isSuccess).toBe(true);
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "confirmed",
+        propertyId: PROP_A,
+      }),
+    );
+  });
+
   it("manager with propertyId outside assignment → Forbidden, search NOT called", async () => {
     const result = await useCase.execute(
       baseFilters({ propertyId: "99999999-9999-4999-8999-999999999999" }),

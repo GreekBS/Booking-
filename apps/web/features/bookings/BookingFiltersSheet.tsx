@@ -109,7 +109,7 @@ export function BookingFiltersSheet({
         type="button"
         variant="outline"
         size="sm"
-        className="shrink-0 gap-1.5"
+        className="h-9 shrink-0 gap-1.5"
         onClick={() => onOpenChange(true)}
         aria-label={
           activeCount > 0 ? `Φίλτρα (${activeCount} ενεργά)` : "Άνοιγμα φίλτρων"

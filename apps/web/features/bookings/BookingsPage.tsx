@@ -47,8 +47,12 @@ import {
 import {
   BookingStatusTabs,
   type BookingStatusTabCounts,
-  type BookingStatusTabId,
 } from "@/features/bookings/BookingStatusTabs";
+import {
+  parseBookingStatusTab,
+  statusTabToListParam,
+  type BookingStatusTabId,
+} from "@/features/bookings/bookings-list-query";
 import { UnsavedChangesDialog } from "@/features/workspace/components/UnsavedChangesDialog";
 import { WorkspaceProvider, useWorkspace } from "@/features/workspace/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
@@ -72,15 +76,6 @@ import {
 
 const PAGE_SIZE = 15;
 
-const STATUS_TABS: BookingStatusTabId[] = [
-  "all",
-  "confirmed",
-  "completed",
-  "cancelled",
-  "pending",
-  "payment_pending",
-];
-
 type SortKey = "createdAt" | "checkIn" | "checkOut" | "guest" | "status";
 
 function reservationCountLabel(total: number): string {
@@ -90,13 +85,6 @@ function reservationCountLabel(total: number): string {
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function parseStatusTab(raw: string | null): BookingStatusTabId {
-  if (raw && (STATUS_TABS as string[]).includes(raw)) {
-    return raw as BookingStatusTabId;
-  }
-  return "all";
 }
 
 function parseSortKey(raw: string | null): SortKey {
@@ -109,6 +97,15 @@ function parseSortKey(raw: string | null): SortKey {
 
 function parseSortDir(raw: string | null): SortDirection {
   return raw === "asc" ? "asc" : "desc";
+}
+
+function statusTabLabel(tab: BookingStatusTabId): string {
+  if (tab === "all") return "Όλες";
+  if (tab === "confirmed" || tab === "completed" || tab === "cancelled") {
+    return bookingStatusPluralLabelEl(tab);
+  }
+  if (tab === "pending") return "Σε αναμονή";
+  return "Εκκρεμεί πληρωμή";
 }
 
 function emptyStatusCounts(): BookingStatusTabCounts {
@@ -151,7 +148,11 @@ function BookingsPageContent() {
   const deepLinkHandled = useRef<string | null>(null);
   const tableTopRef = useRef<HTMLDivElement | null>(null);
   const skipNextScrollRef = useRef(true);
-  const urlHydratedRef = useRef(false);
+  /** True while we are writing list state → URL (skip echo into state). */
+  const writingUrlRef = useRef(false);
+  const urlReadyRef = useRef(false);
+  const reloadTokenRef = useRef(0);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   const {
@@ -175,10 +176,14 @@ function BookingsPageContent() {
   const [catalogReady, setCatalogReady] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const initializedRef = useRef(false);
+  /** Status that the currently displayed rows were fetched for (guards stale UI). */
+  const [appliedStatusTab, setAppliedStatusTab] = useState<BookingStatusTabId>("all");
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusTab, setStatusTab] = useState<BookingStatusTabId>("all");
+  const [statusTab, setStatusTab] = useState<BookingStatusTabId>(() =>
+    parseBookingStatusTab(searchParams.get("status")),
+  );
   const [advancedFilters, setAdvancedFilters] =
     useState<BookingAdvancedFilters>(EMPTY_BOOKING_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -187,18 +192,24 @@ function BookingsPageContent() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<BookingRecord | null>(null);
 
-  /** Hydrate list state from URL once (keeps Back/Forward + refresh working). */
+  /**
+   * Sync list state FROM the URL (initial load, refresh, Back/Forward).
+   * Skips when the URL change was caused by our own replace().
+   */
   useEffect(() => {
-    if (urlHydratedRef.current) return;
-    urlHydratedRef.current = true;
+    if (writingUrlRef.current) {
+      writingUrlRef.current = false;
+      urlReadyRef.current = true;
+      return;
+    }
+
     const sp = searchParams;
-    setStatusTab(parseStatusTab(sp.get("status")));
-    setSearch(sp.get("q") ?? "");
-    setDebouncedSearch(sp.get("q") ?? "");
-    setPage(Math.max(1, Number.parseInt(sp.get("page") ?? "1", 10) || 1));
-    setSortKey(parseSortKey(sp.get("sortBy")));
-    setSortDir(parseSortDir(sp.get("sortDir")));
-    setAdvancedFilters({
+    const nextStatus = parseBookingStatusTab(sp.get("status"));
+    const nextQ = sp.get("q") ?? "";
+    const nextPage = Math.max(1, Number.parseInt(sp.get("page") ?? "1", 10) || 1);
+    const nextSortKey = parseSortKey(sp.get("sortBy"));
+    const nextSortDir = parseSortDir(sp.get("sortDir"));
+    const nextFilters: BookingAdvancedFilters = {
       unitId: sp.get("unitId") && sp.get("unitId") !== "all" ? sp.get("unitId")! : "all",
       checkInFrom: sp.get("checkInFrom") ?? "",
       checkInTo: sp.get("checkInTo") ?? "",
@@ -206,7 +217,26 @@ function BookingsPageContent() {
       checkOutTo: sp.get("checkOutTo") ?? "",
       registeredFrom: sp.get("registeredFrom") ?? "",
       registeredTo: sp.get("registeredTo") ?? "",
-    });
+    };
+
+    setStatusTab((prev) => (prev === nextStatus ? prev : nextStatus));
+    setSearch((prev) => (prev === nextQ ? prev : nextQ));
+    setDebouncedSearch((prev) => (prev === nextQ ? prev : nextQ));
+    setPage((prev) => (prev === nextPage ? prev : nextPage));
+    setSortKey((prev) => (prev === nextSortKey ? prev : nextSortKey));
+    setSortDir((prev) => (prev === nextSortDir ? prev : nextSortDir));
+    setAdvancedFilters((prev) =>
+      prev.unitId === nextFilters.unitId &&
+      prev.checkInFrom === nextFilters.checkInFrom &&
+      prev.checkInTo === nextFilters.checkInTo &&
+      prev.checkOutFrom === nextFilters.checkOutFrom &&
+      prev.checkOutTo === nextFilters.checkOutTo &&
+      prev.registeredFrom === nextFilters.registeredFrom &&
+      prev.registeredTo === nextFilters.registeredTo
+        ? prev
+        : nextFilters,
+    );
+    urlReadyRef.current = true;
   }, [searchParams]);
 
   useEffect(() => {
@@ -214,12 +244,17 @@ function BookingsPageContent() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  /** Tenant change: drop catalog so units/properties reload. */
   useEffect(() => {
-    initializedRef.current = false;
     setCatalogReady(false);
-    setInitialized(false);
     setProperties([]);
     setUnits([]);
+  }, [tenantId]);
+
+  /** Tenant/property change: reset list scope (keep catalog if already loaded). */
+  useEffect(() => {
+    initializedRef.current = false;
+    setInitialized(false);
     setBookings([]);
     setTotal(0);
     setStatusCounts(emptyStatusCounts());
@@ -227,6 +262,7 @@ function BookingsPageContent() {
     setError(null);
     setAdvancedFilters(EMPTY_BOOKING_FILTERS);
     setPage(1);
+    setAppliedStatusTab("all");
     skipNextScrollRef.current = true;
   }, [tenantId, propertyId]);
 
@@ -268,39 +304,64 @@ function BookingsPageContent() {
     [propertyId, advancedFilters, debouncedSearch],
   );
 
-  const loadBookings = useCallback(async () => {
-    if (!tenantId || !catalogReady || !propertyId) return;
+  const requestReload = useCallback(() => {
+    reloadTokenRef.current += 1;
+    setReloadToken(reloadTokenRef.current);
+  }, []);
 
+  /**
+   * Authoritative list fetch. Cleanup cancels stale responses so an older
+   * status="all" result cannot overwrite a newer status="confirmed" selection.
+   */
+  useEffect(() => {
+    if (!tenantId || !catalogReady || !propertyId || !urlReadyRef.current) return;
+
+    let cancelled = false;
+    const requestedStatus = statusTab;
+    const statusParam = statusTabToListParam(requestedStatus);
     const isFirstLoad = !initializedRef.current;
+
     if (isFirstLoad) setLoading(true);
     else setPageTransitioning(true);
     setError(null);
 
     const sortByApi = sortKey === "guest" ? "guestName" : sortKey;
 
-    try {
-      const [result, counts] = await Promise.all([
-        searchBookings(tenantId, {
-          ...filterQueryBase,
-          page,
-          limit: PAGE_SIZE,
-          sortBy: sortByApi,
-          sortDir,
-          status: statusTab !== "all" ? statusTab : undefined,
-        }),
-        fetchBookingStatusCounts(tenantId, filterQueryBase),
-      ]);
-      setBookings(result.data ?? []);
-      setTotal(result.total ?? 0);
-      setStatusCounts(toTabCounts(counts));
-      initializedRef.current = true;
-      setInitialized(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης κρατήσεων");
-    } finally {
-      setLoading(false);
-      setPageTransitioning(false);
+    async function load() {
+      try {
+        const [result, counts] = await Promise.all([
+          searchBookings(tenantId!, {
+            ...filterQueryBase,
+            page,
+            limit: PAGE_SIZE,
+            sortBy: sortByApi,
+            sortDir,
+            status: statusParam,
+          }),
+          fetchBookingStatusCounts(tenantId!, filterQueryBase),
+        ]);
+        if (cancelled) return;
+        setBookings(result.data ?? []);
+        setTotal(result.total ?? 0);
+        setStatusCounts(toTabCounts(counts));
+        setAppliedStatusTab(requestedStatus);
+        initializedRef.current = true;
+        setInitialized(true);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Αποτυχία φόρτωσης κρατήσεων");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setPageTransitioning(false);
+        }
+      }
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [
     tenantId,
     catalogReady,
@@ -310,15 +371,12 @@ function BookingsPageContent() {
     sortKey,
     sortDir,
     statusTab,
+    reloadToken,
   ]);
-
-  useEffect(() => {
-    void loadBookings();
-  }, [loadBookings]);
 
   /** Persist list filters in the URL (preserve bookingId deep-link). */
   useEffect(() => {
-    if (!urlHydratedRef.current) return;
+    if (!urlReadyRef.current) return;
     const params = new URLSearchParams();
     if (deepLinkBookingId) params.set("bookingId", deepLinkBookingId);
     if (statusTab !== "all") params.set("status", statusTab);
@@ -341,12 +399,12 @@ function BookingsPageContent() {
     const next = qs ? `${pathname}?${qs}` : pathname;
     const current = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
     if (next !== current) {
+      writingUrlRef.current = true;
       router.replace(next, { scroll: false });
     }
   }, [
     pathname,
     router,
-    searchParams,
     deepLinkBookingId,
     statusTab,
     debouncedSearch,
@@ -354,6 +412,8 @@ function BookingsPageContent() {
     sortKey,
     sortDir,
     advancedFilters,
+    // Compare against current URL without re-hydrating state on our own writes.
+    searchParams,
   ]);
 
   /** After a successful page change, scroll to the table header (not the whole dashboard). */
@@ -376,7 +436,11 @@ function BookingsPageContent() {
     if (bookingId) params.set("bookingId", bookingId);
     else params.delete("bookingId");
     const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    const next = qs ? `${pathname}?${qs}` : pathname;
+    const current = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    if (next === current) return;
+    writingUrlRef.current = true;
+    router.replace(next, { scroll: false });
   }
 
   function openBooking(booking: BookingRecord) {
@@ -442,24 +506,28 @@ function BookingsPageContent() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const advancedActiveCount = countActiveBookingFilters(advancedFilters);
   const searchActive = Boolean(debouncedSearch);
-  const filtersActive = searchActive || advancedActiveCount > 0 || statusTab !== "all";
+  /** Clear-filters only for search/advanced — status is owned by tabs (avoids header shift). */
+  const sheetFiltersActive = searchActive || advancedActiveCount > 0;
+  const resultsStaleForTab = appliedStatusTab !== statusTab;
+  const showResultsLoading = loading || pageTransitioning || resultsStaleForTab;
+  const visibleBookings = resultsStaleForTab ? [] : bookings;
 
-  function clearAllFilters() {
+  function clearSheetFilters() {
     skipNextScrollRef.current = true;
     setSearch("");
     setDebouncedSearch("");
-    setStatusTab("all");
     setAdvancedFilters(EMPTY_BOOKING_FILTERS);
     setPage(1);
   }
 
   function changePage(next: number) {
-    if (pageTransitioning || loading) return;
+    if (pageTransitioning || loading || resultsStaleForTab) return;
     if (next < 1 || next > totalPages || next === page) return;
     setPage(next);
   }
 
   function changeStatusTab(tab: BookingStatusTabId) {
+    if (tab === statusTab) return;
     skipNextScrollRef.current = true;
     setStatusTab(tab);
     setPage(1);
@@ -499,7 +567,7 @@ function BookingsPageContent() {
   if (propertyGate) return propertyGate;
   if (loading && !initialized) return <Skeleton className="h-[520px] w-full" />;
   if (error && !initialized) {
-    return <ErrorState message={error} onRetry={() => void loadBookings()} />;
+    return <ErrorState message={error} onRetry={requestReload} />;
   }
 
   return (
@@ -519,14 +587,14 @@ function BookingsPageContent() {
       ) : null}
 
       <Surface variant="panel" padding="sm" className="space-y-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-3">
           <BookingStatusTabs
             value={statusTab}
             counts={statusCounts}
             onChange={changeStatusTab}
-            disabled={pageTransitioning}
+            disabled={showResultsLoading}
           />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 md:flex-nowrap">
             <BookingFiltersSheet
               open={filtersOpen}
               onOpenChange={setFiltersOpen}
@@ -543,25 +611,28 @@ function BookingsPageContent() {
                 setPage(1);
               }}
             />
-            {filtersActive ? (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                <X className="h-3.5 w-3.5" />
-                {elCommon.clearFilters}
-              </Button>
-            ) : null}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void loadBookings()}
-              disabled={loading || pageTransitioning}
+              className="h-9"
+              onClick={requestReload}
+              disabled={showResultsLoading}
             >
               <RefreshCw
-                className={`h-4 w-4 ${loading || pageTransitioning ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${showResultsLoading ? "animate-spin" : ""}`}
               />
               {elCommon.refresh}
             </Button>
           </div>
         </div>
+        {sheetFiltersActive ? (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" className="h-8" onClick={clearSheetFilters}>
+              <X className="h-3.5 w-3.5" />
+              {elCommon.clearFilters}
+            </Button>
+          </div>
+        ) : null}
 
         <div className="relative max-w-xl">
           <Label
@@ -588,38 +659,30 @@ function BookingsPageContent() {
 
         <p className="text-xs text-muted-foreground">
           Προεπιλεγμένη ταξινόμηση: νεότερη άφιξη πρώτα (ανεξάρτητα από παρελθόν/μέλλον).
-          {statusTab !== "all"
-            ? ` Εμφάνιση: ${
-                statusTab === "confirmed" ||
-                statusTab === "completed" ||
-                statusTab === "cancelled"
-                  ? bookingStatusPluralLabelEl(statusTab)
-                  : statusTab === "pending"
-                    ? "Σε αναμονή"
-                    : "Εκκρεμεί πληρωμή"
-              }.`
-            : null}
+          {statusTab !== "all" ? ` Εμφάνιση: ${statusTabLabel(statusTab)}.` : null}
         </p>
       </Surface>
 
       {error && initialized ? (
-        <ErrorState message={error} onRetry={() => void loadBookings()} />
+        <ErrorState message={error} onRetry={requestReload} />
       ) : null}
 
       <div ref={tableTopRef} className="scroll-mt-3" />
 
-      {bookings.length === 0 && !loading && !pageTransitioning ? (
+      {visibleBookings.length === 0 && !showResultsLoading ? (
         <EmptyState
           title="Δεν βρέθηκαν κρατήσεις"
           description="Προσαρμόστε τα φίλτρα ή δημιουργήστε χειροκίνητη κράτηση."
           actions={<BookingCreateMenu align="center" />}
         />
+      ) : showResultsLoading && visibleBookings.length === 0 ? (
+        <Skeleton className="h-[320px] w-full" />
       ) : (
         <Surface
           variant="panel"
           padding="none"
-          className={loading || pageTransitioning ? "opacity-60" : ""}
-          aria-busy={pageTransitioning || undefined}
+          className={showResultsLoading ? "opacity-60" : ""}
+          aria-busy={showResultsLoading || undefined}
         >
           <div className="overflow-x-auto">
             <Table>
@@ -682,7 +745,7 @@ function BookingsPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.map((booking) => {
+                {visibleBookings.map((booking) => {
                   const unit = unitMap.get(booking.unitId);
                   const propertyName = propertyMap.get(booking.propertyId)?.name;
                   const nights = nightsBetween(booking.checkIn, booking.checkOut);
@@ -744,7 +807,7 @@ function BookingsPageContent() {
               page={page}
               totalPages={totalPages}
               onPageChange={changePage}
-              disabled={pageTransitioning || loading}
+              disabled={showResultsLoading}
             />
           </div>
         </Surface>

@@ -2,14 +2,12 @@
 
 import { cn } from "@/lib/utils";
 import { bookingStatusPluralLabelEl } from "@/lib/i18n";
+import {
+  VISIBLE_BOOKING_STATUS_TABS,
+  type BookingStatusTabId,
+} from "@/features/bookings/bookings-list-query";
 
-export type BookingStatusTabId =
-  | "all"
-  | "pending"
-  | "payment_pending"
-  | "confirmed"
-  | "completed"
-  | "cancelled";
+export type { BookingStatusTabId };
 
 export interface BookingStatusTabCounts {
   all: number;
@@ -20,29 +18,60 @@ export interface BookingStatusTabCounts {
   cancelled: number;
 }
 
-const TABS: Array<{
-  id: BookingStatusTabId;
-  label: string;
-  tone?: "info" | "success" | "destructive" | "warning" | "muted";
-}> = [
-  { id: "all", label: "Όλες", tone: "muted" },
-  { id: "confirmed", label: bookingStatusPluralLabelEl("confirmed"), tone: "info" },
-  { id: "completed", label: bookingStatusPluralLabelEl("completed"), tone: "success" },
-  { id: "cancelled", label: bookingStatusPluralLabelEl("cancelled"), tone: "destructive" },
-  { id: "pending", label: bookingStatusPluralLabelEl("pending"), tone: "warning" },
-  {
-    id: "payment_pending",
-    label: bookingStatusPluralLabelEl("payment_pending"),
-    tone: "warning",
-  },
-];
+type TabTone = "muted" | "info" | "success" | "destructive";
 
-const toneSelected: Record<string, string> = {
-  muted: "border-foreground/20 bg-foreground text-background",
-  info: "border-info/40 bg-info-subtle text-info",
-  success: "border-success/40 bg-success-subtle text-success",
-  destructive: "border-destructive/40 bg-destructive/10 text-destructive",
-  warning: "border-warning/40 bg-warning-subtle text-warning-foreground",
+const TAB_META: Record<
+  (typeof VISIBLE_BOOKING_STATUS_TABS)[number],
+  { label: string; tone: TabTone }
+> = {
+  all: { label: "Όλες", tone: "muted" },
+  confirmed: {
+    label: bookingStatusPluralLabelEl("confirmed"),
+    tone: "info",
+  },
+  completed: {
+    label: bookingStatusPluralLabelEl("completed"),
+    tone: "success",
+  },
+  cancelled: {
+    label: bookingStatusPluralLabelEl("cancelled"),
+    tone: "destructive",
+  },
+};
+
+/** Idle: color still readable (label, badge, border, subtle fill). */
+const toneIdle: Record<TabTone, string> = {
+  muted:
+    "border-foreground/20 bg-muted text-foreground hover:border-foreground/35 hover:bg-muted/80",
+  info: "border-info/35 bg-info-subtle text-info hover:border-info/55",
+  success: "border-success/35 bg-success-subtle text-success hover:border-success/55",
+  destructive:
+    "border-destructive/35 bg-destructive/10 text-destructive hover:border-destructive/55",
+};
+
+/** Selected: stronger fill/border; also font-semibold + ring (not color-only). */
+const toneSelected: Record<TabTone, string> = {
+  muted:
+    "border-foreground/40 bg-foreground text-background shadow-sm ring-1 ring-foreground/30",
+  info: "border-info/60 bg-info-subtle text-info shadow-sm ring-1 ring-info/40 font-semibold",
+  success:
+    "border-success/60 bg-success-subtle text-success shadow-sm ring-1 ring-success/40 font-semibold",
+  destructive:
+    "border-destructive/60 bg-destructive/15 text-destructive shadow-sm ring-1 ring-destructive/40 font-semibold",
+};
+
+const toneCountIdle: Record<TabTone, string> = {
+  muted: "bg-foreground/10 text-foreground",
+  info: "bg-info/15 text-info",
+  success: "bg-success/15 text-success",
+  destructive: "bg-destructive/15 text-destructive",
+};
+
+const toneCountSelected: Record<TabTone, string> = {
+  muted: "bg-background/20 text-background",
+  info: "bg-info/25 text-info",
+  success: "bg-success/25 text-success",
+  destructive: "bg-destructive/25 text-destructive",
 };
 
 interface BookingStatusTabsProps {
@@ -62,36 +91,36 @@ export function BookingStatusTabs({
     <div
       role="tablist"
       aria-label="Φίλτρο κατάστασης κράτησης"
-      className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 md:flex-nowrap md:overflow-visible"
     >
-      {TABS.map((tab) => {
-        const selected = value === tab.id;
-        const count =
-          tab.id === "all"
-            ? counts.all
-            : counts[tab.id as Exclude<BookingStatusTabId, "all">];
+      {VISIBLE_BOOKING_STATUS_TABS.map((id) => {
+        const meta = TAB_META[id];
+        const selected = value === id;
+        const count = id === "all" ? counts.all : counts[id];
         return (
           <button
-            key={tab.id}
+            key={id}
             type="button"
             role="tab"
             aria-selected={selected}
+            data-tone={meta.tone}
+            data-selected={selected ? "true" : "false"}
             disabled={disabled}
-            onClick={() => onChange(tab.id)}
+            onClick={() => onChange(id)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+              "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              selected
-                ? toneSelected[tab.tone ?? "muted"]
-                : "border-border bg-surface text-muted-foreground hover:bg-surface-subtle hover:text-foreground",
+              selected ? toneSelected[meta.tone] : toneIdle[meta.tone],
+              // Όλες selected already uses inverse chrome; keep weight consistent.
+              selected && meta.tone === "muted" && "font-semibold",
               disabled && "pointer-events-none opacity-60",
             )}
           >
-            <span>{tab.label}</span>
+            <span className="whitespace-nowrap">{meta.label}</span>
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
-                selected ? "bg-black/10 dark:bg-white/15" : "bg-muted text-muted-foreground",
+                selected ? toneCountSelected[meta.tone] : toneCountIdle[meta.tone],
               )}
             >
               {count}

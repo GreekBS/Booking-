@@ -78,10 +78,15 @@ describe("Bookings page V2 — status tabs & filters UX", () => {
     expect(statusLabelEl("completed")).toBe("Ολοκληρωμένη");
 
     const tabs = readWeb("features/bookings/BookingStatusTabs.tsx");
-    expect(tabs).toContain('id: "confirmed"');
-    expect(tabs).toContain('id: "completed"');
+    expect(tabs).toContain("VISIBLE_BOOKING_STATUS_TABS");
     expect(tabs).toContain('tone: "info"');
     expect(tabs).toContain('tone: "success"');
+    expect(tabs).toContain('tone: "destructive"');
+    expect(tabs).toContain("toneIdle");
+    expect(tabs).toContain("toneSelected");
+    // Hidden statuses may remain on the counts type; they must not be tab buttons.
+    expect(tabs).not.toMatch(/onChange\("payment_pending"\)/);
+    expect(tabs).not.toMatch(/label:.*payment_pending/);
   });
 
   it("counts advanced filters and supports clear/apply sheet", () => {
@@ -112,6 +117,7 @@ describe("Bookings page V2 — status tabs & filters UX", () => {
     expect(page).toContain("prefers-reduced-motion");
     expect(page).toContain("tableTopRef");
     expect(page).toContain("pageTransitioning");
+    expect(page).toContain("statusTabToListParam");
     expect(page).toContain('params.set("status"');
     expect(page).toContain('params.set("page"');
     expect(page).toContain("elCommon.registeredAt");
