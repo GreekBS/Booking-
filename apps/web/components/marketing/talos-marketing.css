@@ -13,7 +13,7 @@
 
   color: var(--talos-ink);
   background: var(--talos-paper);
-  font-family: var(--font-talos-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-talos-sans, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
 }
 
 .talos-marketing ::selection {
@@ -21,7 +21,7 @@
 }
 
 .talos-marketing .talos-display {
-  font-family: var(--font-talos-display), ui-serif, Georgia, serif;
+  font-family: var(--font-talos-display, ui-serif), ui-serif, Georgia, serif;
   font-optical-sizing: auto;
   letter-spacing: -0.02em;
 }
@@ -84,7 +84,7 @@
   padding: 1.35rem 1.35rem 1.5rem;
   box-shadow: 0 24px 60px -36px rgba(18, 22, 20, 0.45);
   transform: translateX(-50%);
-  font-family: var(--font-talos-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-talos-sans, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
   animation: talos-signin-dialog-in 220ms ease-out;
   /* Height adapts to view content without forcing Sign-in to Register height. */
   transition: none;
@@ -139,7 +139,7 @@
 }
 
 .talos-signin-dialog .talos-display {
-  font-family: var(--font-talos-display), ui-serif, Georgia, serif;
+  font-family: var(--font-talos-display, ui-serif), ui-serif, Georgia, serif;
   letter-spacing: -0.02em;
 }
 
@@ -166,7 +166,7 @@
   background: #f6f4ef;
   color: #121614;
   box-shadow: 0 28px 70px -40px rgba(18, 22, 20, 0.55);
-  font-family: var(--font-talos-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-talos-sans, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
   animation: talos-get-started-dialog-in 220ms ease-out;
 }
 

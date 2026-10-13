@@ -14,7 +14,7 @@ describe("Talos operator Phase 1 design system", () => {
     expect(css).toContain("--primary-hover: 224 76% 48%");
     expect(css).toContain("--primary-subtle: 214 95% 93%");
     expect(css).toContain("--background: 220 33% 98%");
-    expect(css).toContain("--foreground: 222 36% 15%");
+    expect(css).toContain("--foreground: 222 47% 11%");
     expect(css).toContain("--border: 214 32% 91%");
     expect(css).toContain("--ops-booking: 153 43% 28%");
     expect(css).toContain("--ops-booking-subtle:");
@@ -65,12 +65,18 @@ describe("Talos operator Phase 1 design system", () => {
     expect(badge).not.toContain("bg-emerald-");
   });
 
-  it("wires Manrope/Fraunces on the dashboard layout", () => {
-    const layout = read("app/(dashboard)/layout.tsx");
-    expect(layout).toContain("Manrope");
-    expect(layout).toContain("Fraunces");
-    expect(layout).toContain("--font-talos-sans");
-    expect(layout).toContain("--font-talos-display");
+  it("wires Inter/Fraunces on the root layout for portal-safe fonts", () => {
+    const root = read("app/layout.tsx");
+    expect(root).toContain("Inter");
+    expect(root).toContain("Fraunces");
+    expect(root).toContain("--font-talos-sans");
+    expect(root).toContain("--font-talos-display");
+    expect(root).toContain("sans.variable");
+    expect(root).toContain("font-sans");
+
+    const dashboard = read("app/(dashboard)/layout.tsx");
+    expect(dashboard).not.toContain("Manrope");
+    expect(dashboard).not.toContain("next/font");
   });
 
   it("groups sidebar navigation into operational sections branded Talos", () => {

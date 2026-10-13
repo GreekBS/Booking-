@@ -9,6 +9,7 @@ vi.mock("next/font/google", () => {
     style: { fontFamily: "mock-font" },
   });
   return {
+    Inter: fontFactory,
     Fraunces: fontFactory,
     Manrope: fontFactory,
     Cormorant_Garamond: fontFactory,

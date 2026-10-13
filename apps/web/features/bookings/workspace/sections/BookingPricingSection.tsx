@@ -19,13 +19,13 @@ export function BookingPricingSection({
 }: BookingPricingSectionProps) {
   return (
     <WorkspaceSection title="Τιμολόγηση κράτησης">
-      <p className="text-xs text-foreground/70">
+      <p className="text-[12px] leading-[18px] text-muted-foreground">
         Εμπορική τιμή διαμονής (προσφορά). Ο λογαριασμός (folio) εμφανίζεται στα Οικονομικά.
       </p>
       {quote ? (
         <>
           {proposedPreview ? (
-            <p className="mb-2 text-xs text-foreground/70">
+            <p className="mb-2 text-[12px] leading-[18px] text-muted-foreground">
               Προτεινόμενο σύνολο μετά από αλλαγή διαμονής:{" "}
               <span className="font-semibold tabular-nums text-foreground">
                 {formatMoney(proposedPreview.totalAmount, proposedPreview.currency)}
@@ -59,16 +59,16 @@ export function BookingPricingSection({
           </WorkspaceDetailList>
           {!summary && quote.lineItems.length > 0 ? (
             <div className="overflow-hidden rounded-md border border-border">
-              <div className="border-b border-border bg-surface-subtle px-3 py-2 text-xs font-medium text-foreground/70">
+              <div className="border-b border-border bg-surface-subtle px-3 py-2 text-[12px] font-medium leading-[18px] text-muted-foreground">
                 Ανάλυση ανά νύχτα
               </div>
               <div className="max-h-40 overflow-y-auto">
                 {quote.lineItems.map((line) => (
                   <div
                     key={line.date}
-                    className="flex justify-between border-b border-border/60 px-3 py-1.5 text-xs last:border-0"
+                    className="flex justify-between border-b border-border/60 px-3 py-1.5 text-[12px] leading-[18px] last:border-0"
                   >
-                    <span className="text-foreground/70">{line.date}</span>
+                    <span className="text-muted-foreground">{line.date}</span>
                     <span className="tabular-nums text-foreground">
                       {formatMoney(line.adjustedAmount, line.currency)}
                     </span>

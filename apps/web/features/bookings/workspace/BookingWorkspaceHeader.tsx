@@ -39,11 +39,12 @@ export function BookingWorkspaceHeader({
   const nights = nightsBetween(booking.checkIn, booking.checkOut);
 
   return (
-    <header className="shrink-0 border-b border-border bg-surface px-4 py-3 font-sans sm:px-5 sm:py-4">
+    <header className="shrink-0 border-b border-border bg-surface px-4 py-3.5 font-sans sm:px-5 sm:py-4">
+      {/* Row 1 — identity + close */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-[22px] font-semibold tracking-tight text-foreground sm:text-2xl">
+            <h2 className="truncate text-[23px] font-bold leading-7 tracking-tight text-foreground">
               {booking.guest.name}
             </h2>
             <StatusBadge status={booking.status} />
@@ -58,10 +59,9 @@ export function BookingWorkspaceHeader({
             ) : null}
           </div>
 
-          <p className="mt-1.5 text-sm text-foreground/70">
+          <p className="mt-1 text-[13px] font-medium leading-[19px] text-[hsl(var(--foreground-muted))]">
             <span>{propertyLabel ?? elCommon.property}</span>
-            {" · "}
-            <span>{unitLabel ?? elCommon.unit}</span>
+            {unitLabel ? <span>{` · ${unitLabel}`}</span> : null}
           </p>
         </div>
         {onClose ? (
@@ -77,18 +77,36 @@ export function BookingWorkspaceHeader({
         ) : null}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-        <MetaChip label={elCommon.checkIn} value={formatOperatorDateOnly(booking.checkIn)} />
-        <MetaChip label={elCommon.checkOut} value={formatOperatorDateOnly(booking.checkOut)} />
-        <MetaChip label={elCommon.nights} value={String(nights)} />
-        <MetaChip label={elCommon.guests} value={String(booking.guestCount)} />
+      {/* Row 2 — booking summary strip */}
+      <div
+        className={
+          reservationTotalLabel
+            ? "mt-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-[11px] border border-border bg-border sm:grid-cols-3 lg:grid-cols-5"
+            : "mt-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-[11px] border border-border bg-border sm:grid-cols-4"
+        }
+      >
+        <SummaryCell
+          label={elCommon.checkIn}
+          value={formatOperatorDateOnly(booking.checkIn)}
+        />
+        <SummaryCell
+          label={elCommon.checkOut}
+          value={formatOperatorDateOnly(booking.checkOut)}
+        />
+        <SummaryCell label={elCommon.nights} value={String(nights)} />
+        <SummaryCell label={elCommon.guests} value={String(booking.guestCount)} />
         {reservationTotalLabel ? (
-          <MetaChip label="Σύνολο κράτησης" value={reservationTotalLabel} />
+          <SummaryCell
+            label="Σύνολο κράτησης"
+            value={reservationTotalLabel}
+            emphasize
+            className="col-span-2 sm:col-span-1"
+          />
         ) : null}
       </div>
 
       {outstandingLabel ? (
-        <p className="mt-2 text-xs text-foreground/70">
+        <p className="mt-2.5 text-[12px] leading-[18px] text-[hsl(var(--foreground-muted))]">
           Υπόλοιπο λογαριασμού:{" "}
           <span className="font-semibold tabular-nums text-foreground">{outstandingLabel}</span>
         </p>
@@ -103,24 +121,44 @@ export function BookingWorkspaceHeader({
         />
       </div>
 
-      <details className="mt-3 rounded-md border border-border/80 bg-surface-subtle/40 px-3 py-2">
-        <summary className="cursor-pointer select-none text-xs font-medium text-foreground/70">
+      <details className="mt-3 rounded-md border border-border bg-surface-subtle px-3 py-2">
+        <summary className="cursor-pointer select-none text-[12px] font-medium leading-[18px] text-muted-foreground">
           Τεχνικά στοιχεία
         </summary>
-        <p className="mt-2 font-mono text-xs text-muted-foreground" title={booking.id}>
+        <p className="mt-2 font-mono text-[12px] leading-[18px] text-muted-foreground" title={booking.id}>
           {formatBookingDisplayId(booking.id)}
-          <span className="mt-1 block break-all text-[11px] opacity-80">{booking.id}</span>
+          <span className="mt-1 block break-all text-[12px] opacity-80">{booking.id}</span>
         </p>
       </details>
     </header>
   );
 }
 
-function MetaChip({ label, value }: { label: string; value: string }) {
+function SummaryCell({
+  label,
+  value,
+  emphasize = false,
+  className,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="rounded-md border border-border/70 bg-surface-subtle/60 px-2.5 py-2">
-      <p className="text-xs font-medium text-foreground/70">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-medium tabular-nums text-foreground">{value}</p>
+    <div
+      className={`bg-surface-subtle px-3 py-2.5 sm:px-3.5 ${className ?? ""}`.trim()}
+    >
+      <p className="text-[12px] font-medium leading-[18px] text-muted-foreground">{label}</p>
+      <p
+        className={
+          emphasize
+            ? "mt-0.5 truncate text-[20px] font-bold leading-7 tabular-nums tracking-tight text-foreground"
+            : "mt-0.5 truncate text-[14px] font-medium leading-[21px] tabular-nums text-foreground"
+        }
+      >
+        {value}
+      </p>
     </div>
   );
 }

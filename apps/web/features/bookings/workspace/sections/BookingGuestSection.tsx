@@ -54,7 +54,7 @@ export function BookingGuestSection({ booking, compact = false }: BookingGuestSe
               />
             </WorkspaceDetailList>
           ) : (
-            <p className="text-sm text-foreground/70">
+            <p className="text-[14px] leading-[22px] text-muted-foreground">
               Δεν υπάρχει συνδεδεμένος επισκέπτης CRM σε αυτή την κράτηση.
             </p>
           )}

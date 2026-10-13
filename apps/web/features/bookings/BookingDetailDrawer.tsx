@@ -49,7 +49,7 @@ export function BookingDetailDrawer({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col overflow-hidden border-border bg-surface p-0 font-sans sm:max-w-[min(900px,92vw)] [&>button]:hidden"
+        className="flex w-full flex-col overflow-hidden border-border bg-surface p-0 font-sans sm:max-w-[min(920px,94vw)] [&>button]:hidden"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>Χώρος εργασίας κράτησης</SheetTitle>

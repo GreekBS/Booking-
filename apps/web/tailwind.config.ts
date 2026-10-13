@@ -12,8 +12,22 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-talos-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["var(--font-talos-display)", "ui-serif", "Georgia", "serif"],
+        // var() fallback is required: an unresolved custom property invalidates the whole font-family.
+        sans: [
+          "var(--font-talos-sans, ui-sans-serif)",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"Segoe UI"',
+          "sans-serif",
+        ],
+        display: [
+          "var(--font-talos-display, ui-serif)",
+          "ui-serif",
+          "Georgia",
+          "serif",
+        ],
       },
       colors: {
         border: "hsl(var(--border))",

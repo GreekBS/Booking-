@@ -1,20 +1,7 @@
 import { redirect } from "next/navigation";
-import { Fraunces, Manrope } from "next/font/google";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { getAuthSession, requireSession } from "@/lib/tenant-context";
 import { shouldRedirectSuperAdminToPlatform } from "@/lib/dashboard-routing";
-
-const sans = Manrope({
-  subsets: ["latin"],
-  variable: "--font-talos-sans",
-  display: "swap",
-});
-
-const display = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-talos-display",
-  display: "swap",
-});
 
 export default async function DashboardLayout({
   children,
@@ -40,9 +27,7 @@ export default async function DashboardLayout({
     redirect("/platform");
   }
 
-  return (
-    <div className={`${sans.variable} ${display.variable} font-sans`}>
-      <AdminShell>{children}</AdminShell>
-    </div>
-  );
+  // Fonts (--font-talos-sans / --font-talos-display) are applied on <html> in root layout
+  // so Radix portals inherit the same Inter stack as the operator shell.
+  return <AdminShell>{children}</AdminShell>;
 }

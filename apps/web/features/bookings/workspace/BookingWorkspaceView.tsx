@@ -219,7 +219,9 @@ export function BookingWorkspaceView({
             : "p-4 font-sans"
         }
       >
-        <p className="text-sm text-foreground/70">{error ?? "Η κράτηση δεν είναι διαθέσιμη."}</p>
+        <p className="text-[14px] leading-[22px] text-muted-foreground">
+          {error ?? "Η κράτηση δεν είναι διαθέσιμη."}
+        </p>
       </div>
     );
   }
@@ -254,14 +256,14 @@ export function BookingWorkspaceView({
   }
 
   const tabTriggerClass =
-    "h-9 shrink-0 rounded-md px-3 text-sm font-medium text-foreground/70 data-[state=active]:bg-surface-subtle data-[state=active]:text-foreground data-[state=active]:shadow-none";
+    "h-10 shrink-0 rounded-md px-3.5 text-[14px] font-medium leading-5 text-muted-foreground transition-colors data-[state=active]:bg-primary-subtle data-[state=active]:font-semibold data-[state=active]:text-primary data-[state=active]:shadow-none";
 
   return (
     <div
       className={
         fillHeight
-          ? "flex min-h-0 flex-1 flex-col font-sans"
-          : "flex flex-col font-sans"
+          ? "flex min-h-0 flex-1 flex-col font-sans text-foreground"
+          : "flex flex-col font-sans text-foreground"
       }
     >
       <BookingWorkspaceHeader
@@ -281,8 +283,8 @@ export function BookingWorkspaceView({
         onValueChange={setTab}
         className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="shrink-0 border-b border-border bg-surface px-3 pt-2 sm:px-4">
-          <TabsList className="h-10 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
+        <div className="shrink-0 border-b border-border bg-surface px-3 pt-1.5 sm:px-4">
+          <TabsList className="h-11 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
             <TabsTrigger value="overview" className={tabTriggerClass}>
               Επισκόπηση
             </TabsTrigger>
@@ -298,18 +300,21 @@ export function BookingWorkspaceView({
           </TabsList>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 text-sm sm:px-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-background px-4 py-4 text-[14px] leading-[22px] sm:px-5">
           <TabsContent value="overview" className="mt-0 space-y-4 focus-visible:outline-none">
-            <BookingStaySection
-              draft={draft}
-              readOnly={stayReadOnly}
-              unitOptions={propertyUnits}
-              unitLabel={labels.unitLabel}
-              preview={preview}
-              previewLoading={previewLoading}
-              previewError={previewError}
-              onDraftChange={updateDraft}
-            />
+            {/* Stay editor only when editable — read-only dates live in the header summary. */}
+            {!stayReadOnly ? (
+              <BookingStaySection
+                draft={draft}
+                readOnly={false}
+                unitOptions={propertyUnits}
+                unitLabel={labels.unitLabel}
+                preview={preview}
+                previewLoading={previewLoading}
+                previewError={previewError}
+                onDraftChange={updateDraft}
+              />
+            ) : null}
             <BookingOperationsTasksSection
               bookingId={currentBooking.id}
               propertyId={currentBooking.propertyId}
@@ -318,7 +323,6 @@ export function BookingWorkspaceView({
             />
             <BookingGuestSection {...sectionProps} compact />
             <BookingWhatsAppMessagingSection {...sectionProps} />
-            <BookingPricingSection {...pricingProps} summary />
           </TabsContent>
 
           <TabsContent

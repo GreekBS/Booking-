@@ -27,7 +27,12 @@ export function BookingQuickActions({
   return (
     <div className="flex flex-wrap gap-2">
       {canConfirm ? (
-        <Button size="sm" className="h-9" disabled={actionLoading} onClick={onConfirm}>
+        <Button
+          size="sm"
+          className="h-9 text-[13px] font-semibold"
+          disabled={actionLoading}
+          onClick={onConfirm}
+        >
           {elCommon.confirm}
         </Button>
       ) : null}
@@ -35,7 +40,7 @@ export function BookingQuickActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="h-9 border-destructive/30 text-[13px] font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
           disabled={actionLoading}
           onClick={onCancel}
         >

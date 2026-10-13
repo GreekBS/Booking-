@@ -16,12 +16,12 @@ export function WorkspaceSection({
   return (
     <section
       className={cn(
-        "space-y-3 rounded-lg border border-border bg-surface p-3.5 sm:p-4",
+        "space-y-3 rounded-[11px] border border-border bg-surface p-4",
         className,
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <h3 className="text-[15px] font-semibold leading-[22px] text-foreground">{title}</h3>
         {badge}
       </div>
       {children}
@@ -47,15 +47,16 @@ export function WorkspaceDetailRow({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-start justify-between gap-4 text-sm", className)}>
-      <dt className="shrink-0 text-xs font-medium text-foreground/70 sm:text-sm sm:font-normal sm:text-foreground/70">
+    <div className={cn("flex items-start justify-between gap-4 text-[14px] leading-[22px]", className)}>
+      <dt className="shrink-0 text-[13px] font-medium leading-[19px] text-[hsl(var(--foreground-muted))]">
         {label}
       </dt>
       <dd
         className={cn(
           "text-right text-foreground",
-          mono && "font-mono text-xs text-muted-foreground",
-          bold && "font-semibold tabular-nums",
+          mono && "font-mono text-[12px] leading-[18px] text-muted-foreground",
+          bold && "text-[20px] font-bold leading-7 tabular-nums tracking-tight",
+          !mono && !bold && "text-[14px] font-medium leading-[21px]",
         )}
       >
         {value}
