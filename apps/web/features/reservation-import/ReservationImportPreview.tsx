@@ -2,6 +2,7 @@
 
 import type { CsvImportCanonicalRow, CsvImportIssue, CsvImportParseResult } from "@hcp/domain";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { formatOperatorDateOnly } from "@/lib/admin/money-presentation";
 import { csvIssueMessageEl } from "./csv-issue-messages";
 
 interface ReservationImportPreviewProps {
@@ -11,10 +12,7 @@ interface ReservationImportPreviewProps {
 }
 
 function formatPreviewDate(iso: string | null): string {
-  if (!iso) return "—";
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-  return iso;
+  return formatOperatorDateOnly(iso);
 }
 
 function formatPreviewAmount(row: CsvImportCanonicalRow): string {

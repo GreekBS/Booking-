@@ -21,6 +21,7 @@ import type {
   ConversationThreadRecord,
   OwnerEscalationRecord,
 } from "@/lib/admin/types";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -380,7 +381,7 @@ export function MessagesPage() {
                       <span className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant="secondary">{statusLabel(c.status)}</Badge>
                         {c.lastMessageAt
-                          ? new Date(c.lastMessageAt).toLocaleString("el-GR")
+                          ? formatOperatorDateTime(c.lastMessageAt)
                           : "—"}
                       </span>
                     </button>
@@ -440,7 +441,7 @@ export function MessagesPage() {
                               : "Χειριστής"}
                         </span>
                         <span>
-                          {new Date(m.createdAt).toLocaleString("el-GR")}
+                          {formatOperatorDateTime(m.createdAt)}
                         </span>
                       </div>
                       <p className="whitespace-pre-wrap">{m.body}</p>

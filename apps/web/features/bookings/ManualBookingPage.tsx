@@ -19,6 +19,7 @@ import {
 import type { GuestBookingSelectionRecord } from "@/lib/admin/types";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { CatalogPropertyRecord, QuoteRecord, BookingRecord } from "@/lib/admin/types";
+import { formatOperatorStayRange } from "@/lib/admin/money-presentation";
 import { formatMoney } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
@@ -490,7 +491,8 @@ export function ManualBookingPage() {
           {step === 2 && !convertingHold && (
             <>
               <p className="text-sm text-muted-foreground">
-                Έλεγχος διαθεσιμότητας για {checkIn} → {checkOut}, {guestCount}{" "}
+                Έλεγχος διαθεσιμότητας για{" "}
+                {formatOperatorStayRange(checkIn, checkOut)}, {guestCount}{" "}
                 {guestCount === 1 ? "επισκέπτη" : "επισκέπτες"}
               </p>
               {availabilityError ? (

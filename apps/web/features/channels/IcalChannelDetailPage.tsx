@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import {
   channelProviderLabel,
   channelStatusLabel,
@@ -546,7 +547,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                   <dt>Last activity</dt>
                   <dd>
                     {health.cursorUpdatedAt
-                      ? new Date(health.cursorUpdatedAt).toLocaleString()
+                      ? formatOperatorDateTime(health.cursorUpdatedAt)
                       : "—"}
                   </dd>
                 </div>
@@ -556,7 +557,7 @@ export function IcalChannelDetailPage({ connectionId }: Props) {
                     {health.latestPollJob
                       ? `${health.latestPollJob.status}${
                           health.latestPollJob.completedAt
-                            ? ` · ${new Date(health.latestPollJob.completedAt).toLocaleString()}`
+                            ? ` · ${formatOperatorDateTime(health.latestPollJob.completedAt)}`
                             : ""
                         }`
                       : "—"}

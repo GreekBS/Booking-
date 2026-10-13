@@ -15,6 +15,7 @@ import { ErrorState } from "@/components/admin/error-state";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import {
   ensureWebsite,
   formatWebsiteApiError,
@@ -29,14 +30,7 @@ function sectionCount(sections: unknown): number {
 
 function formatWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("el-GR", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDateTime(iso);
 }
 
 export function WebsitePage() {

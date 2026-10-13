@@ -6,6 +6,7 @@ import { ArrowRight, ClipboardList } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import { listTasks } from "@/lib/admin/api";
 import type { TaskRecord } from "@/lib/admin/types";
+import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,7 +130,7 @@ export function BookingOperationsTasksSection({
                     ? ` · ${elPriority[task.priority] ?? task.priority}`
                     : ""}
                   {task.dueAt
-                    ? ` · προθεσμία ${new Date(task.dueAt).toISOString().slice(0, 10)}`
+                    ? ` · προθεσμία ${formatOperatorDate(task.dueAt)}`
                     : ""}
                 </p>
               </div>

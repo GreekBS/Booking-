@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import { renderTenantGate, useTenant } from "@/hooks/use-tenant";
 import { adminFetch, fetchPropertyUnitCatalog } from "@/lib/admin/api";
+import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import type { MemberRecord, PendingInvitationRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -295,7 +296,7 @@ export function MembersPage() {
                   <TableRow key={invitation.id}>
                     <TableCell>{invitation.email}</TableCell>
                     <TableCell>{memberRoleLabel(invitation.role)}</TableCell>
-                    <TableCell>{new Date(invitation.expiresAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatOperatorDate(invitation.expiresAt)}</TableCell>
                     <TableCell>
                       <Button
                         size="sm"

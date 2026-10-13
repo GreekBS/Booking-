@@ -11,6 +11,10 @@ import {
   releaseHold,
 } from "@/lib/admin/api";
 import type { HoldRecord } from "@/lib/admin/types";
+import {
+  formatOperatorDateOnly,
+  formatOperatorDateTime,
+} from "@/lib/admin/money-presentation";
 import { nightsBetween } from "@/lib/admin/utils";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { Button } from "@/components/ui/button";
@@ -170,7 +174,7 @@ export function HoldDetailDrawer({
                   {countdown || "—"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Λήγει {new Date(data.expiresAt).toLocaleString()}
+                  Λήγει {formatOperatorDateTime(data.expiresAt)}
                 </p>
               </div>
             </SheetHeader>
@@ -180,11 +184,11 @@ export function HoldDetailDrawer({
                 <DrawerDetailList>
                   <DrawerDetailRow
                     label="Άφιξη"
-                    value={data.checkIn}
+                    value={formatOperatorDateOnly(data.checkIn)}
                   />
                   <DrawerDetailRow
                     label="Αναχώρηση"
-                    value={data.checkOut}
+                    value={formatOperatorDateOnly(data.checkOut)}
                   />
                   <DrawerDetailRow
                     label="Νύχτες"

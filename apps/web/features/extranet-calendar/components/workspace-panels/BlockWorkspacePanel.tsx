@@ -5,6 +5,7 @@ import { useTenant } from "@/hooks/use-tenant";
 import { releaseOperatorBlock } from "@/lib/admin/api";
 import type { OperatorBlockType } from "@/lib/admin/types";
 import { OPERATOR_BLOCK_TYPES } from "@/lib/admin/types";
+import { formatOperatorDateOnly } from "@/lib/admin/money-presentation";
 import { nightsBetween } from "@/lib/admin/utils";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -90,8 +91,14 @@ export function BlockWorkspacePanel({ target, active }: BlockWorkspacePanelProps
 
         <DrawerSection title="Ημερομηνίες">
           <DrawerDetailList>
-            <DrawerDetailRow label={elCommon.checkIn} value={target.checkIn} />
-            <DrawerDetailRow label={elCommon.checkOut} value={target.checkOut} />
+            <DrawerDetailRow
+              label={elCommon.checkIn}
+              value={formatOperatorDateOnly(target.checkIn)}
+            />
+            <DrawerDetailRow
+              label={elCommon.checkOut}
+              value={formatOperatorDateOnly(target.checkOut)}
+            />
             <DrawerDetailRow
               label="Διάρκεια"
               value={`${nights} ${nights === 1 ? "νύχτα" : "νύχτες"}`}

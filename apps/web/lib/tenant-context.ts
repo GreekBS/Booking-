@@ -326,6 +326,7 @@ export function serializeBooking(booking: {
   guestId?: string | null;
   status: string;
   confirmationMode: string;
+  createdAt: Date | string;
   isSuperseded?: boolean;
   supersededByBookingId?: string | null;
   supersededAt?: Date | string | null;
@@ -345,6 +346,10 @@ export function serializeBooking(booking: {
     guestId: booking.guestId ?? null,
     status: booking.status,
     confirmationMode: booking.confirmationMode,
+    createdAt:
+      booking.createdAt instanceof Date
+        ? booking.createdAt.toISOString()
+        : String(booking.createdAt),
     isSuperseded: Boolean(booking.isSuperseded),
     supersededByBookingId: booking.supersededByBookingId ?? null,
     supersededAt:

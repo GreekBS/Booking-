@@ -229,6 +229,8 @@ export interface BookingRecord {
   } | null;
   status: string;
   confirmationMode: string;
+  /** ISO timestamp — used for newest-first list sorting / display. */
+  createdAt: string;
   /** True when booking was archived via CSV/import supersede. */
   isSuperseded?: boolean;
   supersededByBookingId?: string | null;

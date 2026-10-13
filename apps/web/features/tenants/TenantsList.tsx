@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import { openTenantAsPlatformAdmin } from "./open-tenant";
 
 interface TenantRow {
@@ -15,11 +16,7 @@ interface TenantRow {
 }
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDate(iso);
 }
 
 export function TenantsList() {

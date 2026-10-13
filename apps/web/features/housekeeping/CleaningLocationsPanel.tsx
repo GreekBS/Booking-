@@ -24,6 +24,7 @@ import type {
   CleaningLocationBoardRow,
   CleaningLocationQrRecord,
 } from "@/lib/admin/types";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ function readinessLabel(status: string): string {
 
 function formatWhen(value: string | null): string {
   if (!value) return "—";
-  return new Date(value).toLocaleString("el-GR");
+  return formatOperatorDateTime(value);
 }
 
 function isHotelType(type: PropertyTypeValue): boolean {

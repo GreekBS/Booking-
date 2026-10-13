@@ -4,15 +4,12 @@ import {
   listTenantsUseCase,
 } from "@/lib/di/container";
 import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
+import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import { requireSuperAdmin } from "@/lib/tenant-context";
 import { PlatformRoleActions } from "@/features/platform-users/PlatformRoleActions";
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDate(iso);
 }
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

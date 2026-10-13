@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { formatMoney } from "@/lib/admin/utils";
 import { adminFetch } from "@/lib/admin/api";
 import { Button } from "@/components/ui/button";
@@ -274,7 +275,7 @@ export function BookingPaymentsSection({
                 {payments.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="py-2 text-xs">
-                      {new Date(p.receivedAt).toLocaleString()}
+                      {formatOperatorDateTime(p.receivedAt)}
                     </TableCell>
                     <TableCell className="py-2 text-xs text-muted-foreground">
                       {PAYMENT_METHOD_LABEL[p.method] ?? p.method} ·{" "}

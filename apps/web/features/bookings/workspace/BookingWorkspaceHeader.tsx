@@ -5,6 +5,7 @@ import type { BookingRecord } from "@/lib/admin/types";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatOperatorDateOnly } from "@/lib/admin/money-presentation";
 import { nightsBetween } from "@/lib/admin/utils";
 import { formatBookingDisplayId } from "./lib/booking-display";
 import { BookingQuickActions } from "./BookingQuickActions";
@@ -83,8 +84,8 @@ export function BookingWorkspaceHeader({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-        <MetaChip label={elCommon.checkIn} value={booking.checkIn} />
-        <MetaChip label={elCommon.checkOut} value={booking.checkOut} />
+        <MetaChip label={elCommon.checkIn} value={formatOperatorDateOnly(booking.checkIn)} />
+        <MetaChip label={elCommon.checkOut} value={formatOperatorDateOnly(booking.checkOut)} />
         <MetaChip label={elCommon.nights} value={String(nights)} />
         <MetaChip label={elCommon.guests} value={String(booking.guestCount)} />
         {reservationTotalLabel ? (

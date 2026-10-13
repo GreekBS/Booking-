@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { getPlatformOverviewUseCase } from "@/lib/di/container";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { leadLabels } from "@/lib/marketing/lead-labels";
 import { serializeLeadSummary } from "@/lib/marketing/serialize-lead";
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDateTime(iso);
 }
 
 function MetricCard({

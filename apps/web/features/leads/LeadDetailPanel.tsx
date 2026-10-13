@@ -13,6 +13,7 @@ import type {
   LeadStatus,
   LeadTool,
 } from "@hcp/domain";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { LEAD_STATUS_OPTIONS, leadLabels } from "@/lib/marketing/lead-labels";
 
 interface LeadDetail {
@@ -48,14 +49,7 @@ interface LeadDetail {
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDateTime(iso);
 }
 
 function yesNo(v: boolean | null): string {

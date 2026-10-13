@@ -1,13 +1,10 @@
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
+
+/** Platform-admin human-readable timestamps — DD/MM/YYYY, HH:mm. */
 export function formatPlatformDate(value: Date | string | null | undefined): string {
   if (!value) return "—";
-  try {
-    return new Date(value).toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return String(value);
-  }
+  const iso = value instanceof Date ? value.toISOString() : String(value);
+  return formatOperatorDateTime(iso);
 }
 
 export function statusBadgeClass(status: string): string {

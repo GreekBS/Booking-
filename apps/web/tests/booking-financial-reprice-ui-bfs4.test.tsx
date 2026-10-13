@@ -95,6 +95,7 @@ const booking: BookingRecord = {
   guest: { name: "Guest", email: null, phone: null },
   status: "confirmed",
   confirmationMode: "manual",
+  createdAt: "2027-01-01T00:00:00.000Z",
 };
 
 function quote(

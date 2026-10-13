@@ -16,6 +16,7 @@ import {
   WorkspaceDetailList,
   WorkspaceDetailRow,
 } from "@/features/workspace/components/WorkspaceSection";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { formatMoney } from "@/lib/admin/utils";
 import { elCommon } from "@/lib/i18n";
 import {
@@ -41,14 +42,7 @@ export interface BookingFinancialRepriceDialogProps {
 function formatExpiry(iso: string): string | null {
   const ms = Date.parse(iso);
   if (Number.isNaN(ms)) return null;
-  try {
-    return new Intl.DateTimeFormat("el-GR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(ms));
-  } catch {
-    return null;
-  }
+  return formatOperatorDateTime(iso);
 }
 
 function formatSignedDelta(amount: string, currency: string): string {

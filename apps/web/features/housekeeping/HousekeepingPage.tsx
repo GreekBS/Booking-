@@ -26,6 +26,7 @@ import type {
   TaskPriority,
   TaskRecord,
 } from "@/lib/admin/types";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -1175,7 +1176,7 @@ function TaskDetailSheet({
             <div>
               <dt className="text-xs text-muted-foreground">Προθεσμία</dt>
               <dd>
-                {task.dueAt ? new Date(task.dueAt).toLocaleString() : "—"}
+                {task.dueAt ? formatOperatorDateTime(task.dueAt) : "—"}
               </dd>
             </div>
             <div className="sm:col-span-2">

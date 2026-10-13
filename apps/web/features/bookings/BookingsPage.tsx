@@ -23,6 +23,7 @@ import {
 } from "@/lib/admin/api";
 import type { BookingRecord, CatalogPropertyRecord } from "@/lib/admin/types";
 import type { SortDirection } from "@/lib/admin/utils";
+import { formatOperatorDateOnly } from "@/lib/admin/money-presentation";
 import { nightsBetween } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface } from "@/components/admin/surface";
@@ -63,7 +64,7 @@ const PAGE_SIZE = 15;
 function reservationCountLabel(total: number): string {
   return total === 1 ? "1 κράτηση" : `${total} κρατήσεις`;
 }
-type SortKey = "checkIn" | "checkOut" | "guest" | "status";
+type SortKey = "createdAt" | "checkIn" | "checkOut" | "guest" | "status";
 
 export function BookingsPage() {
   return (
@@ -109,7 +110,7 @@ function BookingsPageContent() {
   const [arrivalTo, setArrivalTo] = useState("");
   const [departureFrom, setDepartureFrom] = useState("");
   const [departureTo, setDepartureTo] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("checkIn");
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<BookingRecord | null>(null);
@@ -484,6 +485,16 @@ function BookingsPageContent() {
                   </TableHead>
                   <TableHead>Διαμονή / {elCommon.unit}</TableHead>
                   <TableHead
+                    className="hidden cursor-pointer lg:table-cell"
+                    onClick={() => toggleSort("createdAt")}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") toggleSort("createdAt");
+                    }}
+                  >
+                    {elCommon.createdAt} <SortIcon column="createdAt" />
+                  </TableHead>
+                  <TableHead
                     className="cursor-pointer"
                     onClick={() => toggleSort("checkIn")}
                     tabIndex={0}
@@ -544,8 +555,15 @@ function BookingsPageContent() {
                         <div className="text-sm">{displayUnitName(unit?.name)}</div>
                         <div className="text-xs text-muted-foreground">{propertyName ?? "—"}</div>
                       </TableCell>
-                      <TableCell className="tabular-nums text-sm">{booking.checkIn}</TableCell>
-                      <TableCell className="tabular-nums text-sm">{booking.checkOut}</TableCell>
+                      <TableCell className="hidden tabular-nums text-sm lg:table-cell">
+                        {formatOperatorDateOnly(booking.createdAt)}
+                      </TableCell>
+                      <TableCell className="tabular-nums text-sm">
+                        {formatOperatorDateOnly(booking.checkIn)}
+                      </TableCell>
+                      <TableCell className="tabular-nums text-sm">
+                        {formatOperatorDateOnly(booking.checkOut)}
+                      </TableCell>
                       <TableCell className="hidden tabular-nums md:table-cell">{nights}</TableCell>
                       <TableCell className="hidden sm:table-cell">{booking.guestCount}</TableCell>
                       <TableCell>

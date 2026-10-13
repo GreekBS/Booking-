@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
 import { fetchBookingCommercialAmendments } from "@/lib/admin/api";
 import type { CommercialAmendmentRecord } from "@/lib/admin/types";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { formatMoney } from "@/lib/admin/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -20,16 +21,7 @@ export interface BookingCommercialAmendmentsSectionProps {
 }
 
 function formatWhen(iso: string): string {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return iso;
-  try {
-    return new Intl.DateTimeFormat("el-GR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(ms));
-  } catch {
-    return iso;
-  }
+  return formatOperatorDateTime(iso);
 }
 
 function formatSignedDelta(amount: string, currency: string): string {

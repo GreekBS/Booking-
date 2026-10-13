@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Timer } from "lucide-react";
 import { useTenant } from "@/hooks/use-tenant";
 import { createQuoteFromHold, fetchHoldDetail, releaseHold } from "@/lib/admin/api";
+import {
+  formatOperatorDateOnly,
+  formatOperatorDateTime,
+} from "@/lib/admin/money-presentation";
 import { nightsBetween } from "@/lib/admin/utils";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { Button } from "@/components/ui/button";
@@ -151,14 +155,17 @@ export function HoldWorkspacePanel({ target, active }: HoldWorkspacePanelProps) 
             {countdown || "—"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Λήγει {new Date(data.expiresAt).toLocaleString()}
+            Λήγει {formatOperatorDateTime(data.expiresAt)}
           </p>
         </DrawerSection>
 
         <DrawerSection title="Διαμονή">
           <DrawerDetailList>
-            <DrawerDetailRow label="Άφιξη" value={data.checkIn} />
-            <DrawerDetailRow label="Αναχώρηση" value={data.checkOut} />
+            <DrawerDetailRow label="Άφιξη" value={formatOperatorDateOnly(data.checkIn)} />
+            <DrawerDetailRow
+              label="Αναχώρηση"
+              value={formatOperatorDateOnly(data.checkOut)}
+            />
             <DrawerDetailRow
               label="Νύχτες"
               value={String(nightsBetween(data.checkIn, data.checkOut))}

@@ -32,6 +32,10 @@ import type {
   DashboardOverviewRecord,
   HousekeepingTodayBoard,
 } from "@/lib/admin/types";
+import {
+  formatOperatorDateOnly,
+  formatOperatorStayRange,
+} from "@/lib/admin/money-presentation";
 import { formatMoney } from "@/lib/admin/utils";
 import { PageHeader } from "@/components/admin/page-header";
 import { ErrorState } from "@/components/admin/error-state";
@@ -41,7 +45,12 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { elCommon, elNav, elStatus } from "@/lib/i18n";
+import {
+  bookingStatusPluralLabelEl,
+  elCommon,
+  elNav,
+  elStatus,
+} from "@/lib/i18n";
 import {
   analyticsPeriodToSearchParams,
   type AnalyticsPeriodWindow,
@@ -53,16 +62,7 @@ import {
 } from "./DashboardPeriodControl";
 
 function formatOpsDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat("el-GR", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(`${iso}T12:00:00`));
-  } catch {
-    return iso;
-  }
+  return formatOperatorDateOnly(iso);
 }
 
 /**
@@ -263,7 +263,7 @@ export function DashboardOverview() {
                 ? formatMoney(revenue.total.toFixed(4), revenue.currency)
                 : "€0,00"
             }
-            hint={`${period.displayLabel} · Επιβεβαιωμένες & ολοκληρωμένες`}
+            hint={`${period.displayLabel} · ${bookingStatusPluralLabelEl("confirmed")} & ${bookingStatusPluralLabelEl("completed").toLowerCase()}`}
             icon={DollarSign}
             emphasis
           />
@@ -420,7 +420,7 @@ export function DashboardOverview() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{booking.guestName}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {booking.checkIn} → {booking.checkOut}
+                        {formatOperatorStayRange(booking.checkIn, booking.checkOut)}
                         {booking.unitName ? ` · ${booking.unitName}` : ""}
                       </p>
                     </div>
@@ -664,7 +664,8 @@ function StayList({
                 <div className="min-w-0">
                   <p className="truncate font-medium">{b.guestName}</p>
                   <p className="truncate text-[11px] text-muted-foreground">
-                    {b.unitName ?? elCommon.unit} · {b.checkIn} → {b.checkOut}
+                    {b.unitName ?? elCommon.unit} ·{" "}
+                    {formatOperatorStayRange(b.checkIn, b.checkOut)}
                   </p>
                 </div>
                 <StatusBadge status={b.status} />

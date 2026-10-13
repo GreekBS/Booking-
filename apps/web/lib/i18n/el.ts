@@ -169,12 +169,12 @@ export const elStatus: Record<string, string> = {
   INACTIVE: "Ανενεργό",
   archived: "Αρχειοθετημένο",
   ARCHIVED: "Αρχειοθετημένο",
-  // bookings
+  // bookings — confirmed = ACTIVE (Ενεργή); completed stays Ολοκληρωμένη
   pending: "Σε αναμονή",
   PENDING: "Σε αναμονή",
   payment_pending: "Εκκρεμεί πληρωμή",
-  confirmed: "Επιβεβαιωμένη",
-  CONFIRMED: "Επιβεβαιωμένη",
+  confirmed: "Ενεργή",
+  CONFIRMED: "Ενεργή",
   completed: "Ολοκληρωμένη",
   COMPLETED: "Ολοκληρωμένο",
   cancelled: "Ακυρωμένη",
@@ -214,6 +214,20 @@ export function statusLabelEl(status: string): string {
     elStatus[status.toLowerCase()] ??
     status.replace(/_/g, " ")
   );
+}
+
+/** Plural booking-status labels for filters/headings (UI-only). */
+export const elBookingStatusPlural: Record<string, string> = {
+  pending: "Σε αναμονή",
+  payment_pending: "Εκκρεμεί πληρωμή",
+  confirmed: "Ενεργές",
+  completed: "Ολοκληρωμένες",
+  cancelled: "Ακυρωμένες",
+};
+
+export function bookingStatusPluralLabelEl(status: string): string {
+  const key = status.toLowerCase();
+  return elBookingStatusPlural[key] ?? statusLabelEl(status);
 }
 
 export const elChannelStatus: Record<string, string> = {

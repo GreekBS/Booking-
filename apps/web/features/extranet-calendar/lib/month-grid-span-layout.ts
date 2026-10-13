@@ -7,6 +7,8 @@ import {
   truncateLabel,
 } from "@/features/availability/lib/display-utils";
 import type { SpanKind } from "@/features/availability/lib/span-layout";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
+import { statusLabelEl } from "@/lib/i18n";
 
 /**
  * Month-grid visual reservation strip.
@@ -153,7 +155,7 @@ export function buildMonthGridVisualSpans(
       dates,
       nights: nightIndices(dates, hold.checkIn, hold.checkOut),
       meta: {
-        label: `Hold · expires ${new Date(hold.expiresAt).toLocaleString()}`,
+        label: `Hold · expires ${formatOperatorDateTime(hold.expiresAt)}`,
         preview: holdCountdownShort(hold.expiresAt),
         subPreview: "Δέσμευση",
         expiresAt: hold.expiresAt,
@@ -175,9 +177,9 @@ export function buildMonthGridVisualSpans(
       dates,
       nights: nightIndices(dates, booking.checkIn, booking.checkOut),
       meta: {
-        label: `${booking.guestName} · ${booking.status}`,
+        label: `${booking.guestName} · ${statusLabelEl(booking.status)}`,
         preview: `${initials} ${namePreview}`,
-        subPreview: booking.status.replace(/_/g, " "),
+        subPreview: statusLabelEl(booking.status),
         status: booking.status,
       },
       zIndex: 30,

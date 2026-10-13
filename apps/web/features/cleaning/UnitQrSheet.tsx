@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { displayUnitName } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
@@ -140,7 +141,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                   <dt className="text-muted-foreground">Δημιουργήθηκε</dt>
                   <dd>
                     {record?.createdAt
-                      ? new Date(record.createdAt).toLocaleString()
+                      ? formatOperatorDateTime(record.createdAt)
                       : "—"}
                   </dd>
                 </div>
@@ -148,7 +149,7 @@ export function UnitQrSheet({ tenantId, unit, onOpenChange }: UnitQrSheetProps) 
                   <dt className="text-muted-foreground">Τελευταία αντικατάσταση</dt>
                   <dd>
                     {record?.rotatedAt
-                      ? new Date(record.rotatedAt).toLocaleString()
+                      ? formatOperatorDateTime(record.rotatedAt)
                       : "—"}
                   </dd>
                 </div>

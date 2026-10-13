@@ -29,11 +29,11 @@ const statusVariant: Record<string, BadgeVariant> = {
   draft: "secondary",
   inactive: "warning",
   archived: "outline",
-  // Bookings
+  // Bookings — ACTIVE (confirmed) = info/blue; COMPLETED = success/green
   pending: "warning",
   payment_pending: "warning",
-  confirmed: "success",
-  completed: "secondary",
+  confirmed: "info",
+  completed: "success",
   cancelled: "destructive",
   // Holds / inventory ops
   expired: "outline",

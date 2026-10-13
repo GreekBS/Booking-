@@ -1,6 +1,8 @@
 import type { CalendarRecord } from "@/lib/admin/types";
 import { OPERATOR_BLOCK_TYPES } from "@/lib/admin/types";
+import { formatOperatorStayRange } from "@/lib/admin/money-presentation";
 import { dateInStayPeriod } from "@/features/availability/lib/calendar-utils";
+import { statusLabelEl } from "@/lib/i18n";
 import type { RackPropertyGroup } from "../types";
 
 export type TodayOpKind = "arrival" | "departure" | "in-house" | "hold" | "block";
@@ -69,7 +71,7 @@ export function buildTodayOperations(
             id: `arr-b-${booking.id}`,
             kind: "arrival",
             label: booking.guestName,
-            detail: `Άφιξη · ${booking.status.replace(/_/g, " ")}`,
+            detail: `Άφιξη · ${statusLabelEl(booking.status)}`,
           });
         }
 
@@ -89,7 +91,7 @@ export function buildTodayOperations(
             id: `inh-b-${booking.id}`,
             kind: "in-house",
             label: booking.guestName,
-            detail: `${booking.checkIn} → ${booking.checkOut}`,
+            detail: formatOperatorStayRange(booking.checkIn, booking.checkOut),
           });
         }
       }
@@ -131,7 +133,7 @@ export function buildTodayOperations(
             id: `hold-${hold.id}`,
             kind: "hold",
             label: unit.unitName,
-            detail: `${hold.checkIn} → ${hold.checkOut}`,
+            detail: formatOperatorStayRange(hold.checkIn, hold.checkOut),
           });
         }
       }
@@ -147,7 +149,9 @@ export function buildTodayOperations(
           unitName: unit.unitName,
           propertyName: unit.propertyName,
           label: block.blockType.replace(/_/g, " "),
-          detail: block.reason?.trim() || `${block.checkIn} → ${block.checkOut}`,
+          detail:
+            block.reason?.trim() ||
+            formatOperatorStayRange(block.checkIn, block.checkOut),
           blockId: block.id,
           blockType: block.blockType,
           checkIn: block.checkIn,

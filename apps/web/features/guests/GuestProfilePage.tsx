@@ -22,6 +22,10 @@ import type {
   GuestReservationRecord,
   GuestTagRecord,
 } from "@/lib/admin/types";
+import {
+  formatOperatorDateOnly,
+  formatOperatorDateTime,
+} from "@/lib/admin/money-presentation";
 import { toastError, toastSuccess } from "@/lib/admin/toast";
 import { PageHeader } from "@/components/admin/page-header";
 import { Surface, SurfaceHeader } from "@/components/admin/surface";
@@ -390,9 +394,18 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
             />
             <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Metric label="Σύνολο διαμονών" value={String(metrics.stayCount)} />
-              <Metric label={`Πρώτη ${elCommon.checkIn.toLowerCase()}`} value={metrics.firstStayCheckIn ?? "—"} />
-              <Metric label={`Τελευταία ${elCommon.checkOut.toLowerCase()}`} value={metrics.lastStayCheckOut ?? "—"} />
-              <Metric label={`Επόμενη ${elCommon.checkIn.toLowerCase()}`} value={metrics.nextStayCheckIn ?? "—"} />
+              <Metric
+                label={`Πρώτη ${elCommon.checkIn.toLowerCase()}`}
+                value={formatOperatorDateOnly(metrics.firstStayCheckIn)}
+              />
+              <Metric
+                label={`Τελευταία ${elCommon.checkOut.toLowerCase()}`}
+                value={formatOperatorDateOnly(metrics.lastStayCheckOut)}
+              />
+              <Metric
+                label={`Επόμενη ${elCommon.checkIn.toLowerCase()}`}
+                value={formatOperatorDateOnly(metrics.nextStayCheckIn)}
+              />
               <Metric
                 label="Καταλύματα που επισκέφθηκε"
                 value={String(metrics.propertyIdsVisited.length)}
@@ -432,8 +445,12 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                     {reservations.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="font-medium">{row.guestName}</TableCell>
-                        <TableCell className="tabular-nums text-sm">{row.checkIn}</TableCell>
-                        <TableCell className="tabular-nums text-sm">{row.checkOut}</TableCell>
+                        <TableCell className="tabular-nums text-sm">
+                          {formatOperatorDateOnly(row.checkIn)}
+                        </TableCell>
+                        <TableCell className="tabular-nums text-sm">
+                          {formatOperatorDateOnly(row.checkOut)}
+                        </TableCell>
                         <TableCell>{row.guestCount}</TableCell>
                         <TableCell>
                           <StatusBadge status={row.status} />
@@ -489,7 +506,7 @@ export function GuestProfilePage({ guestId }: GuestProfilePageProps) {
                   <li key={note.id} className="px-4 py-3">
                     <p className="whitespace-pre-wrap text-sm">{note.body}</p>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      {new Date(note.createdAt).toLocaleString()}
+                      {formatOperatorDateTime(note.createdAt)}
                       {note.propertyId ? " · Εύρος καταλύματος" : " · Εύρος οργανισμού"}
                     </p>
                   </li>

@@ -1,5 +1,6 @@
 import type { CalendarRecord, OperatorBlockType } from "@/lib/admin/types";
 import { OPERATOR_BLOCK_TYPES } from "@/lib/admin/types";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { addDaysIso, dateInStayPeriod } from "./calendar-utils";
 import { guestInitials, holdCountdownShort, truncateLabel } from "./display-utils";
 
@@ -125,7 +126,7 @@ export function buildCalendarSpans(
         dates,
         indices,
         {
-          label: `Hold · expires ${new Date(hold.expiresAt).toLocaleString()}`,
+          label: `Hold · expires ${formatOperatorDateTime(hold.expiresAt)}`,
           preview: holdCountdownShort(hold.expiresAt),
           subPreview: "Δέσμευση",
           expiresAt: hold.expiresAt,

@@ -4,6 +4,7 @@ import type {
   ReservationImportRejectedRowDto,
   ReservationImportRowDto,
 } from "@/lib/admin/reservation-import-api";
+import { formatOperatorStayRange } from "@/lib/admin/money-presentation";
 import { rowLooksReadyForImport } from "./reservation-import-errors";
 
 export type ReviewTabId = "all" | "action" | "ready" | "conflicts" | "rejected";
@@ -93,17 +94,8 @@ export function tabCounts(
 }
 
 export function formatImportStayRange(checkIn: string, checkOut: string): string {
-  try {
-    const fmt = (d: string) =>
-      new Date(`${d}T12:00:00`).toLocaleDateString("el-GR", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    return `${fmt(checkIn)} → ${fmt(checkOut)}`;
-  } catch {
-    return `${checkIn} → ${checkOut}`;
-  }
+  // Display-only — keep ISO date-only semantics for import contracts elsewhere.
+  return formatOperatorStayRange(checkIn, checkOut);
 }
 
 export type PriceDisplayKind =

@@ -244,6 +244,7 @@ export const listBookingsQuerySchema = paginationSchema.extend({
   checkOutFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   checkOutTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   guestSearch: z.string().max(255).optional(),
-  sortBy: z.enum(["checkIn", "checkOut", "guestName", "status", "createdAt"]).default("checkIn"),
+  // Default: newest bookings first (createdAt desc). Operators may override via sortBy.
+  sortBy: z.enum(["checkIn", "checkOut", "guestName", "status", "createdAt"]).default("createdAt"),
   sortDir: z.enum(["asc", "desc"]).default("desc"),
 });

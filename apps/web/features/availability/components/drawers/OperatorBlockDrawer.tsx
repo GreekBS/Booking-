@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { CalendarRecord, OperatorBlockType } from "@/lib/admin/types";
 import { OPERATOR_BLOCK_TYPES } from "@/lib/admin/types";
+import { formatOperatorDateOnly } from "@/lib/admin/money-presentation";
 import { nightsBetween } from "@/lib/admin/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,8 +96,14 @@ export function OperatorBlockDrawer({
 
           <DrawerSection title="Ημερομηνίες">
             <DrawerDetailList>
-              <DrawerDetailRow label={elCommon.checkIn} value={block.checkIn} />
-              <DrawerDetailRow label={elCommon.checkOut} value={block.checkOut} />
+              <DrawerDetailRow
+                label={elCommon.checkIn}
+                value={formatOperatorDateOnly(block.checkIn)}
+              />
+              <DrawerDetailRow
+                label={elCommon.checkOut}
+                value={formatOperatorDateOnly(block.checkOut)}
+              />
               <DrawerDetailRow label="Διάρκεια" value={`${nights} ${nights === 1 ? "νύχτα" : "νύχτες"}`} />
             </DrawerDetailList>
           </DrawerSection>

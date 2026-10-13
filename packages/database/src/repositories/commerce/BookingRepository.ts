@@ -150,6 +150,12 @@ export class PrismaBookingRepository implements IBookingRepository {
           ? "createdAt"
           : filters.sortBy;
 
+    // Deterministic secondary key so equal primary timestamps stay stable across pages.
+    const orderBy: Prisma.BookingOrderByWithRelationInput[] = [
+      { [orderByField]: filters.sortDir },
+      { id: filters.sortDir },
+    ];
+
     const skip = (filters.page - 1) * filters.limit;
     return withTenantTransaction(filters.tenantId, async (tx) => {
       const [records, total] = await Promise.all([
@@ -157,7 +163,7 @@ export class PrismaBookingRepository implements IBookingRepository {
           where,
           skip,
           take: filters.limit,
-          orderBy: { [orderByField]: filters.sortDir },
+          orderBy,
         }),
         tx.booking.count({ where }),
       ]);

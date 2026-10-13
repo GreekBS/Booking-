@@ -4,6 +4,7 @@ import type {
   OperatorBlockType,
 } from "@/lib/admin/types";
 import { OPERATOR_BLOCK_TYPES } from "@/lib/admin/types";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { dateInStayPeriod, dayOfWeekUtc } from "./calendar-utils";
 
 export type CellVisualType =
@@ -80,7 +81,7 @@ export function resolveCellState(
   if (hold) {
     return {
       type: "held",
-      label: `Hold · expires ${new Date(hold.expiresAt).toLocaleString()}`,
+      label: `Hold · expires ${formatOperatorDateTime(hold.expiresAt)}`,
       holdId: hold.id,
       checkInEdge: date === hold.checkIn,
       checkOutEdge: date === hold.checkOut,

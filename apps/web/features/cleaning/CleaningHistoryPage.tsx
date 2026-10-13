@@ -23,9 +23,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 
 function formatTimestamp(value: string | null): string {
-  return value ? new Date(value).toLocaleString() : "—";
+  return value ? formatOperatorDateTime(value) : "—";
 }
 
 /** Cleaning audit trail for the Active Property, optionally filtered by unit/location. */

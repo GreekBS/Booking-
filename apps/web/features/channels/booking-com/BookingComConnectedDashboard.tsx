@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { channelStatusLabel } from "@/lib/admin/operator-labels";
 import {
   disconnectChannelConnection,
@@ -250,7 +251,7 @@ export function BookingComConnectedDashboard({ connectionId }: Props) {
           {view.reconciliation[0] ? (
             <p className="text-xs text-muted-foreground">
               Τελευταίος έλεγχος: {reconcileOutcomeLabel(view.reconciliation[0].outcome)} ·{" "}
-              {new Date(view.reconciliation[0].completedAt).toLocaleString()}
+              {formatOperatorDateTime(view.reconciliation[0].completedAt)}
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">Δεν έχουν εκτελεστεί ακόμα συμφιλιώσεις.</p>

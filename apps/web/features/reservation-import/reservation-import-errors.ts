@@ -50,7 +50,7 @@ export function bookingStatusLabelEl(status: string): string {
     case "payment_pending":
       return "αναμονή πληρωμής";
     case "confirmed":
-      return "επιβεβαιωμένη";
+      return "ενεργή";
     case "cancelled":
       return "ακυρωμένη";
     case "completed":

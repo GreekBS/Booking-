@@ -9,6 +9,7 @@ import type {
   LeadStatus,
 } from "@hcp/domain";
 import { LEAD_SOURCES, LEAD_STATUSES } from "@hcp/domain";
+import { formatOperatorDateTime } from "@/lib/admin/money-presentation";
 import { LEAD_STATUS_OPTIONS, leadLabels } from "@/lib/marketing/lead-labels";
 
 interface LeadRow {
@@ -27,14 +28,7 @@ interface LeadRow {
 }
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDateTime(iso);
 }
 
 type Props = {

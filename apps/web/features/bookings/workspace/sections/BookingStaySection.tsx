@@ -1,5 +1,6 @@
 "use client";
 
+import { formatOperatorDateOnly } from "@/lib/admin/money-presentation";
 import { nightsBetween, formatMoney } from "@/lib/admin/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,8 +51,14 @@ export function BookingStaySection({
     return (
       <WorkspaceSection title="Διαμονή">
         <WorkspaceDetailList>
-          <WorkspaceDetailRow label={elCommon.checkIn} value={draft.checkIn} />
-          <WorkspaceDetailRow label={elCommon.checkOut} value={draft.checkOut} />
+          <WorkspaceDetailRow
+            label={elCommon.checkIn}
+            value={formatOperatorDateOnly(draft.checkIn)}
+          />
+          <WorkspaceDetailRow
+            label={elCommon.checkOut}
+            value={formatOperatorDateOnly(draft.checkOut)}
+          />
           <WorkspaceDetailRow label={elCommon.nights} value={String(nights)} />
           <WorkspaceDetailRow label={elCommon.guests} value={String(draft.guestCount)} />
         </WorkspaceDetailList>

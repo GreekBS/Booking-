@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPlatformTenantDetailUseCase } from "@/lib/di/container";
+import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import { OpenTenantButton } from "@/features/tenants/OpenTenantButton";
 import { TenantStatusActions } from "@/features/tenants/TenantStatusActions";
 
 function formatDate(value: Date | string): string {
-  try {
-    return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
-  } catch {
-    return String(value);
-  }
+  const iso = value instanceof Date ? value.toISOString() : String(value);
+  return formatOperatorDate(iso);
 }
 
 function locationLabel(row: {

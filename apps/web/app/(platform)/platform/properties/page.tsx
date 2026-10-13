@@ -5,14 +5,11 @@ import {
 } from "@/lib/di/container";
 import { PlatformPageHeader } from "@/components/platform/PlatformPageHeader";
 import { OpenTenantButton } from "@/features/tenants/OpenTenantButton";
+import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import type { PropertyStatus } from "@hcp/domain";
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
-  } catch {
-    return iso;
-  }
+  return formatOperatorDate(iso);
 }
 
 function locationLabel(row: {
