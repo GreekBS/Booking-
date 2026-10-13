@@ -260,6 +260,7 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
 
   const commit = useCallback(async (): Promise<CommitMutationResult> => {
     if (!tenantId || !batchId) return { ok: false, phase: "commit" };
+    // Synchronous — UI must show loading before any await.
     setCommitting(true);
     try {
       const response = await commitReservationImportDraft(tenantId, batchId);
@@ -328,6 +329,45 @@ export function useReservationImportReview(tenantId: string | null, batchId: str
           operatorMessage: mapped.message,
         };
       }
+
+      // Network / unknown failure: never re-POST commit. Reconcile batch status once.
+      try {
+        const detail = await getReservationImportDraft(tenantId, batchId);
+        setState({ kind: "ready", detail });
+        setRefetchFailed(false);
+        if (detail.batch.status === "completed") {
+          const imported = detail.rows.filter((r) => r.status === "imported").length;
+          const skipped = detail.rows.filter(
+            (r) =>
+              r.status === "skipped" || r.status === "skipped_already_imported",
+          ).length;
+          const summary: ReservationImportCommitSummaryDto = {
+            imported,
+            skipped,
+            createdBookingIds: detail.rows
+              .map((r) => r.createdBookingId)
+              .filter((id): id is string => Boolean(id)),
+            supersededBookingIds: [
+              ...new Set(
+                detail.rows
+                  .map((r) => r.supersededBookingId)
+                  .filter((id): id is string => Boolean(id)),
+              ),
+            ],
+            skippedRowIds: detail.rows
+              .filter(
+                (r) =>
+                  r.status === "skipped" || r.status === "skipped_already_imported",
+              )
+              .map((r) => r.id),
+          };
+          setLastCommitSummary(summary);
+          return { ok: true, alreadyCompleted: true, summary };
+        }
+      } catch {
+        // Fall through to generic failure.
+      }
+
       return {
         ok: false,
         phase: "commit",

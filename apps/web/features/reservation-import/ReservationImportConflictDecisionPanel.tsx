@@ -105,14 +105,15 @@ export function ReservationImportConflictDecisionPanel({
   const resolution = row.conflictResolution;
   const existingCount = Math.max(bookings.length, snap.existingBookingIds.length);
   const controlsDisabled = disabled || deciding;
-  const keepCsvBlockedByStatus =
-    hasExisting &&
-    (bookings.length > 0
-      ? bookings.some((b) => !conflictBookingIsSupersedeable(b))
-      : false);
-  const blockedBooking = bookings.find((b) => !conflictBookingIsSupersedeable(b));
-  const blockedStatusLabel = blockedBooking
-    ? bookingStatusLabelEl(blockedBooking.status)
+  // Superseded targets are historical outcomes — not active blockers.
+  // Showing NOT_SUPERSEDEABLE for confirmed+superseded caused contradictory UX
+  // after a successful keep_csv import.
+  const activeBlockingBooking = bookings.find(
+    (b) => !b.isSuperseded && !conflictBookingIsSupersedeable(b),
+  );
+  const keepCsvBlockedByStatus = hasExisting && Boolean(activeBlockingBooking);
+  const blockedStatusLabel = activeBlockingBooking
+    ? bookingStatusLabelEl(activeBlockingBooking.status)
     : "μη ολοκληρωμένη";
   const showFinancialArchiveWarning =
     hasExisting && bookings.some((b) => conflictBookingHasFinancialArchiveWarning(b));

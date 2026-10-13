@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { ErrorState } from "@/components/admin/error-state";
 import { PageHeader } from "@/components/admin/page-header";
@@ -23,6 +24,7 @@ import {
   RESERVATION_IMPORT_BULK_KEEP_CSV_CONFIRM_TITLE,
   RESERVATION_IMPORT_BULK_NONE_ELIGIBLE,
   RESERVATION_IMPORT_BULK_PARTIAL,
+  RESERVATION_IMPORT_BULK_SAVING_LABEL,
   RESERVATION_IMPORT_BULK_SUCCESS,
   RESERVATION_IMPORT_COMMIT_BUSY_LABEL,
   RESERVATION_IMPORT_COMMIT_CONFIRM_BODY,
@@ -30,10 +32,14 @@ import {
   RESERVATION_IMPORT_COMMIT_ERROR,
   RESERVATION_IMPORT_COMMIT_LABEL,
   RESERVATION_IMPORT_COMMIT_NOT_READY_ERROR,
+  RESERVATION_IMPORT_COMMIT_PROCESSING_DETAIL,
+  RESERVATION_IMPORT_COMMIT_PROCESSING_TITLE,
+  RESERVATION_IMPORT_COMMIT_RECONCILED,
   RESERVATION_IMPORT_COMMIT_REFETCH_ERROR,
   RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE,
   RESERVATION_IMPORT_COMMIT_STALE_ERROR,
   RESERVATION_IMPORT_COMMIT_SUCCESS,
+  RESERVATION_IMPORT_COMPLETED_SUCCESS,
   RESERVATION_IMPORT_COMPLETED_TITLE,
   RESERVATION_IMPORT_CREATED_BOOKINGS_TITLE,
   RESERVATION_IMPORT_DECISION_ERROR,
@@ -61,6 +67,8 @@ import {
   RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_HINT,
   RESERVATION_IMPORT_USE_TALOS_ALL_MISSING_LABEL,
   RESERVATION_IMPORT_VIEW_BOOKING_LABEL,
+  RESERVATION_IMPORT_VIEW_BOOKINGS_NAV,
+  RESERVATION_IMPORT_VIEW_CALENDAR_NAV,
 } from "./reservation-import-copy";
 import type { ReservationImportConflictResolutionDto } from "@/lib/admin/reservation-import-api";
 import { ReservationImportBulkConflictBar } from "./ReservationImportBulkConflictBar";
@@ -292,11 +300,15 @@ export function ReservationImportDraftPage() {
   }
 
   async function handleCommit() {
-    const result = await commit();
+    // Close confirm immediately so the page-level processing banner is visible.
     setCommitOpen(false);
+    const result = await commit();
     if (result.ok) {
-      toastSuccess(RESERVATION_IMPORT_COMMIT_SUCCESS);
-      setLiveMessage(RESERVATION_IMPORT_COMMIT_SUCCESS);
+      const msg = result.alreadyCompleted
+        ? RESERVATION_IMPORT_COMMIT_RECONCILED
+        : RESERVATION_IMPORT_COMMIT_SUCCESS;
+      toastSuccess(msg);
+      setLiveMessage(msg);
       return;
     }
     if (result.phase === "stale") {
@@ -474,7 +486,7 @@ export function ReservationImportDraftPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={rechecking || refreshing || committing || bulkBusy}
+                  disabled={rechecking || refreshing || committing || bulkBusy || decisionBusy}
                   title={RESERVATION_IMPORT_RECHECK_RESET_HINT}
                   onClick={() => void handleRecheck()}
                 >
@@ -515,12 +527,58 @@ export function ReservationImportDraftPage() {
         </Surface>
       ) : null}
 
+      {committing ? (
+        <Surface
+          variant="panel"
+          padding="md"
+          className="space-y-3"
+          data-testid="import-commit-processing"
+        >
+          <div className="flex items-start gap-3">
+            <Loader2
+              className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary motion-reduce:animate-none"
+              aria-hidden
+            />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground" role="status" aria-live="polite">
+                {RESERVATION_IMPORT_COMMIT_PROCESSING_TITLE}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {RESERVATION_IMPORT_COMMIT_PROCESSING_DETAIL}
+              </p>
+              <div
+                className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                aria-hidden
+              >
+                <div className="h-full w-1/3 animate-pulse rounded-full bg-primary motion-reduce:animate-none" />
+              </div>
+            </div>
+          </div>
+        </Surface>
+      ) : null}
+
       {isCompleted ? (
-        <Surface variant="panel" padding="md" className="space-y-4">
-          <SurfaceHeader
-            title={RESERVATION_IMPORT_COMPLETED_TITLE}
-            description="Η πρόχειρη εισαγωγή ολοκληρώθηκε και δεν μπορεί να τροποποιηθεί."
-          />
+        <Surface
+          variant="panel"
+          padding="md"
+          className="space-y-4"
+          data-testid="import-completed-summary"
+        >
+          <div className="flex items-start gap-3">
+            <CheckCircle2
+              className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600 motion-safe:animate-in motion-safe:fade-in"
+              aria-hidden
+            />
+            <div>
+              <p className="text-base font-medium text-foreground" role="status">
+                {RESERVATION_IMPORT_COMPLETED_SUCCESS}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Η πρόχειρη εισαγωγή ολοκληρώθηκε και δεν μπορεί να τροποποιηθεί.
+              </p>
+            </div>
+          </div>
+          <SurfaceHeader title={RESERVATION_IMPORT_COMPLETED_TITLE} />
           <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -581,7 +639,7 @@ export function ReservationImportDraftPage() {
               <p className="text-sm font-medium text-foreground">
                 {RESERVATION_IMPORT_CREATED_BOOKINGS_TITLE}
               </p>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
                 {createdBookingIds.map((bookingId, index) => (
                   <li key={bookingId}>
                     <Link
@@ -597,9 +655,17 @@ export function ReservationImportDraftPage() {
             </div>
           ) : null}
 
-          <Button size="sm" asChild>
-            <Link href="/dashboard/bookings">{RESERVATION_IMPORT_BACK_TO_BOOKINGS}</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" asChild>
+              <Link href="/dashboard/bookings">{RESERVATION_IMPORT_VIEW_BOOKINGS_NAV}</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/dashboard/availability">{RESERVATION_IMPORT_VIEW_CALENDAR_NAV}</Link>
+            </Button>
+            <Button size="sm" variant="ghost" asChild>
+              <Link href="/dashboard/bookings">{RESERVATION_IMPORT_BACK_TO_BOOKINGS}</Link>
+            </Button>
+          </div>
         </Surface>
       ) : (
         <Surface variant="panel" padding="md" className="space-y-4">
@@ -706,18 +772,27 @@ export function ReservationImportDraftPage() {
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"
-                disabled={!canCommit}
+                disabled={!canCommit || committing || bulkBusy || decisionBusy}
                 onClick={() => setCommitOpen(true)}
                 data-testid="import-commit-reservations"
+                aria-busy={committing}
               >
-                {committing
-                  ? RESERVATION_IMPORT_COMMIT_BUSY_LABEL
-                  : RESERVATION_IMPORT_COMMIT_LABEL}
+                {committing ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                      aria-hidden
+                    />
+                    {RESERVATION_IMPORT_COMMIT_BUSY_LABEL}
+                  </span>
+                ) : (
+                  RESERVATION_IMPORT_COMMIT_LABEL
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={committing || discarding}
+                disabled={committing || discarding || bulkBusy}
                 onClick={() => setChangeFileOpen(true)}
               >
                 {RESERVATION_IMPORT_CHANGE_FILE_LABEL}
@@ -727,7 +802,7 @@ export function ReservationImportDraftPage() {
         </Surface>
       )}
 
-      {!isCompleted ? (
+      {!isCompleted && !committing ? (
         <ReservationImportBulkConflictBar
           eligibleCount={conflictEligibleIds.length}
           selectedCount={selectedEligibleIds.length}
@@ -784,15 +859,24 @@ export function ReservationImportDraftPage() {
                     allRows={rows}
                     conflictBookings={conflictBookingsList}
                     unitLabel={unitLabel}
-                    decidingRowId={isCompleted ? null : decidingRowId}
-                    pricingRowId={isCompleted ? null : pricingRowId}
-                    decisionBusy={isCompleted || decisionBusy || bulkBusy}
-                    selectable={!isCompleted && rowAllowsConflictDecision(row)}
+                    batchCompleted={isCompleted}
+                    decidingRowId={isCompleted || committing ? null : decidingRowId}
+                    pricingRowId={isCompleted || committing ? null : pricingRowId}
+                    decisionBusy={isCompleted || decisionBusy || bulkBusy || committing}
+                    selectable={
+                      !isCompleted && !committing && rowAllowsConflictDecision(row)
+                    }
                     selected={selectedRowIds.has(row.id)}
                     onSelectedChange={(selected) => toggleRowSelected(row.id, selected)}
-                    onDecideConflict={handleDecideConflict}
-                    onUseTalosPrice={handleUseTalosPrice}
-                    onSaveManualPrice={handleSaveManualPrice}
+                    onDecideConflict={
+                      isCompleted || committing ? undefined : handleDecideConflict
+                    }
+                    onUseTalosPrice={
+                      isCompleted || committing ? undefined : handleUseTalosPrice
+                    }
+                    onSaveManualPrice={
+                      isCompleted || committing ? undefined : handleSaveManualPrice
+                    }
                   />
                 ))
               )}
@@ -862,6 +946,7 @@ export function ReservationImportDraftPage() {
               previewCounts.blockedCount,
             )}
             confirmLabel={RESERVATION_IMPORT_COMMIT_LABEL}
+            loadingLabel={RESERVATION_IMPORT_COMMIT_BUSY_LABEL}
             loading={committing}
             onConfirm={handleCommit}
           />
@@ -878,6 +963,7 @@ export function ReservationImportDraftPage() {
                 selectedEligibleIds.filter(rowAllowsBulkKeepCsv).length,
             )}
             confirmLabel={RESERVATION_IMPORT_BULK_KEEP_CSV}
+            loadingLabel={RESERVATION_IMPORT_BULK_SAVING_LABEL}
             destructive
             loading={bulkBusy}
             onConfirm={() => void handleBulkKeepCsvConfirm()}

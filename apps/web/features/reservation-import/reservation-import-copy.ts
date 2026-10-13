@@ -130,7 +130,28 @@ export const RESERVATION_IMPORT_NET_INCOME_WARNING =
 export const RESERVATION_IMPORT_COMMIT_REFETCH_ERROR =
   "Η εισαγωγή μπορεί να πέτυχε, αλλά απέτυχε η ανανέωση από τον διακομιστή. Ανανεώστε για να δείτε την επίσημη κατάσταση.";
 
-export const RESERVATION_IMPORT_COMMIT_BUSY_LABEL = "Εισαγωγή…";
+export const RESERVATION_IMPORT_COMMIT_BUSY_LABEL = "Εισαγωγή κρατήσεων…";
+
+export const RESERVATION_IMPORT_COMMIT_PROCESSING_TITLE =
+  "Η εισαγωγή βρίσκεται σε εξέλιξη. Παρακαλώ περιμένετε.";
+
+export const RESERVATION_IMPORT_COMMIT_PROCESSING_DETAIL =
+  "Ελέγχουμε τις κρατήσεις, αρχειοθετούμε τις αντικαθιστώμενες και ενημερώνουμε το ημερολόγιο.";
+
+export const RESERVATION_IMPORT_BULK_SAVING_LABEL = "Αποθήκευση επιλογών…";
+
+export const RESERVATION_IMPORT_COMPLETED_SUCCESS =
+  "Η εισαγωγή ολοκληρώθηκε επιτυχώς";
+
+export const RESERVATION_IMPORT_VIEW_BOOKINGS_NAV = "Προβολή κρατήσεων";
+
+export const RESERVATION_IMPORT_VIEW_CALENDAR_NAV = "Προβολή ημερολογίου";
+
+export const RESERVATION_IMPORT_HISTORICAL_RESOLUTION =
+  "Ιστορικό απόφασης σύγκρουσης (η εισαγωγή έχει ολοκληρωθεί — δεν μπορεί να τροποποιηθεί).";
+
+export const RESERVATION_IMPORT_COMMIT_RECONCILED =
+  "Η εισαγωγή ολοκληρώθηκε στον διακομιστή. Η περίληψη ανανεώθηκε.";
 
 export const RESERVATION_IMPORT_COMMIT_REPLACE_NOT_SUPERSEDEABLE =
   "Τουλάχιστον μία υπάρχουσα κράτηση δεν μπορεί να αντικατασταθεί (επιτρέπονται μόνο επιβεβαιωμένες ή ολοκληρωμένες). Επιλέξτε «Διατήρηση υπάρχουσας» ή αλλάξτε την απόφαση πριν επαναλάβετε.";
@@ -229,6 +250,7 @@ export const RESERVATION_IMPORT_READINESS_SUMMARY = (
 export const RESERVATION_IMPORT_COMPLETED_TITLE = "Η εισαγωγή ολοκληρώθηκε";
 
 export const RESERVATION_IMPORT_BACK_TO_BOOKINGS = "Πίσω στις κρατήσεις";
+
 
 export const RESERVATION_IMPORT_VIEW_BOOKING_LABEL = "Προβολή κράτησης";
 

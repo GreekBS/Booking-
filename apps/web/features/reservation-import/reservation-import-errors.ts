@@ -60,8 +60,20 @@ export function bookingStatusLabelEl(status: string): string {
   }
 }
 
-/** Prefer stable errorCode → Greek; never surface raw stacks or PII. */
+const TERMINAL_IMPORT_ROW_STATUSES = new Set([
+  "imported",
+  "skipped",
+  "skipped_already_imported",
+]);
+
+/**
+ * Prefer stable errorCode → Greek; never surface raw stacks or PII.
+ * Terminal (completed-import) rows must not show actionable preflight blockers.
+ */
 export function importRowOperatorErrorMessage(row: ReservationImportRowDto): string | null {
+  if (TERMINAL_IMPORT_ROW_STATUSES.has(row.status)) {
+    return null;
+  }
   const code = row.errorCode ?? "";
   if (code === "REPLACE_TARGET_NOT_SUPERSEDEABLE") {
     const status =
@@ -140,6 +152,9 @@ export function rowHasNonSupersedeableKeepCsvTarget(
   row: ReservationImportRowDto,
   conflictBookings: ReservationImportConflictBookingDto[],
 ): boolean {
+  if (TERMINAL_IMPORT_ROW_STATUSES.has(row.status)) {
+    return false;
+  }
   if (
     row.errorCode &&
     REPLACE_ISSUE_CODES.has(row.errorCode) &&
@@ -157,6 +172,8 @@ export function rowHasNonSupersedeableKeepCsvTarget(
   return snap.existingBookingIds.some((id) => {
     const b = byId.get(id);
     if (!b) return true;
+    // Already-archived targets are not active blockers.
+    if (b.isSuperseded) return false;
     return !conflictBookingIsSupersedeable(b);
   });
 }

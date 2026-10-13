@@ -1,11 +1,13 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   RESERVATION_IMPORT_BULK_CLEAR,
   RESERVATION_IMPORT_BULK_KEEP_CSV,
   RESERVATION_IMPORT_BULK_KEEP_EXISTING,
   RESERVATION_IMPORT_BULK_PROGRESS,
+  RESERVATION_IMPORT_BULK_SAVING_LABEL,
   RESERVATION_IMPORT_BULK_SELECT_ALL,
   RESERVATION_IMPORT_BULK_SELECTED,
 } from "./reservation-import-copy";
@@ -41,6 +43,7 @@ export function ReservationImportBulkConflictBar({
     <div
       className="sticky top-0 z-10 space-y-2 rounded-md border bg-background/95 p-3 shadow-sm backdrop-blur"
       data-testid="import-bulk-conflict-bar"
+      aria-busy={busy}
     >
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm">
@@ -58,9 +61,21 @@ export function ReservationImportBulkConflictBar({
         <span className="text-sm text-muted-foreground" role="status">
           {RESERVATION_IMPORT_BULK_SELECTED(selectedCount)}
         </span>
-        {busy && progressTotal > 0 ? (
-          <span className="text-sm text-muted-foreground" role="status">
-            {RESERVATION_IMPORT_BULK_PROGRESS(progressDone, progressTotal)}
+        {busy ? (
+          <span
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+            data-testid="import-bulk-saving"
+          >
+            <Loader2
+              className="h-4 w-4 animate-spin motion-reduce:animate-none"
+              aria-hidden
+            />
+            {RESERVATION_IMPORT_BULK_SAVING_LABEL}
+            {progressTotal > 0
+              ? ` · ${RESERVATION_IMPORT_BULK_PROGRESS(progressDone, progressTotal)}`
+              : null}
           </span>
         ) : null}
       </div>

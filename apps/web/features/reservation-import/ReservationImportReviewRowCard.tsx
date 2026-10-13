@@ -12,12 +12,15 @@ import { ReservationImportConflictDecisionPanel } from "./ReservationImportConfl
 import { ReservationImportPriceDecisionPanel } from "./ReservationImportPriceDecisionPanel";
 import {
   RESERVATION_IMPORT_CURRENCY_DEFAULTED_HINT,
+  RESERVATION_IMPORT_HISTORICAL_RESOLUTION,
   RESERVATION_IMPORT_NET_INCOME_WARNING,
+  RESERVATION_IMPORT_SUPERSEDED_BADGE,
   RESERVATION_IMPORT_VIEW_BOOKING_LABEL,
 } from "./reservation-import-copy";
 import { importRowOperatorErrorMessage } from "./reservation-import-errors";
 import {
   bookingDrawerHref,
+  conflictResolutionLabel,
   formatImportStayRange,
   formatRowPriceAmount,
   priceDisplayKind,
@@ -35,6 +38,8 @@ type Props = {
   allRows: ReservationImportRowDto[];
   conflictBookings: ReservationImportConflictBookingDto[];
   unitLabel: (unitId: string) => string;
+  /** When true, hide actionable panels and suppress stale preflight errors. */
+  batchCompleted?: boolean;
   decidingRowId?: string | null;
   pricingRowId?: string | null;
   decisionBusy?: boolean;
@@ -54,6 +59,7 @@ export function ReservationImportReviewRowCard({
   allRows,
   conflictBookings,
   unitLabel,
+  batchCompleted = false,
   decidingRowId = null,
   pricingRowId = null,
   decisionBusy = false,
@@ -66,13 +72,21 @@ export function ReservationImportReviewRowCard({
 }: Props) {
   const priceKind = priceDisplayKind(row);
   const priceAmount = formatRowPriceAmount(row);
-  const showConflictPanel =
+  const hadConflict =
     rowHasHardBlockers(row) ||
     rowHasExistingBookingConflicts(row) ||
     rowHasPeerConflicts(row) ||
     row.conflictResolution !== "undecided";
-  const showPricePanel = rowAllowsPriceDecision(row) && onUseTalosPrice && onSaveManualPrice;
-  const operatorError = importRowOperatorErrorMessage(row);
+  const showConflictPanel =
+    !batchCompleted &&
+    hadConflict &&
+    Boolean(onDecideConflict);
+  const showPricePanel =
+    !batchCompleted &&
+    rowAllowsPriceDecision(row) &&
+    onUseTalosPrice &&
+    onSaveManualPrice;
+  const operatorError = batchCompleted ? null : importRowOperatorErrorMessage(row);
 
   const rowDeciding = decidingRowId === row.id;
   const rowPricing = pricingRowId === row.id;
@@ -159,6 +173,23 @@ export function ReservationImportReviewRowCard({
             {RESERVATION_IMPORT_VIEW_BOOKING_LABEL}
           </Link>
         </p>
+      ) : null}
+
+      {batchCompleted && hadConflict ? (
+        <div
+          className="rounded-md border bg-muted/20 p-3 text-sm"
+          data-testid={`import-row-historical-conflict-${row.id}`}
+        >
+          <p className="text-xs text-muted-foreground">{RESERVATION_IMPORT_HISTORICAL_RESOLUTION}</p>
+          <p className="mt-1 text-foreground">
+            Απόφαση: {conflictResolutionLabel(row.conflictResolution)}
+          </p>
+          {row.supersededBookingId ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {RESERVATION_IMPORT_SUPERSEDED_BADGE}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {showPricePanel ? (

@@ -66,8 +66,28 @@ describe("Phase C3 — completed summary + booking links", () => {
     const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
     expect(page).toContain("isCompleted");
     expect(page).toContain("{!isCompleted ? (");
-    expect(page).toContain("decisionBusy={isCompleted || decisionBusy || bulkBusy}");
+    expect(page).toContain("batchCompleted={isCompleted}");
+    expect(page).toContain(
+      "decisionBusy={isCompleted || decisionBusy || bulkBusy || committing}",
+    );
+    expect(page).toContain("onDecideConflict={");
+    expect(page).toContain("isCompleted || committing ? undefined : handleDecideConflict");
     expect(page).toContain("RESERVATION_IMPORT_BACK_TO_BOOKINGS");
+    expect(page).toContain("RESERVATION_IMPORT_VIEW_BOOKINGS_NAV");
+    expect(page).toContain("RESERVATION_IMPORT_VIEW_CALENDAR_NAV");
+    expect(page).toContain('data-testid="import-completed-summary"');
+  });
+
+  it("shows immediate commit loading feedback", () => {
+    const page = read("features/reservation-import/ReservationImportDraftPage.tsx");
+    expect(page).toContain('data-testid="import-commit-processing"');
+    expect(page).toContain("RESERVATION_IMPORT_COMMIT_PROCESSING_TITLE");
+    expect(page).toContain("RESERVATION_IMPORT_COMMIT_BUSY_LABEL");
+    expect(page).toContain("setCommitOpen(false)");
+    expect(page).toContain("aria-busy={committing}");
+    const hook = read("features/reservation-import/useReservationImportReview.ts");
+    expect(hook).toContain("setCommitting(true)");
+    expect(hook).toContain('detail.batch.status === "completed"');
   });
 });
 
