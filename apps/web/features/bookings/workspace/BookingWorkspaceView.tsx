@@ -195,7 +195,13 @@ export function BookingWorkspaceView({
 
   if (loading && !booking) {
     return (
-      <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-3 p-4" : "space-y-3 p-4"}>
+      <div
+        className={
+          fillHeight
+            ? "flex min-h-0 flex-1 flex-col gap-3 p-4 font-sans"
+            : "space-y-3 p-4 font-sans"
+        }
+      >
         <Skeleton className="h-28 w-full rounded-lg" />
         <Skeleton className="h-10 w-full rounded-md" />
         <Skeleton className="h-40 w-full rounded-lg" />
@@ -206,8 +212,14 @@ export function BookingWorkspaceView({
 
   if (!booking || !draft) {
     return (
-      <div className={fillHeight ? "flex flex-1 items-center justify-center p-4" : "p-4"}>
-        <p className="text-sm text-muted-foreground">{error ?? "Η κράτηση δεν είναι διαθέσιμη."}</p>
+      <div
+        className={
+          fillHeight
+            ? "flex flex-1 items-center justify-center p-4 font-sans"
+            : "p-4 font-sans"
+        }
+      >
+        <p className="text-sm text-foreground/70">{error ?? "Η κράτηση δεν είναι διαθέσιμη."}</p>
       </div>
     );
   }
@@ -241,8 +253,17 @@ export function BookingWorkspaceView({
     }
   }
 
+  const tabTriggerClass =
+    "h-9 shrink-0 rounded-md px-3 text-sm font-medium text-foreground/70 data-[state=active]:bg-surface-subtle data-[state=active]:text-foreground data-[state=active]:shadow-none";
+
   return (
-    <div className={fillHeight ? "flex min-h-0 flex-1 flex-col" : "flex flex-col"}>
+    <div
+      className={
+        fillHeight
+          ? "flex min-h-0 flex-1 flex-col font-sans"
+          : "flex flex-col font-sans"
+      }
+    >
       <BookingWorkspaceHeader
         booking={currentBooking}
         propertyLabel={labels.propertyLabel}
@@ -261,36 +282,24 @@ export function BookingWorkspaceView({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="shrink-0 border-b border-border bg-surface px-3 pt-2 sm:px-4">
-          <TabsList className="h-9 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
-            <TabsTrigger
-              value="overview"
-              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
-            >
+          <TabsList className="h-10 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0">
+            <TabsTrigger value="overview" className={tabTriggerClass}>
               Επισκόπηση
             </TabsTrigger>
-            <TabsTrigger
-              value="financials"
-              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="financials" className={tabTriggerClass}>
               Οικονομικά
             </TabsTrigger>
-            <TabsTrigger
-              value="guest"
-              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="guest" className={tabTriggerClass}>
               Επισκέπτης &amp; χρέωση
             </TabsTrigger>
-            <TabsTrigger
-              value="activity"
-              className="rounded-md px-3 py-1.5 text-xs data-[state=active]:bg-primary-subtle data-[state=active]:text-primary data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="activity" className={tabTriggerClass}>
               Δραστηριότητα
             </TabsTrigger>
           </TabsList>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 text-sm sm:px-5">
-          <TabsContent value="overview" className="mt-0 space-y-5 focus-visible:outline-none">
+          <TabsContent value="overview" className="mt-0 space-y-4 focus-visible:outline-none">
             <BookingStaySection
               draft={draft}
               readOnly={stayReadOnly}
@@ -307,9 +316,9 @@ export function BookingWorkspaceView({
               unitId={currentBooking.unitId}
               active={active}
             />
-            <BookingGuestSection {...sectionProps} />
+            <BookingGuestSection {...sectionProps} compact />
             <BookingWhatsAppMessagingSection {...sectionProps} />
-            <BookingPricingSection {...pricingProps} />
+            <BookingPricingSection {...pricingProps} summary />
           </TabsContent>
 
           <TabsContent
@@ -317,11 +326,17 @@ export function BookingWorkspaceView({
             forceMount
             className={
               tab === "financials"
-                ? "mt-0 space-y-5 focus-visible:outline-none"
+                ? "mt-0 space-y-4 focus-visible:outline-none"
                 : "mt-0 hidden"
             }
           >
             <BookingPricingSection {...pricingProps} />
+            <BookingPaymentsSection
+              {...sectionProps}
+              active
+              refreshNonce={financialRefreshNonce}
+              onOutstandingChange={setOutstandingLabel}
+            />
             <BookingFinancialRepricePanel
               tenantId={tenantId}
               booking={currentBooking}
@@ -335,21 +350,15 @@ export function BookingWorkspaceView({
               refreshNonce={financialRefreshNonce}
               active={tab === "financials"}
             />
-            <BookingPaymentsSection
-              {...sectionProps}
-              active
-              refreshNonce={financialRefreshNonce}
-              onOutstandingChange={setOutstandingLabel}
-            />
           </TabsContent>
 
-          <TabsContent value="guest" className="mt-0 space-y-5 focus-visible:outline-none">
+          <TabsContent value="guest" className="mt-0 space-y-4 focus-visible:outline-none">
             <BookingGuestSection {...sectionProps} />
             <BookingWhatsAppMessagingSection {...sectionProps} />
             <BookingBillingFiscalSection {...sectionProps} />
           </TabsContent>
 
-          <TabsContent value="activity" className="mt-0 space-y-5 focus-visible:outline-none">
+          <TabsContent value="activity" className="mt-0 space-y-4 focus-visible:outline-none">
             <BookingTimelineSection {...sectionProps} />
             <BookingNotesSection />
           </TabsContent>

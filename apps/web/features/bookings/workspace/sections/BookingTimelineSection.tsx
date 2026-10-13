@@ -16,7 +16,7 @@ export function BookingTimelineSection({ booking }: BookingSectionProps) {
           const isLast = index === steps.length - 1;
 
           return (
-            <li key={step.label} className="relative flex gap-3 pb-6 last:pb-0">
+            <li key={step.label} className="relative flex gap-3 pb-4 last:pb-0">
               {!isLast && (
                 <span
                   aria-hidden
@@ -32,7 +32,12 @@ export function BookingTimelineSection({ booking }: BookingSectionProps) {
               />
               <div className="min-w-0 flex-1 pt-0.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={cn("text-sm", step.current ? "font-medium" : "text-muted-foreground")}>
+                  <span
+                    className={cn(
+                      "text-sm",
+                      step.current ? "font-semibold text-foreground" : "text-foreground/70",
+                    )}
+                  >
                     {step.label}
                   </span>
                   {step.current && <StatusBadge status={booking.status} />}

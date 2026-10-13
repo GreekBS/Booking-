@@ -25,6 +25,7 @@ describe("Talos operator Phase 2 — bookings workspace", () => {
     const drawer = read("features/bookings/BookingDetailDrawer.tsx");
     expect(drawer).toContain("BookingWorkspaceView");
     expect(drawer).toContain("sm:max-w-[min(900px,92vw)]");
+    expect(drawer).toContain("font-sans");
     expect(drawer).not.toContain("sm:max-w-xl");
   });
 
@@ -42,6 +43,40 @@ describe("Talos operator Phase 2 — bookings workspace", () => {
     expect(view).toContain("BookingTimelineSection");
     expect(view).toContain("BookingFinancialRepricePanel");
     expect(view).toContain("BookingCommercialAmendmentsSection");
+    expect(view).toContain("font-sans");
+    expect(view).toContain("compact");
+    expect(view).toContain("summary");
+    // Financials tab body: Pricing → Payments → Reprice → Amendments
+    const finBody = view.indexOf("forceMount");
+    expect(finBody).toBeGreaterThan(-1);
+    const pricingIdx = view.indexOf("<BookingPricingSection", finBody);
+    const paymentsIdx = view.indexOf("<BookingPaymentsSection", finBody);
+    const repriceIdx = view.indexOf("<BookingFinancialRepricePanel", finBody);
+    const amendIdx = view.indexOf("<BookingCommercialAmendmentsSection", finBody);
+    expect(pricingIdx).toBeGreaterThan(finBody);
+    expect(paymentsIdx).toBeGreaterThan(pricingIdx);
+    expect(repriceIdx).toBeGreaterThan(paymentsIdx);
+    expect(amendIdx).toBeGreaterThan(repriceIdx);
+  });
+
+  it("drawer header hierarchy locks sans scale and demotes technical IDs", () => {
+    const header = read("features/bookings/workspace/BookingWorkspaceHeader.tsx");
+    expect(header).toContain("font-sans");
+    expect(header).toContain("text-[22px]");
+    expect(header).toContain("Τεχνικά στοιχεία");
+    expect(header).toContain("formatBookingDisplayId");
+    expect(header).toContain("<details");
+    expect(header).not.toContain("text-[10px] font-semibold uppercase");
+
+    const section = read("features/workspace/components/WorkspaceSection.tsx");
+    expect(section).toContain("rounded-lg border border-border bg-surface");
+    expect(section).toContain("text-sm font-semibold text-foreground");
+    expect(section).not.toContain("uppercase tracking-wide");
+
+    const actions = read("features/bookings/workspace/BookingQuickActions.tsx");
+    expect(actions).toContain('variant="outline"');
+    expect(actions).toContain("text-destructive");
+    expect(actions).not.toContain('variant="destructive"');
   });
 
   it("guest section does not invent country/language/special requests", () => {

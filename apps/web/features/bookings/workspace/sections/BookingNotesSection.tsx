@@ -9,12 +9,12 @@ export function BookingNotesSection() {
     <WorkspaceSection
       title={elCommon.notes}
       badge={
-        <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground/70">
           Σύντομα
         </span>
       }
     >
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-foreground/70">
         Οι εσωτερικές και οι σημειώσεις επισκέπτη δεν είναι ακόμα διαθέσιμες.
       </p>
     </WorkspaceSection>

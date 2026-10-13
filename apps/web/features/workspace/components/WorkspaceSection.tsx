@@ -14,11 +14,14 @@ export function WorkspaceSection({
   badge?: React.ReactNode;
 }) {
   return (
-    <section className={cn("space-y-3", className)}>
+    <section
+      className={cn(
+        "space-y-3 rounded-lg border border-border bg-surface p-3.5 sm:p-4",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {badge}
       </div>
       {children}
@@ -45,12 +48,14 @@ export function WorkspaceDetailRow({
 }) {
   return (
     <div className={cn("flex items-start justify-between gap-4 text-sm", className)}>
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dt className="shrink-0 text-xs font-medium text-foreground/70 sm:text-sm sm:font-normal sm:text-foreground/70">
+        {label}
+      </dt>
       <dd
         className={cn(
-          "text-right",
-          mono && "font-mono text-xs",
-          bold && "font-semibold",
+          "text-right text-foreground",
+          mono && "font-mono text-xs text-muted-foreground",
+          bold && "font-semibold tabular-nums",
         )}
       >
         {value}

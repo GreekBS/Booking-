@@ -31,7 +31,7 @@ describe("operator-ui housekeeping HT-4", () => {
     expect(section).toContain("Δημιουργία εργασίας");
     expect(section).toContain("Λειτουργικές εργασίες");
     expect(section).toContain("Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες");
-    expect(section).toContain("min-h-8");
+    expect(section).toContain("min-h-9");
   });
 
   it("Housekeeping honors bookingId server filter and create presets", () => {

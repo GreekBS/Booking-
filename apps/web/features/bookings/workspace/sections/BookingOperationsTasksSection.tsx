@@ -10,6 +10,7 @@ import { formatOperatorDate } from "@/lib/admin/money-presentation";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceSection } from "@/features/workspace/components/WorkspaceSection";
 import { elCommon, elPriority, elTaskCategory, statusLabelEl } from "@/lib/i18n";
 
 function categoryLabel(category: string): string {
@@ -71,38 +72,32 @@ export function BookingOperationsTasksSection({
   const createHref = `${hkHref}&create=1&unitId=${encodeURIComponent(unitId)}`;
 
   return (
-    <section aria-labelledby="booking-ops-tasks-heading" className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3
-            id="booking-ops-tasks-heading"
-            className="text-sm font-semibold text-foreground"
-          >
-            Λειτουργικές εργασίες
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            {loading
-              ? elCommon.loading
-              : total === 0
-                ? "Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες."
-                : `${openCount} ανοιχτές · ${inProgressCount} σε εξέλιξη`}
-          </p>
-        </div>
+    <WorkspaceSection
+      title="Λειτουργικές εργασίες"
+      badge={
         <div className="flex flex-wrap gap-1.5">
-          <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
+          <Button variant="outline" size="sm" className="h-9 text-xs" asChild>
             <Link href={createHref}>
               <ClipboardList className="h-3.5 w-3.5" aria-hidden />
               Δημιουργία εργασίας
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+          <Button variant="ghost" size="sm" className="h-9 text-xs" asChild>
             <Link href={hkHref}>
               Όλες οι εργασίες
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </Button>
         </div>
-      </div>
+      }
+    >
+      <p className="text-xs text-foreground/70">
+        {loading
+          ? elCommon.loading
+          : total === 0
+            ? "Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες."
+            : `${openCount} ανοιχτές · ${inProgressCount} σε εξέλιξη`}
+      </p>
 
       {error ? (
         <p className="text-xs text-destructive" role="alert">
@@ -110,33 +105,28 @@ export function BookingOperationsTasksSection({
         </p>
       ) : null}
 
-      {loading && tasks.length === 0 ? (
-        <Skeleton className="h-16 w-full" />
-      ) : null}
-
-      {!loading && tasks.length === 0 && !error ? (
-        <p className="text-xs text-muted-foreground">Δεν υπάρχουν ανοιχτές λειτουργικές εργασίες.</p>
-      ) : null}
+      {loading && tasks.length === 0 ? <Skeleton className="h-16 w-full" /> : null}
 
       {tasks.length > 0 ? (
-        <ul className="divide-y divide-border rounded-md border border-border/70">
+        <ul className="divide-y divide-border overflow-hidden rounded-md border border-border/70">
           {tasks.map((task) => (
-            <li key={task.id} className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <li
+              key={task.id}
+              className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div className="min-w-0 space-y-0.5">
-                <p className="truncate text-sm font-medium">{task.title}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
+                <p className="text-xs text-foreground/70">
                   {categoryLabel(task.category)}
                   {task.priority !== "NORMAL"
                     ? ` · ${elPriority[task.priority] ?? task.priority}`
                     : ""}
-                  {task.dueAt
-                    ? ` · προθεσμία ${formatOperatorDate(task.dueAt)}`
-                    : ""}
+                  {task.dueAt ? ` · προθεσμία ${formatOperatorDate(task.dueAt)}` : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <StatusBadge status={task.status} label={statusLabelEl(task.status)} />
-                <Button variant="outline" size="sm" className="h-8 min-h-8 text-xs" asChild>
+                <Button variant="outline" size="sm" className="h-9 min-h-9 text-xs" asChild>
                   <Link
                     href={`/dashboard/housekeeping?view=all&taskId=${encodeURIComponent(task.id)}&bookingId=${encodeURIComponent(bookingId)}`}
                   >
@@ -148,6 +138,6 @@ export function BookingOperationsTasksSection({
           ))}
         </ul>
       ) : null}
-    </section>
+    </WorkspaceSection>
   );
 }

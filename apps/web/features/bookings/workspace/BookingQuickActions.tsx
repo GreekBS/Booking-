@@ -27,12 +27,18 @@ export function BookingQuickActions({
   return (
     <div className="flex flex-wrap gap-2">
       {canConfirm ? (
-        <Button size="sm" disabled={actionLoading} onClick={onConfirm}>
+        <Button size="sm" className="h-9" disabled={actionLoading} onClick={onConfirm}>
           {elCommon.confirm}
         </Button>
       ) : null}
       {canCancel ? (
-        <Button size="sm" variant="destructive" disabled={actionLoading} onClick={onCancel}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={actionLoading}
+          onClick={onCancel}
+        >
           Ακύρωση κράτησης
         </Button>
       ) : null}

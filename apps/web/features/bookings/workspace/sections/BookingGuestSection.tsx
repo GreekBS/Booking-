@@ -10,8 +10,13 @@ import { Button } from "@/components/ui/button";
 import type { BookingSectionProps } from "../types";
 import { elCommon } from "@/lib/i18n";
 
+interface BookingGuestSectionProps extends BookingSectionProps {
+  /** Overview: contact snapshot only; full CRM stays on the Guest tab. */
+  compact?: boolean;
+}
+
 /** Reservation contact snapshot + linked CRM Guest identity when authorized. */
-export function BookingGuestSection({ booking }: BookingSectionProps) {
+export function BookingGuestSection({ booking, compact = false }: BookingGuestSectionProps) {
   const linked = booking.linkedGuest ?? null;
 
   return (
@@ -24,35 +29,37 @@ export function BookingGuestSection({ booking }: BookingSectionProps) {
         </WorkspaceDetailList>
       </WorkspaceSection>
 
-      <WorkspaceSection title="Συνδεδεμένος επισκέπτης (CRM)">
-        {linked ? (
-          <>
+      {compact ? null : (
+        <WorkspaceSection title="Συνδεδεμένος επισκέπτης (CRM)">
+          {linked ? (
+            <>
+              <WorkspaceDetailList>
+                <WorkspaceDetailRow label="Εμφανιζόμενο όνομα" value={linked.displayName} />
+                <WorkspaceDetailRow label={elCommon.email} value={linked.email ?? "—"} />
+                <WorkspaceDetailRow label={elCommon.phone} value={linked.phone ?? "—"} />
+                <WorkspaceDetailRow label="ID επισκέπτη" value={linked.id} mono />
+              </WorkspaceDetailList>
+              <div className="mt-3">
+                <Button variant="outline" size="sm" className="h-9" asChild>
+                  <Link href={`/dashboard/guests/${linked.id}`}>Προφίλ επισκέπτη</Link>
+                </Button>
+              </div>
+            </>
+          ) : booking.guestId ? (
             <WorkspaceDetailList>
-              <WorkspaceDetailRow label="Εμφανιζόμενο όνομα" value={linked.displayName} />
-              <WorkspaceDetailRow label={elCommon.email} value={linked.email ?? "—"} />
-              <WorkspaceDetailRow label={elCommon.phone} value={linked.phone ?? "—"} />
-              <WorkspaceDetailRow label="ID επισκέπτη" value={linked.id} />
+              <WorkspaceDetailRow label="ID επισκέπτη" value={booking.guestId} mono />
+              <WorkspaceDetailRow
+                label={elCommon.status}
+                value="Συνδέθηκε (τα στοιχεία ταυτότητας δεν είναι διαθέσιμα)"
+              />
             </WorkspaceDetailList>
-            <div className="mt-3">
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/dashboard/guests/${linked.id}`}>Προφίλ επισκέπτη</Link>
-              </Button>
-            </div>
-          </>
-        ) : booking.guestId ? (
-          <WorkspaceDetailList>
-            <WorkspaceDetailRow label="ID επισκέπτη" value={booking.guestId} />
-            <WorkspaceDetailRow
-              label={elCommon.status}
-              value="Συνδέθηκε (τα στοιχεία ταυτότητας δεν είναι διαθέσιμα)"
-            />
-          </WorkspaceDetailList>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Δεν υπάρχει συνδεδεμένος επισκέπτης CRM σε αυτή την κράτηση.
-          </p>
-        )}
-      </WorkspaceSection>
+          ) : (
+            <p className="text-sm text-foreground/70">
+              Δεν υπάρχει συνδεδεμένος επισκέπτης CRM σε αυτή την κράτηση.
+            </p>
+          )}
+        </WorkspaceSection>
+      )}
     </>
   );
 }

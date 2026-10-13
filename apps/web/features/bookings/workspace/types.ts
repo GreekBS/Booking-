@@ -36,4 +36,6 @@ export interface BookingPricingSectionProps extends BookingSectionProps {
     totalAmount: string;
     currency: string;
   } | null;
+  /** Overview: totals only; night breakdown stays on Financials. */
+  summary?: boolean;
 }

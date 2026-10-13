@@ -15,18 +15,21 @@ export function BookingPricingSection({
   quote,
   discountTotal,
   proposedPreview,
+  summary = false,
 }: BookingPricingSectionProps) {
   return (
     <WorkspaceSection title="Τιμολόγηση κράτησης">
-      <p className="text-[11px] text-muted-foreground">
-        Εμπορική τιμή διαμονής (προσφορά). Ο λογαριασμός (folio) εμφανίζεται ξεχωριστά παρακάτω.
+      <p className="text-xs text-foreground/70">
+        Εμπορική τιμή διαμονής (προσφορά). Ο λογαριασμός (folio) εμφανίζεται στα Οικονομικά.
       </p>
       {quote ? (
         <>
           {proposedPreview ? (
-            <p className="mb-2 text-xs text-muted-foreground">
+            <p className="mb-2 text-xs text-foreground/70">
               Προτεινόμενο σύνολο μετά από αλλαγή διαμονής:{" "}
-              {formatMoney(proposedPreview.totalAmount, proposedPreview.currency)}
+              <span className="font-semibold tabular-nums text-foreground">
+                {formatMoney(proposedPreview.totalAmount, proposedPreview.currency)}
+              </span>
             </p>
           ) : null}
           <WorkspaceDetailList>
@@ -54,9 +57,9 @@ export function BookingPricingSection({
               bold
             />
           </WorkspaceDetailList>
-          {quote.lineItems.length > 0 ? (
+          {!summary && quote.lineItems.length > 0 ? (
             <div className="overflow-hidden rounded-md border border-border">
-              <div className="border-b border-border bg-surface-subtle px-3 py-2 text-xs font-medium text-muted-foreground">
+              <div className="border-b border-border bg-surface-subtle px-3 py-2 text-xs font-medium text-foreground/70">
                 Ανάλυση ανά νύχτα
               </div>
               <div className="max-h-40 overflow-y-auto">
@@ -65,8 +68,8 @@ export function BookingPricingSection({
                     key={line.date}
                     className="flex justify-between border-b border-border/60 px-3 py-1.5 text-xs last:border-0"
                   >
-                    <span className="text-muted-foreground">{line.date}</span>
-                    <span className="tabular-nums">
+                    <span className="text-foreground/70">{line.date}</span>
+                    <span className="tabular-nums text-foreground">
                       {formatMoney(line.adjustedAmount, line.currency)}
                     </span>
                   </div>
@@ -76,7 +79,7 @@ export function BookingPricingSection({
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Η προσφορά δεν είναι διαθέσιμη</p>
+        <p className="text-sm text-foreground/70">Η προσφορά δεν είναι διαθέσιμη</p>
       )}
     </WorkspaceSection>
   );

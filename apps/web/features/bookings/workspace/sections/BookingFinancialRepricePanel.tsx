@@ -65,13 +65,13 @@ export function BookingFinancialRepricePanel({
 
   return (
     <WorkspaceSection title="Συμφωνημένη τιμή">
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-foreground/70">
         Επανυπολογισμός της εμπορικής συμφωνημένης τιμής από το RatePlan, χωρίς
         αυτόματη πληρωμή ή επιστροφή.
       </p>
 
       {eligibility.message ? (
-        <p className="text-sm text-muted-foreground" role="status">
+        <p className="text-sm text-foreground/70" role="status">
           {eligibility.message}
         </p>
       ) : null}
@@ -80,6 +80,7 @@ export function BookingFinancialRepricePanel({
         type="button"
         size="sm"
         variant="outline"
+        className="h-9"
         disabled={!eligibility.enabled}
         onClick={() => setOpen(true)}
         data-testid="financial-reprice-open"
