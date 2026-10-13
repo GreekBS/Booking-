@@ -121,20 +121,38 @@ describe("Bookings status tabs — page wiring guards stale rows", () => {
     expect(tabs).toContain("h-9");
   });
 
-  it("applies distinct token colors for idle and selected tabs (not color-only selection)", () => {
+  it("uses colored pills when idle and soft tinted rectangles when selected", () => {
     const tabs = readWeb("features/bookings/BookingStatusTabs.tsx");
     expect(tabs).toContain("toneIdle");
     expect(tabs).toContain("toneSelected");
     expect(tabs).toContain("toneCountIdle");
     expect(tabs).toContain("toneCountSelected");
-    // Idle tones remain colored (not generic muted-foreground chrome).
+    // Exactly four visible tones — no pending/payment_pending buttons.
+    expect(tabs).toContain('label: "Όλες"');
+    expect(tabs).toContain('tone: "info"');
+    expect(tabs).toContain('tone: "success"');
+    expect(tabs).toContain('tone: "destructive"');
+    // Idle = rounded-full pills with status-colored borders/tints.
+    expect(tabs).toContain('selected ? "rounded-md" : "rounded-full"');
+    expect(tabs).toContain("border-info/40");
+    expect(tabs).toContain("border-success/40");
+    expect(tabs).toContain("border-destructive/40");
+    expect(tabs).toContain("bg-info-subtle");
+    expect(tabs).toContain("bg-success-subtle");
+    expect(tabs).toContain("bg-destructive/10");
+    // Selected = no decorative outline/ring/shadow; keep status colors (not inverse black).
+    expect(tabs).toContain("border-transparent");
+    expect(tabs).toContain("font-semibold");
+    expect(tabs).toContain("bg-muted text-foreground");
     expect(tabs).toContain("bg-info-subtle text-info");
     expect(tabs).toContain("bg-success-subtle text-success");
-    expect(tabs).toContain("bg-destructive/10 text-destructive");
-    expect(tabs).toContain("bg-muted text-foreground");
-    // Selected is stronger + non-color cues.
-    expect(tabs).toContain("ring-1");
-    expect(tabs).toContain("font-semibold");
+    expect(tabs).toContain("bg-destructive/15 text-destructive");
+    expect(tabs).not.toContain("bg-foreground text-background");
+    expect(tabs).not.toContain("shadow-sm");
+    expect(tabs).not.toMatch(/toneSelected[\s\S]*ring-1/);
+    // Count badges stay rounded; keyboard focus retained.
+    expect(tabs).toContain("rounded-full px-1.5");
+    expect(tabs).toContain("focus-visible:ring-2");
     expect(tabs).toContain("aria-selected={selected}");
     expect(tabs).toContain('data-selected={selected ? "true" : "false"}');
     expect(tabs).toContain("data-tone={meta.tone}");

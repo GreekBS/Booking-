@@ -39,25 +39,30 @@ const TAB_META: Record<
   },
 };
 
-/** Idle: color still readable (label, badge, border, subtle fill). */
+/**
+ * Unselected: fully rounded colored pills (border + subtle tint + status text).
+ * Colors stay visible when idle — no plain gray chrome for status tabs.
+ */
 const toneIdle: Record<TabTone, string> = {
   muted:
-    "border-foreground/20 bg-muted text-foreground hover:border-foreground/35 hover:bg-muted/80",
-  info: "border-info/35 bg-info-subtle text-info hover:border-info/55",
-  success: "border-success/35 bg-success-subtle text-success hover:border-success/55",
+    "border-foreground/25 bg-muted/80 text-foreground hover:border-foreground/40 hover:bg-muted",
+  info: "border-info/40 bg-info-subtle/70 text-info hover:border-info/55 hover:bg-info-subtle",
+  success:
+    "border-success/40 bg-success-subtle/70 text-success hover:border-success/55 hover:bg-success-subtle",
   destructive:
-    "border-destructive/35 bg-destructive/10 text-destructive hover:border-destructive/55",
+    "border-destructive/40 bg-destructive/10 text-destructive hover:border-destructive/55 hover:bg-destructive/15",
 };
 
-/** Selected: stronger fill/border; also font-semibold + ring (not color-only). */
+/**
+ * Selected: soft rectangle, no decorative outline/ring/shadow.
+ * Keep each tab's status color (Όλες stays slate — never inverse black).
+ * Transparent border preserves width so selection does not shift layout.
+ */
 const toneSelected: Record<TabTone, string> = {
-  muted:
-    "border-foreground/40 bg-foreground text-background shadow-sm ring-1 ring-foreground/30",
-  info: "border-info/60 bg-info-subtle text-info shadow-sm ring-1 ring-info/40 font-semibold",
-  success:
-    "border-success/60 bg-success-subtle text-success shadow-sm ring-1 ring-success/40 font-semibold",
-  destructive:
-    "border-destructive/60 bg-destructive/15 text-destructive shadow-sm ring-1 ring-destructive/40 font-semibold",
+  muted: "border-transparent bg-muted text-foreground font-semibold",
+  info: "border-transparent bg-info-subtle text-info font-semibold",
+  success: "border-transparent bg-success-subtle text-success font-semibold",
+  destructive: "border-transparent bg-destructive/15 text-destructive font-semibold",
 };
 
 const toneCountIdle: Record<TabTone, string> = {
@@ -68,10 +73,10 @@ const toneCountIdle: Record<TabTone, string> = {
 };
 
 const toneCountSelected: Record<TabTone, string> = {
-  muted: "bg-background/20 text-background",
-  info: "bg-info/25 text-info",
-  success: "bg-success/25 text-success",
-  destructive: "bg-destructive/25 text-destructive",
+  muted: "bg-foreground/15 text-foreground",
+  info: "bg-info/20 text-info",
+  success: "bg-success/20 text-success",
+  destructive: "bg-destructive/20 text-destructive",
 };
 
 interface BookingStatusTabsProps {
@@ -108,18 +113,19 @@ export function BookingStatusTabs({
             disabled={disabled}
             onClick={() => onChange(id)}
             className={cn(
-              "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors",
+              "inline-flex h-9 shrink-0 items-center gap-1.5 border px-3.5 text-sm font-medium transition-colors",
+              // Idle = pill; selected = soft rectangle (shape is a non-color cue).
+              selected ? "rounded-md" : "rounded-full",
+              // Keyboard focus only — not a decorative selected chrome.
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               selected ? toneSelected[meta.tone] : toneIdle[meta.tone],
-              // Όλες selected already uses inverse chrome; keep weight consistent.
-              selected && meta.tone === "muted" && "font-semibold",
               disabled && "pointer-events-none opacity-60",
             )}
           >
             <span className="whitespace-nowrap">{meta.label}</span>
             <span
               className={cn(
-                "rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
                 selected ? toneCountSelected[meta.tone] : toneCountIdle[meta.tone],
               )}
             >
