@@ -191,7 +191,7 @@ export function invalidatePropertiesCache(tenantId?: string): void {
 
 export async function searchBookings(
   tenantId: string,
-  params: Record<string, string | number | undefined>,
+  params: Record<string, string | number | boolean | undefined>,
 ): Promise<PaginatedBookings> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -200,6 +200,30 @@ export async function searchBookings(
     }
   }
   return adminFetch(`/bookings?${query.toString()}`, { tenantId });
+}
+
+export interface BookingStatusCountsRecord {
+  all: number;
+  byStatus: {
+    pending: number;
+    payment_pending: number;
+    confirmed: number;
+    cancelled: number;
+    completed: number;
+  };
+}
+
+export async function fetchBookingStatusCounts(
+  tenantId: string,
+  params: Record<string, string | number | boolean | undefined>,
+): Promise<BookingStatusCountsRecord> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "" && value !== "all") {
+      query.set(key, String(value));
+    }
+  }
+  return adminFetch(`/bookings/status-counts?${query.toString()}`, { tenantId });
 }
 
 export async function fetchAllBookings(

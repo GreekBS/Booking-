@@ -1,5 +1,12 @@
 import { ConflictError } from "@hcp/domain";
-import { Booking, type BookingSearchFilters, type IBookingRepository } from "@hcp/domain";
+import {
+  Booking,
+  type BookingStatusCountFilters,
+  type BookingStatusCounts,
+  type BookingStatusValue,
+  type BookingSearchFilters,
+  type IBookingRepository,
+} from "@hcp/domain";
 import { withTenantTransaction } from "../../client";
 import type { Prisma } from "@prisma/client";
 import {
@@ -8,6 +15,74 @@ import {
 } from "../OutboxRepository";
 import { bookingToDomain, isExclusionViolation, stayOverlapsRangeWhere } from "./commerceMappers";
 import { persistBookingTx } from "./commercePersistence";
+
+const BOOKING_STATUS_VALUES: BookingStatusValue[] = [
+  "pending",
+  "payment_pending",
+  "confirmed",
+  "cancelled",
+  "completed",
+];
+
+function buildBookingListWhere(
+  filters: BookingStatusCountFilters & { status?: string },
+): Prisma.BookingWhereInput {
+  const where: Prisma.BookingWhereInput = {
+    tenantId: filters.tenantId,
+  };
+
+  if (filters.unitId) {
+    where.unitId = filters.unitId;
+  }
+  if (filters.propertyId) {
+    where.propertyId = filters.propertyId;
+  } else if (filters.allowedPropertyIds && filters.allowedPropertyIds.length > 0) {
+    where.propertyId = { in: filters.allowedPropertyIds };
+  }
+  if (filters.status) {
+    where.status = filters.status as Prisma.EnumBookingStatusFilter["equals"];
+  }
+  if (filters.excludeSuperseded) {
+    where.supersededAt = null;
+  }
+  if (filters.checkInFrom || filters.checkInTo) {
+    where.checkIn = {
+      ...(filters.checkInFrom ? { gte: new Date(`${filters.checkInFrom}T00:00:00.000Z`) } : {}),
+      ...(filters.checkInTo ? { lte: new Date(`${filters.checkInTo}T00:00:00.000Z`) } : {}),
+    };
+  }
+  if (filters.checkOutFrom || filters.checkOutTo) {
+    where.checkOut = {
+      ...(filters.checkOutFrom
+        ? { gte: new Date(`${filters.checkOutFrom}T00:00:00.000Z`) }
+        : {}),
+      ...(filters.checkOutTo ? { lte: new Date(`${filters.checkOutTo}T00:00:00.000Z`) } : {}),
+    };
+  }
+  if (filters.createdAtFrom || filters.createdAtTo) {
+    where.createdAt = {
+      ...(filters.createdAtFrom
+        ? { gte: new Date(`${filters.createdAtFrom}T00:00:00.000Z`) }
+        : {}),
+      ...(filters.createdAtTo
+        ? { lte: new Date(`${filters.createdAtTo}T23:59:59.999Z`) }
+        : {}),
+    };
+  }
+  if (filters.guestSearch) {
+    const q = filters.guestSearch.trim();
+    const or: Prisma.BookingWhereInput[] = [
+      { guestName: { contains: q, mode: "insensitive" } },
+      { guestEmail: { contains: q, mode: "insensitive" } },
+    ];
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q)) {
+      or.push({ id: q });
+    }
+    where.OR = or;
+  }
+
+  return where;
+}
 
 export class PrismaBookingRepository implements IBookingRepository {
   constructor(private readonly outboxRepository: PrismaOutboxRepository) {}
@@ -106,42 +181,7 @@ export class PrismaBookingRepository implements IBookingRepository {
   }
 
   async search(filters: BookingSearchFilters) {
-    const where: Prisma.BookingWhereInput = {
-      tenantId: filters.tenantId,
-    };
-
-    if (filters.unitId) {
-      where.unitId = filters.unitId;
-    }
-    if (filters.propertyId) {
-      where.propertyId = filters.propertyId;
-    } else if (filters.allowedPropertyIds && filters.allowedPropertyIds.length > 0) {
-      where.propertyId = { in: filters.allowedPropertyIds };
-    }
-    if (filters.status) {
-      where.status = filters.status as Prisma.EnumBookingStatusFilter["equals"];
-    }
-    if (filters.checkInFrom || filters.checkInTo) {
-      where.checkIn = {
-        ...(filters.checkInFrom ? { gte: new Date(`${filters.checkInFrom}T00:00:00.000Z`) } : {}),
-        ...(filters.checkInTo ? { lte: new Date(`${filters.checkInTo}T00:00:00.000Z`) } : {}),
-      };
-    }
-    if (filters.checkOutFrom || filters.checkOutTo) {
-      where.checkOut = {
-        ...(filters.checkOutFrom
-          ? { gte: new Date(`${filters.checkOutFrom}T00:00:00.000Z`) }
-          : {}),
-        ...(filters.checkOutTo ? { lte: new Date(`${filters.checkOutTo}T00:00:00.000Z`) } : {}),
-      };
-    }
-    if (filters.guestSearch) {
-      const q = filters.guestSearch.trim();
-      where.OR = [
-        { guestName: { contains: q, mode: "insensitive" } },
-        { guestEmail: { contains: q, mode: "insensitive" } },
-      ];
-    }
+    const where = buildBookingListWhere(filters);
 
     const orderByField =
       filters.sortBy === "guestName"
@@ -174,6 +214,33 @@ export class PrismaBookingRepository implements IBookingRepository {
         page: filters.page,
         limit: filters.limit,
       };
+    });
+  }
+
+  async countByStatus(filters: BookingStatusCountFilters): Promise<BookingStatusCounts> {
+    const where = buildBookingListWhere(filters);
+    return withTenantTransaction(filters.tenantId, async (tx) => {
+      const rows = await tx.booking.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+      });
+
+      const byStatus = Object.fromEntries(
+        BOOKING_STATUS_VALUES.map((s) => [s, 0]),
+      ) as Record<BookingStatusValue, number>;
+
+      let all = 0;
+      for (const row of rows) {
+        const status = row.status as BookingStatusValue;
+        const count = row._count._all;
+        if (status in byStatus) {
+          byStatus[status] = count;
+        }
+        all += count;
+      }
+
+      return { all, byStatus };
     });
   }
 }

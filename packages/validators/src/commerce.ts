@@ -235,16 +235,44 @@ export const applyBulkRatePlanFromTemplateSchema = z.object({
   confirmOverwrite: z.boolean().optional(),
 });
 
-export const listBookingsQuerySchema = paginationSchema.extend({
+const bookingStatusEnum = z.enum([
+  "pending",
+  "payment_pending",
+  "confirmed",
+  "cancelled",
+  "completed",
+]);
+
+const bookingListFilterFields = {
   unitId: z.string().uuid().optional(),
   propertyId: z.string().uuid().optional(),
-  status: z.enum(["pending", "confirmed", "cancelled", "completed"]).optional(),
   checkInFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   checkInTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   checkOutFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   checkOutTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Talos registration date range — not original guest booking date. */
+  createdAtFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  createdAtTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   guestSearch: z.string().max(255).optional(),
-  // Default: newest bookings first (createdAt desc). Operators may override via sortBy.
-  sortBy: z.enum(["checkIn", "checkOut", "guestName", "status", "createdAt"]).default("createdAt"),
+  excludeSuperseded: z
+    .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
+    .optional()
+    .transform((v) => {
+      if (v === undefined) return undefined;
+      if (typeof v === "boolean") return v;
+      return v === "true" || v === "1";
+    }),
+};
+
+export const listBookingsQuerySchema = paginationSchema.extend({
+  ...bookingListFilterFields,
+  status: bookingStatusEnum.optional(),
+  // Default: latest check-in first (past and future in one chronology). Operators may override.
+  sortBy: z.enum(["checkIn", "checkOut", "guestName", "status", "createdAt"]).default("checkIn"),
   sortDir: z.enum(["asc", "desc"]).default("desc"),
+});
+
+/** Status-tab facet counts — same filter scope as list, without status. */
+export const bookingStatusCountsQuerySchema = z.object({
+  ...bookingListFilterFields,
 });

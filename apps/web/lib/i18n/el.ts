@@ -107,7 +107,9 @@ export const elCommon = {
   source: "Πηγή",
   priority: "Προτεραιότητα",
   assignedTo: "Ανάθεση σε",
-  createdAt: "Δημιουργήθηκε",
+  createdAt: "Καταχωρήθηκε",
+  /** Talos registration timestamp — not original guest/OTA booking date. */
+  registeredAt: "Καταχωρήθηκε",
   updatedAt: "Ενημερώθηκε",
   startedAt: "Έναρξη",
   completedAt: "Ολοκλήρωση",

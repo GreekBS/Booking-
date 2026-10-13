@@ -4,6 +4,8 @@ import type { PermissionChecker, ActorContext } from "../../shared/services/Perm
 import { PERMISSIONS } from "@hcp/permissions";
 import type { Hold } from "../booking/domain/Hold";
 import type {
+  BookingStatusCountFilters,
+  BookingStatusCounts,
   BookingSearchFilters,
   HoldListFilters,
   IBookingRepository,
@@ -69,6 +71,44 @@ export class SearchBookingsUseCase {
       }
 
       const result = await this.bookingRepository.search({
+        ...filters,
+        allowedPropertyIds,
+      });
+
+      return Result.ok(result);
+    } catch (error) {
+      return Result.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+}
+
+/**
+ * Authoritative status-tab counts for the Bookings list.
+ * Same ACL + property/filter scope as search; status facet is independent of the selected tab.
+ */
+export class CountBookingsByStatusUseCase {
+  constructor(
+    private readonly bookingRepository: IBookingRepository,
+    private readonly permissionChecker: PermissionChecker,
+  ) {}
+
+  async execute(
+    filters: Omit<BookingStatusCountFilters, "allowedPropertyIds">,
+    actor: ActorContext,
+  ): Promise<Result<BookingStatusCounts, Error>> {
+    try {
+      const allowedPropertyIds = resolveAllowedPropertyIds(
+        this.permissionChecker,
+        actor,
+        filters.tenantId,
+        filters.propertyId,
+      );
+
+      if (allowedPropertyIds === undefined) {
+        return Result.fail(new ForbiddenError());
+      }
+
+      const result = await this.bookingRepository.countByStatus({
         ...filters,
         allowedPropertyIds,
       });

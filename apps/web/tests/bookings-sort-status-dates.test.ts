@@ -26,42 +26,49 @@ function readRepo(rel: string): string {
   return readFileSync(join(repoRoot, rel), "utf8");
 }
 
-describe("Bookings list — newest-first default sort", () => {
-  it("defaults sortBy=createdAt and sortDir=desc at the query schema", () => {
+describe("Bookings list — check-in descending default sort", () => {
+  it("defaults sortBy=checkIn and sortDir=desc at the query schema", () => {
     const parsed = listBookingsQuerySchema.parse({ page: 1, limit: 20 });
-    expect(parsed.sortBy).toBe("createdAt");
+    expect(parsed.sortBy).toBe("checkIn");
     expect(parsed.sortDir).toBe("desc");
   });
 
-  it("preserves explicit operator sort overrides", () => {
-    const byCheckIn = listBookingsQuerySchema.parse({
+  it("preserves explicit operator sort overrides including createdAt", () => {
+    const byCreated = listBookingsQuerySchema.parse({
       page: 1,
       limit: 20,
-      sortBy: "checkIn",
+      sortBy: "createdAt",
       sortDir: "asc",
     });
-    expect(byCheckIn.sortBy).toBe("checkIn");
-    expect(byCheckIn.sortDir).toBe("asc");
+    expect(byCreated.sortBy).toBe("createdAt");
+    expect(byCreated.sortDir).toBe("asc");
   });
 
   it("repository applies primary + deterministic id secondary orderBy", () => {
     const repo = readRepo(
       "packages/database/src/repositories/commerce/BookingRepository.ts",
     );
-    expect(repo).toContain('filters.sortBy === "createdAt"');
     expect(repo).toContain("{ [orderByField]: filters.sortDir }");
     expect(repo).toContain("{ id: filters.sortDir }");
   });
 
-  it("BookingsPage defaults to createdAt and maps guest → guestName", () => {
+  it("BookingsPage defaults to checkIn DESC and maps guest → guestName", () => {
     const page = readWeb("features/bookings/BookingsPage.tsx");
-    expect(page).toContain('useState<SortKey>("createdAt")');
+    expect(page).toContain('useState<SortKey>("checkIn")');
+    expect(page).toContain('useState<SortDirection>("desc")');
     expect(page).toContain('sortKey === "guest" ? "guestName" : sortKey');
-    expect(page).toContain("formatOperatorDateOnly(booking.createdAt)");
     expect(page).toContain("formatOperatorDateOnly(booking.checkIn)");
+    expect(page).toContain("νεότερη άφιξη πρώτα");
   });
 
-  it("serializeBooking exposes createdAt for list display/sort verification", () => {
+  it("past and future check-ins share one descending chronology (no today split)", () => {
+    const page = readWeb("features/bookings/BookingsPage.tsx");
+    expect(page).toContain("ανεξάρτητα από παρελθόν/μέλλον");
+    expect(page).not.toContain("upcoming arrivals");
+    expect(page).not.toContain("bookedAt");
+  });
+
+  it("serializeBooking still exposes createdAt for the registration column", () => {
     const ser = readWeb("lib/tenant-context.ts");
     expect(ser).toContain("booking.createdAt instanceof Date");
     expect(ser).toContain("booking.createdAt.toISOString()");
@@ -104,10 +111,11 @@ describe("Booking status — confirmed ACTIVE blue / completed GREEN", () => {
 
   it("status filters keep internal confirmed/completed values", () => {
     const page = readWeb("features/bookings/BookingsPage.tsx");
-    expect(page).toContain('SelectItem value="confirmed"');
-    expect(page).toContain('SelectItem value="completed"');
-    expect(page).toContain('statusLabelEl("confirmed")');
-    expect(page).toContain('statusLabelEl("completed")');
+    const tabs = readWeb("features/bookings/BookingStatusTabs.tsx");
+    expect(tabs).toContain('id: "confirmed"');
+    expect(tabs).toContain('id: "completed"');
+    expect(page).toContain('statusTab !== "all" ? statusTab');
+    expect(page).toContain('params.set("status", statusTab)');
   });
 
   it("import conflict lowercase status copy uses ενεργή", () => {

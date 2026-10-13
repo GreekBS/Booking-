@@ -338,6 +338,7 @@ import {
   UpdatePublishableKeyDomainsUseCase,
 
   SearchBookingsUseCase,
+  CountBookingsByStatusUseCase,
 
   GetTenantDashboardOverviewUseCase,
 
@@ -2647,6 +2648,11 @@ export const updateWebsiteThemeUseCase = new UpdateWebsiteThemeUseCase(
 );
 
 export const searchBookingsUseCase = new SearchBookingsUseCase(
+  bookingRepository,
+  permissionChecker,
+);
+
+export const countBookingsByStatusUseCase = new CountBookingsByStatusUseCase(
   bookingRepository,
   permissionChecker,
 );

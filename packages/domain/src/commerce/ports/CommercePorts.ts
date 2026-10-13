@@ -100,25 +100,55 @@ export interface IBookingRepository {
     range?: CalendarDateRange,
   ): Promise<Booking[]>;
   search(filters: BookingSearchFilters): Promise<PaginatedBookings>;
+  /**
+   * Facet counts by booking status for the same filter scope as search
+   * (excluding the status tab itself). Used by Bookings status tabs.
+   */
+  countByStatus(filters: BookingStatusCountFilters): Promise<BookingStatusCounts>;
 }
 
 export type BookingSortField = "checkIn" | "checkOut" | "guestName" | "status" | "createdAt";
 
-export interface BookingSearchFilters {
+export type BookingStatusValue =
+  | "pending"
+  | "payment_pending"
+  | "confirmed"
+  | "cancelled"
+  | "completed";
+
+export interface BookingListFilterBase {
   tenantId: string;
   unitId?: string;
   propertyId?: string;
-  status?: string;
   checkInFrom?: string;
   checkInTo?: string;
   checkOutFrom?: string;
   checkOutTo?: string;
+  /** Talos registration timestamp range (ISO date-only). Not original OTA book date. */
+  createdAtFrom?: string;
+  createdAtTo?: string;
   guestSearch?: string;
   allowedPropertyIds?: string[] | null;
+  /**
+   * When true, exclude bookings superseded via CSV/import archive
+   * (`supersededAt` set). Operational booking lists should pass true.
+   */
+  excludeSuperseded?: boolean;
+}
+
+export interface BookingSearchFilters extends BookingListFilterBase {
+  status?: string;
   page: number;
   limit: number;
   sortBy: BookingSortField;
   sortDir: "asc" | "desc";
+}
+
+export type BookingStatusCountFilters = BookingListFilterBase;
+
+export interface BookingStatusCounts {
+  all: number;
+  byStatus: Record<BookingStatusValue, number>;
 }
 
 export interface PaginatedBookings {
